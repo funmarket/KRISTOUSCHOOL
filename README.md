@@ -23,7 +23,7 @@ The old `funmarket/Kristou` repository is a read-only source of migrated product
 
 ## Platform direction
 
-Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. No Supabase project has been verified as connected by this documentation change. Railway is not the target hosting/database provider. See ADR-014 and the implementation plan for the auth-policy decision gate, security controls, setup order, and verification criteria.
+Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. No Supabase project has been verified as connected by this documentation change. Railway is not the target hosting/database provider. Preserve the accepted Web username/password and Telegram WebApp login/linking behavior; ADR-015 gates only the compatible technical implementation, not a change in login policy.
 
 ## Development
 

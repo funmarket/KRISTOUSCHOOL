@@ -10,7 +10,7 @@ This document defines architecture, runtime boundaries, data ownership, and depe
 
 The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It does not yet contain a Supabase CLI project, migrations, RLS policies, Edge Functions, production authentication, or a backend. UI data, login, roles, and pickup transitions are prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by a single Supabase project boundary for managed PostgreSQL, server-side functions, and private object storage. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by a single Supabase project boundary for managed PostgreSQL, server-side functions, and private object storage. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 

@@ -40,7 +40,7 @@ The Supabase backend plan is an ordered proposal subordinate to the owner's inst
 - Do not put student, child, family, health, enrollment, or pickup data into public projections or production mock fixtures.
 - Pickup arrival and child release are distinct. Parents/authorized pickup actors may announce arrival; only authorized staff may confirm physical release through server-verified policy and an atomic state transition.
 - No heuristic identity merging. Never merge people by name, email, phone, username, or photo.
-- Do not silently replace the locked username-plus-password policy with email/phone login. Supabase Auth's fit is an explicit unresolved decision gate recorded in `docs/DECISIONS.md`; no auth implementation may bypass it.
+- Preserve the owner's confirmed Web username-plus-password and Telegram WebApp login/linking policy. Do not replace it with email/phone login or synthetic email aliases. The compatible server-side session/identity bridge and Postgres authorization design is the implementation gate in `docs/DECISIONS.md`; no auth implementation may bypass it.
 - No secrets in source, browser bundles, examples, tests, logs, or screenshots. Use placeholders in `.env.example` and managed secrets for deployed functions.
 - All schema changes must be reversible/reviewable migrations committed to `supabase/migrations/`; do not make dashboard-only production schema changes.
 - Do not describe partial/demo behavior as secure, complete, tested, or deployed.
@@ -60,4 +60,4 @@ Supabase is the selected platform direction, not current implementation evidence
 
 Edge Functions are server-side transport/orchestration boundaries, not cross-domain business authorities. Keep domain policy in small domain-owned application modules and database constraints/RLS. Use the caller's verified identity for ordinary user operations where the selected auth design permits it. Any use of a secret/service-role credential must be narrowly scoped, justified, and followed by explicit server-side authorization; RLS bypass is never a substitute for policy.
 
-The username/password versus Supabase Auth identity mismatch must be resolved by the product owner before protected user accounts are implemented. Until resolved, only synthetic local fixtures and intentionally public data may be used.
+The product-policy choice is settled: retain username/password for Web and Telegram WebApp authentication/linking. Before protected user accounts, the secure Supabase-compatible implementation and database identity bridge must be designed, tested, and recorded. Until that technical gate is met, use only synthetic local fixtures and intentionally public data.

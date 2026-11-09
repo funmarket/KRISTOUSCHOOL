@@ -11,7 +11,9 @@ This file records verified state in `funmarket/KRISTOUSCHOOL`. It is not a produ
 - Existing implementation is a Vite/React UI prototype with mock-driven in-memory state and a placeholder Supabase client configuration.
 - No Supabase CLI project, committed migrations, database schema, RLS policies, Edge Functions, authentication integration, real-data connection, or deployed backend was found in the starting tree.
 - Prototype authentication accepts mock/fallback identities and is not production authentication. Pickup state transitions are client-side and are not safe or authoritative.
-- Documentation and code changes in this migration are being prepared on a focused documentation branch; no Supabase project has been provisioned or changed.
+- Documentation migration is on branch `docs/supabase-source-of-truth`; commit `9bacf69` opened review-only PR #3 against `main`. The PR has not been merged.
+- The product owner reaffirmed that Web username/password, optional non-login email, Telegram WebApp authentication/linking, and one canonical User remain unchanged. ADR-015 now gates only the technical Supabase-compatible implementation design.
+- `git diff --check` passed for the documentation commit. Application builds/tests were not run because no application code changed. No Supabase project has been provisioned or changed.
 
 ## Historical source note
 
