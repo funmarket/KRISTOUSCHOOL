@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AuthModal } from './AuthModal';
 import {
@@ -47,7 +47,23 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showProfileMenu) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) setShowProfileMenu(false);
+    };
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowProfileMenu(false);
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    document.addEventListener('keydown', dismissEscape);
+    return () => {
+      document.removeEventListener('pointerdown', dismissOutside);
+      document.removeEventListener('keydown', dismissEscape);
+    };
+  }, [showProfileMenu]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -65,83 +81,31 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Brand Logo & Name */}
-        <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer" onClick={() => setActiveTab('home')}>
+        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0" onClick={() => setActiveTab('home')}>
           <img
-            src="/public/assets/kristou-logo.png"
+            src="/assets/kristou-logo.png"
             alt="KRISTOU SCHOOL"
-            className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
           />
           <div>
-            <span className="font-bold text-gray-900 dark:text-white tracking-wide text-lg block leading-none">
+            <span className="font-bold text-gray-900 dark:text-white tracking-wide text-sm sm:text-lg block leading-none">
               KRISTOU
             </span>
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+            <span className="hidden sm:block text-xs text-k-brand font-medium">
               École Primaire Privée
             </span>
           </div>
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center space-x-1 rtl:space-x-reverse text-sm font-medium text-gray-700 dark:text-gray-300">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'home' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-          >
-            {t('home')}
-          </button>
-          
-          {(currentRole === 'PARENT' || currentRole === 'STUDENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
-            <button
-              onClick={() => setActiveTab('community')}
-              className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'community' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-            >
-              {t('classCommunity')}
-            </button>
-          )}
-
-          {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
-            <button
-              onClick={() => setActiveTab('notes')}
-              className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'notes' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-            >
-              {t('parentNotes')}
-            </button>
-          )}
-
-          {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'ADMIN') && (
-            <button
-              onClick={() => setActiveTab('pickup')}
-              className={`px-3 py-2 rounded-lg transition-colors flex items-center space-x-1 rtl:space-x-reverse ${activeTab === 'pickup' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{t('pickup')}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('foodMenu')}
-            className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'foodMenu' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-          >
-            {t('foodMenu')}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('directory')}
-            className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'directory' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-          >
-            {t('teachers')}
-          </button>
-        </nav>
-
         {/* Right Actions: Language, Theme, Notifications, Profile, Role Switcher */}
-        <div className="flex items-center space-x-2 rtl:space-x-reverse shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
           {/* Language Dropdown */}
           <div className="relative flex items-center">
             <select
               value={language}
               onChange={e => setLanguage(e.target.value as any)}
-              className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-bold px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer uppercase"
+              className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-bold px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-k-brand cursor-pointer uppercase"
             >
               <option value="ar">AR</option>
               <option value="fr">FR</option>
@@ -161,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           {/* Role Switcher Button */}
           <button
             onClick={() => setShowRoleModal(true)}
-            className="hidden sm:flex items-center space-x-1 rtl:space-x-reverse px-3 py-1.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-900 transition-colors"
+            className="hidden sm:flex items-center space-x-1 rtl:space-x-reverse px-3 py-1.5 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand hover:bg-k-brand/15 dark:hover:bg-k-brand/20 text-xs font-semibold rounded-xl border border-k-brand/25 dark:border-blue-900 transition-colors"
           >
             <Shield className="w-3.5 h-3.5" />
             <span>{currentRole}</span>
@@ -186,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <div className="absolute right-0 sm:right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">{t('notifications')}</h3>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{unreadCount} non lues</span>
+                  <span className="text-xs text-k-brand dark:text-k-brand font-medium">{unreadCount} non lues</span>
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
                   {notifications.length === 0 ? (
@@ -196,7 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       <div
                         key={n.id}
                         onClick={() => markNotificationRead(n.id)}
-                        className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${!n.read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
+                        className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${!n.read ? 'bg-k-brand/10 dark:bg-k-brand/10' : ''}`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-xs text-gray-900 dark:text-white">{n.title}</span>
@@ -212,34 +176,41 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </div>
 
           {/* User Profile / Auth */}
-          {currentUser ? (
-            <div className="relative">
+          <div ref={profileMenuRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                aria-label={currentUser ? t('home') : 'Menu'}
+                aria-expanded={showProfileMenu}
                 onMouseEnter={() => setShowProfileMenu(true)}
                 className="flex items-center space-x-2 rtl:space-x-reverse p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                <img
-                  src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                  alt={currentUser.fullName}
-                  className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                />
-                <span className="hidden lg:inline text-xs font-semibold text-gray-800 dark:text-gray-200">
-                  {currentUser.fullName}
-                </span>
+                {currentUser ? (
+                  <img
+                    src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
+                    alt={currentUser.fullName}
+                    className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                  />
+                ) : <Menu className="w-6 h-6" />}
+                {currentUser && (
+                  <span className="hidden lg:inline text-xs font-semibold text-gray-800 dark:text-gray-200">
+                    {currentUser.fullName}
+                  </span>
+                )}
               </button>
 
               {/* Profile Dropdown with Hover Bridge */}
               {showProfileMenu && (
                 <div
-                  className="absolute right-0 rtl:right-auto rtl:left-0 top-full pt-1.5 w-72 z-50"
+                  className="absolute end-0 top-full pt-1.5 w-[min(18rem,calc(100vw-1rem))] z-50"
                   onMouseLeave={() => setShowProfileMenu(false)}
                 >
                   <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                    <p className="font-bold text-sm text-gray-900 dark:text-white">{currentUser.fullName}</p>
-                    <p className="text-xs text-gray-500 uppercase font-mono mt-0.5">{currentUser.role}</p>
-                  </div>
+                  {currentUser && (
+                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                      <p className="font-bold text-sm text-gray-900 dark:text-white">{currentUser.fullName}</p>
+                      <p className="text-xs text-gray-500 uppercase font-mono mt-0.5">{currentUser.role}</p>
+                    </div>
+                  )}
 
                   {/* Navigation Menu Links */}
                   <div className="py-1 border-b border-gray-100 dark:border-gray-800">
@@ -285,9 +256,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     >
                       <span>👨‍🏫 {t('teachers')}</span>
                     </button>
+                    <button
+                      onClick={() => { setActiveTab('registration'); setShowProfileMenu(false); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                    >
+                      <span>📝 {t('registration')}</span>
+                    </button>
                   </div>
 
-                  <div className="py-1">
+                  {currentUser && <div className="py-1">
                     <button
                       onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
                       className="w-full text-start px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
@@ -298,89 +275,34 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     {!currentUser.telegramLinked && (
                       <button
                         onClick={() => { connectTelegram(); setShowProfileMenu(false); }}
-                        className="w-full text-start px-4 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                        className="w-full text-start px-4 py-2 text-xs font-medium text-k-brand dark:text-k-brand hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
                       >
                         <Send className="w-4 h-4" />
                         <span>{t('telegramConnect')}</span>
                       </button>
                     )}
-                  </div>
+                  </div>}
 
                   <div className="border-t border-gray-100 dark:border-gray-800 py-1">
-                    <button
+                    {currentUser ? <button
                       onClick={() => { logout(); setShowProfileMenu(false); }}
                       className="w-full text-start px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center space-x-2 rtl:space-x-reverse"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>{t('logout')}</span>
-                    </button>
+                    </button> : <button
+                      onClick={() => { setShowAuthModal(true); setShowProfileMenu(false); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-k-brand hover:bg-k-brand/10"
+                    >
+                      {t('login')}
+                    </button>}
                   </div>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-500/20 transition-all"
-            >
-              {t('login')}
-            </button>
-          )}
         </div>
       </div>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800 px-4 py-4 space-y-2">
-          <button
-            onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('home')}
-          </button>
-          <button
-            onClick={() => { setActiveTab('community'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('classCommunity')}
-          </button>
-          <button
-            onClick={() => { setActiveTab('notes'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('parentNotes')}
-          </button>
-          <button
-            onClick={() => { setActiveTab('pickup'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('pickup')}
-          </button>
-          <button
-            onClick={() => { setActiveTab('foodMenu'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('foodMenu')}
-          </button>
-          <button
-            onClick={() => { setActiveTab('directory'); setMobileMenuOpen(false); }}
-            className="w-full text-start px-3 py-2 rounded-xl font-medium text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('teachers')}
-          </button>
-
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-            <button
-              onClick={() => { setShowRoleModal(true); setMobileMenuOpen(false); }}
-              className="w-full text-start px-3 py-2 rounded-xl font-semibold text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 flex items-center space-x-2 rtl:space-x-reverse"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Changer de rôle (Rôle actuel: {currentRole})</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Role Switcher Modal */}
       {showRoleModal && (
@@ -406,15 +328,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       setCurrentRole(r.role);
                       setShowRoleModal(false);
                     }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 font-semibold' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200'}`}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected ? 'bg-k-brand/10 dark:bg-k-brand/15 border-k-brand text-k-brand dark:text-k-brand font-semibold' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200'}`}
                   >
                     <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-k-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
                         <IconComponent className="w-4 h-4" />
                       </div>
                       <span className="text-sm">{r.label}</span>
                     </div>
-                    {isSelected && <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                    {isSelected && <CheckCircle className="w-4 h-4 text-k-brand dark:text-k-brand" />}
                   </button>
                 );
               })}
