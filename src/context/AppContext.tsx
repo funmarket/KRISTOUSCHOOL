@@ -18,15 +18,7 @@ import {
   AdminDirectoryMember,
 } from '../types';
 import {
-  MOCK_CHILDREN,
-  MOCK_CLASSES,
   MOCK_ANNOUNCEMENTS,
-  MOCK_HOMEWORK,
-  MOCK_CALENDAR,
-  MOCK_QUESTIONS,
-  MOCK_PARENT_NOTES,
-  MOCK_MESSAGES,
-  MOCK_PICKUP_RECORDS,
   MOCK_FOOD_MENU,
   MOCK_TEACHERS,
   MOCK_ADMIN,
@@ -94,15 +86,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [notificationSound, setNotificationSound] = useState<string>('Kristou Bell');
 
-  const [childrenList] = useState<Child[]>(MOCK_CHILDREN);
-  const [classesList] = useState<ClassItem[]>(MOCK_CLASSES);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
-  const [homeworkList] = useState<Homework[]>(MOCK_HOMEWORK);
-  const [calendarEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR);
-  const [classQuestions, setClassQuestions] = useState<ClassQuestion[]>(MOCK_QUESTIONS);
-  const [parentNotes, setParentNotes] = useState<ParentNote[]>(MOCK_PARENT_NOTES);
-  const [messages] = useState<MessageThread[]>(MOCK_MESSAGES);
-  const [pickupRecords, setPickupRecords] = useState<PickupRecord[]>(MOCK_PICKUP_RECORDS);
+  const [childrenList] = useState<Child[]>([]);
+  const [classesList] = useState<ClassItem[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS.filter(announcement => !announcement.classId));
+  const [homeworkList] = useState<Homework[]>([]);
+  const [calendarEvents] = useState<CalendarEvent[]>([]);
+  const [classQuestions, setClassQuestions] = useState<ClassQuestion[]>([]);
+  const [parentNotes, setParentNotes] = useState<ParentNote[]>([]);
+  const [messages] = useState<MessageThread[]>([]);
+  const [pickupRecords, setPickupRecords] = useState<PickupRecord[]>([]);
   const [foodMenu] = useState<FoodMenuWeek>(MOCK_FOOD_MENU);
   const [teachers] = useState<TeacherDirectoryMember[]>(MOCK_TEACHERS);
   const [admins] = useState<AdminDirectoryMember[]>(MOCK_ADMIN);
