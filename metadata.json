@@ -1,0 +1,6 @@
+{
+  "name": "KRISTOU SCHOOL",
+  "description": "Digital school administration, teaching, parent, and student platform for École Primaire Privée Kristou School.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
