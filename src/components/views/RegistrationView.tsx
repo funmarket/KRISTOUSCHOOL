@@ -26,7 +26,7 @@ export const RegistrationView: React.FC = () => {
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm text-center">
         <img
-          src="/public/assets/kristou-logo.png"
+          src="/assets/kristou-logo.png"
           alt="KRISTOU SCHOOL"
           className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
         />
@@ -137,7 +137,7 @@ export const RegistrationView: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center space-x-2 rtl:space-x-reverse mt-4"
+              className="w-full py-3.5 bg-k-brand hover:bg-k-brand-strong text-white font-bold text-sm rounded-xl shadow-lg shadow-k-brand/25 transition-all flex items-center justify-center space-x-2 rtl:space-x-reverse mt-4"
             >
               <Send className="w-4 h-4" />
               <span>Soumettre la demande d'admission</span>
