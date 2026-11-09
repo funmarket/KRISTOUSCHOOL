@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
             <img
-              src="/public/assets/kristou-logo.png"
+              src="/assets/kristou-logo.png"
               alt="KRISTOU SCHOOL"
               className="w-9 h-9 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
             />
@@ -34,10 +34,10 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Navigation</h4>
           <ul className="space-y-2 text-xs font-medium">
-            <li><a href="#home" className="hover:text-blue-600 transition-colors">{t('home')}</a></li>
-            <li><a href="#directory" className="hover:text-blue-600 transition-colors">{t('teachers')}</a></li>
-            <li><a href="#foodMenu" className="hover:text-blue-600 transition-colors">{t('foodMenu')}</a></li>
-            <li><a href="#registration" className="hover:text-blue-600 transition-colors">{t('registration')}</a></li>
+            <li><a href="#home" className="hover:text-k-brand transition-colors">{t('home')}</a></li>
+            <li><a href="#directory" className="hover:text-k-brand transition-colors">{t('teachers')}</a></li>
+            <li><a href="#foodMenu" className="hover:text-k-brand transition-colors">{t('foodMenu')}</a></li>
+            <li><a href="#registration" className="hover:text-k-brand transition-colors">{t('registration')}</a></li>
           </ul>
         </div>
 
@@ -46,15 +46,15 @@ export const Footer: React.FC = () => {
           <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Contact & Localisation</h4>
           <ul className="space-y-2.5 text-xs">
             <li className="flex items-center space-x-2 rtl:space-x-reverse">
-              <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+              <MapPin className="w-4 h-4 text-k-brand shrink-0" />
               <span>Tunis, Tunisie</span>
             </li>
             <li className="flex items-center space-x-2 rtl:space-x-reverse">
-              <Phone className="w-4 h-4 text-blue-600 shrink-0" />
+              <Phone className="w-4 h-4 text-k-brand shrink-0" />
               <span>+216 71 000 000</span>
             </li>
             <li className="flex items-center space-x-2 rtl:space-x-reverse">
-              <Mail className="w-4 h-4 text-blue-600 shrink-0" />
+              <Mail className="w-4 h-4 text-k-brand shrink-0" />
               <span>contact@kristou.edu.tn</span>
             </li>
           </ul>
@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
           <p className="text-xs text-gray-500 mb-3">
             Accessible via Navigateur Web et Telegram Mini App avec la même base de données canonique sécurisée.
           </p>
-          <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl text-xs font-semibold">
+          <div className="inline-flex items-center space-x-2 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand px-3 py-1.5 rounded-xl text-xs font-semibold">
             <span>🌐 Web & Telegram Sync</span>
           </div>
         </div>

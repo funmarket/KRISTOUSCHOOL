@@ -27,7 +27,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
     <div className="space-y-8 pb-12">
       
       {/* Hero Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 text-white p-6 sm:p-10 overflow-hidden shadow-xl">
+      <div className="relative rounded-3xl bg-gradient-to-r from-k-brand via-k-brand to-k-brand-strong text-white p-6 sm:p-10 overflow-hidden shadow-xl">
         <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center space-x-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-4">
@@ -37,7 +37,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
             {t('appName')}
           </h1>
-          <p className="text-sm sm:text-base text-blue-100 mb-6 leading-relaxed">
+          <p className="text-sm sm:text-base text-white/90 mb-6 leading-relaxed">
             {t('tagline')} — Un environnement numérique unifié pour l'éducation, la sécurité des élèves et la communication fluide entre parents, enseignants et administration.
           </p>
 
@@ -45,7 +45,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
             {currentRole === 'PARENT' && (
               <button
                 onClick={() => setActiveTab('pickup')}
-                className="px-5 py-2.5 bg-white text-blue-700 font-bold text-xs sm:text-sm rounded-xl shadow-lg hover:bg-blue-50 transition-all flex items-center space-x-2 rtl:space-x-reverse"
+                className="px-5 py-2.5 bg-white text-k-brand-strong font-bold text-xs sm:text-sm rounded-xl shadow-lg hover:bg-white/90 transition-all flex items-center space-x-2 rtl:space-x-reverse"
               >
                 <span>{t('pickup')}</span>
                 <ArrowRight className="w-4 h-4 rtl:rotate-180" />
@@ -53,13 +53,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
             )}
             <button
               onClick={() => setActiveTab('community')}
-              className="px-5 py-2.5 bg-blue-900/60 hover:bg-blue-900 text-white font-semibold text-xs sm:text-sm rounded-xl border border-blue-400/30 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
+              className="px-5 py-2.5 bg-k-brand-strong/75 hover:bg-k-brand-strong text-white font-semibold text-xs sm:text-sm rounded-xl border border-white/25 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
             >
               <span>{t('classCommunity')}</span>
             </button>
             <button
               onClick={() => setActiveTab('foodMenu')}
-              className="px-5 py-2.5 bg-blue-900/60 hover:bg-blue-900 text-white font-semibold text-xs sm:text-sm rounded-xl border border-blue-400/30 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
+              className="px-5 py-2.5 bg-k-brand-strong/75 hover:bg-k-brand-strong text-white font-semibold text-xs sm:text-sm rounded-xl border border-white/25 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
             >
               <span>{t('foodMenu')}</span>
             </button>
