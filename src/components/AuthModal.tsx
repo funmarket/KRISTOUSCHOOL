@@ -33,9 +33,11 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center text-xl font-bold mb-3 shadow-md shadow-blue-500/30">
-            K
-          </div>
+          <img
+            src="/public/assets/kristou-logo.png"
+            alt="KRISTOU SCHOOL"
+            className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
+          />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('login')}</h2>
           <p className="text-xs text-gray-500 mt-1">École Primaire Privée Kristou School</p>
         </div>

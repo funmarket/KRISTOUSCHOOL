@@ -7,14 +7,16 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="bg-white dark:bg-[#090909] border-t border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         
         {/* Col 1 */}
         <div className="space-y-4">
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-              K
-            </div>
+            <img
+              src="/public/assets/kristou-logo.png"
+              alt="KRISTOU SCHOOL"
+              className="w-9 h-9 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
+            />
             <span className="font-bold text-gray-900 dark:text-white text-base">
               KRISTOU SCHOOL
             </span>

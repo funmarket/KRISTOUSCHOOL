@@ -88,8 +88,12 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(MOCK_USERS[0]); // default parent Karim
   const [currentRole, setCurrentRoleState] = useState<UserRole>('PARENT');
-  const [language, setLanguageState] = useState<Language>('fr'); // Default French or Arabic/English
-  const [theme, setThemeState] = useState<ThemeMode>('light');
+  const [language, setLanguageState] = useState<Language>(() => {
+    return (localStorage.getItem('kristou_lang') as Language) || 'fr';
+  });
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    return (localStorage.getItem('kristou_theme') as ThemeMode) || 'light';
+  });
   const [notificationSound, setNotificationSound] = useState<string>('Kristou Bell');
 
   const [childrenList] = useState<Child[]>(MOCK_CHILDREN);
@@ -134,9 +138,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (theme === 'pitch-black') {
       document.documentElement.classList.add('dark', 'pitch-black');
+      document.documentElement.classList.remove('light');
     } else {
+      document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark', 'pitch-black');
     }
+    localStorage.setItem('kristou_theme', theme);
   }, [theme]);
 
   const setCurrentRole = (role: UserRole) => {
@@ -155,10 +162,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
+    localStorage.setItem('kristou_lang', lang);
   };
 
   const setTheme = (thm: ThemeMode) => {
     setThemeState(thm);
+    localStorage.setItem('kristou_theme', thm);
   };
 
   const t = (key: keyof typeof translations['en']): string => {

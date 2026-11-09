@@ -25,9 +25,11 @@ export const RegistrationView: React.FC = () => {
       
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm text-center">
-        <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center font-bold text-lg mb-3 shadow-md shadow-blue-500/30">
-          K
-        </div>
+        <img
+          src="/public/assets/kristou-logo.png"
+          alt="KRISTOU SCHOOL"
+          className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
+        />
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
           {t('registration')} — Rentrée 2025/2026
         </h1>

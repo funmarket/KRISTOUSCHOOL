@@ -66,9 +66,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         
         {/* Brand Logo & Name */}
         <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer" onClick={() => setActiveTab('home')}>
-          <div className="w-10 h-10 rounded-xl bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20">
-            K
-          </div>
+          <img
+            src="/public/assets/kristou-logo.png"
+            alt="KRISTOU SCHOOL"
+            className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
+          />
           <div>
             <span className="font-bold text-gray-900 dark:text-white tracking-wide text-lg block leading-none">
               KRISTOU
@@ -166,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </button>
 
           {/* Notifications Bell */}
-          <div className="relative">
+          <div className="relative" onMouseLeave={() => setShowNotifications(false)}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -181,7 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
+              <div className="absolute right-0 sm:right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">{t('notifications')}</h3>
                   <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{unreadCount} non lues</span>
@@ -214,6 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onMouseEnter={() => setShowProfileMenu(true)}
                 className="flex items-center space-x-2 rtl:space-x-reverse p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <img
@@ -226,12 +229,62 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 </span>
               </button>
 
-              {/* Profile Dropdown */}
+              {/* Profile Dropdown with Hover Bridge */}
               {showProfileMenu && (
-                <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-64 bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-50">
+                <div
+                  className="absolute right-0 rtl:right-auto rtl:left-0 top-full pt-1.5 w-72 z-50"
+                  onMouseLeave={() => setShowProfileMenu(false)}
+                >
+                  <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                     <p className="font-bold text-sm text-gray-900 dark:text-white">{currentUser.fullName}</p>
                     <p className="text-xs text-gray-500 uppercase font-mono mt-0.5">{currentUser.role}</p>
+                  </div>
+
+                  {/* Navigation Menu Links */}
+                  <div className="py-1 border-b border-gray-100 dark:border-gray-800">
+                    <button
+                      onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                    >
+                      <span>🏠 {t('home')}</span>
+                    </button>
+                    {(currentRole === 'PARENT' || currentRole === 'STUDENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
+                      <button
+                        onClick={() => { setActiveTab('community'); setShowProfileMenu(false); }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      >
+                        <span>📚 {t('classCommunity')}</span>
+                      </button>
+                    )}
+                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
+                      <button
+                        onClick={() => { setActiveTab('notes'); setShowProfileMenu(false); }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      >
+                        <span>📝 {t('parentNotes')}</span>
+                      </button>
+                    )}
+                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'ADMIN') && (
+                      <button
+                        onClick={() => { setActiveTab('pickup'); setShowProfileMenu(false); }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      >
+                        <span>🛡️ {t('pickup')}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setActiveTab('foodMenu'); setShowProfileMenu(false); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                    >
+                      <span>🍲 {t('foodMenu')}</span>
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('directory'); setShowProfileMenu(false); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                    >
+                      <span>👨‍🏫 {t('teachers')}</span>
+                    </button>
                   </div>
 
                   <div className="py-1">
@@ -262,6 +315,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       <span>{t('logout')}</span>
                     </button>
                   </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -273,14 +327,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               {t('login')}
             </button>
           )}
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
       </div>
 
