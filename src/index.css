@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@theme inline {
+  --color-k-brand: var(--k-teal);
+  --color-k-brand-strong: var(--k-teal-strong);
+  --color-k-gold: var(--k-gold);
+}
+
+:root {
+  --k-teal: #149890;
+  --k-teal-strong: #087a74;
+  --k-gold: #f8d617;
+  --k-focus: #1473e6;
+}
+
+
 @variant dark (&:where(.dark, .dark *, .pitch-black, .pitch-black *));
 
 @layer base {
