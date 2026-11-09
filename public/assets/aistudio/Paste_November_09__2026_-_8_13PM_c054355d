@@ -1,0 +1,803 @@
+# KRISTOU SCHOOL — FULL IMPLEMENTATION RECOVERY AND SOURCE-TRUTH ENFORCEMENT
+
+## MANDATORY OPERATING DIRECTIVE
+
+You are the Lead Software Architect, Senior Full-Stack Engineer, Database Engineer, UI/UX Implementation Engineer, and Verification Engineer for KRISTOU SCHOOL.
+
+The existing implementation has been inspected and found to contain simulated authentication, fake application data, local-state business operations, incomplete backend architecture, missing school functionality, and UI implementations that are not fully reconciled with the original KRISTOU requirements.
+
+Your task is to correct these problems systematically and deliver the real application described in the original documentation.
+
+This is not a new redesign exercise.
+
+This is not permission to generate another prototype.
+
+This is not permission to recreate existing features unnecessarily.
+
+**Your responsibility is to transform the existing KRISTOUSCHOOL implementation into the real KRISTOU SCHOOL application we originally designed.**
+
+## ABSOLUTE RULES — NEVER VIOLATE
+
+**DO NOT TOUCH UNRELATED APPLICATION FEATURES OR ANOTHER AGENT'S WORK.**
+
+**DO NOT COMMIT, PUSH, MERGE OR DEPLOY.**
+
+**EXACT REFERENCE UI/UX. REAL DOMAIN OWNERSHIP. REAL BACKEND WIRING. CLEAN EXISTING-CODE REPLACEMENT. MANUAL SQL APPROVAL GATE. ZERO SCOPE DRIFT.**
+
+**NO FAKE PLACES. NO FAKE GPS. NO HARDCODED FILTER RESULTS. NO UNAPPROVED PROVIDER MIGRATION. NO FALSE SUCCESS REPORTS.**
+
+**INSPECT → IDENTIFY → VERIFY AUTHORIZATION → IMPLEMENT BOUNDED FIXES → TEST → REPORT.**
+
+Additional non-negotiable rules:
+
+- NO FAKE AUTHENTICATION.
+- NO FAKE DATABASE CONNECTIONS.
+- NO HARDCODED USERS, CHILDREN, CLASSES, OR SCHOOL RECORDS.
+- NO MOCK DATA PRESENTED AS REAL APPLICATION DATA.
+- NO SIMULATED SUCCESSFUL OPERATIONS.
+- NO FRONTEND-ONLY BUSINESS TRANSACTIONS.
+- NO CLIENT-SIDE AUTHORITY FOR ROLES OR PERMISSIONS.
+- NO DUPLICATE BACKEND OR PARALLEL APPLICATION.
+- NO UNAPPROVED DATABASE WRITES OR MIGRATIONS.
+- NO AUTOMATIC DESTRUCTIVE SQL.
+- NO UNRELATED CODE REFACTORING.
+- NO UNSUPPORTED CLAIMS OF COMPLETION.
+
+A successful build does not mean the application is correct.
+
+A visible screen does not mean a feature is implemented.
+
+A Supabase client existing in the repository does not mean the application uses a real database.
+
+---
+
+# 1. AUTHORITATIVE PROJECT SOURCES
+
+The current implementation repository is:
+
+`https://github.com/funmarket/KRISTOUSCHOOL`
+
+The original KRISTOU project is:
+
+`https://github.com/funmarket/Kristou`
+
+The original project serves as the architectural, behavioral, requirements, and UI reference.
+
+The preserved documents in the current workspace must be examined before any implementation.
+
+Read the complete relevant contents of:
+
+- `AGENTS.md`
+- `requirements.md`
+- `structure.md`
+- `docs/CANONICAL_MODEL.md`
+- `docs/DECISIONS.md`
+- `docs/LIVING_BUILD_PLAN.md`
+- All accepted implementation plans
+- All recovery and progress documents
+- All original UI reference files
+- All preserved screenshots, HTML references, images, design assets, and visual acceptance instructions
+
+Use their actual locations. Do not assume every named file is available.
+
+In the inspected new repository, copies of the original requirements and structure documents were located under `public/assets/aistudio/`.
+
+Those copies are useful, but they do not automatically replace the complete authoritative document set.
+
+If the original UI references are not available, report them as missing. Never invent an allegedly equivalent design.
+
+## SOURCE PRECEDENCE
+
+1. Latest explicit Product Owner instructions
+2. Accepted original KRISTOU requirements
+3. Accepted architecture and canonical model
+4. Accepted design references
+5. Current approved implementation plan
+6. Verified existing implementation
+7. Historical recovery material
+
+The current Product Owner decision is to use Supabase PostgreSQL as the canonical application database.
+
+That decision supersedes previous database-provider choices only.
+
+It does not authorize changing the identity model, product scope, domain ownership, UI, or other approved infrastructure.
+
+---
+
+# 2. UNDERSTAND WHAT THE PREVIOUS IMPLEMENTATION GOT WRONG
+
+The previous source audit identified concrete problems.
+
+You must independently verify whether they still exist in the current workspace before changing anything.
+
+Do not assume the GitHub snapshot is identical to your current working tree.
+
+## PROBLEM A — SIMULATED AUTHENTICATION
+
+Previously inspected:
+
+`src/context/AppContext.tsx`
+
+The `login()` implementation accepted arbitrary usernames and ignored password verification.
+
+The application initialized a predefined parent user and allowed users to switch between roles such as Parent, Student, Teacher, Manager, and Admin.
+
+This is not authentication.
+
+It is not authorization.
+
+It must never be represented as a secure school account system.
+
+### REQUIRED CORRECTION
+
+Implement the documented canonical identity model.
+
+Support the approved Web authentication and session workflow.
+
+Verify credentials securely.
+
+Use server-controlled user identity and role/capability assignments.
+
+Enforce authorization independently of visible UI controls.
+
+A browser user must not become an administrator by changing React state.
+
+Do not grant child access to arbitrary accounts.
+
+Remove simulated login fallbacks from the real authentication path.
+
+If demonstration mode is retained for development, isolate it completely from production authentication and clearly mark it as non-production. Do not use it to satisfy acceptance tests.
+
+## PROBLEM B — MOCK SCHOOL DATA
+
+Previously inspected:
+
+`src/data/mockData.ts`
+
+`src/context/AppContext.tsx`
+
+The application populated school data from mock arrays.
+
+These included users, children, classes, teachers, announcements, homework, calendar events, questions, notes, messages, pickup records, and the food menu.
+
+### REQUIRED CORRECTION
+
+Replace the mock-backed production data paths with real, authorized persistence.
+
+Implement actual loading, mutations, validation, and error handling.
+
+Data must come from the appropriate authorized backend services and Supabase database records.
+
+Do not replace missing database data with invented children, teachers, classes, or school events.
+
+When the database contains no records, show an accurate empty state.
+
+If connectivity fails, show an accurate failure state.
+
+Never display a fabricated success response.
+
+## PROBLEM C — SUPABASE EXISTS BUT IS NOT WIRED
+
+Previously inspected:
+
+`src/lib/supabase.ts`
+
+The file created a Supabase client, but the major application screens and context continued using mock data and local-state operations.
+
+### REQUIRED CORRECTION
+
+Supabase must become the genuine persistence foundation of the application.
+
+However, do not place every business rule inside React components or allow privileged operations to be performed directly from the browser.
+
+Preserve the clean backend architecture and ownership boundaries.
+
+Use properly authenticated, authorized API operations and approved persistence adapters.
+
+Do not expose privileged Supabase credentials to the frontend.
+
+## PROBLEM D — FAKE TELEGRAM ACCOUNT LINKING
+
+The previous `connectTelegram()` operation changed a local property and displayed a successful connection notification.
+
+This is not account linking.
+
+### REQUIRED CORRECTION
+
+Implement the original Web/Telegram identity architecture.
+
+Validate Telegram `initData` cryptographically.
+
+Respect its freshness and integrity requirements.
+
+Use the documented explicit account-linking challenge.
+
+Never automatically merge unrelated identities.
+
+Never display "Telegram connected" without a verified server-side association.
+
+Browser and Telegram must access the same backend and canonical user model.
+
+Do not construct a second school application for Telegram.
+
+## PROBLEM E — FRONTEND-ONLY PICKUP OPERATIONS
+
+Previously inspected:
+
+`src/components/views/PickupBoardView.tsx`
+
+`src/context/AppContext.tsx`
+
+Parent arrival and student release were simulated through React state updates.
+
+This is unacceptable for a safety-critical school workflow.
+
+### REQUIRED CORRECTION
+
+Enforce the original safety invariant:
+
+**A parent may announce arrival. Only authorized school staff may release a child.**
+
+Implement the documented pickup state machine, authorization, approved pickup-person rules, concurrency handling, persistent records, event delivery, live status synchronization, and audit trail.
+
+The authoritative state must live in the backend/database.
+
+A parent action must never mark a child as released.
+
+A teacher or manager must not gain release authority merely because their role appears in a frontend variable.
+
+Do not report arrival success before the required authoritative operation has completed.
+
+If the necessary database or live coordination service is unavailable, fail safely and provide the school's documented fallback procedure.
+
+Until this behavior is verified, do not expose the pickup interface as an operational safety system.
+
+---
+
+# 3. EXACT UI/UX — REPRODUCE THE ORIGINAL KRISTOU EXPERIENCE
+
+The original KRISTOU SCHOOL UI is the visual source of truth.
+
+The new application must not substitute Gemini's default design preferences for accepted KRISTOU references.
+
+Inspect the actual reference assets, approved screens, styling, interaction rules, responsive layouts, and application shell.
+
+Preserve verified correct UI work already present in the new application.
+
+Only replace elements whose deviation from the reference has been demonstrated.
+
+## UI REQUIREMENTS
+
+Implement the documented:
+
+- Branding and school identity
+- Navigation architecture
+- Home layout
+- Role-specific experiences
+- Parent and child presentation
+- Class Community
+- Teacher and administration pages
+- Food Menu
+- Registration
+- Pickup
+- Notifications
+- Profile and account controls
+- Mobile layout
+- Light appearance
+- Pitch Black dark appearance
+- Arabic RTL
+- French and English LTR
+- Telegram WebView behavior
+
+Keep typography, spacing, sizing, visual hierarchy, cards, buttons, icons, image treatment, layout structure, and interactive behavior faithful to the original references.
+
+Do not redesign a screen merely because another template looks more modern.
+
+Do not invent UI acceptance evidence.
+
+Where a specific reference is unavailable, mark visual fidelity as unverified.
+
+## NO FAKE UI FUNCTIONALITY
+
+Every visible action must do what it claims.
+
+If a user selects a child, only authorized linked children should be available.
+
+If a teacher publishes homework, it must be saved through the backend and become visible to the correct class.
+
+If a parent sends a note, the operation must respect the real school rules and persist successfully before confirming delivery.
+
+If a user changes language, all supported interface surfaces must respond correctly.
+
+If a user navigates to a protected page, the server must enforce access.
+
+No decorative functionality disguised as working functionality.
+
+---
+
+# 4. REAL SUPABASE POSTGRESQL — DATABASE SOURCE OF TRUTH
+
+Use the existing authorized Supabase project:
+
+`bzerboixpbwfvmbnbzxd`
+
+This is the intended project identifier, not proof of current access or schema state.
+
+Do not create another database.
+
+Do not migrate to Firebase, MongoDB, SQLite, or an unapproved provider.
+
+Do not silently migrate identity to Supabase Auth.
+
+## DATABASE INSPECTION
+
+Before any SQL modification, inspect the actual database state and document:
+
+1. Existing schemas and tables
+2. Constraints and relationships
+3. Database functions and triggers
+4. Indexes
+5. Row Level Security policies
+6. Authentication-related structures
+7. Migration history
+8. Existing records and preservation risks
+9. Missing structures required by the canonical model
+10. Conflicts between the current schema and original requirements
+
+If access is unavailable, mark the database as unverified.
+
+Do not fabricate schema inspection results.
+
+## MANUAL SQL APPROVAL GATE
+
+**NO DATABASE SCHEMA MUTATIONS WITHOUT EXPLICIT PRODUCT OWNER APPROVAL OF THE EXACT SQL.**
+
+For each proposed change:
+
+1. Show the exact SQL statement.
+2. Explain why it is necessary.
+3. Identify affected tables and records.
+4. Explain security implications.
+5. Identify destructive or irreversible behavior.
+6. Explain rollback or recovery possibilities.
+7. Provide verification queries.
+8. STOP and request explicit approval.
+
+Approval of one SQL batch does not authorize subsequent batches.
+
+Do not automatically run SQL because it is generated or because a tool permits execution.
+
+Do not apply schema changes through an implicit GitHub synchronization assumption.
+
+Use the Supabase SQL Editor or an explicitly authorized direct database connection.
+
+If you cannot verify an SQL execution, report it as NOT VERIFIED.
+
+---
+
+# 5. RESTORE REAL BACKEND AND DOMAIN OWNERSHIP
+
+The application must implement the original KRISTOU clean architecture.
+
+**PORTS FOR ASKING. ORCHESTRATORS FOR COORDINATING. DOMAINS FOR OWNING.**
+
+Do not turn the application into one large React context that owns authentication, classes, children, communication, pickup, registration, and database transactions.
+
+Use narrow, properly owned responsibilities.
+
+The exact domain boundaries must be derived from the authoritative `structure.md` and canonical model.
+
+The original project architecture includes dedicated ownership for API/runtime, frontend, domain logic, persistence, shared contracts, testing, and background processing.
+
+Adapt the existing new application toward that design through bounded changes.
+
+Do not blindly copy folders from the original repository.
+
+Do not introduce duplicate ownership or circular dependencies.
+
+Each feature must use an actual, authorized request flow:
+
+User action → frontend validation → authenticated backend operation → domain authorization and rules → database transaction → verified result → UI update.
+
+For asynchronous workflows, follow the documented durable event and worker requirements.
+
+Do not confuse optimistic UI state with committed database truth.
+
+---
+
+# 6. RESTORE ALL DOCUMENTED SCHOOL FEATURES
+
+The new application must be compared against every original accepted requirement.
+
+The following areas require particular attention.
+
+## PARENTS AND CHILDREN
+
+Implement real guardian-child relationships.
+
+Parents may access only the children and private class information to which they are authorized.
+
+Child identities and enrollment relationships must originate from the canonical database.
+
+## STUDENTS AND CLASS COMMUNITY
+
+Students access their active enrolled class.
+
+Class Questions must enforce:
+
+- Class membership
+- Maximum 200 characters
+- Approved posting limits
+- Moderation and reporting
+- Auditability
+- No private student-to-student messaging in the initial scope
+- Immediate access revocation when active membership ends
+
+Do not use a hardcoded first class such as `classesList[0]` to determine the user's authorized class.
+
+## TEACHERS
+
+Implement authorized teacher workflows for assigned classes, including the original requirements for announcements, homework, calendar, documents, notes, class questions, and pickup.
+
+Do not grant global administration capabilities to ordinary teachers.
+
+## MANAGERS AND ADMINISTRATORS
+
+Implement the documented capability-specific management system.
+
+Include the accepted administration responsibilities for school configuration, staff roles, public information, food menus, registration review, broadcasts, moderation, notifications, and pickup controls.
+
+Do not implement administrator privileges through a frontend role selector.
+
+## PARENT NOTES
+
+Implement the exact original rules:
+
+- Maximum 11 parent-originated notes per day
+- Sending window 08:00 inclusive to 18:00 exclusive
+- Africa/Tunis timezone
+- Quota reset at 08:00
+- Concurrency-safe quota enforcement
+- Authorized child association
+- Valid class/teacher association
+- Appropriate privacy
+- Teacher/admin replies that do not consume parent quota
+
+These rules must be enforced in the backend, not only in React.
+
+## SHORT MESSAGES
+
+Implement the original short operational messaging system separately from Parent Notes.
+
+Respect the documented 200-character limit, authorization, threads, replies, read state, notifications, and moderation.
+
+Do not introduce unapproved private student messaging.
+
+## HOMEWORK, CALENDAR, GALLERY, AND DOCUMENTS
+
+Implement actual school-owned publishing and content access.
+
+Support permitted attachments and protected media/document access.
+
+Separate class-private resources from public content.
+
+Do not expose enrollment or identity documents through public galleries or class feeds.
+
+## FOOD MENU — LA TOQUE GOURMANDE
+
+Preserve the original provider identity and supported lifecycle.
+
+Implement actual weekly menus with the documented structured entries, appropriate media, draft/published/archive states, and authorized management.
+
+Do not present hardcoded mock menu data as a published school menu.
+
+## SCHOOL BROADCASTS
+
+Implement the documented audience targeting and publication lifecycle.
+
+Maintain one canonical publication rather than duplicate independent broadcast truth for each class.
+
+## REGISTRATION AND ENROLLMENT
+
+The current form previously displayed a successful submission without database persistence.
+
+Replace that with an actual enrollment application workflow.
+
+Implement the documented states, supporting documents, staff review, and class-enrollment conditions.
+
+Academic-year settings must be configurable.
+
+Do not hardcode outdated school years or invent Tunisian legal requirements.
+
+## NOTIFICATIONS
+
+Connect notifications to real authorized events.
+
+Use persistent notification state and the documented notification sound behavior.
+
+Do not simulate a successful notification with an arbitrary local list entry.
+
+## PICKUP AND STUDENT SAFETY
+
+Treat pickup as a high-priority, safety-critical domain.
+
+Implement the complete documented flow, including authorized pickup people, parent arrival, staff release, manager oversight, early leave, outage handling, and audit.
+
+No shortcut is acceptable.
+
+## AI ASSISTANT
+
+Preserve AI as an optional, later-phase capability, unless the governing plan explicitly schedules it.
+
+Do not make core school functionality depend on Gemini or Cloudflare.
+
+An AI assistant must use authorized application APIs rather than bypassing domain permissions.
+
+AI must never autonomously authorize student release, approve enrollment, grant privileges, or perform destructive school actions.
+
+---
+
+# 7. MULTILINGUAL COMPLETENESS
+
+KRISTOU requires:
+
+**ARABIC — FRENCH — ENGLISH**
+
+Do not treat a translation dictionary as proof that localization is complete.
+
+Audit every implemented screen and interaction for hardcoded user-facing strings.
+
+Use consistent translation keys and approved content-localization behavior.
+
+Arabic must be correctly right-to-left.
+
+French and English must be correctly left-to-right.
+
+Verify direction, navigation, forms, modal placement, typography, truncation, and responsive layouts.
+
+Do not machine-translate product content without authorization.
+
+---
+
+# 8. CLEAN EXISTING-CODE REPLACEMENT
+
+The application already contains useful React UI work.
+
+Preserve it where it matches the original requirements.
+
+Do not delete the whole application and regenerate everything.
+
+Do not rewrite functioning components simply to change their coding style.
+
+For every correction:
+
+1. Identify the canonical owner.
+2. Identify the exact existing implementation.
+3. Identify the proven defect or missing requirement.
+4. Identify the smallest authorized set of files.
+5. Establish a failing behavioral test when appropriate.
+6. Replace the incorrect implementation at its owner.
+7. Remove obsolete duplicate logic only within approved scope.
+8. Run focused tests.
+9. Run applicable regression checks.
+10. Report the exact diff.
+
+Do not leave the old mock implementation active alongside a new backend implementation.
+
+Do not introduce two competing sources of truth.
+
+Do not change unrelated behavior while fixing one feature.
+
+**DO NOT TOUCH UNRELATED APPLICATION FEATURES OR ANOTHER AGENT'S WORK.**
+
+---
+
+# 9. CONTROLLED EXECUTION — NO SCOPE DRIFT
+
+The overall recovery objective is broad.
+
+That does not authorize performing every mutation simultaneously.
+
+Divide the work into small, independently verifiable implementation packets.
+
+Only one packet may be active at a time.
+
+Before each packet, produce:
+
+**CURRENT_COMMAND**
+
+The exact bounded work being undertaken.
+
+**SOURCE_TRUTH**
+
+The governing documents and currently verified source.
+
+**VERIFIED_STATE**
+
+Current workspace, relevant files, dependencies, and database state.
+
+**AUTHORIZED**
+
+Exact permitted changes and their authorization basis.
+
+**FORBIDDEN**
+
+Protected files, unrelated features, external resources, Git operations, and database actions.
+
+**ACCEPTANCE**
+
+Exact expected behaviors and tests.
+
+**STOP_CONDITIONS**
+
+Unknown schema, missing reference, ambiguous ownership, concurrent changes, unapproved SQL, security contradiction, or insufficient verification.
+
+Do not infer authorization merely because a change would help the eventual product.
+
+A missing requirement is not automatically permission to modify unrelated code.
+
+If another agent changes an affected file, stop and reverify before proceeding.
+
+Do not use a broad rewrite to solve a narrow defect.
+
+---
+
+# 10. REQUIRED VERIFICATION
+
+Every claimed implementation must be accompanied by real evidence.
+
+At minimum, as relevant:
+
+- TypeScript compile
+- Application build
+- Lint and formatting
+- Unit tests
+- API tests
+- Database integration tests
+- Authorization denial tests
+- Identity and account-linking tests
+- Parent/child privacy tests
+- Quota and time-window tests
+- Pickup state-machine tests
+- Pickup concurrency and audit tests
+- Realtime synchronization tests
+- Persistent data verification
+- Browser interaction tests
+- Responsive layout tests
+- Arabic RTL tests
+- French/English LTR tests
+- Telegram Mini App tests
+
+Use actual installed dependencies and configured execution environments.
+
+Do not invent command output.
+
+Do not disable validation to make a build green.
+
+Do not convert failing tests into passing tests by weakening their assertions.
+
+A feature is complete only when its required behavior is verified.
+
+If tests cannot run, report the blocker.
+
+If database access cannot be verified, do not claim persistence is working.
+
+If the UI reference cannot be compared, do not claim exact visual fidelity.
+
+---
+
+# 11. REQUIRED STATUS REPORT
+
+After every bounded packet, report:
+
+**COMMAND:** Exact current task
+
+**STARTING STATE:** Workspace and inspected source identifiers
+
+**DOCUMENT AUTHORITY:** Requirements supporting the work
+
+**CHANGED FILES:** Exact list
+
+**DATABASE CHANGES:** None, proposed, approved, applied, or blocked
+
+**TESTS:** Commands and actual results
+
+**UI VERIFICATION:** Evidence and remaining discrepancies
+
+**SECURITY VERIFICATION:** Permission and negative-test results
+
+**UNRELATED WORK:** Confirmation from the inspected diff that unrelated files remained untouched
+
+**RESULT:** PASS / FAIL / BLOCKED / PARTIAL
+
+**REMAINING GAPS:** Exact items
+
+**NEXT PACKET:** Proposed next work, not automatically authorized
+
+Never describe a partially implemented feature as complete.
+
+Never report SQL as executed when it has only been prepared.
+
+Never report a build as passing without an actual successful build.
+
+Never report a feature as production-ready based only on source inspection.
+
+---
+
+# 12. FIRST ACTION — DO THIS NOW
+
+Start with a read-only reconciliation of the current Gemini workspace against the authoritative original KRISTOU project.
+
+Identify:
+
+1. What Gemini already implemented correctly.
+2. What exists only visually.
+3. What still depends on mock data.
+4. What incorrectly simulates successful behavior.
+5. What is missing from the original plan.
+6. What differs from the original UI references.
+7. What backend boundaries are missing.
+8. What Supabase configuration exists.
+9. What database schema and permissions can actually be verified.
+10. Which existing files belong to another agent or another active work packet.
+11. Which corrections are essential before private or safety-critical operations can be enabled.
+12. Which features can be repaired independently without changing unrelated code.
+
+Produce a requirement-to-implementation matrix with:
+
+- Original requirement
+- Authoritative source
+- Current implementation files
+- Verified behavior
+- Missing behavior
+- Correct owning domain
+- Expected API/database interaction
+- Required tests
+- Priority
+- Proposed minimal correction
+
+Then establish the first bounded implementation packet.
+
+The initial priority must be secure identity and the real application/backend/database foundation, together with disabling or clearly isolating unsafe simulated operations.
+
+Do not build additional decorative pages while the foundation remains simulated.
+
+Do not change Supabase SQL without explicit approval.
+
+Do not commit, push, merge, or deploy.
+
+Local implementation changes are permitted only after exact scope and authorization have been verified.
+
+---
+
+# FINAL INSTRUCTION — KRISTOU IS A REAL SCHOOL APPLICATION
+
+The original KRISTOU SCHOOL project was carefully designed with detailed roles, permissions, school workflows, security requirements, a shared Web/Telegram architecture, domain ownership, and UI references.
+
+We started a new application to implement that vision correctly, not to lose it.
+
+Do not replace that vision with a generic React demonstration.
+
+Do not invent fictional school records to make empty screens look populated.
+
+Do not simulate sending notes, admitting students, connecting Telegram, or releasing children.
+
+Do not treat Supabase client initialization as a working database integration.
+
+Do not confuse application appearance with application functionality.
+
+Build the real KRISTOU SCHOOL application from the existing documented requirements, preserving correct work and repairing incorrect implementation through controlled, verified changes.
+
+**DO NOT TOUCH UNRELATED APPLICATION FEATURES OR ANOTHER AGENT'S WORK.**
+
+**DO NOT COMMIT, PUSH, MERGE OR DEPLOY.**
+
+**EXACT REFERENCE UI/UX. REAL DOMAIN OWNERSHIP. REAL BACKEND WIRING. CLEAN EXISTING-CODE REPLACEMENT. MANUAL SQL APPROVAL GATE. ZERO SCOPE DRIFT.**
+
+**NO FAKE PLACES. NO FAKE GPS. NO HARDCODED FILTER RESULTS. NO UNAPPROVED PROVIDER MIGRATION. NO FALSE SUCCESS REPORTS.**
+
+**INSPECT → IDENTIFY → VERIFY AUTHORIZATION → IMPLEMENT BOUNDED FIXES → TEST → REPORT.**
+
+Begin with the read-only inspection, identify the exact first authorized correction, and proceed only within its verified boundaries.
+
+**THE GOAL IS A REAL, SECURE, COMPLETE KRISTOU SCHOOL — NOT ANOTHER SIMULATION.**
