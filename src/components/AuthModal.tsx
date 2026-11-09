@@ -1,26 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, LockKeyhole } from 'lucide-react';
+import { X, Send, Lock, User as UserIcon } from 'lucide-react';
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { language, t } = useApp();
+  const { login, connectTelegram, t } = useApp();
+  const [username, setUsername] = useState('parent_karim');
+  const [password, setPassword] = useState('••••••••');
+  const [error, setError] = useState('');
 
-  // R1 containment only: do not present mock credentials or fake a valid session.
-  // R2 will reconnect this entry point to verified, administrator-approved accounts.
-  const unavailableMessage = {
-    ar: 'تسجيل الدخول إلى الحسابات المدرسية غير متاح حالياً. لا يمكن تفعيل أي حساب أو صلاحية دون التحقق والموافقة من إدارة التطبيق.',
-    fr: "La connexion aux comptes scolaires n'est pas encore disponible. Aucun compte ni rôle protégé ne peut être activé sans vérification et approbation de l'administration.",
-    en: 'School account sign-in is not available yet. No protected account or role can be activated without verification and administrator approval.',
-  }[language];
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username) {
+      setError('Veuillez entrer un nom d’utilisateur');
+      return;
+    }
+    const success = login(username, password);
+    if (success) {
+      onClose();
+    } else {
+      setError('Identifiants incorrects');
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="kristou-signin-title" className="bg-white dark:bg-[#111111] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800 relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-[#111111] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800 relative">
         <button
-          type="button"
           onClick={onClose}
-          aria-label={language === 'ar' ? 'إغلاق' : language === 'en' ? 'Close' : 'Fermer'}
-          className="absolute top-4 end-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
         >
           <X className="w-5 h-5" />
         </button>
@@ -31,13 +38,69 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             alt="KRISTOU SCHOOL"
             className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
           />
-          <h2 id="kristou-signin-title" className="text-xl font-bold text-gray-900 dark:text-white">{t('login')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('login')}</h2>
           <p className="text-xs text-gray-500 mt-1">École Primaire Privée Kristou School</p>
         </div>
 
-        <div role="status" className="rounded-2xl border border-k-brand/25 bg-k-brand/10 dark:bg-k-brand/15 p-5 text-center">
-          <LockKeyhole className="w-7 h-7 mx-auto mb-3 text-k-brand" />
-          <p className="text-sm leading-relaxed font-medium text-gray-800 dark:text-gray-100">{unavailableMessage}</p>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 text-red-600 text-xs rounded-xl font-medium">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              {t('username')}
+            </label>
+            <div className="relative">
+              <UserIcon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-k-brand"
+                placeholder="Ex: parent_karim"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              {t('password')}
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-k-brand"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 bg-k-brand hover:bg-k-brand-strong text-white font-semibold rounded-xl text-sm shadow-lg shadow-k-brand/25 transition-all"
+          >
+            {t('login')}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+          <p className="text-xs text-gray-500 mb-3">Accès rapide Telegram Mini App</p>
+          <button
+            onClick={() => {
+              connectTelegram();
+              onClose();
+            }}
+            className="w-full py-2.5 bg-[#229ED9] hover:bg-[#1e8bc3] text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-md transition-all"
+          >
+            <Send className="w-4 h-4" />
+            <span>Connexion via Telegram initData</span>
+          </button>
         </div>
       </div>
     </div>
