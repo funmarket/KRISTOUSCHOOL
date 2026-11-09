@@ -1070,34 +1070,17 @@ The app must remain functional without AI.
 
 # 43. Infrastructure direction
 
-Current verified candidate deployment:
+Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. This is a target direction, not evidence that any Supabase project is provisioned, linked, deployed, or serving this repository.
 
-## Railway
+Railway is not the selected backend/database provider for this repository. Do not carry over its service names, deployment branches, environment variables, endpoints, or historical deployment claims from `funmarket/Kristou`.
 
-Railway is the current hosting/runtime authority for the KRISTOU candidate:
+Frontend hosting is not decided by selecting Supabase for the backend. Keep one canonical KRISTOU frontend and make a separate hosting decision only when deployment is in scope.
 
-- Web frontend (`web-candidate`);
-- API (`api-candidate`);
-- PostgreSQL;
-- Redis/Valkey.
+Local, staging, and production must use isolated configuration, secrets, and data. Schema and security changes must be tracked as migrations and tested locally before a hosted project is changed.
 
-The verified Web deployment is sourced from the repository's `deploy-candidate` lineage and builds with `npm run build:web`.
+The existing username-plus-password requirement must be reconciled with the selected authentication provider before protected account implementation. Do not silently change login identifiers or weaken the identity model.
 
-## Cloudflare
-
-Cloudflare is not the current frontend hosting authority.
-
-It is reserved for later AI/edge capabilities when that phase is explicitly implemented, including where approved:
-
-- Workers / Workers AI;
-- AI Gateway;
-- optional R2/object storage if separately selected.
-
-Introducing Cloudflare must not fork the KRISTOU product frontend or create a second application/runtime authority.
-
-Local, staging, and production must use isolated configuration/secrets/data.
-
-Provider/runtime state is mutable; fresh deployment evidence overrides stale documentation about what is currently live.
+Provider/runtime state is mutable; fresh evidence in this repository overrides stale documentation or progress from another repository.
 
 ---
 
