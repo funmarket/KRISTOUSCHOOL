@@ -11,13 +11,9 @@ import {
   Shield,
   Send,
   Menu,
-  X,
   BookOpen,
-  Utensils,
   GraduationCap,
   Users,
-  Calendar,
-  MessageSquare,
   ShieldCheck,
   CheckCircle,
 } from 'lucide-react';
@@ -46,7 +42,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
 
-        {/* Right Actions: Language, Theme, Notifications, Profile, Role Switcher */}
+        {/* Right Actions: Language, Theme, Notifications, Profile */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
           {/* Language Dropdown */}
@@ -120,15 +115,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             title={theme === 'light' ? t('pitchBlack') : t('lightMode')}
           >
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
-          </button>
-
-          {/* Role Switcher Button */}
-          <button
-            onClick={() => setShowRoleModal(true)}
-            className="hidden sm:flex items-center space-x-1 rtl:space-x-reverse px-3 py-1.5 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand hover:bg-k-brand/15 dark:hover:bg-k-brand/20 text-xs font-semibold rounded-xl border border-k-brand/25 dark:border-blue-900 transition-colors"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>{currentRole}</span>
           </button>
 
           {/* Notifications Bell */}
@@ -179,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           <div ref={profileMenuRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                aria-label={currentUser ? t('home') : 'Menu'}
+                aria-label={language === 'ar' ? 'قائمة المستخدم' : language === 'en' ? 'User menu' : 'Menu utilisateur'}
                 aria-expanded={showProfileMenu}
                 onMouseEnter={() => setShowProfileMenu(true)}
                 className="flex items-center space-x-2 rtl:space-x-reverse p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -201,10 +187,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               {/* Profile Dropdown with Hover Bridge */}
               {showProfileMenu && (
                 <div
-                  className="absolute end-0 top-full pt-1.5 w-[min(18rem,calc(100vw-1rem))] z-50"
+                  className="absolute end-0 top-full pt-1.5 w-[min(19rem,calc(100vw-1rem))] z-50"
                   onMouseLeave={() => setShowProfileMenu(false)}
                 >
-                  <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
+                  <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 max-h-[min(75vh,38rem)] overflow-y-auto">
                   {currentUser && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                       <p className="font-bold text-sm text-gray-900 dark:text-white">{currentUser.fullName}</p>
@@ -283,6 +269,38 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     )}
                   </div>}
 
+                  {/* Development role selection lives inside the user menu, not the header. */}
+                  <div className="border-t border-gray-100 dark:border-gray-800 px-2 py-2">
+                    <p className="px-2 pb-2 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {language === 'ar' ? 'تجربة الأدوار' : language === 'en' ? 'Test profiles' : 'Profils de test'}
+                    </p>
+                    <div className="space-y-1">
+                      {rolesList.map(({ role, label, icon: RoleIcon }) => (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => { setCurrentRole(role); setShowProfileMenu(false); }}
+                          aria-current={currentRole === role ? 'true' : undefined}
+                          className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-start text-xs transition-colors ${currentRole === role ? 'bg-k-brand/10 text-k-brand font-bold dark:bg-k-brand/15' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        >
+                          <RoleIcon className="w-4 h-4 shrink-0" />
+                          <span className="flex-1">{label}</span>
+                          {currentRole === role && <CheckCircle className="w-4 h-4 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-100 dark:border-gray-800 py-1">
+                    <button
+                      type="button"
+                      onClick={() => { setShowProfileMenu(false); setShowAuthModal(true); }}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-k-brand hover:bg-k-brand/10"
+                    >
+                      {t('login')}
+                    </button>
+                  </div>
+
                   <div className="border-t border-gray-100 dark:border-gray-800 py-1">
                     {currentUser ? <button
                       onClick={() => { logout(); setShowProfileMenu(false); }}
@@ -290,12 +308,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     >
                       <LogOut className="w-4 h-4" />
                       <span>{t('logout')}</span>
-                    </button> : <button
-                      onClick={() => { setShowAuthModal(true); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-k-brand hover:bg-k-brand/10"
-                    >
-                      {t('login')}
-                    </button>}
+                    </button> : null}
                   </div>
                   </div>
                 </div>
@@ -303,47 +316,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
         </div>
       </div>
-
-      {/* Role Switcher Modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#111111] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Sélectionner un Rôle</h3>
-              <button onClick={() => setShowRoleModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">
-              Testez instantanément l'application depuis différentes perspectives d'utilisateurs selon les exigences de KRISTOU SCHOOL.
-            </p>
-            <div className="space-y-2">
-              {rolesList.map(r => {
-                const IconComponent = r.icon;
-                const isSelected = currentRole === r.role;
-                return (
-                  <button
-                    key={r.role}
-                    onClick={() => {
-                      setCurrentRole(r.role);
-                      setShowRoleModal(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected ? 'bg-k-brand/10 dark:bg-k-brand/15 border-k-brand text-k-brand dark:text-k-brand font-semibold' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200'}`}
-                  >
-                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-k-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm">{r.label}</span>
-                    </div>
-                    {isSelected && <CheckCircle className="w-4 h-4 text-k-brand dark:text-k-brand" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Auth Modal */}
       {showAuthModal && (
