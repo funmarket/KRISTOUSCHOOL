@@ -132,28 +132,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         </nav>
 
         {/* Right Actions: Language, Theme, Notifications, Profile, Role Switcher */}
-        <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <div className="flex items-center space-x-2 rtl:space-x-reverse shrink-0">
           
-          {/* Language Switcher */}
-          <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-            <button
-              onClick={() => setLanguage('ar')}
-              className={`px-2 py-1 text-xs font-semibold rounded-lg transition-all ${language === 'ar' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
+          {/* Language Dropdown */}
+          <div className="relative flex items-center">
+            <select
+              value={language}
+              onChange={e => setLanguage(e.target.value as any)}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-bold px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer uppercase"
             >
-              عربي
-            </button>
-            <button
-              onClick={() => setLanguage('fr')}
-              className={`px-2 py-1 text-xs font-semibold rounded-lg transition-all ${language === 'fr' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
-            >
-              FR
-            </button>
-            <button
-              onClick={() => setLanguage('en')}
-              className={`px-2 py-1 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
-            >
-              EN
-            </button>
+              <option value="ar">AR</option>
+              <option value="fr">FR</option>
+              <option value="en">EN</option>
+            </select>
           </div>
 
           {/* Theme Toggle */}
