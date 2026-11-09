@@ -3,23 +3,11 @@ import { useApp } from '../context/AppContext';
 import { AuthModal } from './AuthModal';
 import {
   Bell,
-  Globe,
   Moon,
   Sun,
   User as UserIcon,
   LogOut,
-  Shield,
-  Send,
   Menu,
-  X,
-  BookOpen,
-  Utensils,
-  GraduationCap,
-  Users,
-  Calendar,
-  MessageSquare,
-  ShieldCheck,
-  CheckCircle,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,7 +19,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const {
     currentUser,
     currentRole,
-    setCurrentRole,
     language,
     setLanguage,
     theme,
@@ -40,13 +27,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     logout,
     notifications,
     markNotificationRead,
-    connectTelegram,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,15 +51,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   }, [showProfileMenu]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
-
-  const rolesList: { role: any; label: string; icon: any }[] = [
-    { role: 'PUBLIC', label: 'Visiteur Public', icon: Globe },
-    { role: 'PARENT', label: 'Parent (Karim)', icon: Users },
-    { role: 'STUDENT', label: 'Élève (Yasmine)', icon: GraduationCap },
-    { role: 'TEACHER', label: 'Enseignante (Fatma)', icon: BookOpen },
-    { role: 'MANAGER', label: 'Manager (Anis)', icon: ShieldCheck },
-    { role: 'ADMIN', label: 'Admin Direction', icon: Shield },
-  ];
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#090909]/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
@@ -97,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
 
-        {/* Right Actions: Language, Theme, Notifications, Profile, Role Switcher */}
+        {/* Right Actions: Language, Theme, Notifications, Profile */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
           {/* Language Dropdown */}
@@ -120,15 +96,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             title={theme === 'light' ? t('pitchBlack') : t('lightMode')}
           >
             {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
-          </button>
-
-          {/* Role Switcher Button */}
-          <button
-            onClick={() => setShowRoleModal(true)}
-            className="hidden sm:flex items-center space-x-1 rtl:space-x-reverse px-3 py-1.5 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand hover:bg-k-brand/15 dark:hover:bg-k-brand/20 text-xs font-semibold rounded-xl border border-k-brand/25 dark:border-blue-900 transition-colors"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>{currentRole}</span>
           </button>
 
           {/* Notifications Bell */}
@@ -272,15 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       <UserIcon className="w-4 h-4 text-gray-400" />
                       <span>Mon Profil & Enfants</span>
                     </button>
-                    {!currentUser.telegramLinked && (
-                      <button
-                        onClick={() => { connectTelegram(); setShowProfileMenu(false); }}
-                        className="w-full text-start px-4 py-2 text-xs font-medium text-k-brand dark:text-k-brand hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
-                      >
-                        <Send className="w-4 h-4" />
-                        <span>{t('telegramConnect')}</span>
-                      </button>
-                    )}
+
                   </div>}
 
                   <div className="border-t border-gray-100 dark:border-gray-800 py-1">
@@ -303,47 +262,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
         </div>
       </div>
-
-      {/* Role Switcher Modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#111111] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Sélectionner un Rôle</h3>
-              <button onClick={() => setShowRoleModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">
-              Testez instantanément l'application depuis différentes perspectives d'utilisateurs selon les exigences de KRISTOU SCHOOL.
-            </p>
-            <div className="space-y-2">
-              {rolesList.map(r => {
-                const IconComponent = r.icon;
-                const isSelected = currentRole === r.role;
-                return (
-                  <button
-                    key={r.role}
-                    onClick={() => {
-                      setCurrentRole(r.role);
-                      setShowRoleModal(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected ? 'bg-k-brand/10 dark:bg-k-brand/15 border-k-brand text-k-brand dark:text-k-brand font-semibold' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200'}`}
-                  >
-                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-k-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm">{r.label}</span>
-                    </div>
-                    {isSelected && <CheckCircle className="w-4 h-4 text-k-brand dark:text-k-brand" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Auth Modal */}
       {showAuthModal && (
