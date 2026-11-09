@@ -34,7 +34,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
         <div className="text-center mb-6">
           <img
-            src="/public/assets/kristou-logo.png"
+            src="/assets/kristou-logo.png"
             alt="KRISTOU SCHOOL"
             className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
           />
@@ -59,7 +59,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-k-brand"
                 placeholder="Ex: parent_karim"
               />
             </div>
@@ -75,7 +75,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-k-brand"
                 placeholder="••••••••"
               />
             </div>
@@ -83,7 +83,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-500/25 transition-all"
+            className="w-full py-3 bg-k-brand hover:bg-k-brand-strong text-white font-semibold rounded-xl text-sm shadow-lg shadow-k-brand/25 transition-all"
           >
             {t('login')}
           </button>
