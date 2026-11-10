@@ -567,3 +567,10 @@ This update supersedes the secret diagnosis and next-step assumptions in §§8, 
 - The latest CORS response still includes a trailing slash in `Access-Control-Allow-Origin` (`https://kristouschool.vercel.app/`). Set `ALLOWED_ORIGIN` in the same Supabase project to exactly `https://kristouschool.vercel.app`.
 - `https://t.me/kristouschool_bot/dreambig` is a valid Telegram direct-link shape if `dreambig` is configured as the Mini App short name. The current `src/` contains no code that reads `Telegram.WebApp.initData` or calls `telegram-auth`, so the direct link alone does not finish authentication. Add the bridge in a separate UI PR; do not add UI files to PR #9.
 - Next: review and push the source fix to PR #9, correct the CORS secret, deploy only after review/authorization, then test with fresh `initData` from a real Telegram WebApp. Never fabricate or log a valid payload. Do not merge PR #9 without explicit user instruction.
+
+
+---
+
+## 18. Post-push status (2026-11-11)
+
+A fresh GitHub check confirmed PR #9 remains OPEN and MERGEABLE at `193c67beec36fc9646617e87c176d009f772b2a1`. The PR now contains the verifier correction (`9a16841`) and updated continuation evidence. No merge or Supabase deployment was performed; the hosted functions remain at version 5, so the verifier fix is source-reviewed through PR #9 but not yet live. Next steps: review the PR, correct `ALLOWED_ORIGIN` to the exact deployed origin without a trailing slash, separately authorize deployment, add the `Telegram.WebApp.initData` bridge in a UI PR, then run a real Telegram WebApp flow with fresh `initData`.

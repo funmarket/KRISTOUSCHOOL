@@ -743,3 +743,8 @@ Review against [Telegram's official Mini Apps validation instructions](https://c
 The latest CORS response still advertises `https://kristouschool.vercel.app/` with a trailing slash. Set the Supabase Function Secret `ALLOWED_ORIGIN` to exactly `https://kristouschool.vercel.app` so it matches the browser Origin.
 
 The Telegram link `https://t.me/kristouschool_bot/dreambig` uses Telegram's direct-link shape only if `dreambig` is configured as the bot's Mini App short name. The current frontend does not read `Telegram.WebApp.initData` or invoke `telegram-auth`; opening the direct link by itself cannot complete the app auth flow. Implement that runtime bridge in a separate UI change after the backend verifier is reviewed/deployed. Then test with fresh `initData` supplied by a real Telegram WebApp; do not fabricate or log it.
+
+
+### Publication status (2026-11-11)
+
+The backend verifier correction and its synthetic tests are now pushed to open PR #9 at head `193c67beec36fc9646617e87c176d009f772b2a1` (fix commit `9a16841`). PR #9 remains unmerged. Supabase still runs `telegram-auth` version 5; no deployment was performed. Review the PR and resolve the exact CORS-origin secret before separately authorizing a deployment. The frontend `Telegram.WebApp.initData` bridge and real-session verification remain future work.

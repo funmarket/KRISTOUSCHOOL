@@ -58,3 +58,8 @@ For every future entry, record exact branch/HEAD, files changed, migrations, tes
 - Live CORS verification after the user reported saving the origin still observed `Access-Control-Allow-Origin: https://kristouschool.vercel.app/` (trailing slash), which does not match the browser Origin `https://kristouschool.vercel.app`. Correct only `ALLOWED_ORIGIN` to the exact no-trailing-slash origin in the same Supabase project.
 - The direct link `https://t.me/kristouschool_bot/dreambig` follows Telegram's direct-link format if `dreambig` is configured as the bot's Mini App short name. The current `src/` tree has no Telegram WebApp bridge or call to `telegram-auth`; opening the link alone therefore cannot complete app authentication. Keep that client integration in a separate UI PR, not PR #9.
 - No valid live Telegram `initData` was supplied or tested. Deployed function version 5 remains unchanged; the corrected source must be reviewed and deployed before a real end-to-end test.
+
+## PR #9 publication status (2026-11-11)
+
+- After a fresh state check confirmed PR #9 remained OPEN on the expected head, the two validated commits were fast-forward pushed to `feature/supabase-telegram-deployment`. GitHub now reports PR #9 OPEN/MERGEABLE at `193c67beec36fc9646617e87c176d009f772b2a1`, including verifier fix `9a16841` and the documentation update.
+- No PR merge or Supabase deployment was performed. Live `telegram-auth` remains version 5, so the HMAC correction is not live yet.
