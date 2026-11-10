@@ -68,23 +68,23 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const rolesList: { role: any; label: string; icon: any }[] = [
-    { role: 'PUBLIC', label: 'Visiteur Public', icon: Globe },
-    { role: 'PARENT', label: 'Parent (Karim)', icon: Users },
-    { role: 'STUDENT', label: 'Élève (Yasmine)', icon: GraduationCap },
-    { role: 'TEACHER', label: 'Enseignante (Fatma)', icon: BookOpen },
-    { role: 'MANAGER', label: 'Manager (Anis)', icon: ShieldCheck },
-    { role: 'ADMIN', label: 'Admin Direction', icon: Shield },
+    { role: 'PUBLIC', label: t('rolePublic'), icon: Globe },
+    { role: 'PARENT', label: t('roleParent'), icon: Users },
+    { role: 'STUDENT', label: t('roleStudent'), icon: GraduationCap },
+    { role: 'TEACHER', label: t('roleTeacher'), icon: BookOpen },
+    { role: 'MANAGER', label: t('roleManager'), icon: ShieldCheck },
+    { role: 'ADMIN', label: t('roleAdmin'), icon: Shield },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#090909]/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
+    <header dir="ltr" className="sticky top-0 z-50 bg-white/90 dark:bg-[#090909]/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0" onClick={() => setActiveTab('home')}>
           <img
             src="/assets/kristou-logo.png"
-            alt="KRISTOU SCHOOL"
+            alt={t('school')}
             className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain bg-white dark:bg-gray-800 p-0.5 shadow-md border border-gray-200 dark:border-gray-700 shrink-0"
           />
           <div>
@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               KRISTOU
             </span>
             <span className="hidden sm:block text-xs text-k-brand font-medium">
-              École Primaire Privée
+              {t('school')}
             </span>
           </div>
         </div>
@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow-xs">
+                <span className="absolute top-1 end-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow-xs">
                   {unreadCount}
                 </span>
               )}
@@ -147,14 +147,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 sm:right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
+              <div className="absolute end-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">{t('notifications')}</h3>
-                  <span className="text-xs text-k-brand dark:text-k-brand font-medium">{unreadCount} non lues</span>
+                  <span className="text-xs text-k-brand dark:text-k-brand font-medium">{unreadCount} {t('unread')}</span>
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
                   {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">Aucune notification</div>
+                    <div className="p-4 text-center text-sm text-gray-500">{t('noNotifications')}</div>
                   ) : (
                     notifications.map(n => (
                       <div
@@ -179,7 +179,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           <div ref={profileMenuRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                aria-label={currentUser ? t('home') : 'Menu'}
+                aria-label={currentUser ? t('account') : t('login')}
                 aria-expanded={showProfileMenu}
                 onMouseEnter={() => setShowProfileMenu(true)}
                 className="flex items-center space-x-2 rtl:space-x-reverse p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -270,7 +270,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       className="w-full text-start px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
                     >
                       <UserIcon className="w-4 h-4 text-gray-400" />
-                      <span>Mon Profil & Enfants</span>
+                      <span>{t('profile')}</span>
                     </button>
                     {!currentUser.telegramLinked && (
                       <button
@@ -306,16 +306,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
       {/* Role Switcher Modal */}
       {showRoleModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#111111] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800">
+        <div className="fixed inset-0 z-50 min-h-[100dvh] overflow-y-auto bg-black/60 p-4 backdrop-blur-xs">
+          <div className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-md items-center"><div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-[#111111]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Sélectionner un Rôle</h3>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">{t('roleModalTitle')}</h3>
               <button onClick={() => setShowRoleModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-xs text-gray-500 mb-4">
-              Testez instantanément l'application depuis différentes perspectives d'utilisateurs selon les exigences de KRISTOU SCHOOL.
+              {t('roleModalHint')}
             </p>
             <div className="space-y-2">
               {rolesList.map(r => {
@@ -341,7 +341,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 );
               })}
             </div>
-          </div>
+          </div></div>
         </div>
       )}
 

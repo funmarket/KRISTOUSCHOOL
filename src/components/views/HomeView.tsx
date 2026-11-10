@@ -28,7 +28,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
       
       {/* Hero Banner */}
       <div className="relative rounded-3xl bg-gradient-to-r from-k-brand via-k-brand to-k-brand-strong text-white p-6 sm:p-10 overflow-hidden shadow-xl">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute end-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center space-x-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-4">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />

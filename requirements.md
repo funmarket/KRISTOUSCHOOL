@@ -46,7 +46,7 @@ The following are locked:
 7. **Children’s privacy first.** Private student/family/class information is never public by default.
 8. **One authoritative owner per concept.** Product behavior must not be duplicated across domains.
 9. **PostgreSQL is durable truth.** Redis is transient only where explicitly designed.
-10. **Arabic, French, English from foundation.** Arabic uses full RTL.
+10. **Arabic, French, English from foundation.** Arabic text is supported from the foundation, while the application shell and top navigation remain stable LTR when the language changes.
 11. **Light is default.** Optional dark mode is pitch black with light/white text.
 12. **Official KRISTOU brand identity.** Use the owner-approved enhanced KRISTOU SCHOOL logo without substituting a fake mascot/mark.
 
@@ -179,12 +179,12 @@ KRISTOU supports from foundation:
 
 Requirements:
 
-- Arabic uses `dir="rtl"`;
-- French/English use LTR;
-- one shared component tree, not one duplicated app per language;
+- Arabic, French, and English use one shared component tree;
+- changing language must not mirror or reposition the application shell, top navigation, profile menu, or modal controls;
+- Arabic text must render correctly inside the stable LTR shell;
 - UI strings use translation keys;
 - school-managed content should support translated fields where appropriate;
-- layouts, menus, bottom sheets, cards, forms, and navigation must work in RTL.
+- layouts, menus, bottom sheets, cards, forms, and navigation must remain stable across languages.
 
 ---
 
