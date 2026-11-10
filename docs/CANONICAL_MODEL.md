@@ -4,7 +4,7 @@ Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
 This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`.
 
-It does **not** claim that the models below are already implemented. Supabase is the selected backend/database platform direction, but no schema or project integration is verified by this migration. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. The auth-provider-to-canonical-User mapping is blocked on ADR-015; do not infer that Supabase Auth has been selected.
+It does **not** claim that the models below are already implemented. Supabase is the selected backend/database platform direction, but no schema or project integration is verified by this migration. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. The product owner confirmed the existing Web username/password and Telegram WebApp identity/linking policy; ADR-015 tracks the engineering design needed to preserve it safely on Supabase. Do not infer that Supabase Auth has been selected.
 
 During implementation, the following must agree with this document:
 

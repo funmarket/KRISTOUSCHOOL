@@ -80,7 +80,7 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 ## ADR-012 — Web login uses username + password; email is optional
 
-**Status:** Accepted product-policy decision; Supabase implementation mapping is unresolved by ADR-015.
+**Status:** Accepted product-policy decision; Supabase implementation mapping is addressed by ADR-015.
 
 **Decision:** KRISTOU Web authentication uses one unique normalized login username plus password. Email is optional, is not a Web login identifier, and is not password-recovery authority unless a separately implemented verified-email flow establishes ownership. A Telegram-originated canonical User may later attach a WebCredential to the same `User.id`; doing so must not create a second User.
 
@@ -106,15 +106,15 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status consequence:** This decision does not prove that a Supabase project has been provisioned, connected, or deployed. Record those facts only in `progress.md` after verification.
 
-## ADR-015 — Supabase Auth identifier compatibility gate
+## ADR-015 — Preserve Web and Telegram login policy on Supabase
 
-**Status:** Proposed — product-owner decision required before protected account implementation.
+**Status:** Accepted product policy; technical implementation design required before protected account implementation.
 
-**Context:** ADR-012 requires username/password sign-in with optional email. Supabase's documented password sign-in uses email or phone identifiers. Replacing username sign-in, mapping usernames to synthetic email addresses, or implementing custom sessions each changes identity/security behavior.
+**Context:** The product owner confirmed that the accepted KRISTOU login and identity plan from `funmarket/Kristou` must remain unchanged in `funmarket/KRISTOUSCHOOL`: Web login remains username + password with optional email, and Telegram WebApp authentication/linking remains a separate verified transport to the same canonical User. Supabase is selected as the backend/database platform, not as permission to change product authentication. Supabase's documented password sign-in uses email or phone identifiers, so the backend needs an explicit compatible design.
 
-**Decision required:** Choose and document either (a) an explicit product-policy change to Supabase Auth email/phone sign-in and its verified-contact/recovery rules, or (b) a reviewed server-managed username/password and session design compatible with Supabase and the database authorization model.
+**Decision:** Preserve the accepted product policy. Do not replace username login with email/phone, create synthetic email aliases, or remove Telegram login/account linking to fit a provider API. Before implementing protected account flows, document and threat-model the server-side credential/session/Telegram validation design and how its verified canonical actor is safely represented to Postgres authorization. Use strong one-way password hashing, short/rotatable sessions, revocation/expiry, rate limits, enumeration-resistant responses, explicit one-time account linking, and tests for conflicting identities. No browser-side username lookup or client-supplied role may establish identity. Supabase Auth may be used only if a reviewed design preserves these exact product rules; it is not assumed to be the credential authority.
 
-**Until resolved:** Do not implement signup/login/recovery, protected profile/RLS policies that assume an identity mapping, or real/private school data flows. Do not infer user identity from a submitted username or client role.
+**Until the technical design is accepted:** Do not implement production signup/login/recovery, protected RLS policies that assume an unverified identity mapping, or real/private school data flows. Local synthetic tooling and tests may proceed. Do not reopen the product-policy choice unless the owner explicitly changes it.
 
 **Reference:** [Supabase password-based authentication](https://supabase.com/docs/guides/auth/passwords).
 

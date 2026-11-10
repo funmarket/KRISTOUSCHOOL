@@ -10,23 +10,20 @@ Use Supabase as the planned platform for managed PostgreSQL, source-controlled d
 
 Supabase is selected instead of Railway for the backend/database direction. This does not mean a Supabase project has been provisioned, connected, or deployed. Hosting for the static frontend is not selected by this plan; do not infer that Supabase backend selection answers frontend hosting.
 
-## Blocking decision: login identity
+## Fixed product policy and technical authentication gate
 
-The existing accepted product contract and ADR-012 specify a unique username plus password, with optional email that is not a login or password-recovery authority. Supabase's documented password sign-in identifiers are email or phone, not a native username identifier. Do not invent a synthetic email alias, expose an account-lookup endpoint that leaks identity, or silently change the requirement.
+The product owner confirmed that KRISTOUSCHOOL must retain the old KRISTOU login/identity requirements: Web username + password, optional email that is not a login or recovery authority, Telegram WebApp authentication and explicit account linking, and one canonical User across both transports. This is a fixed product requirement, not an open choice to replace login with email or phone. Supabase's documented password sign-in identifiers are email or phone, not a native username identifier. Do not invent a synthetic email alias, expose an account-lookup endpoint that leaks identity, or silently change the requirement.
 
-Before building protected account flows, the product owner must choose and record one of these designs:
+Before implementing protected accounts, document and threat-model a Supabase-compatible server-side design that preserves those existing login transports and the canonical User model. Define password hashing, session minting/verification/revocation, enumeration resistance, rate limits, recovery policy, Telegram `initData` validation, one-time account linking, conflict handling, and how the verified actor is represented to Postgres authorization. Supabase Auth may be used only if a reviewed design preserves these rules; it is not assumed to be the credential authority. Do not treat `service_role` access as a substitute for identity or authorization.
 
-1. **Adopt Supabase Auth email/phone sign-in.** Explicitly revise `requirements.md`, `docs/CANONICAL_MODEL.md`, and the relevant ADR. Map the Supabase Auth identity to one canonical KRISTOU user and define verified contact/recovery rules.
-2. **Preserve username/password.** Specify and threat-model a server-managed credential/session design that remains compatible with Supabase Edge Functions and Postgres. Define password hashing, session minting/verification/revocation, enumeration resistance, rate limits, recovery, and how the verified actor identity is represented to database policies. Do not treat `service_role` access as a substitute for this design.
-
-No protected school data schema or auth implementation should advance past local synthetic tests until this decision is accepted. Supabase Auth documentation describes email and phone as password identifiers; phone/password carries recycled-number risks and should not be adopted without an explicit policy and mitigations.[1]
+Do not put real/private school data behind protected policies until this technical design and its tests are accepted. Local synthetic tooling and tests may proceed. Supabase Auth documentation describes email and phone as password identifiers; that provider API limitation does not override the product owner's chosen username/Telegram policy.[1]
 
 ## Target request/data flow
 
 ```text
 React/Vite browser
   -> publishable Supabase key (public project identifier, not a secret)
-  -> verified user session (only after the identity decision)
+  -> server-verified Web or Telegram session (per the preserved identity policy)
   -> Row Level Security for caller-scoped reads/writes
 
 React/Vite browser
@@ -44,15 +41,15 @@ Supabase Edge Functions are server-side TypeScript/Deno functions. They are appr
 
 1. Confirm the target repository/default branch and latest HEAD. Keep this plan as subordinate to `AGENTS.md` and the accepted requirements.
 2. Record that the current frontend uses mock state and that no backend/schema/auth has been verified. Do not import the old repository's CI, deployment, project references, user records, or historical completion claims.
-3. Resolve the username-versus-Supabase-Auth choice above before handling real or even representative protected account data.
+3. Preserve the accepted username/password and Telegram WebApp requirements. Complete and approve the compatible server-side identity/session design before protected account data is introduced.
 4. Confirm that Supabase is the approved managed database/function provider and choose a project owner, organization, region, and project separation strategy. Do not create a hosted project implicitly as part of code work.
 
-**Gate:** accepted auth design is recorded in `docs/DECISIONS.md`; staging/production ownership and region are documented. Until then, proceed only with non-sensitive local tooling and synthetic-only tests.
+**Gate:** the compatible authentication/identity design is recorded in `docs/DECISIONS.md`; staging/production ownership and region are documented. Until then, proceed only with non-sensitive local tooling and synthetic-only tests.
 
 ### 1. Add reproducible local Supabase development
 
 1. Pin a Supabase CLI version in the project toolchain (choose the repo's supported installation method; do not depend on an unpinned global binary).
-2. Initialize `supabase/config.toml` and configure local Auth only after the identity policy is chosen.
+2. Initialize `supabase/config.toml` and configure local Auth/session behavior only after the technical design shows how the accepted username/password and Telegram transports are preserved.
 3. Add local migration, reset, test, function-serve, type-generation, and status commands to `package.json` only when they work in this repository.
 4. Keep `.env.example` to placeholders such as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and server-side-only secret names. Remove fallback project IDs, mock keys, and embedded credentials from source. The publishable key may be present in browser configuration; secret/service-role keys may not.
 5. Verify `.gitignore` excludes actual environment files and local Supabase state. Create local-only synthetic `supabase/seed.sql` fixtures with no real student, family, staff, contact, medical, enrollment, or pickup records.
@@ -64,8 +61,8 @@ Supabase's local-development workflow supports tracked migrations, repeatable da
 ### 2. Define the authentication and canonical identity mapping
 
 1. Implement only the approved path from Phase 0.
-2. If Supabase Auth is selected, make `auth.users.id` the authentication-provider identity and define an explicit one-to-one foreign-key mapping to canonical KRISTOU `User.id` (or record the reviewed decision to use the Auth UUID as canonical User ID). Do not copy passwords into application tables.
-3. If username/password is preserved, do not build an improvised browser-side password lookup. Keep credential verification and session issuance server-side; use a strong one-way password hash, opaque high-entropy sessions or otherwise reviewed tokens, hashed-at-rest session verifiers, expiry/revocation, generic errors, rate limits, and a documented database-policy identity bridge. Require a security review before exposing any protected table through the Data API.
+2. Preserve the canonical KRISTOU User as the shared Web/Telegram product identity. If a reviewed design uses Supabase Auth, define an explicit one-to-one mapping from `auth.users.id` to canonical `User.id`; do not copy Supabase-managed passwords into application tables.
+3. Web username/password is fixed product behavior. Do not build an improvised browser-side username lookup. Design credential verification and session issuance server-side; define a strong one-way password hash, opaque high-entropy sessions or otherwise reviewed tokens, hashed-at-rest session verifiers, expiry/revocation, generic errors, rate limits, and a documented database-policy identity bridge. Require a security review before exposing any protected table through the Data API.
 4. Define account-link behavior for Telegram as a separate explicit one-time, expiring, conflict-failing flow. Telegram identity must resolve to the same canonical KRISTOU User and never merge heuristically.
 5. Add auth integration tests for unauthorized access, expiry/revocation, conflicting identities, and any signup/recovery policy before relying on auth in RLS.
 
