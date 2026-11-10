@@ -6,7 +6,8 @@ create extension if not exists pgcrypto;
 
 do $$ begin
   create type public.app_role as enum (
-    'GENERAL_USER', 'PARENT', 'STUDENT', 'TEACHER', 'MANAGER',
+    'GENERAL_USER', 'PARENT', 'STUDENT', 'TEACHER',
+    'SCHOOL_STAFF', 'ADMINISTRATIVE_PERSONNEL', 'MANAGER',
     'PRINCIPAL', 'EMPLOYEE', 'APP_ADMIN'
   );
 exception when duplicate_object then null;
@@ -20,6 +21,8 @@ create table if not exists public.profiles (
   email text,
   phone text,
   requested_role public.app_role not null default 'GENERAL_USER',
+  staff_id text,
+  admission_id text,
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -31,6 +34,8 @@ create unique index if not exists profiles_username_normalized_key
 create unique index if not exists profiles_phone_key
   on public.profiles (phone) where phone is not null;
 create index if not exists profiles_email_key on public.profiles (lower(email)) where email is not null;
+create unique index if not exists profiles_staff_id_key on public.profiles (lower(staff_id)) where staff_id is not null;
+create unique index if not exists profiles_admission_id_key on public.profiles (lower(admission_id)) where admission_id is not null;
 
 create table if not exists public.role_assignments (
   id uuid primary key default gen_random_uuid(),
@@ -112,20 +117,24 @@ begin
     requested := 'GENERAL_USER';
   end;
 
-  insert into public.profiles (id, username, full_name, email, phone, requested_role)
+  insert into public.profiles (id, username, full_name, email, phone, requested_role, staff_id, admission_id)
   values (
     new.id,
     supplied_username,
     nullif(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name')), ''),
     nullif(lower(btrim(new.email)), ''),
     nullif(btrim(new.phone), ''),
-    requested
+    requested,
+    nullif(btrim(new.raw_user_meta_data ->> 'staff_id'), ''),
+    nullif(btrim(new.raw_user_meta_data ->> 'admission_id'), '')
   )
   on conflict (id) do update set
     email = excluded.email,
     phone = excluded.phone,
     full_name = coalesce(public.profiles.full_name, excluded.full_name),
-    requested_role = excluded.requested_role;
+    requested_role = excluded.requested_role,
+    staff_id = coalesce(public.profiles.staff_id, excluded.staff_id),
+    admission_id = coalesce(public.profiles.admission_id, excluded.admission_id);
 
   insert into public.role_assignments (user_id, role)
   values (new.id, initial_role)

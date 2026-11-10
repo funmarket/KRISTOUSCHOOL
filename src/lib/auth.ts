@@ -2,13 +2,15 @@ import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase';
 import type { User, UserRole } from '../types';
 
-export type SignupRole = 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER';
+export type SignupRole = 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER' | 'SCHOOL_STAFF' | 'ADMINISTRATIVE_PERSONNEL';
 
 const roleMap: Record<string, UserRole> = {
   GENERAL_USER: 'GENERAL_USER',
   PARENT: 'PARENT',
   STUDENT: 'STUDENT',
   TEACHER: 'TEACHER',
+  SCHOOL_STAFF: 'SCHOOL_STAFF',
+  ADMINISTRATIVE_PERSONNEL: 'ADMINISTRATIVE_PERSONNEL',
   MANAGER: 'MANAGER',
   PRINCIPAL: 'MANAGER',
   EMPLOYEE: 'MANAGER',
@@ -35,6 +37,8 @@ export async function signUpAccount(input: {
   phone?: string;
   fullName: string;
   requestedRole: SignupRole;
+  staffId?: string;
+  admissionId?: string;
 }) {
   const client = requireSupabaseClient();
   const email = input.email?.trim().toLowerCase() || undefined;
@@ -45,7 +49,7 @@ export async function signUpAccount(input: {
     : { phone: phone as string, password: input.password };
   const { data, error } = await client.auth.signUp({
     ...credentials,
-    options: { data: { username: input.username.trim(), full_name: input.fullName.trim(), requested_role: input.requestedRole } },
+    options: { data: { username: input.username.trim(), full_name: input.fullName.trim(), requested_role: input.requestedRole, staff_id: input.staffId?.trim() || undefined, admission_id: input.admissionId?.trim() || undefined } },
   });
   if (error) throw error;
   return data;

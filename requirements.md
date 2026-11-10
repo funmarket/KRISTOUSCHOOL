@@ -86,7 +86,26 @@ Teacher assigned to one or more classes.
 
 Teacher class authority is scoped to assigned classes unless separately granted broader capability.
 
-## 3.6 MANAGER / ASSOCIATE
+## 3.6 SCHOOL_STAFF
+
+School staff are school personnel who support student wellbeing, learning resources, health, operations, facilities, safety, meals, transportation, or additional needs. The role is a requested account category; it does not grant access until the school assigns explicit capabilities and resource scope.
+
+The School Staff category includes:
+
+- Guidance Counselors and School Psychologists: mental health support, emotional guidance, and academic counseling;
+- School Nurses and Health Technicians: student medical needs, first aid, and prescriptions;
+- Librarians and Curriculum Developers: media resources and instructional materials;
+- Secretaries and Attendance Clerks: office management, attendance, and family communication;
+- Caretakers and Cleaners: facility maintenance, repairs, and classroom sanitation;
+- Security Guards: campus entry monitoring and physical safety;
+- Cafeteria Staff: daily meals for students and faculty;
+- Transportation Workers and Special Needs Assistants: bus transit, student arrival logistics, and additional-needs support.
+
+## 3.7 ADMINISTRATIVE_PERSONNEL
+
+Administrative personnel oversee or coordinate school operations and educational leadership. This category includes Principals and Vice Principals, who oversee daily school operations, evaluate staff, and lead educational policies. It is a requested account category and does not grant global authority by itself.
+
+## 3.8 MANAGER / ASSOCIATE
 
 Delegated school staff with explicit capabilities.
 
@@ -94,7 +113,7 @@ A manager label does not imply full App Admin authority.
 
 Initial owner preference: no more than approximately three managers/associates, subject to later owner change.
 
-## 3.7 APP_ADMIN / SCHOOL_OWNER
+## 3.9 APP_ADMIN / SCHOOL_OWNER
 
 Global school application authority.
 

@@ -98,7 +98,7 @@ Each durable concept has exactly one owner. These are product boundaries, not a 
 | Concept | Owner | Boundary |
 |---|---|---|
 | Canonical User, WebCredential/session, Telegram identity/link | Identity & Authentication | One user; Supabase Auth credential mapping, explicit Telegram linking, and no heuristic merges. |
-| Roles, capabilities, scoped grants | Access Control | Server-side RBAC and resource scope; frontend visibility is not authority. |
+| Roles, capabilities, scoped grants | Access Control | Includes Parent, Student, Teacher, School Staff, Administrative Personnel, Manager/Associate, and App Admin categories; server-side RBAC and resource scope remain authoritative. |
 | Parent/student/teacher/manager profiles | People | Presentation/profile facts, not credentials. |
 | Parent-child guardian relation | Family | Sole source for parent-to-child scope. |
 | Academic year, level, class, teacher/student assignments | Academics | Sole class identity, active membership, and assignment authority. |

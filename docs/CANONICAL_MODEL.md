@@ -154,6 +154,8 @@ The authentication foundation persists `RoleAssignment` in Supabase. Capability-
 Locked authority rules:
 
 - APP_ADMIN / School Owner is global authority;
+- Administrative Personnel authority is explicit, capability-specific, and scoped to assigned operational responsibilities;
+- School Staff authority is explicit, capability-specific, and scoped to assigned student, facility, health, meal, transport, or resource responsibilities;
 - Manager/Associate authority is explicit and capability-specific;
 - Teacher authority is class/resource-scoped;
 - Parent authority depends on canonical guardian/child scope;

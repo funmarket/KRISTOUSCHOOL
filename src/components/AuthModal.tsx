@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Send, Lock, User as UserIcon, Mail, Phone, Shield } from 'lucide-react';
+import { X, Send, Lock, User as UserIcon, Mail, Phone, Shield, Badge } from 'lucide-react';
 import type { SignupRole } from '../lib/auth';
+
+const inputClass = 'w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white';
+
+type RegistrationRole = Exclude<SignupRole, 'GENERAL_USER'>;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { login, signup, connectTelegram, t, dir } = useApp();
@@ -11,11 +15,18 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const [admissionId, setAdmissionId] = useState('');
   const [password, setPassword] = useState('');
-  const [requestedRole, setRequestedRole] = useState<SignupRole>('GENERAL_USER');
+  const [requestedRole, setRequestedRole] = useState<RegistrationRole>('PARENT');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const isStudent = requestedRole === 'STUDENT';
+  const isParent = requestedRole === 'PARENT';
+  const isEmployee = requestedRole === 'SCHOOL_STAFF' || requestedRole === 'ADMINISTRATIVE_PERSONNEL';
+  const isStaffLike = requestedRole === 'TEACHER' || isEmployee;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -28,18 +39,30 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const result = await login(identifier.trim(), password);
         if (!result.success) { setError(t('invalidCredentials')); return; }
         onClose();
-      } else {
-        if (!username.trim() || !fullName.trim() || !password || (!email.trim() && !phone.trim())) {
-          setError(t('requiredUsername'));
-          return;
-        }
-        const result = await signup({ username, fullName, password, email: email || undefined, phone: phone || undefined, requestedRole });
-        if (!result.success) { setError(result.error || t('error')); return; }
-        setMessage(result.confirmationRequired ? 'Account created. Confirm your contact method before signing in.' : 'Account created. You can now sign in.');
-        setMode('login');
-        setIdentifier(email || phone || username);
-        setPassword('');
+        return;
       }
+
+      const missingRoleSpecificId = (isStaffLike && !staffId.trim()) || (isStudent && !admissionId.trim());
+      if (!username.trim() || !fullName.trim() || !password || (!email.trim() && !phone.trim()) || missingRoleSpecificId) {
+        setError(t('requiredUsername'));
+        return;
+      }
+
+      const result = await signup({
+        username,
+        fullName,
+        password,
+        email: email || undefined,
+        phone: phone || undefined,
+        requestedRole,
+        staffId: isStaffLike ? staffId : undefined,
+        admissionId: isStudent ? admissionId : undefined,
+      });
+      if (!result.success) { setError(result.error || t('error')); return; }
+      setMessage(result.confirmationRequired ? 'Account created. Confirm your contact method before signing in.' : 'Account created. You can now sign in.');
+      setMode('login');
+      setIdentifier(email || phone || username);
+      setPassword('');
     } finally { setBusy(false); }
   };
 
@@ -49,6 +72,14 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     if (result.error) setError(result.error);
     else setMessage(`Telegram linking challenge created. Open the KRISTOU Telegram WebApp within 10 minutes. Code: ${result.linkCode}`);
   };
+
+  const roleLabel = (role: RegistrationRole) => ({
+    PARENT: t('roleParent'),
+    TEACHER: t('roleTeacher'),
+    SCHOOL_STAFF: t('roleSchoolStaff'),
+    ADMINISTRATIVE_PERSONNEL: t('roleAdministrativePersonnel'),
+    STUDENT: t('roleStudent'),
+  }[role]);
 
   return (
     <div className="fixed inset-0 z-[60] min-h-[100dvh] overflow-y-auto bg-black/60 p-4 backdrop-blur-xs sm:p-6" role="presentation" dir={dir} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -60,49 +91,67 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <h2 id="auth-modal-title" className="text-xl font-bold text-gray-900 dark:text-white">{mode === 'login' ? t('login') : t('register')}</h2>
             <p className="mt-1 text-xs text-gray-500">{t('school')}</p>
           </div>
+
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900">
             <button type="button" onClick={() => { setMode('login'); setError(''); }} className={`rounded-lg py-2 text-xs font-bold ${mode === 'login' ? 'bg-white text-k-brand shadow-sm dark:bg-gray-800' : 'text-gray-500'}`}>{t('login')}</button>
             <button type="button" onClick={() => { setMode('signup'); setError(''); }} className={`rounded-lg py-2 text-xs font-bold ${mode === 'signup' ? 'bg-white text-k-brand shadow-sm dark:bg-gray-800' : 'text-gray-500'}`}>{t('register')}</button>
           </div>
+
           {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40">{error}</div>}
           {message && <div className="mb-4 break-words rounded-xl bg-emerald-50 p-3 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40">{message}</div>}
+
           <form onSubmit={handleSubmit} className="space-y-3">
-            {mode === 'signup' ? <>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('parentName')}
-                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={fullName} onChange={e => setFullName(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+            {mode === 'signup' && <>
+              {/* Role is deliberately the first registration decision. */}
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('roleSwitch')}
+                <div className="relative mt-1"><Shield className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><select required value={requestedRole} onChange={e => setRequestedRole(e.target.value as RegistrationRole)} className={`${inputClass} appearance-none`} aria-label={t('roleSwitch')}>
+                  <option value="PARENT">{roleLabel('PARENT')}</option>
+                  <option value="TEACHER">{roleLabel('TEACHER')}</option>
+                  <option value="SCHOOL_STAFF">{roleLabel('SCHOOL_STAFF')}</option>
+                  <option value="ADMINISTRATIVE_PERSONNEL">{roleLabel('ADMINISTRATIVE_PERSONNEL')}</option>
+                  <option value="STUDENT">{roleLabel('STUDENT')}</option>
+                </select></div>
               </label>
+
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{isParent ? t('parentName') : isStudent ? t('studentFullName') : t('fullName')}
+                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={fullName} onChange={e => setFullName(e.target.value)} autoComplete="name" className={inputClass} /></div>
+              </label>
+
+              {isStaffLike && <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('staffId')}
+                <div className="relative mt-1"><Badge className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={staffId} onChange={e => setStaffId(e.target.value)} className={inputClass} /></div>
+              </label>}
+              {isStudent && <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('admissionId')}
+                <div className="relative mt-1"><Badge className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={admissionId} onChange={e => setAdmissionId(e.target.value)} className={inputClass} /></div>
+              </label>}
+
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')}
-                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className={inputClass} /></div>
               </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">Email
-                  <div className="relative mt-1"><Mail className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-3 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{isStaffLike ? t('schoolEmail') : 'Email'}
+                  <div className="relative mt-1"><Mail className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} /></div>
                 </label>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('phone')}
-                  <div className="relative mt-1"><Phone className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+216..." className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-3 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+                  <div className="relative mt-1"><Phone className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+216..." className={inputClass} /></div>
                 </label>
               </div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('roleSwitch')}
-                <div className="relative mt-1"><Shield className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><select value={requestedRole} onChange={e => setRequestedRole(e.target.value as SignupRole)} className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white"><option value="GENERAL_USER">{t('rolePublic')}</option><option value="PARENT">{t('roleParent')}</option><option value="STUDENT">{t('roleStudent')}</option><option value="TEACHER">{t('roleTeacher')}</option></select></div>
-              </label>
-            </> : <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')} / Email / {t('phone')}
-              <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+            </>}
+
+            {mode === 'login' && <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')} / Email / {t('phone')}
+              <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" className={inputClass} /></div>
             </label>}
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('password')}
-              <div className="relative mt-1"><Lock className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white" /></div>
+              <div className="relative mt-1"><Lock className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} className={inputClass} /></div>
             </label>
             <button disabled={busy} type="submit" className="w-full rounded-xl bg-k-brand py-3 text-sm font-semibold text-white shadow-lg shadow-k-brand/25 transition-all hover:bg-k-brand-strong disabled:opacity-50">{busy ? t('loading') : mode === 'login' ? t('login') : t('register')}</button>
           </form>
+
           <div className="mt-5 border-t border-gray-100 pt-5 text-center dark:border-gray-800">
             <p className="mb-3 text-xs text-gray-500">{t('telegramInitData')}</p>
-            <button onClick={mode === 'login' && !identifier ? () => { setError('Open the KRISTOU Telegram WebApp to authenticate directly.'); } : startTelegram} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-[#1e8bc3]"><Send className="h-4 w-4" /><span>{mode === 'signup' ? t('telegramAccess') : currentUserLabel(mode, t('telegramAccess'), t('telegramConnect'))}</span></button>
+            <button onClick={startTelegram} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-[#1e8bc3]"><Send className="h-4 w-4" /><span>{t('telegramAccess')}</span></button>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-function currentUserLabel(mode: 'login' | 'signup', access: string, connect: string) {
-  return mode === 'login' ? access : connect;
-}

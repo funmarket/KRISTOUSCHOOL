@@ -39,6 +39,8 @@ export interface DatabaseSchema {
           email: string | null;
           phone: string | null;
           requested_role: string;
+          staff_id: string | null;
+          admission_id: string | null;
           avatar_url: string | null;
           created_at: string;
           updated_at: string;
@@ -50,6 +52,8 @@ export interface DatabaseSchema {
           email?: string | null;
           phone?: string | null;
           requested_role?: string;
+          staff_id?: string | null;
+          admission_id?: string | null;
           avatar_url?: string | null;
         };
         Update: {

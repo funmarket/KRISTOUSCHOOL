@@ -72,7 +72,7 @@ Supabase's local-development workflow supports tracked migrations, repeatable da
 
 1. Create the first timestamped SQL migration under `supabase/migrations/`; do not create product tables by bulk-copying UI TypeScript types or mock data.
 2. Implement only the approved identity/access-control foundation needed for the first vertical slice. Use UUID/FK/unique/check constraints that encode accepted invariants; select `timestamptz` for instants; use `Africa/Tunis` only for business rules that require local school time.
-3. Keep canonical identity, role/capability authority, parent-child link, class membership, and teacher assignment distinct. Do not allow frontend-supplied role strings to become authority.
+3. Keep canonical identity, role/capability authority, parent-child link, class membership, teacher assignment, School Staff responsibilities, and Administrative Personnel responsibilities distinct. Do not allow frontend-supplied role strings to become authority.
 4. Put each security-relevant schema, grant, policy, SQL function, trigger, and storage policy in a reviewable migration. Add indexes from actual foreign-key and policy query patterns.
 5. Use transactions/conditional updates for one-time challenge consumption and safety-sensitive state. Avoid premature domain tables, giant JSON records, or generic mutable role state.
 6. Add typed generated database types only from the committed schema and regenerate them reproducibly.

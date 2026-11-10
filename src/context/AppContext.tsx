@@ -73,7 +73,7 @@ interface AppContextType {
 
   // Actions
   login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole }) => Promise<{ success: boolean; confirmationRequired?: boolean; error?: string }>;
+  signup: (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => Promise<{ success: boolean; confirmationRequired?: boolean; error?: string }>;
   logout: () => void;
   connectTelegram: () => Promise<{ linkCode?: string; error?: string }>;
   addParentNote: (childId: string, topic: ParentNote['topic'], content: string, teacherId?: string) => { success: boolean; error?: string };
@@ -260,7 +260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const signup = async (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole }) => {
+  const signup = async (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => {
     try {
       const data = await signUpAccount(input);
       return { success: true, confirmationRequired: !data.session };
