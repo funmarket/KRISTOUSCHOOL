@@ -1,6 +1,6 @@
 # KRISTOU SCHOOL
 
-KRISTOU SCHOOL is the mobile-first school platform for École Primaire Privée Kristou School in Tunisia. This repository, `funmarket/KRISTOUSCHOOL`, is the canonical source of truth for product requirements, architecture, data authority, implementation plans, and verified progress.
+KRISTOU SCHOOL is the mobile-first school application for École Primaire Privée Kristou School in Tunisia. This repository, `funmarket/KRISTOUSCHOOL`, is the canonical source of truth for product requirements, architecture, data authority, implementation plans, and verified progress. It is a dedicated single-school deployment; each separately sold school receives its own application/project and data environment rather than sharing a multi-tenant platform.
 
 ## Current state
 
@@ -17,13 +17,15 @@ Read the following authorities before implementation:
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — accepted and proposed architecture decisions.
 - [`docs/LIVING_BUILD_PLAN.md`](docs/LIVING_BUILD_PLAN.md) — task execution discipline.
 - [`docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`](docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md) — ordered plan for Supabase backend/database integration.
+- [`docs/CONTINUATION_HANDOFF_2026-11-10.md`](docs/CONTINUATION_HANDOFF_2026-11-10.md) — current collaboration context and mandatory continuation handoff.
+- [`docs/SUPABASE_CONTINUATION_PLAN.md`](docs/SUPABASE_CONTINUATION_PLAN.md) — detailed Supabase-first execution phases and agent work packets.
 - [`progress.md`](progress.md) — current repository implementation evidence only.
 
 The old `funmarket/Kristou` repository is a read-only source of migrated product and architecture material. Its commits, branches, CI, deployments, database state, and progress entries are not evidence about this repository. HoomaUltimate is not a product or implementation authority.
 
 ## Platform direction
 
-Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. No Supabase project has been verified as connected by this documentation change. Railway is not the target hosting/database provider. Preserve the accepted Web username/password and Telegram WebApp login/linking behavior; ADR-015 gates only the compatible technical implementation, not a change in login policy.
+Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. The active project and current integration status must be verified from fresh evidence before any remote operation. Frontend hosting is a separate decision. Preserve the accepted Web username/password and Telegram WebApp login/linking behavior; ADR-015 gates only the compatible technical implementation, not a change in login policy.
 
 ## Development
 

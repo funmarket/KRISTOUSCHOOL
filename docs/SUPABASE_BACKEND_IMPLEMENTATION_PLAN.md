@@ -8,7 +8,7 @@ This plan establishes a safe route from the current Vite/React prototype to a Su
 
 Use Supabase as the planned platform for managed PostgreSQL, source-controlled database migrations, server-side Edge Functions, and private object storage. Keep the browser as a presentation client. Deliver one complete, tested vertical slice at a time. Do not migrate all demo features or seed fake school records into a hosted environment.
 
-Supabase is selected instead of Railway for the backend/database direction. This does not mean a Supabase project has been provisioned, connected, or deployed. Hosting for the static frontend is not selected by this plan; do not infer that Supabase backend selection answers frontend hosting.
+Supabase is selected for the backend/database direction. This does not by itself prove that a project has been provisioned, connected, migrated, or deployed. Hosting for the static frontend is separate and is not selected by this plan.
 
 ## Fixed product policy and technical authentication gate
 

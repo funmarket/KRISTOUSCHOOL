@@ -3,6 +3,7 @@
 Status: **PRIMARY ARCHITECTURE CONTRACT**
 Repository: `funmarket/KRISTOUSCHOOL`
 Backend platform direction: **Supabase** (planned; not yet verified as provisioned or integrated)
+Deployment model: **one dedicated school per application/project**
 
 This document defines architecture, runtime boundaries, data ownership, and dependency rules. It is not a progress ledger, feature backlog, or permission to create speculative structures. Product behavior belongs in `requirements.md`; data authority belongs in `docs/CANONICAL_MODEL.md`; decisions belong in `docs/DECISIONS.md`; verified status belongs in `progress.md`.
 
@@ -10,7 +11,7 @@ This document defines architecture, runtime boundaries, data ownership, and depe
 
 The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It does not yet contain a Supabase CLI project, migrations, RLS policies, Edge Functions, production authentication, or a backend. UI data, login, roles, and pickup transitions are prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by a single Supabase project boundary for managed PostgreSQL, server-side functions, and private object storage. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one dedicated Supabase project boundary for this school’s managed PostgreSQL, server-side functions, and private object storage. Each separately sold school receives a separate application/project deployment; this repository does not implement a shared multi-tenant platform. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 
@@ -27,7 +28,7 @@ KRISTOUSCHOOL/
   docs/                       # requirements, architecture, plans, evidence
 ```
 
-Do not create a Node monorepo, separate API runtime, worker, package, or Telegram frontend unless an evidenced requirement justifies it. Supabase Edge Functions are the initial server-side HTTP/orchestration runtime. A future long-running worker or separate API is a distinct architecture decision, not a default prerequisite.
+Do not create a Node monorepo, separate API runtime, worker, package, Telegram frontend, tenant router, school registry, or cross-school membership model unless an evidenced requirement justifies it and the product owner explicitly changes the single-school deployment decision. Supabase Edge Functions are the initial server-side HTTP/orchestration runtime. A future long-running worker or separate API is a distinct architecture decision, not a default prerequisite.
 
 ## 2. Runtime and data boundaries
 

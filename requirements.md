@@ -15,7 +15,9 @@ When the product owner gives a newer explicit instruction that conflicts with th
 
 # 1. Product definition
 
-KRISTOU SCHOOL is the mobile-first digital platform for École Primaire Privée Kristou School in Tunisia.
+KRISTOU SCHOOL is the mobile-first digital application for École Primaire Privée Kristou School in Tunisia.
+
+This repository defines one dedicated school deployment. The product is sold or provisioned separately for each school, with a separate application environment, Supabase project, credentials, domain/hosting configuration, branding, users, and data. It is not a shared multi-tenant SaaS platform. Do not add cross-school accounts, school switching, tenant routing, or a global school registry unless the product owner explicitly changes this decision.
 
 It serves:
 
@@ -1070,9 +1072,7 @@ The app must remain functional without AI.
 
 # 43. Infrastructure direction
 
-Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. This is a target direction, not evidence that any Supabase project is provisioned, linked, deployed, or serving this repository.
-
-Railway is not the selected backend/database provider for this repository. Do not carry over its service names, deployment branches, environment variables, endpoints, or historical deployment claims from `funmarket/Kristou`.
+Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. This is a target direction, not evidence that any Supabase project is provisioned, linked, deployed, or serving this repository. Do not carry over historical provider service names, deployment branches, environment variables, endpoints, or deployment claims from `funmarket/Kristou`.
 
 Frontend hosting is not decided by selecting Supabase for the backend. Keep one canonical KRISTOU frontend and make a separate hosting decision only when deployment is in scope.
 
