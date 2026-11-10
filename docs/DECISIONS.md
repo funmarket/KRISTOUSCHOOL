@@ -122,9 +122,9 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status:** Accepted.
 
-**Context:** The product owner considered turning KRISTOUSCHOOL into a shared multi-school platform with school signup, tenant routing, dedicated school homepages, and cross-school memberships, and rejected that scope as unnecessary responsibility for the current product.
+**Context:** The product owner confirmed that KRISTOUSCHOOL is a dedicated single-school product and rejected adding school signup, additional-school routing, dedicated school switching, or memberships spanning schools.
 
-**Decision:** KRISTOUSCHOOL remains only the single-school product for École Primaire Privée Kristou School. The current repository must not add a shared `Platform`, `Tenant`, `SchoolMembership`, school signup, global school registry, school switcher, cross-school user, or cross-school data model.
+**Decision:** KRISTOUSCHOOL remains only the single-school product for École Primaire Privée Kristou School. The current repository must not add a shared platform registry, school signup, global school registry, school switcher, users belonging to additional schools, or data shared between schools.
 
 **Consequences:** School-specific configuration and branding remain local to KRISTOU SCHOOL. Any future scope change would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
 

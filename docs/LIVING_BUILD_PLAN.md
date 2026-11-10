@@ -13,7 +13,7 @@ This document defines how work is performed; it is not a feature backlog or prod
 - `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md` — ordered Supabase implementation steps.
 - `progress.md` — verified implementation evidence only.
 
-The product owner's newest explicit instruction overrides older project documents. This plan controls execution quality, not product scope. The old `funmarket/Kristou` repository is historical reference and is not current implementation or deployment evidence. The current product scope is KRISTOU SCHOOL only; agents must not introduce other schools, multi-tenant platform concepts, or cross-school data unless the owner explicitly changes the decision.
+The product owner's newest explicit instruction overrides older project documents. This plan controls execution quality, not product scope. The old `funmarket/Kristou` repository is historical reference and is not current implementation or deployment evidence. The current product scope is KRISTOU SCHOOL only; agents must not introduce other schools, shared-school registries, or data spanning schools unless the owner explicitly changes the decision.
 
 When present, agents must also read `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` before implementation. Those documents provide current collaboration context and the ordered Supabase work plan, but neither overrides the product-owner/source-of-truth order above.
 
