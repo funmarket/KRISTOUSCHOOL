@@ -12,11 +12,11 @@ Supabase is selected for the backend/database direction. This does not by itself
 
 ## Fixed product policy and technical authentication gate
 
-The product owner confirmed that KRISTOUSCHOOL must retain the old KRISTOU login/identity requirements: Web username + password, optional email that is not a login or recovery authority, Telegram WebApp authentication and explicit account linking, and one canonical User across both transports. This is a fixed product requirement, not an open choice to replace login with email or phone. Supabase's documented password sign-in identifiers are email or phone, not a native username identifier. Do not invent a synthetic email alias, expose an account-lookup endpoint that leaks identity, or silently change the requirement.
+The product owner approved Supabase Auth for Web credential verification with email, phone, or custom username plus password. The custom username is stored in the KRISTOU profile linked one-to-one to `auth.users`; username resolution occurs only in a server-side Edge Function. Telegram WebApp authentication remains a separate direct transport with explicit account linking to the same canonical User. The school admission/registration form remains separate from app signup.
 
-Before implementing protected accounts, document and threat-model a Supabase-compatible server-side design that preserves those existing login transports and the canonical User model. Define password hashing, session minting/verification/revocation, enumeration resistance, rate limits, recovery policy, Telegram `initData` validation, one-time account linking, conflict handling, and how the verified actor is represented to Postgres authorization. Supabase Auth may be used only if a reviewed design preserves these rules; it is not assumed to be the credential authority. Do not treat `service_role` access as a substitute for identity or authorization.
+The authentication foundation defines the server-side profile trigger, role assignment storage, protected username resolver, Telegram `initData` validation boundary, and one-time linking challenge. Strong provider password handling, generic errors, contact confirmation, rate limits, conflict handling, and service-role isolation remain required at deployment review. Do not treat service-role access as a substitute for authorization.
 
-Do not put real/private school data behind protected policies until this technical design and its tests are accepted. Local synthetic tooling and tests may proceed. Supabase Auth documentation describes email and phone as password identifiers; that provider API limitation does not override the product owner's chosen username/Telegram policy.[1]
+Private school data remains behind feature-specific access matrices, RLS policies, and allow/deny tests. Supabase Auth documentation describes native email and phone password identifiers; the server-side username resolver supplies the approved custom identifier.[1]
 
 ## Target request/data flow
 
@@ -41,10 +41,10 @@ Supabase Edge Functions are server-side TypeScript/Deno functions. They are appr
 
 1. Confirm the target repository/default branch and latest HEAD. Keep this plan as subordinate to `AGENTS.md` and the accepted requirements.
 2. Record that the current frontend uses mock state and that no backend/schema/auth has been verified. Do not import the old repository's CI, deployment, project references, user records, or historical completion claims.
-3. Preserve the accepted username/password and Telegram WebApp requirements. Complete and approve the compatible server-side identity/session design before protected account data is introduced.
+3. Preserve the approved email/phone/username Web credential model and Telegram WebApp identity/linking model. Keep school admission separate from app signup.
 4. Confirm that Supabase is the approved managed database/function provider and choose a project owner, organization, region, and project separation strategy. Do not create a hosted project implicitly as part of code work.
 
-**Gate:** the compatible authentication/identity design is recorded in `docs/DECISIONS.md`; staging/production ownership and region are documented. Until then, proceed only with non-sensitive local tooling and synthetic-only tests.
+**Gate:** the Supabase Auth/profile/role mapping, username resolver, Telegram validation/linking boundary, and deployment secret requirements are recorded in `docs/DECISIONS.md`; private school-domain writes still require separate security gates.
 
 ### 1. Add reproducible local Supabase development
 

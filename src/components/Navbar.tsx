@@ -11,7 +11,6 @@ import {
   Shield,
   Send,
   Menu,
-  X,
   BookOpen,
   Utensils,
   GraduationCap,
@@ -19,7 +18,6 @@ import {
   Calendar,
   MessageSquare,
   ShieldCheck,
-  CheckCircle,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,7 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const {
     currentUser,
     currentRole,
-    setCurrentRole,
     language,
     setLanguage,
     theme,
@@ -46,7 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,15 +62,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   }, [showProfileMenu]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
-
-  const rolesList: { role: any; label: string; icon: any }[] = [
-    { role: 'PUBLIC', label: t('rolePublic'), icon: Globe },
-    { role: 'PARENT', label: t('roleParent'), icon: Users },
-    { role: 'STUDENT', label: t('roleStudent'), icon: GraduationCap },
-    { role: 'TEACHER', label: t('roleTeacher'), icon: BookOpen },
-    { role: 'MANAGER', label: t('roleManager'), icon: ShieldCheck },
-    { role: 'ADMIN', label: t('roleAdmin'), icon: Shield },
-  ];
 
   return (
     <header dir="ltr" className="sticky top-0 z-50 bg-white/95 dark:bg-[#090909]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
@@ -258,13 +245,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                         <span>{theme === 'light' ? t('pitchBlack') : t('lightMode')}</span>
                       </button>
                     </div>
-                    <button
-                      onClick={() => setShowRoleModal(true)}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
-                    >
-                      <Shield className="w-4 h-4 text-k-brand" />
-                      <span>{t('roleSwitch')}: {currentRole}</span>
-                    </button>
                     {currentUser && <>
                     <button
                       onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
@@ -305,47 +285,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
         </div>
       </div>
-
-      {/* Role Switcher Modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 z-50 min-h-[100dvh] overflow-y-auto bg-black/60 p-4 backdrop-blur-xs">
-          <div className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-md items-center"><div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-[#111111]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">{t('roleModalTitle')}</h3>
-              <button onClick={() => setShowRoleModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">
-              {t('roleModalHint')}
-            </p>
-            <div className="space-y-2">
-              {rolesList.map(r => {
-                const IconComponent = r.icon;
-                const isSelected = currentRole === r.role;
-                return (
-                  <button
-                    key={r.role}
-                    onClick={() => {
-                      setCurrentRole(r.role);
-                      setShowRoleModal(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected ? 'bg-k-brand/10 dark:bg-k-brand/15 border-k-brand text-k-brand dark:text-k-brand font-semibold' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200'}`}
-                  >
-                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-k-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm">{r.label}</span>
-                    </div>
-                    {isSelected && <CheckCircle className="w-4 h-4 text-k-brand dark:text-k-brand" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div></div>
-        </div>
-      )}
 
       {/* Auth Modal */}
       {showAuthModal && (

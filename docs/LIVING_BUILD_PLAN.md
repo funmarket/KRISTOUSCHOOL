@@ -62,7 +62,7 @@ PostgreSQL is durable business truth. Redis or another cache is transient only u
 
 1. Supabase is an accepted provider direction, not a verified deployment. Inspect the actual target project and environment before any remote operation.
 2. Use Supabase CLI local development and committed migrations as the schema source of truth. Avoid dashboard-only schema changes.
-3. Do not create protected auth flows until ADR-015 is resolved. The current accepted login identifier is username, while Supabase Auth password sign-in documents email/phone identifiers.
+3. Use the approved Supabase Auth/profile foundation for email, phone, and custom username Web credentials. Keep username resolution server-side and preserve explicit Telegram identity linking.
 4. Before exposing any table/view/function/storage path, document access rules and explicitly inspect grants and RLS. Test allowed and denied operations with pgTAP and function/API tests.
 5. Do not put service-role keys or database credentials in browser code. For any server-side RLS bypass, show why it is necessary and implement independent server-side identity/resource authorization and deny-case tests.
 6. Prefer local synthetic data; never import child/family data into development fixtures.

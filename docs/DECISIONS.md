@@ -78,13 +78,10 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Decision:** Security-sensitive runtime behavior must use explicit application/environment configuration and must not be inferred from `NODE_ENV` alone.
 
-## ADR-012 — Web login uses username + password; email is optional
-
-**Status:** Accepted product-policy decision; Supabase implementation mapping is addressed by ADR-015.
-
-**Decision:** KRISTOU Web authentication uses one unique normalized login username plus password. Email is optional, is not a Web login identifier, and is not password-recovery authority unless a separately implemented verified-email flow establishes ownership. A Telegram-originated canonical User may later attach a WebCredential to the same `User.id`; doing so must not create a second User.
-
-**Reason:** Keep Web login deterministic and preserve one canonical identity. Optional contact data must not silently become authentication or recovery authority.
+## ADR-012 — Supabase Auth credentials plus canonical KRISTOU profile
+**Status:** Accepted; implementation begins in the authentication foundation migration.
+**Decision:** KRISTOU Web signup requires a unique username, password, full name, and either email or full international phone number. Web sign-in accepts email, phone, or username plus password. Supabase Auth verifies email/phone credentials; a server-side username resolver maps the unique KRISTOU profile username to the linked Auth identity without exposing contact identifiers to the browser. All application users are stored in Supabase through `auth.users` plus the linked KRISTOU profile and role-assignment tables.
+**Reason:** Support the requested identifiers while keeping durable application identity and authorization in Supabase.
 
 ## ADR-013 — One canonical product frontend
 
@@ -106,27 +103,14 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status consequence:** This decision does not prove that a Supabase project has been provisioned, connected, or deployed. Record those facts only in `progress.md` after verification.
 
-## ADR-015 — Preserve Web and Telegram login policy on Supabase
+## ADR-015 — Supabase Auth mapping and Telegram identity linking
+**Status:** Accepted; implementation is limited to the source-controlled authentication foundation and server-side functions.
+**Context:** The product owner approved email, phone, or username plus password for Web access, while Telegram remains a direct authentication transport. The school admission form is separate from application account signup.
+**Decision:** Use Supabase Auth as the credential verifier for email/phone credentials and link every Auth user one-to-one to a KRISTOU profile. Store the custom username and requested role in the profile created by the `auth.users` trigger. Resolve username sign-in only in a server-side Edge Function, then establish the normal Supabase Auth session. Validate Telegram `initData` server-side and attach the Telegram identity through an explicit short-lived, one-time challenge. Role assignments remain server-authoritative; requested signup roles never grant privileged access.
 
-**Status:** Accepted product policy; technical implementation design required before protected account implementation.
-
-**Context:** The product owner confirmed that the accepted KRISTOU login and identity plan from `funmarket/Kristou` must remain unchanged in `funmarket/KRISTOUSCHOOL`: Web login remains username + password with optional email, and Telegram WebApp authentication/linking remains a separate verified transport to the same canonical User. Supabase is selected as the backend/database platform, not as permission to change product authentication. Supabase's documented password sign-in uses email or phone identifiers, so the backend needs an explicit compatible design.
-
-**Decision:** Preserve the accepted product policy. Do not replace username login with email/phone, create synthetic email aliases, or remove Telegram login/account linking to fit a provider API. Before implementing protected account flows, document and threat-model the server-side credential/session/Telegram validation design and how its verified canonical actor is safely represented to Postgres authorization. Use strong one-way password hashing, short/rotatable sessions, revocation/expiry, rate limits, enumeration-resistant responses, explicit one-time account linking, and tests for conflicting identities. No browser-side username lookup or client-supplied role may establish identity. Supabase Auth may be used only if a reviewed design preserves these exact product rules; it is not assumed to be the credential authority.
-
-**Until the technical design is accepted:** Do not implement production signup/login/recovery, protected RLS policies that assume an unverified identity mapping, or real/private school data flows. Local synthetic tooling and tests may proceed. Do not reopen the product-policy choice unless the owner explicitly changes it.
+The implementation must use strong provider password handling, confirmation settings, generic authentication errors, rate limits at the Edge Function/provider boundary, no browser-side contact lookup, explicit conflict failure, and no service-role credential in browser code. Private school domains remain gated until their own access matrices and deny-case tests are implemented.
 
 **Reference:** [Supabase password-based authentication](https://supabase.com/docs/guides/auth/passwords).
-
-## ADR-016 — KRISTOUSCHOOL remains one-school only
-
-**Status:** Accepted.
-
-**Context:** The product owner confirmed that KRISTOUSCHOOL is a dedicated single-school product and rejected adding school signup, additional-school routing, dedicated school switching, or memberships spanning schools.
-
-**Decision:** KRISTOUSCHOOL remains only the single-school product for École Primaire Privée Kristou School. The current repository must not add a shared platform registry, school signup, global school registry, school switcher, users belonging to additional schools, or data shared between schools.
-
-**Consequences:** School-specific configuration and branding remain local to KRISTOU SCHOOL. Any future scope change would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
 
 ## ADR template
 

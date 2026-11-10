@@ -45,12 +45,12 @@ These are hard gates, not suggestions:
 - no remote table/data deletion, rename, truncation, or cascade cleanup during the current build phase;
 - no direct browser access to private public-schema tables until grants, RLS, identity mapping, and deny tests are complete;
 - no real school data in local seed fixtures;
-- no production auth implementation until the username/password + Telegram identity design is threat-modeled and accepted;
+- Web email/phone/username credentials must use the source-controlled Supabase Auth/profile foundation; no browser-side username contact lookup;
 - no separate Browser/Telegram app, store, router, or API authority;
 - no frontend-only role authorization;
 - no `service_role` or database secret in `src/` or Vite output;
 - no feature migration without a domain owner, access matrix, test plan, and rollback/forward-fix plan;
-- no “done” claim based only on a page, button, model, mock, or successful build.
+- no “done” claim based only on a page, button, model, mock, or successful build; the authentication foundation is not evidence that private school domains are secure.
 
 ---
 
@@ -171,12 +171,12 @@ Tasks:
 
 ### Phase 3 — Identity/session threat model and decision
 
-**Purpose:** preserve the fixed product login policy while making it compatible with Supabase.
+**Purpose:** implement the approved Supabase Auth credential mapping and Telegram canonical identity linking safely.
 
 The product policy is not open for replacement:
 
-- Web uses normalized username + password;
-- email is optional and not automatically login/recovery authority;
+- Web uses email, full international phone number, or normalized username + password;
+- username resolution is server-side and contact identifiers are not exposed to the browser;
 - Telegram WebApp validates `initData` server-side;
 - Web and Telegram resolve to one canonical User;
 - account linking is explicit, expiring, one-time, conflict-failing;
