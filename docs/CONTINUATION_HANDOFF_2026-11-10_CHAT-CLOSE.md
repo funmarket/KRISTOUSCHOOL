@@ -553,3 +553,17 @@ For reporting:
 - If an external action was not possible, provide the exact manual next step.
 
 The goal is not merely to make the next screen or endpoint appear to work. The goal is to continue building one coherent, secure, mobile-first Kristou School product without losing the architectural decisions, evidence discipline, or user-approved boundaries established in this collaboration.
+
+
+---
+
+## 17. Telegram auth continuation update (2026-11-11)
+
+This update supersedes the secret diagnosis and next-step assumptions in §§8, 10, and 13 above; those sections preserve the earlier dated history.
+
+- PR #9 was refreshed immediately before work and remained OPEN/MERGEABLE at head `8a93e96b4d68facc110e349f0dfbf0b87568db60`. The verifier correction is committed locally on `work/telegram-hmac-fix` as `9a16841`, based on that PR head. It is not yet deployed.
+- A prior empty `{}` POST returning `503 telegram_unavailable` was incorrectly attributed to missing secrets. In the deployed handler it also means `initData` was not a string. A safe `initData: ""` request instead returned `401 invalid_telegram_auth`, reaching the validation branch after required environment checks. No secret value or real Telegram payload was sent.
+- Deployed `telegram-auth` version 5 uses the wrong HMAC derivation for Telegram WebApp `initData`. The code fix follows the [official Telegram validation algorithm](https://core.telegram.org/bots/webapps); four deterministic synthetic tests passed. This proves the local verifier only, not the deployed function.
+- The latest CORS response still includes a trailing slash in `Access-Control-Allow-Origin` (`https://kristouschool.vercel.app/`). Set `ALLOWED_ORIGIN` in the same Supabase project to exactly `https://kristouschool.vercel.app`.
+- `https://t.me/kristouschool_bot/dreambig` is a valid Telegram direct-link shape if `dreambig` is configured as the Mini App short name. The current `src/` contains no code that reads `Telegram.WebApp.initData` or calls `telegram-auth`, so the direct link alone does not finish authentication. Add the bridge in a separate UI PR; do not add UI files to PR #9.
+- Next: review and push the source fix to PR #9, correct the CORS secret, deploy only after review/authorization, then test with fresh `initData` from a real Telegram WebApp. Never fabricate or log a valid payload. Do not merge PR #9 without explicit user instruction.

@@ -730,3 +730,16 @@ Only after these three tickets pass their gates should the team select the first
 ```
 
 Do not report a feature as complete unless the applicable source, authorization, persistence, UI, integration, tests, documentation, and runtime layers are proven for that exact scope.
+
+
+---
+
+## Telegram WebApp validation addendum (2026-11-11)
+
+This addendum supersedes the secret-missing interpretation in §1.2 for the current deployed function. A `{}` POST returns `503` because the handler requires `initData` to be a string; it is not evidence that a secret is absent. A safe request with `initData: ""` returned `401 invalid_telegram_auth`, meaning the deployed handler reached validation after its required environment checks. No real Telegram `initData` was supplied.
+
+Review against [Telegram's official Mini Apps validation instructions](https://core.telegram.org/bots/webapps) found that deployed `telegram-auth` version 5 derives the validation key incorrectly (plain SHA-256 of the token rather than HMAC-SHA-256 with `WebAppData` as the key). A backend-only source correction and synthetic unit tests are prepared in PR #9's continuation branch; this source has **not** been deployed. The focused test command passed 4/4 cases, but that does not establish hosted authentication success.
+
+The latest CORS response still advertises `https://kristouschool.vercel.app/` with a trailing slash. Set the Supabase Function Secret `ALLOWED_ORIGIN` to exactly `https://kristouschool.vercel.app` so it matches the browser Origin.
+
+The Telegram link `https://t.me/kristouschool_bot/dreambig` uses Telegram's direct-link shape only if `dreambig` is configured as the bot's Mini App short name. The current frontend does not read `Telegram.WebApp.initData` or invoke `telegram-auth`; opening the direct link by itself cannot complete the app auth flow. Implement that runtime bridge in a separate UI change after the backend verifier is reviewed/deployed. Then test with fresh `initData` supplied by a real Telegram WebApp; do not fabricate or log it.
