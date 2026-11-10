@@ -118,15 +118,15 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Reference:** [Supabase password-based authentication](https://supabase.com/docs/guides/auth/passwords).
 
-## ADR-016 — Separate dedicated deployment per school
+## ADR-016 — KRISTOUSCHOOL remains one-school only
 
 **Status:** Accepted.
 
-**Context:** The product owner considered turning KRISTOUSCHOOL into a shared multi-school platform with school signup, tenant routing, dedicated school homepages, and cross-school memberships. That would add platform operations, tenant isolation, cross-school identity, billing/onboarding, and a larger security surface that is not required for the current product.
+**Context:** The product owner considered turning KRISTOUSCHOOL into a shared multi-school platform with school signup, tenant routing, dedicated school homepages, and cross-school memberships, and rejected that scope as unnecessary responsibility for the current product.
 
-**Decision:** KRISTOUSCHOOL remains a single-school product per deployment. The product is sold or provisioned separately for each school. Each school has its own application environment, Supabase project, credentials, domain/hosting configuration, branding, users, and durable data. The current repository must not add a shared `Platform`, `Tenant`, `SchoolMembership`, global school registry, school switcher, cross-school user, or cross-school data model.
+**Decision:** KRISTOUSCHOOL remains only the single-school product for École Primaire Privée Kristou School. The current repository must not add a shared `Platform`, `Tenant`, `SchoolMembership`, school signup, global school registry, school switcher, cross-school user, or cross-school data model.
 
-**Consequences:** School-specific configuration and branding remain local to the dedicated deployment. Reusable code may be copied or released as a separate deployment for another school, but runtime data and authorization do not cross school boundaries. A future multi-tenant product would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
+**Consequences:** School-specific configuration and branding remain local to KRISTOU SCHOOL. Any future scope change would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
 
 ## ADR template
 

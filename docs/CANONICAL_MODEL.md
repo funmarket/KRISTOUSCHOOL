@@ -2,7 +2,7 @@
 
 Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
-This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`. The model is for one dedicated school per application/project deployment; this repository does not define a shared multi-school tenant model.
+This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`. The model is only for KRISTOU SCHOOL. This repository does not define a shared multi-school tenant model.
 
 It does **not** claim that the models below are already implemented. Supabase is the selected backend/database platform direction, but no schema or project integration is verified by this migration. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. The product owner confirmed the existing Web username/password and Telegram WebApp identity/linking policy; ADR-015 tracks the engineering design needed to preserve it safely on Supabase. Do not infer that Supabase Auth has been selected.
 
@@ -35,7 +35,7 @@ If implementation establishes a different owner for a concept, update this docum
 8. Notification/realtime failure never rewrites the canonical business event that triggered it.
 9. Exposed Supabase tables/views/functions require deliberate grants and tested Row Level Security; service-role access is not a substitute for product authorization.
 10. Private Supabase Storage access follows the same resource authorization as the owning product feature.
-11. School-specific durable records belong to this deployment; do not add cross-school membership, school switching, or a global school registry without an explicit product decision.
+11. All durable records belong to KRISTOU SCHOOL; do not add other schools, cross-school membership, school switching, or a global school registry without an explicit product decision.
 
 ---
 

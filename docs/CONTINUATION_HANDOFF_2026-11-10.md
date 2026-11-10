@@ -3,7 +3,7 @@
 **Prepared:** 2026-11-10
 **Repository:** `funmarket/KRISTOUSCHOOL`
 **Purpose:** Preserve complete context when the current chat closes. The next agent must read this file together with the repository authorities before making changes.
-**Deployment boundary:** One dedicated school per application/project; this is not a multi-tenant platform.
+**Deployment boundary:** KRISTOU SCHOOL only; this is not a multi-school or multi-tenant platform.
 
 ---
 
@@ -27,7 +27,7 @@ This document is an operational handoff, not a substitute for the repository’s
 
 ## 2. User and collaboration context
 
-The product owner is building KRISTOU SCHOOL for École Primaire Privée Kristou School in Tunisia. They want the old `funmarket/Kristou` repository used as a read-only product/architecture reference, while `funmarket/KRISTOUSCHOOL` is the clean canonical project. The owner has now explicitly decided that the application remains dedicated to one school per deployment: each school is sold and operated separately with its own application, Supabase project, domain/hosting setup, credentials, branding, users, and data.
+The product owner is building KRISTOU SCHOOL for École Primaire Privée Kristou School in Tunisia. They want the old `funmarket/Kristou` repository used as a read-only product/architecture reference, while `funmarket/KRISTOUSCHOOL` is the clean canonical project. The owner has now explicitly decided that this repository remains only for KRISTOU SCHOOL. Do not design a multi-school or multi-tenant product here.
 
 The owner is very sensitive to drift, invented behavior, duplicated architecture, and destructive database actions. They explicitly require:
 
@@ -37,7 +37,7 @@ The owner is very sensitive to drift, invented behavior, duplicated architecture
 - preservation of Web username + password login, optional non-login email, Telegram WebApp authentication/linking, and one canonical User;
 - Arabic language support without mirroring or moving the LTR application shell, top navigation, profile menu, or login modal;
 - detailed plans and handoffs so later agents do not guess or copy historical infrastructure blindly;
-- no multi-tenant SaaS expansion unless the owner explicitly changes the decision.
+- no expansion beyond KRISTOU SCHOOL unless the owner explicitly changes the product scope.
 
 When in doubt, ask: “Is this a product requirement, an architecture rule, a verified fact, a proposed plan, or only a mock?” Never promote a mock or a successful build to production evidence.
 
@@ -440,19 +440,19 @@ The reference repository may be inspected for historical product decisions and s
 
 ---
 
-## 11. Explicit single-school decision
+## 11. Explicit one-school-only decision
 
-The product owner considered a shared multi-school platform and rejected that direction for now because it creates too much operational, authorization, tenant-isolation, onboarding, and maintenance responsibility. The current rule is:
+The product owner considered a shared multi-school platform and rejected it because it creates unnecessary operational, authorization, tenant-isolation, onboarding, and maintenance responsibility. The current rule is:
 
 ```text
-One school
-  -> one dedicated application deployment
-  -> one dedicated Supabase project
-  -> one dedicated domain/hosting configuration
-  -> one school’s users and data
+KRISTOU SCHOOL only
+one school
+one school data model
+one school user base
+one school Supabase project
 ```
 
-Agents must not add tenant routing, school signup inside the product, cross-school membership, a global school registry, school switching, or shared cross-school data. Reusable source code may be deployed separately for another school later, but runtime data must remain separate.
+Agents must not add tenant routing, school signup, cross-school membership, a global school registry, school switching, or shared cross-school data.
 
 ## 12. Immediate next task
 

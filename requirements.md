@@ -17,7 +17,7 @@ When the product owner gives a newer explicit instruction that conflicts with th
 
 KRISTOU SCHOOL is the mobile-first digital application for École Primaire Privée Kristou School in Tunisia.
 
-This repository defines one dedicated school deployment. The product is sold or provisioned separately for each school, with a separate application environment, Supabase project, credentials, domain/hosting configuration, branding, users, and data. It is not a shared multi-tenant SaaS platform. Do not add cross-school accounts, school switching, tenant routing, or a global school registry unless the product owner explicitly changes this decision.
+This repository defines only KRISTOU SCHOOL, one school. It is not a multi-school or multi-tenant SaaS platform. Do not add other schools, school signup, cross-school accounts, school switching, tenant routing, or a global school registry unless the product owner explicitly changes this decision.
 
 It serves:
 
