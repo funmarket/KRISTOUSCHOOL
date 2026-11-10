@@ -1,183 +1,88 @@
 import React from 'react';
+import { Bell, BookOpen, CalendarDays, Images, Megaphone, UsersRound, Utensils, GraduationCap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import {
-  ShieldCheck,
-  Bell,
-  Users,
-  BookOpen,
-  Calendar,
-  Utensils,
-  GraduationCap,
-  Sparkles,
-  ArrowRight,
-  Send,
-  CheckCircle2,
-} from 'lucide-react';
+import './KristouHome.css';
 
-interface HomeViewProps {
-  setActiveTab: (tab: string) => void;
-}
+type HomeViewProps = { setActiveTab: (tab: string) => void };
+const ASSET = '/assets/kristou-home/';
 
 export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab }) => {
   const { currentUser, currentRole, childrenList, announcements, foodMenu, t } = useApp();
+  const isParent = currentRole === 'PARENT' && !!currentUser;
+  const myChildren = isParent ? childrenList.filter(child => currentUser?.linkedChildrenIds?.includes(child.id)) : [];
 
-  const userChildren = childrenList.filter(c => currentUser?.linkedChildrenIds?.includes(c.id));
+  const shortcuts = [
+    { title: t('schedule'), subtitle: t('scheduleHint'), icon: CalendarDays, shade: '#dff4ff', color: '#159af4', tab: null },
+    { title: t('homework'), subtitle: t('homeworkHint'), icon: BookOpen, shade: '#f1e4ff', color: '#9234f0', tab: 'community' },
+    { title: t('foodMenu'), subtitle: t('menuHint'), icon: Utensils, shade: '#fff2d0', color: '#f8ae08', tab: 'foodMenu' },
+    { title: t('classCommunity'), subtitle: t('communityHint'), icon: UsersRound, shade: '#dff9e9', color: '#09ab7d', tab: 'community' },
+    { title: t('gallery'), subtitle: t('galleryHint'), icon: Images, shade: '#ffe8ef', color: '#ff496d', tab: null },
+    { title: t('announcements'), subtitle: t('announcementsHint'), icon: Megaphone, shade: '#dff4ff', color: '#1699df', tab: 'community' },
+  ] as const;
+  const levelLabels = [
+    [t('levelCp'), t('level1')], [t('levelCe1'), t('level2')], [t('levelCe2'), t('level3')],
+    [t('levelCm1'), t('level4')], [t('levelCm2'), t('level5')], [t('levelSix'), t('level6')],
+  ];
+  const levelColors = ['#d8f0ff', '#d4f7eb', '#ffeab5', '#ffdfd2', '#e8dcff', '#ffdfe8'];
+  const levelInk = ['#15539d', '#007965', '#815008', '#8a542e', '#4b35a3', '#a92b5a'];
 
-  return (
-    <div className="space-y-8 pb-12">
-      
-      {/* Hero Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-k-brand via-k-brand to-k-brand-strong text-white p-6 sm:p-10 overflow-hidden shadow-xl">
-        <div className="absolute end-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center space-x-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>École Primaire Privée Kristou School</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            {t('appName')}
-          </h1>
-          <p className="text-sm sm:text-base text-white/90 mb-6 leading-relaxed">
-            {t('tagline')} — Un environnement numérique unifié pour l'éducation, la sécurité des élèves et la communication fluide entre parents, enseignants et administration.
-          </p>
-
-          <div className="flex flex-wrap gap-3">
-            {currentRole === 'PARENT' && (
-              <button
-                onClick={() => setActiveTab('pickup')}
-                className="px-5 py-2.5 bg-white text-k-brand-strong font-bold text-xs sm:text-sm rounded-xl shadow-lg hover:bg-white/90 transition-all flex items-center space-x-2 rtl:space-x-reverse"
-              >
-                <span>{t('pickup')}</span>
-                <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('community')}
-              className="px-5 py-2.5 bg-k-brand-strong/75 hover:bg-k-brand-strong text-white font-semibold text-xs sm:text-sm rounded-xl border border-white/25 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
-            >
-              <span>{t('classCommunity')}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('foodMenu')}
-              className="px-5 py-2.5 bg-k-brand-strong/75 hover:bg-k-brand-strong text-white font-semibold text-xs sm:text-sm rounded-xl border border-white/25 backdrop-blur-xs transition-all flex items-center space-x-2 rtl:space-x-reverse"
-            >
-              <span>{t('foodMenu')}</span>
-            </button>
-          </div>
+  return <section className="kr-home" aria-label={t('home')}>
+    <div className="kr-hero">
+      <div className="kr-hero-copy">
+        <div className="kr-eyebrow">{t('heroSchoolType')}</div>
+        <h1>Kristou <strong>School</strong></h1>
+        <p>{t('heroDescription')}</p>
+        <div className="kr-actions">
+          <button type="button" className="kr-btn" onClick={() => setActiveTab('registration')}>{t('heroSecondary')} <span aria-hidden="true">→</span></button>
+          <button type="button" className="kr-btn ghost" onClick={() => setActiveTab('directory')}>{t('discoverTeam')} <span aria-hidden="true">↗</span></button>
         </div>
       </div>
-
-      {/* Role-Specific Quick Cards */}
-      {currentRole === 'PARENT' && userChildren.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-2 rtl:space-x-reverse">
-            <Users className="w-5 h-5 text-blue-600" />
-            <span>{t('myChildren')}</span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {userChildren.map(child => (
-              <div
-                key={child.id}
-                className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-center space-x-4 rtl:space-x-reverse"
-              >
-                <img
-                  src={child.photoUrl}
-                  alt={child.fullName}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-blue-500 shadow-md"
-                />
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-base">{child.fullName}</h3>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-0.5">{child.className}</p>
-                  <p className="text-xs text-gray-500 mt-1">Niveau: {child.level}</p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('pickup')}
-                  className="px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold text-xs rounded-xl hover:bg-emerald-100 transition-colors"
-                >
-                  Pickup
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Grid: Announcements & Food Menu Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Recent Announcements */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center space-x-2 rtl:space-x-reverse">
-              <Bell className="w-5 h-5 text-blue-600" />
-              <span>{t('announcements')}</span>
-            </h3>
-            <button
-              onClick={() => setActiveTab('community')}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Voir tout
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {announcements.map(ann => (
-              <div
-                key={ann.id}
-                className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
-                    {ann.authorRole} • {ann.authorName}
-                  </span>
-                  {ann.priority === 'URGENT' && (
-                    <span className="px-2 py-0.5 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 rounded-lg text-[10px] font-bold">
-                      URGENT
-                    </span>
-                  )}
-                </div>
-                <h4 className="font-bold text-sm text-gray-900 dark:text-white">{ann.title}</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{ann.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Food Menu Preview */}
-        <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center space-x-2 rtl:space-x-reverse">
-                <Utensils className="w-5 h-5 text-amber-500" />
-                <span>{t('foodMenu')}</span>
-              </h3>
-              <span className="text-[10px] bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-lg font-bold">
-                La Toque Gourmande
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">{foodMenu.weekRange}</p>
-
-            <div className="space-y-3">
-              {foodMenu.items.slice(0, 3).map((item, idx) => (
-                <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
-                  <div className="font-bold text-xs text-blue-600 dark:text-blue-400 mb-1">{item.day}</div>
-                  <div className="text-xs text-gray-800 dark:text-gray-200 font-medium">{item.main}</div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">{item.dessert}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('foodMenu')}
-            className="w-full py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold text-xs rounded-xl transition-colors text-center mt-4"
-          >
-            Voir le menu complet de la semaine
-          </button>
-        </div>
-
-      </div>
-
+      <img className="kr-hero-photo" src={`${ASSET}hero-schoolchildren.png`} alt={t('heroImageAlt')} />
     </div>
-  );
+
+    <div className="kr-shortcuts" aria-label={t('quickTitle')}>
+      {shortcuts.map(({ title, subtitle, icon: Icon, shade, color, tab }) => <button
+        className="kr-shortcut" type="button" key={title} disabled={!tab}
+        title={tab ? undefined : t('comingSoon')}
+        onClick={tab ? () => setActiveTab(tab) : undefined}>
+        <span className="ico" style={{ '--shade': shade, '--accent': color } as React.CSSProperties}><Icon size={23} strokeWidth={2.5} /></span>
+        <strong>{title}</strong><small>{subtitle}</small>{!tab && <em>{t('comingSoon')}</em>}
+      </button>)}
+    </div>
+
+    <div className="kr-info-grid">
+      <section className="kr-panel">
+        <div className="kr-panel-head"><h2><Bell size={20} color="#119fff" /> {t('featuredTitle')}</h2><button type="button" className="kr-link" onClick={() => setActiveTab('community')}>{t('featuredLink')} →</button></div>
+        {announcements.length ? announcements.slice(0, 2).map((ann, index) => <article className="kr-announcement" key={ann.id}>
+          <img src={`${ASSET}${index === 0 ? 'announcement-school' : 'announcement-bardo'}.png`} alt={t('announcementImageAlt')} />
+          <div>{ann.priority === 'URGENT' && <span className="kr-urgent">{t('urgent')}</span>}<h3>{ann.title}</h3>
+            <time dateTime={ann.createdAt}>{new Date(ann.createdAt).toLocaleDateString()}</time><p>{ann.body}</p></div>
+        </article>) : <p>{t('noItems')}</p>}
+      </section>
+
+      <section className="kr-panel kr-canteen">
+        <div className="kr-panel-head"><h2><Utensils color="#f6a400" size={20} /> {t('canteenTitle')}</h2><span className="kr-chip">{t('canteenBrand')}</span></div>
+        <p className="kr-week">{foodMenu.weekRange}</p>
+        <div className="kr-meals"><img src={`${ASSET}canteen-meal.png`} alt={t('canteenImageAlt')} /><div>
+          {foodMenu.items.slice(0, 5).map((item, index) => <div className="kr-meal" key={`${item.day}-${index}`}><b>{item.day}</b><span>{item.main}</span></div>)}
+        </div></div>
+        <button type="button" className="kr-meal-action" onClick={() => setActiveTab('foodMenu')}>{t('fullMenu')} →</button>
+      </section>
+
+      {isParent ? <section className="kr-panel kr-kids">
+        <div className="kr-panel-head"><h2><UsersRound size={21} color="#00a595" /> {t('myChildren')}</h2></div>
+        <div className="kr-children-grid">{myChildren.length ? myChildren.map((child, index) => <button type="button" className="kr-child" key={child.id} onClick={() => setActiveTab('pickup')}>
+          <img src={child.photoUrl || `${ASSET}${index ? 'child-second' : 'child-yasmine'}.png`} alt={child.fullName} />
+          <span><strong>{child.fullName}</strong><small>{child.className}</small></span><span className="kr-chevron" aria-hidden="true">›</span>
+        </button>) : <p>{t('noLinkedChildren')}</p>}</div>
+      </section> : <section className="kr-panel kr-kids"><div className="kr-panel-head"><h2><UsersRound size={21} color="#00a595" /> {t('familySpace')}</h2></div><p>{t('familySpaceBody')}</p><button type="button" className="kr-btn" onClick={() => setActiveTab('registration')}>{t('registration')} →</button></section>}
+    </div>
+
+    <div className="kr-lower">
+      <div className="kr-campus"><img src={`${ASSET}school-building.png`} alt={t('schoolBuildingAlt')} /><button type="button" className="kr-video" onClick={() => setActiveTab('directory')}>{t('discoverSchool')} →</button></div>
+      <section className="kr-levels"><h2><GraduationCap size={23} color="#009d92" style={{ display: 'inline', verticalAlign: 'middle' }} /> {t('levelsTitle')}</h2><p>{t('levelsBody')}</p><div className="kr-level-row">{levelLabels.map(([name, desc], index) => <div className="kr-level" key={name} style={{ '--lvbg': levelColors[index], '--lvink': levelInk[index] } as React.CSSProperties}>{name}<small>{desc}</small></div>)}</div></section>
+      <section className="kr-enroll"><img src={`${ASSET}enrollment-children.png`} alt={t('enrollmentImageAlt')} /><div><h2>{t('enrollmentTitle')}</h2><button type="button" className="kr-btn" onClick={() => setActiveTab('registration')}>{t('heroSecondary')} →</button></div></section>
+    </div>
+    <div className="kr-foot-stripe"><div>🎓 &nbsp; {t('featureQualified')}</div><div>📊 &nbsp; {t('featureTracking')}</div><div>🎨 &nbsp; {t('featureActivities')}</div><div>🛡️ &nbsp; {t('featureSafe')}</div></div>
+  </section>;
 };

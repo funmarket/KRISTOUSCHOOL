@@ -33,6 +33,7 @@ import {
   MOCK_ADMIN,
 } from '../data/mockData';
 import { translations, type TranslationKey } from '../i18n/translations';
+import { contentT } from '../i18n/content';
 
 interface NotificationItem {
   id: string;
@@ -128,9 +129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
   ]);
 
-  // Arabic text is supported, but the product shell intentionally remains LTR.
-  // Language changes must not mirror or move the top bar, profile menu, or modal controls.
-  const dir = 'ltr';
+  const dir = language === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     document.documentElement.dir = dir;
@@ -176,6 +175,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dict = translations[language] || translations.en;
     return dict[key] || translations.en[key] || key;
   };
+
+  const localizedAnnouncements = announcements.map(item => ({
+    ...item,
+    title: contentT(language, 'announcements', item.id, 'title', item.title),
+    body: contentT(language, 'announcements', item.id, 'body', item.body),
+    authorRole: contentT(language, 'announcements', item.id, 'authorRole', item.authorRole),
+  }));
+  const localizedHomework = homeworkList.map(item => ({
+    ...item,
+    title: contentT(language, 'homework', item.id, 'title', item.title),
+    description: contentT(language, 'homework', item.id, 'description', item.description),
+  }));
+  const localizedCalendar = calendarEvents.map(item => ({
+    ...item,
+    title: contentT(language, 'calendar', item.id, 'title', item.title),
+    description: contentT(language, 'calendar', item.id, 'description', item.description),
+    category: contentT(language, 'calendar', item.id, 'category', item.category) as typeof item.category,
+  }));
+  const localizedFoodMenu = {
+    ...foodMenu,
+    weekRange: contentT(language, 'menu', foodMenu.id, 'weekRange', foodMenu.weekRange),
+    items: foodMenu.items.map((item, index) => ({
+      ...item,
+      day: contentT(language, 'menu', String(index), 'day', item.day),
+      starter: contentT(language, 'menu', String(index), 'starter', item.starter),
+      main: contentT(language, 'menu', String(index), 'main', item.main),
+      side: contentT(language, 'menu', String(index), 'side', item.side),
+      dessert: contentT(language, 'menu', String(index), 'dessert', item.dessert),
+      notes: item.notes ? contentT(language, 'menu', String(index), 'notes', item.notes) : item.notes,
+    })),
+  };
+  const localizedTeachers = teachers.map(item => ({
+    ...item,
+    title: contentT(language, 'teachers', item.id, 'title', item.title),
+    bio: contentT(language, 'teachers', item.id, 'bio', item.bio),
+  }));
+  const localizedAdmins = admins.map(item => ({
+    ...item,
+    title: contentT(language, 'admins', item.id, 'title', item.title),
+    bio: contentT(language, 'admins', item.id, 'bio', item.bio),
+  }));
+  const localizedNotifications = notifications.map(item => ({
+    ...item,
+    title: contentT(language, 'notifications', item.id, 'title', item.title),
+    message: contentT(language, 'notifications', item.id, 'message', item.message),
+    time: contentT(language, 'notifications', item.id, 'time', item.time),
+  }));
 
   const login = (username: string, _pass: string): boolean => {
     const found = MOCK_USERS.find(u => u.username.toLowerCase() === username.toLowerCase());
@@ -370,17 +416,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dir,
         childrenList,
         classesList,
-        announcements,
-        homeworkList,
-        calendarEvents,
+        announcements: localizedAnnouncements,
+        homeworkList: localizedHomework,
+        calendarEvents: localizedCalendar,
         classQuestions,
         parentNotes,
         messages,
         pickupRecords,
-        foodMenu,
-        teachers,
-        admins,
-        notifications,
+        foodMenu: localizedFoodMenu,
+        teachers: localizedTeachers,
+        admins: localizedAdmins,
+        notifications: localizedNotifications,
         login,
         logout,
         connectTelegram,

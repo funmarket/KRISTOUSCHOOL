@@ -36,7 +36,7 @@ export const ClassCommunityView: React.FC = () => {
     e.preventDefault();
     if (!newQuestionText.trim()) return;
     if (newQuestionText.length > 200) {
-      setQuestionError('Maximum 200 caractères requis.');
+      setQuestionError(t('max200'));
       return;
     }
     setQuestionError('');
@@ -44,7 +44,7 @@ export const ClassCommunityView: React.FC = () => {
     if (res.success) {
       setNewQuestionText('');
     } else {
-      setQuestionError(res.error || 'Erreur');
+      setQuestionError(res.error || t('error'));
     }
   };
 
@@ -63,13 +63,13 @@ export const ClassCommunityView: React.FC = () => {
         <div>
           <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Classe Active: {selectedClass.name}</span>
+            <span>{t('classActive')}: {selectedClass.name}</span>
           </div>
           <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
             {t('classCommunity')}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Enseignante référente : {selectedClass.teacherName} • Année scolaire {selectedClass.academicYear}
+            {t('teacherLabel')} : {selectedClass.teacherName} • {t('schoolYear')} {selectedClass.academicYear}
           </p>
         </div>
 
@@ -164,7 +164,7 @@ export const ClassCommunityView: React.FC = () => {
           <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-2">{t('askClassmates')}</h3>
             <p className="text-xs text-gray-500 mb-4">
-              Réservé exclusivement aux élèves du même classe. Maximum 200 caractères par question. Pas de messages privés.
+              {t('questionRule')}
             </p>
 
             {questionError && (
@@ -179,7 +179,7 @@ export const ClassCommunityView: React.FC = () => {
                 onChange={e => setNewQuestionText(e.target.value)}
                 maxLength={200}
                 rows={3}
-                placeholder="Posez votre question concernant le cours ou les devoirs..."
+                placeholder={t('questionPlaceholder')}
                 className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="flex items-center justify-between">
@@ -191,7 +191,7 @@ export const ClassCommunityView: React.FC = () => {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 rtl:space-x-reverse"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Publier</span>
+                  <span>{t('publish')}</span>
                 </button>
               </div>
             </form>
@@ -235,14 +235,14 @@ export const ClassCommunityView: React.FC = () => {
                     value={replyTextMap[q.id] || ''}
                     onChange={e => setReplyTextMap({ ...replyTextMap, [q.id]: e.target.value })}
                     maxLength={200}
-                    placeholder="Écrire une réponse..."
+                    placeholder={t('replyPlaceholder')}
                     className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none"
                   />
                   <button
                     onClick={() => handleReplySubmit(q.id)}
                     className="px-3 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-xl"
                   >
-                    Répondre
+                    {t('reply')}
                   </button>
                 </div>
               </div>

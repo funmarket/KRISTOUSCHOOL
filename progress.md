@@ -30,10 +30,11 @@ For every future entry, record exact branch/HEAD, files changed, migrations, tes
 - The foundation migration revokes browser-role table/sequence privileges, enables and forces RLS, and creates explicit deny-by-default policies for `anon` and `authenticated` until the verified identity bridge and feature-specific allow policies are implemented.
 - Updated the frontend translation dictionary, stable LTR shell behavior for Arabic language changes, and mobile/Telegram-safe login modal viewport handling.
 - Verified `npm run lint`, `npm run build`, and `git diff --check` locally. Supabase CLI reset and remote migration application were not run because the CLI is not installed in this environment and the remote cleanup is destructive.
-## 2026-11-10 — dedicated single-school wording cleanup
 
-- Branch: `fix/kristou-single-school-wording`, based on `origin/feature/frontend-i18n-stable-ltr` at `fbf8d2880a8371cd1194aecae013e6acb894c8ff`.
-- Reworded the current repository authorities and continuation handoff to describe KRISTOUSCHOOL positively as the dedicated one-school product for École Primaire Privée Kristou School.
-- No frontend source, Supabase client, migrations, remote schema, data, credentials, or deployment configuration was changed.
-- The archived destructive cleanup SQL was not adopted or executed.
-- `git diff --check` passed; dependency install and application checks remain environment-blocked by the existing npm peer conflict between `vite@8.3.7` and `esbuild@0.25.12`.
+## Continuation reconciliation (2026-11-10)
+
+- Inspected the continuation handoff archive, the requested feature branch, the read-only `funmarket/Kristou` reference repository, and the current Supabase integration surface.
+- Removed obsolete wording about shared or additional-school product scope from the current repository documents. The product boundary is stated directly as KRISTOU SCHOOL only.
+- Updated `src/lib/supabase.ts` to remove the embedded project URL and mock key. The browser client is now unavailable until runtime URL and publishable/anon key configuration is supplied, and `requireSupabaseClient()` fails with an explicit configuration error.
+- Added `docs/REMOTE_SCHEMA_INVENTORY.md`. It records the supplied handoff audit for `bzerboixpbwfvmbnbzxd` and the current authorized connector evidence for a different project, `ofppapwofhovhroyjtkc`, which currently reports no public tables. This mismatch blocks schema pull, generated types, migration baselining, and remote changes.
+- No Supabase remote mutation was performed. No existing table, data, grant, policy, function, storage object, or migration history was changed.

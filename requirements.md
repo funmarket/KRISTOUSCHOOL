@@ -17,7 +17,7 @@ When the product owner gives a newer explicit instruction that conflicts with th
 
 KRISTOU SCHOOL is the mobile-first digital application for École Primaire Privée Kristou School in Tunisia.
 
-This repository defines only KRISTOU SCHOOL, one school. Keep accounts, content, and school operations scoped to KRISTOU SCHOOL.
+This repository defines only KRISTOU SCHOOL, one school. Do not add other schools, school signup, accounts shared between schools, school switching, routing for additional schools, or a global school registry unless the product owner explicitly changes this decision.
 
 It serves:
 

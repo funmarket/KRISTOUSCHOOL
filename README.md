@@ -1,6 +1,6 @@
 # KRISTOU SCHOOL
 
-KRISTOU SCHOOL is the mobile-first school application for École Primaire Privée Kristou School in Tunisia. This repository, `funmarket/KRISTOUSCHOOL`, is the canonical source of truth for product requirements, architecture, data authority, implementation plans, and verified progress. It is dedicated to this single school and its school community.
+KRISTOU SCHOOL is the mobile-first school application for École Primaire Privée Kristou School in Tunisia. This repository, `funmarket/KRISTOUSCHOOL`, is the canonical source of truth for product requirements, architecture, data authority, implementation plans, and verified progress. It is only for one school: KRISTOU SCHOOL. Keep this repository dedicated to KRISTOU SCHOOL; do not add support for additional schools.
 
 ## Current state
 

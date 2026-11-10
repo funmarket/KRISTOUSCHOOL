@@ -21,15 +21,15 @@ export const ParentNotesView: React.FC = () => {
     setSuccessMsg('');
 
     if (!content.trim()) {
-      setErrorMsg('Veuillez saisir le contenu de la note.');
+      setErrorMsg(t('error'));
       return;
     }
 
     const res = addParentNote(selectedChildId, topic, content);
     if (!res.success) {
-      setErrorMsg(res.error || 'Erreur lors de l’envoi');
+      setErrorMsg(res.error || t('error'));
     } else {
-      setSuccessMsg('Note transmise avec succès à l’école.');
+      setSuccessMsg(t('success'));
       setContent('');
     }
   };
@@ -44,15 +44,15 @@ export const ParentNotesView: React.FC = () => {
             {t('parentNotes')}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Communication structurée entre parents et école (Absences, Devoirs, Santé, Pickup).
+            {t('notesDescription')}
           </p>
         </div>
 
         <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 px-4 py-2 rounded-2xl flex items-center space-x-3 rtl:space-x-reverse">
           <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <div>
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">Quota journalier</div>
-            <div className="text-sm font-bold text-gray-900 dark:text-white">{remainingQuota} / 11 notes restantes</div>
+            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">{t('dailyQuota')}</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-white">{remainingQuota} / 11 {t('notesRemaining')}</div>
           </div>
         </div>
       </div>
@@ -64,7 +64,7 @@ export const ParentNotesView: React.FC = () => {
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('sendNote')}</h3>
 
           <p className="text-[11px] text-gray-500 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
-            Horaires d’envoi autorisés : de 08:00 à 18:00 (heure de Tunis).
+            {t('sendingHours')}
           </p>
 
           {errorMsg && (
@@ -83,7 +83,7 @@ export const ParentNotesView: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Enfant concerné</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('childConcerned')}</label>
               <select
                 value={selectedChildId}
                 onChange={e => setSelectedChildId(e.target.value)}
@@ -98,28 +98,28 @@ export const ParentNotesView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Sujet</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('subject')}</label>
               <select
                 value={topic}
                 onChange={e => setTopic(e.target.value as any)}
                 className="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white"
               >
-                <option value="ABSENCE">Absence / Retard</option>
-                <option value="HOMEWORK">Devoirs</option>
-                <option value="BEHAVIOR">Comportement</option>
-                <option value="HEALTH">Santé / Allergie</option>
-                <option value="PICKUP">Pickup / Sortie</option>
-                <option value="OTHER">Autre sujet</option>
+                <option value="ABSENCE">{t('calendar')} / Retard</option>
+                <option value="HOMEWORK">{t('homework')}</option>
+                <option value="BEHAVIOR">{t('subject')}</option>
+                <option value="HEALTH">{t('subject')}</option>
+                <option value="PICKUP">{t('pickup')}</option>
+                <option value="OTHER">{t('subject')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Message</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('message')}</label>
               <textarea
                 value={content}
                 onChange={e => setContent(e.target.value)}
                 rows={4}
-                placeholder="Rédigez votre note ici..."
+                placeholder={t('notePlaceholder')}
                 className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -135,12 +135,12 @@ export const ParentNotesView: React.FC = () => {
 
         {/* History of notes */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white">Historique des Notes</h3>
+          <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('noteHistory')}</h3>
           
           <div className="space-y-3">
             {userNotes.length === 0 ? (
               <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-gray-500 text-xs">
-                Aucune note enregistrée.
+                {t('noNotes')}
               </div>
             ) : (
               userNotes.map(n => (
@@ -161,7 +161,7 @@ export const ParentNotesView: React.FC = () => {
 
                   {n.replyContent && (
                     <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 p-3.5 rounded-2xl text-xs space-y-1">
-                      <div className="font-bold text-[11px] text-emerald-700 dark:text-emerald-400">Réponse de l'école :</div>
+                      <div className="font-bold text-[11px] text-emerald-700 dark:text-emerald-400">{t('schoolReply')} :</div>
                       <p className="text-emerald-900 dark:text-emerald-300">{n.replyContent}</p>
                     </div>
                   )}

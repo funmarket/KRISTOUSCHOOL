@@ -2,7 +2,7 @@
 
 Status: **MANDATORY REPOSITORY INSTRUCTIONS**
 
-These rules apply to every developer, coding agent, automation, and delegated worker in `funmarket/KRISTOUSCHOOL`. The product is KRISTOU SCHOOL. The old `funmarket/Kristou` repository is read-only migration history; do not assume its branches, deployment, code, tests, or infrastructure are current here. This repository is dedicated to one school: École Primaire Privée Kristou School. Keep its product, data model, and user base scoped to KRISTOU SCHOOL.
+These rules apply to every developer, coding agent, automation, and delegated worker in `funmarket/KRISTOUSCHOOL`. The product is KRISTOU SCHOOL. The old `funmarket/Kristou` repository is read-only migration history; do not assume its branches, deployment, code, tests, or infrastructure are current here. This repository is only for one school: KRISTOU SCHOOL. Keep every feature, identity, and data relationship inside this school unless the product owner explicitly changes this decision.
 
 ## 1. Mandatory onboarding gate
 
@@ -35,7 +35,7 @@ The Supabase backend plan is an ordered proposal subordinate to the owner's inst
 ## 3. Non-negotiable safety and quality rules
 
 - One canonical KRISTOU product, one canonical identity per person, one authoritative owner per durable concept, and one school only.
-- Keep all product concepts scoped to the dedicated KRISTOU SCHOOL product, its single school data model, and its single school user base.
+- Do not introduce a shared school registry, additional-school switching, inter-school memberships, or a database shared by multiple schools in this repository.
 - Never treat frontend visibility, a client-supplied role, a publishable key, or a client-side check as authorization.
 - Every exposed Supabase table/view/function/storage path must have least-privilege grants and appropriate, tested RLS/access controls. A Supabase service-role/secret key bypasses RLS and must remain server-side; never expose it to the browser.
 - Do not put student, child, family, health, enrollment, or pickup data into public projections or production mock fixtures.

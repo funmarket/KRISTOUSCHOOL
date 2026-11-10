@@ -11,7 +11,7 @@ This document defines architecture, runtime boundaries, data ownership, and depe
 
 The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It does not yet contain a Supabase CLI project, migrations, RLS policies, Edge Functions, production authentication, or a backend. UI data, login, roles, and pickup transitions are prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. The product and Supabase boundary are dedicated to KRISTOU SCHOOL and its school community. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 
@@ -28,7 +28,7 @@ KRISTOUSCHOOL/
   docs/                       # requirements, architecture, plans, evidence
 ```
 
-Keep the repository focused on one canonical school product: do not add unrelated product registries, school-selection flows, or alternate data authorities. Supabase Edge Functions are the initial server-side HTTP/orchestration runtime. A future long-running worker or separate API is a distinct architecture decision, not a default prerequisite.
+Do not create a Node monorepo, separate API runtime, worker, package, Telegram frontend, additional-school router, school registry, or inter-school membership model. The product owner must explicitly change the single-school decision before support for additional schools is considered. Supabase Edge Functions are the initial server-side HTTP/orchestration runtime. A future long-running worker or separate API is a distinct architecture decision, not a default prerequisite.
 
 ## 2. Runtime and data boundaries
 

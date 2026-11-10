@@ -77,8 +77,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <header dir="ltr" className="sticky top-0 z-50 bg-white/90 dark:bg-[#090909]/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header dir="ltr" className="sticky top-0 z-50 bg-white/95 dark:bg-[#090909]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
+      <div dir="ltr" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
         
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0" onClick={() => setActiveTab('home')}>
@@ -112,24 +112,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <option value="en">EN</option>
             </select>
           </div>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(theme === 'light' ? 'pitch-black' : 'light')}
-            className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title={theme === 'light' ? t('pitchBlack') : t('lightMode')}
-          >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
-          </button>
-
-          {/* Role Switcher Button */}
-          <button
-            onClick={() => setShowRoleModal(true)}
-            className="hidden sm:flex items-center space-x-1 rtl:space-x-reverse px-3 py-1.5 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand hover:bg-k-brand/15 dark:hover:bg-k-brand/20 text-xs font-semibold rounded-xl border border-k-brand/25 dark:border-blue-900 transition-colors"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>{currentRole}</span>
-          </button>
 
           {/* Notifications Bell */}
           <div className="relative" onMouseLeave={() => setShowNotifications(false)}>
@@ -264,7 +246,26 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     </button>
                   </div>
 
-                  {currentUser && <div className="py-1">
+                  <div className="py-1">
+                    <div className="px-4 py-2 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800">
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('appearance')}</span>
+                      <button
+                        onClick={() => setTheme(theme === 'light' ? 'pitch-black' : 'light')}
+                        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        title={theme === 'light' ? t('pitchBlack') : t('lightMode')}
+                      >
+                        {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
+                        <span>{theme === 'light' ? t('pitchBlack') : t('lightMode')}</span>
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowRoleModal(true)}
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                    >
+                      <Shield className="w-4 h-4 text-k-brand" />
+                      <span>{t('roleSwitch')}: {currentRole}</span>
+                    </button>
+                    {currentUser && <>
                     <button
                       onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
                       className="w-full text-start px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
@@ -281,7 +282,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                         <span>{t('telegramConnect')}</span>
                       </button>
                     )}
-                  </div>}
+                    </>}
+                  </div>
 
                   <div className="border-t border-gray-100 dark:border-gray-800 py-1">
                     {currentUser ? <button

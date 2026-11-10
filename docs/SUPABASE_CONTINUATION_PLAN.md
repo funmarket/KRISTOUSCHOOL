@@ -4,7 +4,7 @@
 **Backend direction:** Supabase PostgreSQL, Supabase Edge Functions, private Supabase Storage when needed.
 **Frontend:** one canonical React/TypeScript product for Browser and Telegram WebView.
 **Primary goal:** move from the current mock-driven UI to safe, tested vertical slices without duplicate ownership, accidental data deletion, or historical-provider drift.
-**Deployment boundary:** this plan serves the dedicated KRISTOU SCHOOL product and its school community.
+**Deployment boundary:** this plan serves KRISTOU SCHOOL only. It does not design support for additional schools, a school signup registry, inter-school membership, or data shared between schools.
 
 ---
 
@@ -101,7 +101,7 @@ PostgreSQL/RLS/storage                       # durable authority and enforcement
 Tasks:
 
 1. Keep `funmarket/KRISTOUSCHOOL` as the only implementation authority for KRISTOU SCHOOL.
-2. Keep identity, content, and access scoped to the KRISTOU SCHOOL community.
+2. Do not add other schools, routing for additional schools, or identities shared between schools.
 3. Keep `funmarket/Kristou` read-only and historical.
 4. Ensure current repository docs contain no superseded provider names, service labels, deployment variables, endpoints, or historical live claims.
 5. State clearly that Supabase is backend/database/function/storage direction, while frontend hosting remains a separate future decision.

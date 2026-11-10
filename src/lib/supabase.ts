@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve Supabase URL and Anon Key from environment variables (Vite or Node runtime)
+// Retrieve only public runtime configuration. Never embed a project URL or key in source.
 const getEnvVar = (key: string): string => {
   if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
     const val = (import.meta as any).env[key];
@@ -18,8 +18,14 @@ const getEnvVar = (key: string): string => {
   return '';
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL') || 'https://bzerboixpbwfvmbnbzxd.supabase.co';
-const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_anon_key_for_kristou';
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL');
+const supabasePublishableKey =
+  getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') ||
+  getEnvVar('VITE_SUPABASE_ANON_KEY') ||
+  getEnvVar('SUPABASE_PUBLISHABLE_KEY') ||
+  getEnvVar('SUPABASE_ANON_KEY');
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 
 export interface DatabaseSchema {
   public: {
@@ -171,9 +177,21 @@ export interface DatabaseSchema {
   };
 }
 
-export const supabase = createClient<DatabaseSchema>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+export const supabase = isSupabaseConfigured
+  ? createClient<DatabaseSchema>(supabaseUrl, supabasePublishableKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
+  : null;
+
+export function requireSupabaseClient() {
+  if (!supabase) {
+    throw new Error(
+      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the runtime environment.',
+    );
+  }
+
+  return supabase;
+}

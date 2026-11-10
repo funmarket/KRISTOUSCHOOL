@@ -3,7 +3,7 @@
 **Prepared:** 2026-11-10
 **Repository:** `funmarket/KRISTOUSCHOOL`
 **Purpose:** Preserve complete context when the current chat closes. The next agent must read this file together with the repository authorities before making changes.
-**Deployment boundary:** the dedicated KRISTOU SCHOOL product and its school community.
+**Deployment boundary:** KRISTOU SCHOOL only; this serves KRISTOU SCHOOL only.
 
 ---
 
@@ -27,7 +27,7 @@ This document is an operational handoff, not a substitute for the repository’s
 
 ## 2. User and collaboration context
 
-The product owner is building KRISTOU SCHOOL for École Primaire Privée Kristou School in Tunisia. They want the old `funmarket/Kristou` repository used as a read-only product/architecture reference, while `funmarket/KRISTOUSCHOOL` is the clean canonical project. Keep this repository dedicated to KRISTOU SCHOOL and its school community.
+The product owner is building KRISTOU SCHOOL for École Primaire Privée Kristou School in Tunisia. They want the old `funmarket/Kristou` repository used as a read-only product/architecture reference, while `funmarket/KRISTOUSCHOOL` is the clean canonical project. The owner has now explicitly decided that this repository remains only for KRISTOU SCHOOL. Do not design for additional schools here.
 
 The owner is very sensitive to drift, invented behavior, duplicated architecture, and destructive database actions. They explicitly require:
 
@@ -442,7 +442,7 @@ The reference repository may be inspected for historical product decisions and s
 
 ## 11. Explicit one-school-only decision
 
-The product owner confirmed the dedicated-school scope. The current product boundary is:
+The product owner confirmed that this remains a dedicated single-school product. The current rule is:
 
 ```text
 KRISTOU SCHOOL only
@@ -452,7 +452,7 @@ one school user base
 one school Supabase project
 ```
 
-Agents must keep product features, identity, and durable data within the KRISTOU SCHOOL community.
+Agents must not add routing for additional schools, school signup, inter-school memberships, a global school registry, school switching, or data shared between schools.
 
 ## 12. Immediate next task
 

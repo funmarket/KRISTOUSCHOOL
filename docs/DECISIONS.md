@@ -122,9 +122,9 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status:** Accepted.
 
-**Context:** KRISTOUSCHOOL is intentionally scoped to École Primaire Privée Kristou School, with one dedicated product, school data model, and school user base.
+**Context:** The product owner confirmed that KRISTOUSCHOOL is a dedicated single-school product and rejected adding school signup, additional-school routing, dedicated school switching, or memberships spanning schools.
 
-**Decision:** KRISTOUSCHOOL remains the dedicated product for École Primaire Privée Kristou School. All product features, accounts, and durable records stay within this single-school scope.
+**Decision:** KRISTOUSCHOOL remains only the single-school product for École Primaire Privée Kristou School. The current repository must not add a shared platform registry, school signup, global school registry, school switcher, users belonging to additional schools, or data shared between schools.
 
 **Consequences:** School-specific configuration and branding remain local to KRISTOU SCHOOL. Any future scope change would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
 
