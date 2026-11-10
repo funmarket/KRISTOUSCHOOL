@@ -34,6 +34,7 @@ import {
 } from '../data/mockData';
 import { translations, type TranslationKey } from '../i18n/translations';
 import { contentT } from '../i18n/content';
+import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, type SignupRole } from '../lib/auth';
 
 interface NotificationItem {
   id: string;
@@ -71,9 +72,10 @@ interface AppContextType {
   notifications: NotificationItem[];
 
   // Actions
-  login: (username: string, pass: string) => boolean;
+  login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => Promise<{ success: boolean; confirmationRequired?: boolean; error?: string }>;
   logout: () => void;
-  connectTelegram: () => void;
+  connectTelegram: () => Promise<{ linkCode?: string; error?: string }>;
   addParentNote: (childId: string, topic: ParentNote['topic'], content: string, teacherId?: string) => { success: boolean; error?: string };
   addClassQuestion: (classId: string, content: string) => { success: boolean; error?: string };
   replyClassQuestion: (questionId: string, content: string) => void;
@@ -87,8 +89,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(MOCK_USERS[0]); // default parent Karim
-  const [currentRole, setCurrentRoleState] = useState<UserRole>('PARENT');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentRole, setCurrentRoleState] = useState<UserRole>('PUBLIC');
   const [language, setLanguageState] = useState<Language>(() => {
     return (localStorage.getItem('kristou_lang') as Language) || 'fr';
   });
@@ -146,6 +148,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     localStorage.setItem('kristou_theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    let active = true;
+    import('../lib/supabase').then(({ supabase }) => {
+      if (!supabase) return;
+      supabase.auth.getSession().then(async ({ data }) => {
+        if (!active || !data.session?.user) return;
+        try {
+          const user = await loadCanonicalUser(data.session.user);
+          if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
+        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } }
+      });
+      const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (!active || !session?.user) { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } return; }
+        try {
+          const user = await loadCanonicalUser(session.user);
+          if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
+        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } }
+      });
+      return () => listener.subscription.unsubscribe();
+    });
+    return () => { active = false; };
+  }, []);
 
   const setCurrentRole = (role: UserRole) => {
     setCurrentRoleState(role);
@@ -223,45 +248,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     time: contentT(language, 'notifications', item.id, 'time', item.time),
   }));
 
-  const login = (username: string, _pass: string): boolean => {
-    const found = MOCK_USERS.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (found) {
-      setCurrentUser(found);
-      setCurrentRoleState(found.role);
-      return true;
+  const login = async (identifier: string, pass: string) => {
+    try {
+      const { user } = await signInAccount(identifier, pass);
+      const canonicalUser = await loadCanonicalUser(user);
+      setCurrentUser(canonicalUser);
+      setCurrentRoleState(canonicalUser.role);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Invalid credentials' };
     }
-    // Generic fallback login
-    const newUser: User = {
-      id: 'user-custom',
-      username,
-      fullName: username,
-      role: 'PARENT',
-      linkedChildrenIds: ['child-1'],
-    };
-    setCurrentUser(newUser);
-    setCurrentRoleState('PARENT');
-    return true;
+  };
+
+  const signup = async (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => {
+    try {
+      const data = await signUpAccount(input);
+      return { success: true, confirmationRequired: !data.session };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unable to create account' };
+    }
   };
 
   const logout = () => {
+    void signOutAccount();
     setCurrentUser(null);
     setCurrentRoleState('PUBLIC');
   };
 
-  const connectTelegram = () => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, telegramLinked: true });
-      setNotifications(prev => [
-        {
-          id: `n-${Date.now()}`,
-          title: 'Telegram Connect',
-          message: 'Votre compte a été lié avec succès à Telegram.',
-          time: "À l'instant",
-          read: false,
-          type: 'system',
-        },
-        ...prev,
-      ]);
+  const connectTelegram = async () => {
+    if (!currentUser) return { error: 'Authentication required' };
+    try {
+      const challenge = await createTelegramLinkChallenge();
+      return { linkCode: challenge.linkCode };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Unable to start Telegram linking' };
     }
   };
 
@@ -428,6 +448,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         admins: localizedAdmins,
         notifications: localizedNotifications,
         login,
+        signup,
         logout,
         connectTelegram,
         addParentNote,

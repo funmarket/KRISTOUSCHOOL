@@ -4,7 +4,7 @@ Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
 This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`. The model is only for KRISTOU SCHOOL. This repository defines only the KRISTOU SCHOOL data model.
 
-It does **not** claim that the models below are already implemented. Supabase is the selected backend/database platform direction, but no schema or project integration is verified by this migration. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. The product owner confirmed the existing Web username/password and Telegram WebApp identity/linking policy; ADR-015 tracks the engineering design needed to preserve it safely on Supabase. Do not infer that Supabase Auth has been selected.
+The authentication foundation is now implemented as a source-controlled Supabase migration and server-side function boundary. The remaining domain models below are contracts and must not be treated as implemented until their own migrations, RLS, and tests exist. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. Supabase Auth is selected for Web credential verification; application identity and roles remain in KRISTOU-linked public tables, and Telegram remains a separately validated identity transport.
 
 During implementation, the following must agree with this document:
 
@@ -78,10 +78,10 @@ updatedAt
 
 Rules:
 
-- `loginUsername` is the unique normalized Web login identifier;
-- Web sign-in is login username + password;
-- `email` is optional and is not a Web login identifier;
-- an optional email value is not password-recovery authority unless a separate verified-email flow is implemented;
+- `loginUsername` is the unique normalized custom Web identifier;
+- Web sign-in accepts username, email, or full international phone number plus password;
+- email and phone credentials are verified by Supabase Auth;
+- username resolution is server-side and must not expose contact identifiers to the browser;
 - a Telegram-originated canonical User may later add exactly one WebCredential to the same `User.id`;
 - creating Web credentials must never create a second canonical User for an already authenticated Telegram-originated account.
 
@@ -149,11 +149,13 @@ RoleAssignment
 CapabilityGrant
 ```
 
-Exact persistence shape is **TBD**.
+The authentication foundation persists `RoleAssignment` in Supabase. Capability-grant details remain **TBD** and must not be duplicated in feature domains.
 
 Locked authority rules:
 
 - APP_ADMIN / School Owner is global authority;
+- Administrative Personnel authority is explicit, capability-specific, and scoped to assigned operational responsibilities;
+- School Staff authority is explicit, capability-specific, and scoped to assigned student, facility, health, meal, transport, or resource responsibilities;
 - Manager/Associate authority is explicit and capability-specific;
 - Teacher authority is class/resource-scoped;
 - Parent authority depends on canonical guardian/child scope;

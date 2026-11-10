@@ -1,0 +1,2 @@
+-- Intentionally empty. Do not seed real or synthetic school people here until the
+-- authentication and role-assignment tests define safe fixtures in an isolated test schema.

@@ -86,7 +86,26 @@ Teacher assigned to one or more classes.
 
 Teacher class authority is scoped to assigned classes unless separately granted broader capability.
 
-## 3.6 MANAGER / ASSOCIATE
+## 3.6 SCHOOL_STAFF
+
+School staff are school personnel who support student wellbeing, learning resources, health, operations, facilities, safety, meals, transportation, or additional needs. The role is a requested account category; it does not grant access until the school assigns explicit capabilities and resource scope.
+
+The School Staff category includes:
+
+- Guidance Counselors and School Psychologists: mental health support, emotional guidance, and academic counseling;
+- School Nurses and Health Technicians: student medical needs, first aid, and prescriptions;
+- Librarians and Curriculum Developers: media resources and instructional materials;
+- Secretaries and Attendance Clerks: office management, attendance, and family communication;
+- Caretakers and Cleaners: facility maintenance, repairs, and classroom sanitation;
+- Security Guards: campus entry monitoring and physical safety;
+- Cafeteria Staff: daily meals for students and faculty;
+- Transportation Workers and Special Needs Assistants: bus transit, student arrival logistics, and additional-needs support.
+
+## 3.7 ADMINISTRATIVE_PERSONNEL
+
+Administrative personnel oversee or coordinate school operations and educational leadership. This category includes Principals and Vice Principals, who oversee daily school operations, evaluate staff, and lead educational policies. It is a requested account category and does not grant global authority by itself.
+
+## 3.8 MANAGER / ASSOCIATE
 
 Delegated school staff with explicit capabilities.
 
@@ -94,7 +113,7 @@ A manager label does not imply full App Admin authority.
 
 Initial owner preference: no more than approximately three managers/associates, subject to later owner change.
 
-## 3.7 APP_ADMIN / SCHOOL_OWNER
+## 3.9 APP_ADMIN / SCHOOL_OWNER
 
 Global school application authority.
 
@@ -132,19 +151,25 @@ Never merge identities because of matching:
 
 Account linking must be explicit and verified.
 
-## 4.2.1 Web login policy
+## 4.2.1 Web account and login policy
 
-KRISTOU Web authentication uses:
+KRISTOU Web account access uses Supabase Auth for credential verification and a linked KRISTOU profile for application identity. During app signup, a user provides:
 
-- a unique normalized **login username**;
-- a password stored only as a strong one-way password hash;
-- an optional email address.
+- a unique normalized **username**;
+- a password;
+- either an email address or a full international phone number;
+- a full name and a requested account role.
 
-The optional email is not a Web login identifier. Web sign-in is **login username + password**.
+After signup, Web sign-in accepts **email + password**, **phone + password**, or **username + password**. Username is stored in the canonical Supabase-linked profile and is resolved only through the protected server-side authentication function; the browser must not query profile email/phone values to implement username login.
 
-An email value does not become password-recovery authority merely because it is present. Email-based recovery requires a separately designed verified-email flow.
+Email and phone confirmation behavior follows the configured Supabase Auth policy. An email or phone value is an authentication identifier only when it is attached to the verified Supabase Auth identity; it is not automatically a recovery authority outside the configured provider flow.
 
-A Telegram-originated canonical User may add a WebCredential later by choosing a unique login username and password, with email remaining optional. That WebCredential must attach to the existing canonical User rather than creating a second User.
+The requested signup role is informational and never grants authority. Server-side role assignments control access. A Telegram-originated canonical User may later attach Web credentials to the same User rather than creating a second User.
+
+
+## 4.2.2 App signup is separate from school admission
+
+App signup creates an authenticated application account. It does not enroll a child, submit an admission request, or replace the school registration/admission flow. The existing Registration surface remains the separate school-owned enrollment process for student admission.
 
 ## 4.3 Web -> Telegram linking
 

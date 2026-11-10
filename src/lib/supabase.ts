@@ -30,6 +30,42 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKe
 export interface DatabaseSchema {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          username: string;
+          username_normalized: string;
+          full_name: string | null;
+          email: string | null;
+          phone: string | null;
+          requested_role: string;
+          staff_id: string | null;
+          admission_id: string | null;
+          avatar_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          username: string;
+          full_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          requested_role?: string;
+          staff_id?: string | null;
+          admission_id?: string | null;
+          avatar_url?: string | null;
+        };
+        Update: {
+          full_name?: string | null;
+          avatar_url?: string | null;
+        };
+      };
+      role_assignments: {
+        Row: { id: string; user_id: string; role: string; active: boolean; assigned_by: string | null; created_at: string; updated_at: string };
+        Insert: { user_id: string; role: string; active?: boolean; assigned_by?: string | null };
+        Update: { active?: boolean };
+      };
       users: {
         Row: {
           id: string;

@@ -2,16 +2,16 @@
 
 Status: **PRIMARY ARCHITECTURE CONTRACT**
 Repository: `funmarket/KRISTOUSCHOOL`
-Backend platform direction: **Supabase** (planned; not yet verified as provisioned or integrated)
+Backend platform direction: **Supabase** (authentication foundation source-controlled; live deployment not yet verified)
 Deployment model: **KRISTOU SCHOOL only**
 
 This document defines architecture, runtime boundaries, data ownership, and dependency rules. It is not a progress ledger, feature backlog, or permission to create speculative structures. Product behavior belongs in `requirements.md`; data authority belongs in `docs/CANONICAL_MODEL.md`; decisions belong in `docs/DECISIONS.md`; verified status belongs in `progress.md`.
 
 ## 1. Current state and target
 
-The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It does not yet contain a Supabase CLI project, migrations, RLS policies, Edge Functions, production authentication, or a backend. UI data, login, roles, and pickup transitions are prototype-only.
+The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It now contains the source-controlled Supabase authentication foundation, migrations, and Edge Function boundaries; private school-domain backend slices remain unimplemented. UI data, login, roles, and pickup transitions are prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Preserve the accepted Web username/password and Telegram WebApp authentication/linking requirements; the Supabase-compatible server-side implementation remains an engineering gate. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the approved Web email/phone/username + password flow and Telegram WebApp authentication/linking; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 
@@ -42,7 +42,7 @@ Browser and Telegram WebView must use the same frontend, feature implementations
 
 Owns the versioned PostgreSQL schema, constraints, indexes, SQL functions/triggers, grants, RLS policies, and changes to Supabase-managed storage policies. Every schema/security change is reviewed and tested locally before remote deployment. The Supabase dashboard is not the authoritative schema editor for persistent changes.
 
-PostgreSQL is durable business truth. Supabase Auth records, if selected after the explicit identity decision, are authentication authority; a separate canonical KRISTOU user/profile authority must map to them without duplicate identities. Storage holds binary bytes; product-owned rows hold semantic attachment, visibility, and lifecycle references.
+PostgreSQL is durable business truth. Supabase Auth is the Web credential authority; the canonical KRISTOU profile and role-assignment rows map one-to-one to Auth users without duplicate identities. Storage holds binary bytes; product-owned rows hold semantic attachment, visibility, and lifecycle references.
 
 ### `supabase/functions/<capability>/` — server-side transport and orchestration
 
@@ -58,7 +58,7 @@ Use private buckets for child/family/enrollment/class media and documents. Use s
 
 ### Local and hosted environments
 
-Local development uses Supabase CLI and versioned migrations. Local, preview/staging, and production projects must be isolated by URL, keys, data, and authentication configuration. Seed files contain synthetic data only. No hosted project should be linked or mutated until project ownership, region, recovery, and secrets are confirmed.
+Local development uses Supabase CLI and versioned migrations. Local, preview/staging, and production projects must be isolated by URL, keys, data, and authentication configuration. Seed files contain synthetic data only. The authentication migration is not yet applied to the hosted project; remote deployment still requires review of project ownership, region, recovery, and secrets.
 
 ## 3. Dependency direction and module shape
 
@@ -97,8 +97,8 @@ Each durable concept has exactly one owner. These are product boundaries, not a 
 
 | Concept | Owner | Boundary |
 |---|---|---|
-| Canonical User, WebCredential/session, Telegram identity/link | Identity & Authentication | One user; explicit linking; no heuristic merges. Auth provider mapping is blocked on ADR-015. |
-| Roles, capabilities, scoped grants | Access Control | Server-side RBAC and resource scope; frontend visibility is not authority. |
+| Canonical User, WebCredential/session, Telegram identity/link | Identity & Authentication | One user; Supabase Auth credential mapping, explicit Telegram linking, and no heuristic merges. |
+| Roles, capabilities, scoped grants | Access Control | Includes Parent, Student, Teacher, School Staff, Administrative Personnel, Manager/Associate, and App Admin categories; server-side RBAC and resource scope remain authoritative. |
 | Parent/student/teacher/manager profiles | People | Presentation/profile facts, not credentials. |
 | Parent-child guardian relation | Family | Sole source for parent-to-child scope. |
 | Academic year, level, class, teacher/student assignments | Academics | Sole class identity, active membership, and assignment authority. |
