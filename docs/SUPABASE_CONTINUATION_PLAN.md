@@ -1,6 +1,6 @@
 # KRISTOU SCHOOL — SUPABASE-FIRST CONTINUATION PLAN
 
-**Status:** Proposed execution plan for review; no remote database mutation is authorized by this document.
+**Status:** Active execution plan; the authentication foundation and Telegram function boundary are deployed to the authorized KRISTOU SCHOOL project. Feature-domain migrations remain gated.
 **Backend direction:** Supabase PostgreSQL, Supabase Edge Functions, private Supabase Storage when needed.
 **Frontend:** one canonical React/TypeScript product for Browser and Telegram WebView.
 **Primary goal:** move from the current mock-driven UI to safe, tested vertical slices without duplicate ownership, accidental data deletion, or historical-provider drift.
@@ -26,6 +26,12 @@ The current app has a coherent visual prototype but not a production backend:
 ### 1.2 What exists remotely
 
 The active Supabase project has a broad schema with canonical PascalCase tables and legacy snake_case tables. The schema is empty in the observed audit, but the schema itself is not empty. RLS is enabled without policies, and browser roles have broad grants. There is no proven migration-history table.
+
+The authentication foundation was subsequently deployed to the authorized project `ofppapwofhovhroyjtkc` as migration `authentication_foundation`, with RLS-enabled profile/role/Telegram/link-challenge tables and three active Edge Functions. The Auth trigger's public RPC execute permission was removed by a follow-up hardening migration.
+
+The Telegram runtime still requires protected Supabase Function Secrets. GitHub repository secrets are not automatically inherited by Supabase Edge Functions. Required Supabase-side secrets are `TELEGRAM_BOT_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, and `ALLOWED_ORIGIN`. `TELEGRAM_BOT_ID` is retained for bot/deep-link configuration but is not read by the current server-side `initData` validator.
+
+To finish configuration manually in Supabase Dashboard: open **Project Settings -> Edge Functions -> Secrets**, add `TELEGRAM_BOT_TOKEN` with the same value stored in GitHub, add the project's service-role key as `SUPABASE_SERVICE_ROLE_KEY`, and add the deployed web origin as `ALLOWED_ORIGIN`. Never place any of these values in `VITE_*` variables or browser code. After saving the secrets, retry the Telegram WebApp using a real Telegram `initData` payload; an empty POST is not a valid Telegram authentication test.
 
 This creates two different risks:
 
