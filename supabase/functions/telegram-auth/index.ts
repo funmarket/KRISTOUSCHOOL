@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateInitData } from '../_shared/telegram-init-data.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -6,24 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-async function validateInitData(initData: string, botToken: string) {
-  const params = new URLSearchParams(initData);
-  const hash = params.get('hash');
-  if (!hash) return null;
-  params.delete('hash');
-  const dataCheckString = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${key}=${value}`).join('\n');
-  const secretKey = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(botToken));
-  const key = await crypto.subtle.importKey('raw', secretKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(dataCheckString));
-  const expected = [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  if (expected !== hash) return null;
-  const authDate = Number(params.get('auth_date'));
-  if (!Number.isFinite(authDate) || Math.floor(Date.now() / 1000) - authDate > 300) return null;
-  const rawUser = params.get('user');
-  if (!rawUser) return null;
-  return JSON.parse(rawUser) as { id: number; username?: string; first_name?: string; last_name?: string; language_code?: string };
-}
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
