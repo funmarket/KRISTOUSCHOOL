@@ -22,3 +22,18 @@ Product and architecture material was migrated from `funmarket/Kristou` because 
 ## Evidence discipline
 
 For every future entry, record exact branch/HEAD, files changed, migrations, tests/builds, CI, and runtime/deployment proof actually observed. Clearly state what remains unverified. Do not convert plans, source presence, mock screens, or a successful build into proof of secure product behavior.
+
+## Phase 1 implementation work (2026-11-10)
+
+- Created local Supabase CLI configuration under `supabase/config.toml`, an empty synthetic-only `supabase/seed.sql`, and a committed canonical foundation migration under `supabase/migrations/20261110020000_canonical_foundation.sql`.
+- A destructive legacy-table cleanup migration was intentionally **not retained** after the owner confirmed that no Supabase tables are to be deleted while the project is still being built.
+- The foundation migration revokes browser-role table/sequence privileges, enables and forces RLS, and creates explicit deny-by-default policies for `anon` and `authenticated` until the verified identity bridge and feature-specific allow policies are implemented.
+- Updated the frontend translation dictionary, stable LTR shell behavior for Arabic language changes, and mobile/Telegram-safe login modal viewport handling.
+- Verified `npm run lint`, `npm run build`, and `git diff --check` locally. Supabase CLI reset and remote migration application were not run because the CLI is not installed in this environment and the remote cleanup is destructive.
+## 2026-11-10 — dedicated single-school wording cleanup
+
+- Branch: `fix/kristou-single-school-wording`, based on `origin/feature/frontend-i18n-stable-ltr` at `fbf8d2880a8371cd1194aecae013e6acb894c8ff`.
+- Reworded the current repository authorities and continuation handoff to describe KRISTOUSCHOOL positively as the dedicated one-school product for École Primaire Privée Kristou School.
+- No frontend source, Supabase client, migrations, remote schema, data, credentials, or deployment configuration was changed.
+- The archived destructive cleanup SQL was not adopted or executed.
+- `git diff --check` passed; dependency install and application checks remain environment-blocked by the existing npm peer conflict between `vite@8.3.7` and `esbuild@0.25.12`.

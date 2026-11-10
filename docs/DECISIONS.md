@@ -98,7 +98,7 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status:** Accepted direction; provisioning and implementation are pending.
 
-**Context:** The product owner selected Supabase instead of Railway for backend and database integration in `funmarket/KRISTOUSCHOOL`.
+**Context:** The product owner selected Supabase as the backend and database platform direction for `funmarket/KRISTOUSCHOOL`.
 
 **Decision:** Use Supabase-managed PostgreSQL as durable business truth, source-controlled Supabase CLI migrations for schema/security changes, Supabase Edge Functions as the initial server-side HTTP/orchestration runtime, and private Supabase Storage for approved private media. Local development, staging, and production must be isolated. The frontend hosting provider is not decided by this ADR.
 
@@ -117,6 +117,16 @@ This file records explicit architecture decisions only. Product behavior belongs
 **Until the technical design is accepted:** Do not implement production signup/login/recovery, protected RLS policies that assume an unverified identity mapping, or real/private school data flows. Local synthetic tooling and tests may proceed. Do not reopen the product-policy choice unless the owner explicitly changes it.
 
 **Reference:** [Supabase password-based authentication](https://supabase.com/docs/guides/auth/passwords).
+
+## ADR-016 — KRISTOUSCHOOL remains one-school only
+
+**Status:** Accepted.
+
+**Context:** KRISTOUSCHOOL is intentionally scoped to École Primaire Privée Kristou School, with one dedicated product, school data model, and school user base.
+
+**Decision:** KRISTOUSCHOOL remains the dedicated product for École Primaire Privée Kristou School. All product features, accounts, and durable records stay within this single-school scope.
+
+**Consequences:** School-specific configuration and branding remain local to KRISTOU SCHOOL. Any future scope change would require an explicit new product decision, requirements rewrite, architecture decision, threat model, migration plan, and authorization redesign before implementation.
 
 ## ADR template
 
