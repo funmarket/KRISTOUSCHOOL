@@ -15,25 +15,25 @@ export const PickupBoardView: React.FC = () => {
         <div>
           <div className="inline-flex items-center space-x-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Sécurité & Sortie des Élèves</span>
+            <span>{t('pickupSecurity')}</span>
           </div>
           <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
             {t('pickup')}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Règle de sécurité : Les parents annoncent leur arrivée. Seule l'école autorise et confirme la libération de l'élève.
+            {t('pickupRule')}
           </p>
         </div>
 
         <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 rounded-2xl text-xs font-semibold text-gray-700 dark:text-gray-300">
-          Fuseau horaire : Africa/Tunis
+          {t('timezone')}
         </div>
       </div>
 
       {/* Parent Perspective */}
       {currentRole === 'PARENT' && (
         <div className="space-y-4">
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white">Annoncer votre arrivée pour vos enfants</h3>
+          <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('announceArrival')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {userChildren.map(child => {
               const record = pickupRecords.find(p => p.childId === child.id);
@@ -50,9 +50,9 @@ export const PickupBoardView: React.FC = () => {
                   </div>
 
                   <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Statut actuel :</span>
+                    <span className="text-gray-500">{t('currentStatus')} :</span>
                     <span className={`font-bold px-3 py-1 rounded-xl uppercase text-[10px] ${state === 'RELEASED' ? 'bg-emerald-100 text-emerald-700' : state === 'PARENT_ARRIVED' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {state === 'RELEASED' ? 'Sorti(e) de l’école' : state === 'PARENT_ARRIVED' ? 'Parent Arrivé(e)' : 'En attente en classe'}
+                      {state === 'RELEASED' ? t('released') : state === 'PARENT_ARRIVED' ? t('parentArrived') : t('waiting')}
                     </span>
                   </div>
 
@@ -65,7 +65,7 @@ export const PickupBoardView: React.FC = () => {
                     </button>
                   ) : (
                     <div className="text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold py-2">
-                      ✓ Arrivée signalée. Veuillez patienter pour la remise par l'enseignant.
+                      ✓ {t('arrivalSent')}
                     </div>
                   )}
                 </div>
@@ -79,8 +79,8 @@ export const PickupBoardView: React.FC = () => {
       {(currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'ADMIN') && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-white">Tableau de Suivi Pickup (Enseignant / Staff)</h3>
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">Mise à jour en direct</span>
+            <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('pickupBoard')}</h3>
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{t('liveUpdate')}</span>
           </div>
 
           <div className="space-y-3">
@@ -92,7 +92,7 @@ export const PickupBoardView: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-gray-900 dark:text-white">{rec.childName}</h4>
-                    <p className="text-xs text-gray-500">{rec.className} • Autorisé : {rec.authorizedPerson}</p>
+                    <p className="text-xs text-gray-500">{rec.className} • {t('authorized')} : {rec.authorizedPerson}</p>
                   </div>
                 </div>
 

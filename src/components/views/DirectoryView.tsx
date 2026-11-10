@@ -13,10 +13,10 @@ export const DirectoryView: React.FC = () => {
       <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
-            Annuaire de l'École
+            {t('directoryTitle')}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Découvrez l'équipe pédagogique et la direction de l'École Primaire Privée Kristou School.
+            {t('directoryDescription')}
           </p>
         </div>
 

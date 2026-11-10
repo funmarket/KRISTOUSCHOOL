@@ -22,17 +22,17 @@ export const Footer: React.FC = () => {
             </span>
           </div>
           <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-            École Primaire Privée Kristou School. Plateforme numérique unifiée pour l'administration, les enseignants, les parents et les élèves.
+            {t('registrationDescription')}
           </p>
           <div className="flex items-center space-x-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
             <ShieldCheck className="w-4 h-4" />
-            <span>Supabase PostgreSQL & Sécurité Active</span>
+            <span>{t('securityActive')}</span>
           </div>
         </div>
 
         {/* Col 2: Navigation */}
         <div>
-          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Navigation</h4>
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">{t('navigation')}</h4>
           <ul className="space-y-2 text-xs font-medium">
             <li><a href="#home" className="hover:text-k-brand transition-colors">{t('home')}</a></li>
             <li><a href="#directory" className="hover:text-k-brand transition-colors">{t('teachers')}</a></li>
@@ -43,11 +43,11 @@ export const Footer: React.FC = () => {
 
         {/* Col 3: Contact */}
         <div>
-          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Contact & Localisation</h4>
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">{t('contactLocation')}</h4>
           <ul className="space-y-2.5 text-xs">
             <li className="flex items-center space-x-2 rtl:space-x-reverse">
               <MapPin className="w-4 h-4 text-k-brand shrink-0" />
-              <span>Tunis, Tunisie</span>
+              <span>{t('tunis')}</span>
             </li>
             <li className="flex items-center space-x-2 rtl:space-x-reverse">
               <Phone className="w-4 h-4 text-k-brand shrink-0" />
@@ -62,19 +62,19 @@ export const Footer: React.FC = () => {
 
         {/* Col 4: Telegram & Web */}
         <div>
-          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Accès Multi-Plateforme</h4>
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">{t('platformAccess')}</h4>
           <p className="text-xs text-gray-500 mb-3">
-            Accessible via Navigateur Web et Telegram Mini App avec la même base de données canonique sécurisée.
+            {t('platformDescription')}
           </p>
           <div className="inline-flex items-center space-x-2 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand px-3 py-1.5 rounded-xl text-xs font-semibold">
-            <span>🌐 Web & Telegram Sync</span>
+            <span>🌐 Web & Telegram</span>
           </div>
         </div>
 
       </div>
 
       <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} KRISTOU SCHOOL. Tous droits réservés.
+        © {new Date().getFullYear()} KRISTOU SCHOOL. {t('allRights')}.
       </div>
     </footer>
   );

@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { X, Send, Lock, User as UserIcon } from 'lucide-react';
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { login, connectTelegram, t } = useApp();
+  const { login, connectTelegram, t, dir } = useApp();
   const [username, setUsername] = useState('parent_karim');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +23,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     <div
       className="fixed inset-0 z-[60] min-h-[100dvh] overflow-y-auto bg-black/60 p-4 backdrop-blur-xs sm:p-6"
       role="presentation"
-      dir="ltr"
+      dir={dir}
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="flex min-h-[calc(100dvh-2rem)] items-center justify-center py-[max(0.5rem,env(safe-area-inset-top))] sm:min-h-[calc(100dvh-3rem)]">
@@ -50,7 +50,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')}</label>
               <div className="relative">
                 <UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" />
-                <input type="text" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-k-brand dark:border-gray-800 dark:bg-gray-900 dark:text-white" placeholder="Ex: parent_karim" />
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-k-brand dark:border-gray-800 dark:bg-gray-900 dark:text-white" placeholder="parent_karim" />
               </div>
             </div>
             <div>

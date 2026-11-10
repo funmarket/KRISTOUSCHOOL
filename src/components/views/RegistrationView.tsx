@@ -31,25 +31,25 @@ export const RegistrationView: React.FC = () => {
           className="w-14 h-14 rounded-2xl object-contain bg-white dark:bg-gray-800 p-1 mx-auto mb-3 shadow-md border border-gray-200 dark:border-gray-700"
         />
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
-          {t('registration')} — Rentrée 2025/2026
+          {t('registrationTitle')}
         </h1>
         <p className="text-xs text-gray-500 max-w-lg mx-auto">
-          Inscrivez votre enfant à l'École Primaire Privée Kristou School. Remplissez le formulaire ci-dessous pour initier la demande d'admission.
+          {t('registrationDescription')}
         </p>
       </div>
 
       {submitted ? (
         <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-8 rounded-3xl text-center space-y-3">
           <CheckCircle2 className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
-          <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-300">Demande d'inscription enregistrée !</h3>
+          <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-300">{t('registrationSaved')}</h3>
           <p className="text-xs text-emerald-700 dark:text-emerald-400 max-w-md mx-auto">
-            Notre service des admissions étudiera votre dossier et vous contactera rapidement par téléphone ou email.
+            {t('registrationSavedBody')}
           </p>
           <button
             onClick={() => setSubmitted(false)}
             className="px-6 py-2.5 bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-md hover:bg-emerald-700 transition-all mt-4"
           >
-            Nouvelle demande
+            {t('newRequest')}
           </button>
         </div>
       ) : (
@@ -57,19 +57,19 @@ export const RegistrationView: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nom et Prénom de l'élève</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('studentName')}</label>
                 <input
                   type="text"
                   required
                   value={formData.childName}
                   onChange={e => setFormData({ ...formData, childName: e.target.value })}
-                  placeholder="Ex: Yasmine Ben Salah"
+                  placeholder="Yasmine Ben Salah"
                   className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Date de naissance</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('birthDate')}</label>
                 <input
                   type="date"
                   required
@@ -82,29 +82,29 @@ export const RegistrationView: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Niveau scolaire souhaité</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('desiredLevel')}</label>
                 <select
                   value={formData.level}
                   onChange={e => setFormData({ ...formData, level: e.target.value })}
                   className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white"
                 >
-                  <option value="Primaire 1">1ère Année Primaire</option>
-                  <option value="Primaire 2">2ème Année Primaire</option>
-                  <option value="Primaire 3">3ème Année Primaire</option>
-                  <option value="Primaire 4">4ème Année Primaire</option>
-                  <option value="Primaire 5">5ème Année Primaire</option>
-                  <option value="Primaire 6">6ème Année Primaire</option>
+                  <option value="Primaire 1">{t('desiredLevel')} 1</option>
+                  <option value="Primaire 2">{t('desiredLevel')} 2</option>
+                  <option value="Primaire 3">{t('desiredLevel')} 3</option>
+                  <option value="Primaire 4">{t('desiredLevel')} 4</option>
+                  <option value="Primaire 5">{t('desiredLevel')} 5</option>
+                  <option value="Primaire 6">{t('desiredLevel')} 6</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nom et Prénom du Parent / Tuteur</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('parentName')}</label>
                 <input
                   type="text"
                   required
                   value={formData.parentName}
                   onChange={e => setFormData({ ...formData, parentName: e.target.value })}
-                  placeholder="Ex: Karim Ben Salah"
+                  placeholder="Karim Ben Salah"
                   className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white"
                 />
               </div>
@@ -112,7 +112,7 @@ export const RegistrationView: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Numéro de téléphone</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('phone')}</label>
                 <input
                   type="tel"
                   required
@@ -124,7 +124,7 @@ export const RegistrationView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Adresse Email (Optionnelle)</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{t('optionalEmail')}</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -140,7 +140,7 @@ export const RegistrationView: React.FC = () => {
               className="w-full py-3.5 bg-k-brand hover:bg-k-brand-strong text-white font-bold text-sm rounded-xl shadow-lg shadow-k-brand/25 transition-all flex items-center justify-center space-x-2 rtl:space-x-reverse mt-4"
             >
               <Send className="w-4 h-4" />
-              <span>Soumettre la demande d'admission</span>
+              <span>{t('submitRegistration')}</span>
             </button>
           </form>
         </div>

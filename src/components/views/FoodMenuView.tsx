@@ -13,13 +13,13 @@ export const FoodMenuView: React.FC = () => {
         <div>
           <div className="inline-flex items-center space-x-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
             <Utensils className="w-3.5 h-3.5" />
-            <span>Service Restauration</span>
+            <span>{t('serviceRestaurant')}</span>
           </div>
           <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
             {t('foodMenu')} — La Toque Gourmande
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Repas équilibrés et préparés selon les normes nutritionnelles pour les élèves de l'école.
+            {t('foodDescription')}
           </p>
         </div>
 
@@ -36,25 +36,25 @@ export const FoodMenuView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h3 className="font-extrabold text-base text-blue-600 dark:text-blue-400">{item.day}</h3>
               <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-lg">
-                Équilibré
+                {t('balanced')}
               </span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-gray-400 block mb-0.5">Entrée</span>
+                <span className="text-gray-400 block mb-0.5">{t('starter')}</span>
                 <span className="font-bold text-gray-900 dark:text-white">{item.starter}</span>
               </div>
               <div>
-                <span className="text-gray-400 block mb-0.5">Plat Principal</span>
+                <span className="text-gray-400 block mb-0.5">{t('mainDish')}</span>
                 <span className="font-bold text-gray-900 dark:text-white">{item.main}</span>
               </div>
               <div>
-                <span className="text-gray-400 block mb-0.5">Accompagnement</span>
+                <span className="text-gray-400 block mb-0.5">{t('sideDish')}</span>
                 <span className="font-semibold text-gray-800 dark:text-gray-200">{item.side}</span>
               </div>
               <div>
-                <span className="text-gray-400 block mb-0.5">Dessert</span>
+                <span className="text-gray-400 block mb-0.5">{t('dessert')}</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{item.dessert}</span>
               </div>
             </div>
