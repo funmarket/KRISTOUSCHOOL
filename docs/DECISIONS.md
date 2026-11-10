@@ -70,7 +70,7 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Status:** Accepted.
 
-**Decision:** Light is the initial/default theme; optional dark mode uses a pitch-black foundation with light/white text. Arabic, French, and English are foundational, with Arabic RTL supported by the same component system.
+**Decision:** Light is the initial/default theme; optional dark mode uses a pitch-black foundation with light/white text. Arabic, French, and English are foundational; Arabic text is supported in the same component system while the application shell remains stable LTR across language changes.
 
 ## ADR-011 — Security-sensitive environment selection is explicit
 

@@ -218,7 +218,7 @@ export const ClassCommunityView: React.FC = () => {
 
                 {/* Replies */}
                 {q.replies && q.replies.length > 0 && (
-                  <div className="space-y-2 pl-4 rtl:pl-0 rtl:pr-4 border-l-2 rtl:border-l-0 rtl:border-r-2 border-blue-500">
+                  <div className="space-y-2 ps-4 rtl:ps-0 rtl:pe-4 border-s-2 rtl:border-s-0 rtl:border-e-2 border-blue-500">
                     {q.replies.map(r => (
                       <div key={r.id} className="bg-gray-50 dark:bg-gray-900/60 p-3 rounded-2xl text-xs space-y-1">
                         <div className="font-bold text-[11px] text-blue-600 dark:text-blue-400">{r.authorName}</div>

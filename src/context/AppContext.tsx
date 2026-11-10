@@ -32,7 +32,7 @@ import {
   MOCK_TEACHERS,
   MOCK_ADMIN,
 } from '../data/mockData';
-import { translations } from '../i18n/translations';
+import { translations, type TranslationKey } from '../i18n/translations';
 
 interface NotificationItem {
   id: string;
@@ -51,7 +51,7 @@ interface AppContextType {
   setLanguage: (lang: Language) => void;
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
-  t: (key: keyof typeof translations['en']) => string;
+  t: (key: TranslationKey) => string;
   dir: 'rtl' | 'ltr';
   
   // Data state
@@ -128,7 +128,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
   ]);
 
-  const dir = language === 'ar' ? 'rtl' : 'ltr';
+  // Arabic text is supported, but the product shell intentionally remains LTR.
+  // Language changes must not mirror or move the top bar, profile menu, or modal controls.
+  const dir = 'ltr';
 
   useEffect(() => {
     document.documentElement.dir = dir;
@@ -170,9 +172,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('kristou_theme', thm);
   };
 
-  const t = (key: keyof typeof translations['en']): string => {
+  const t = (key: TranslationKey): string => {
     const dict = translations[language] || translations.en;
-    return (dict as any)[key] || translations.en[key] || key;
+    return dict[key] || translations.en[key] || key;
   };
 
   const login = (username: string, _pass: string): boolean => {
