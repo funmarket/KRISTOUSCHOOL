@@ -1,4 +1,4 @@
-# KRISTOU SCHOOL — COMPLETE CONTINUATION HANDOFF
+# KRISTOU SCHOOL — COMPLETE FULL-PROJECT CONTINUATION HANDOFF
 
 **Prepared:** 2026-11-10 23:18 +01:00  
 **Repository:** `https://github.com/funmarket/KRISTOUSCHOOL`  
@@ -9,7 +9,9 @@
 **Open PR:** [PR #9 — Deploy Telegram backend separately](https://github.com/funmarket/KRISTOUSCHOOL/pull/9)  
 **Previous PR:** PR #8 was merged by the user and is not the place for new database/deployment work.
 
-> This document is the durable continuation record for the next chat. Read it before changing the repository, Supabase project, PRs, or authentication flow.
+> This document covers the **entire KRISTOU SCHOOL project**, not only PR #9. PR #9 is only the current backend/deployment delta inside the wider product history. Read this document before changing the repository, Supabase project, PRs, UI, authentication flow, translations, or product plans.
+
+The next agent should treat this as a project memory document: it explains what the product is, what has already been built, why the architecture is shaped this way, what was learned from mistakes, which documents are authoritative, how GitHub and Supabase must be handled, and what remains unfinished. Do not reduce the project context to the latest PR.
 
 ---
 
@@ -417,3 +419,137 @@ Relevant URLs:
 ## 14. Final state summary
 
 The project has moved from a mock UI/auth prototype to a source-controlled Supabase authentication foundation with role-based registration, Telegram linking boundaries, RLS-enabled identity tables, active Edge Functions, and security-advisor-cleared trigger permissions. The remaining issue is operational configuration and real Telegram verification, not missing function deployment. PR #9 is the correct review vehicle for this backend-only follow-up and must remain separate from merged PR #8.
+
+
+---
+
+## 15. Full-project map for the next agent
+
+### What the project looked like at the beginning
+
+The repository began as a Vite/React school application prototype with mock data, in-memory state, a basic application shell, placeholder Supabase configuration, and incomplete translation coverage. The user supplied a continuation archive, live Supabase audit material, product requirements, architecture documents, and design packages. The first responsibility was to recover the project’s intended architecture instead of treating the prototype as production-ready.
+
+The initial inspection established that the project needed a single-school boundary, a Supabase-first backend, real authentication, role-aware access, Telegram linking, complete trilingual content, and mobile-first UI. The old reference repository `funmarket/Kristou` was retained as a feature/behavior reference but not as a database or implementation source of truth.
+
+### Documentation and architecture work already completed
+
+The product and architecture authorities were reconciled across:
+
+- `requirements.md`
+- `structure.md`
+- `docs/CANONICAL_MODEL.md`
+- `docs/DECISIONS.md`
+- `docs/LIVING_BUILD_PLAN.md`
+- `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`
+- `docs/SUPABASE_CONTINUATION_PLAN.md`
+- `AGENTS.md`
+- `progress.md`
+
+The accepted contract is now: one canonical KRISTOU user profile, Supabase Auth for credentials, a custom server-side username resolver, optional Telegram identity linking, server-authoritative role assignments, and a separate school enrollment/admission flow. Do not reintroduce the earlier ambiguity that treated registration as only parent registration or treated enrollment as app signup.
+
+### UI and design work already completed
+
+The homepage was redesigned from the original plain/blurry concept into a supplied-reference-faithful, colorful, mobile-first Kristou School composition. Supplied image assets were copied into the project and superseded blurry assets were removed from active use. The homepage preserves application routes and feature navigation rather than becoming a disconnected marketing page.
+
+The app shell was adjusted so mobile phone presentation is the primary design target. The user specifically rejected a desktop page merely shrinking onto a phone. Future UI work must start at phone width and then expand gracefully for larger screens.
+
+The top navigation is deliberately stable LTR. Arabic changes content direction for page content where appropriate, but the generic top menu does not mirror or rearrange. The profile icon remains on the far right. Dark/light mode and role status were moved into the profile dropdown and removed from the top bar. Do not undo these constraints when changing translations or RTL behavior.
+
+### Translation work already completed
+
+The translation system was expanded beyond titles and navigation labels. Homepage copy, feature UI labels, announcements, coursework, menu content, directory content, notes, notifications, authentication labels, role labels, and new registration fields participate in the English/French/Arabic dictionary. Dynamic mock content is localized through content mappings rather than leaving language-dependent literals in views.
+
+When adding future user-facing text:
+
+- Add English, French, and Arabic dictionary entries.
+- Use the shared translation helper in components.
+- Do not introduce hardcoded visible labels, placeholders, titles, aria labels, or error messages unless they are genuinely technical and intentionally untranslated.
+- Preserve the stable LTR top navigation even when Arabic is selected.
+
+### Authentication and role work already completed
+
+The old mock/fallback login path was replaced with Supabase Auth/session restoration and canonical profile loading. Username login is resolved server-side by `auth-username-signin`; the browser does not query private profiles to resolve usernames.
+
+The registration modal was corrected after the user identified a structural UX error. Role selection is now the first registration decision below the Sign in/Register tabs. Conditional state determines which fields appear. Parents, teachers, school employees, administrative personnel, and students each have separate registration paths and metadata. Registration requests do not grant permissions; the server must assign active roles.
+
+The current account model must continue to recognize these broad user types:
+
+- Parents/guardians.
+- Teachers.
+- School employees/staff.
+- Administrative personnel.
+- Students.
+- General users.
+- Managers/associates with explicit capabilities.
+- App administrators/school owner.
+
+### Telegram architecture learned during this work
+
+Telegram is not a separate application or a second canonical user database. It is a WebApp login/linking channel connected to the same Supabase profile. The expected sequence is: authenticated web user requests a short-lived link challenge; Telegram WebApp sends signed `initData` and the challenge code; the Edge Function validates the HMAC with the bot token; the backend consumes the challenge and stores one Telegram identity for the canonical profile.
+
+The bot token must remain a Supabase Edge Function Secret. GitHub Actions/repository secrets and Supabase Edge Function Secrets are separate stores. The current code accepts `SERVICE_ROLE_KEY` because that is the user’s actual Supabase secret name and also accepts the old `SUPABASE_SERVICE_ROLE_KEY` spelling for compatibility.
+
+### What remains unfinished across the full project
+
+- Complete a real Telegram WebApp authentication/linking test with a fresh signed `initData` payload after `TELEGRAM_BOT_TOKEN` is visible in the correct Supabase project.
+- Confirm `SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, and `ALLOWED_ORIGIN` in Supabase Edge Function Secrets.
+- Review and merge PR #9 only when the user explicitly requests it.
+- Replace remaining mock feature data with domain-specific Supabase vertical slices one at a time.
+- Before every domain migration, audit the actual live schema, migration history, grants, policies, and existing ownership documents.
+- Add database/RLS tests and integration tests when the user authorizes test work and budget permits.
+- Continue from the current mobile-first UI without reintroducing blurry assets, desktop-first layout, generic top navigation, incomplete translations, or manual frontend role authorization.
+
+---
+
+## 16. How the next agent must work
+
+Start every new task by reading this handoff and the relevant authority documents. Then inspect the current GitHub branch/PR state and the live Supabase project state. The current repository is not a local-only coding exercise: GitHub and Supabase are the real project surfaces.
+
+For GitHub:
+
+1. Fetch current `main` and relevant branches.
+2. Check whether the named PR is open, merged, closed, or already superseded.
+3. Never push to a merged PR.
+4. Create a new branch from current `origin/main` for follow-up work.
+5. Keep UI PRs and database/deployment PRs separate when requested.
+6. Do not merge unless the user explicitly asks.
+
+For Supabase:
+
+1. Identify the project by URL/ref before any mutation.
+2. List migrations and tables before adding schema.
+3. Inspect advisors after security-sensitive changes.
+4. Prefer source-controlled migrations for DDL.
+5. Do not create duplicates or blindly replay reference-project schema.
+6. Do not delete or reset existing school data during the build phase.
+7. Keep service-role credentials out of browser code.
+8. Treat RLS, grants, and server functions as the authorization boundary.
+
+For Telegram:
+
+1. Confirm required secrets in Supabase, not only GitHub.
+2. Use real fresh Telegram `initData` for success testing.
+3. Treat empty requests, malformed payloads, CORS responses, and unauthorized responses as smoke tests only.
+4. Never fabricate a valid HMAC or report a successful login without real Telegram evidence.
+5. Verify challenge expiry, replay rejection, identity conflict rejection, and canonical profile reuse.
+
+For UI:
+
+1. Design phone-first, not desktop-down.
+2. Preserve the real Kristou logo and sharp assets.
+3. Preserve stable LTR top navigation and right-side profile placement.
+4. Keep theme and role status inside the profile menu.
+5. Translate all visible content in English, French, and Arabic.
+6. Keep school enrollment separate from application account registration.
+
+For reporting:
+
+- State what was inspected.
+- State what was changed.
+- State what was deployed.
+- State exact branch/commit/PR and live migration/function versions.
+- Separate verified facts from assumptions and remaining blockers.
+- If tests were skipped, say so plainly.
+- If an external action was not possible, provide the exact manual next step.
+
+The goal is not merely to make the next screen or endpoint appear to work. The goal is to continue building one coherent, secure, mobile-first Kristou School product without losing the architectural decisions, evidence discipline, or user-approved boundaries established in this collaboration.
