@@ -32,7 +32,7 @@ Deno.serve(async (request) => {
     const { initData, linkCode } = await request.json();
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const url = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const serviceKey = Deno.env.get('SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!botToken || !url || !serviceKey || typeof initData !== 'string') return json({ error: 'telegram_unavailable' }, 503);
     const telegramUser = await validateInitData(initData, botToken);
     if (!telegramUser) return json({ error: 'invalid_telegram_auth' }, 401);
