@@ -463,3 +463,15 @@ The next agent should not start by implementing a feature against the remote tab
 The required output is a reviewed inventory and plan, not a remote migration.
 
 See `docs/SUPABASE_CONTINUATION_PLAN.md` for the dependency-ordered execution plan and per-agent handoffs.
+
+## 13. Owner clarification — shared-app signup, then Telegram link (2026-11-11)
+
+This section supersedes the older Telegram-first signup/session alternatives above and in prior research addenda:
+
+- Visitors may browse public school content without an account.
+- App accounts are created and signed into through the shared app's normal credential form, whether opened in Browser or Telegram WebView. School admission remains separate.
+- A signed-in app user explicitly links Telegram using a short-lived challenge; the configured Telegram Mini App receives it as `start_param` and confirms it with fresh, server-validated raw `initData`.
+- The link confirmation attaches Telegram identity to the same canonical User and does not create an account or issue a Supabase Auth session.
+- Current code work is isolated to local branch `feature/telegram-visitor-linking`; PR #9 remains a separate database/function branch. No remote migration, deployment, or production change is authorized by this addendum.
+
+The owner specifically asked to keep this flow simple: use the existing app signup/login and then connect the Telegram identity. Do not reopen the rejected Telegram-first account-provisioning/session alternatives unless the owner changes the product direction.

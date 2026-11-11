@@ -6,6 +6,8 @@
 **Primary goal:** move from the current mock-driven UI to safe, tested vertical slices without duplicate ownership, accidental data deletion, or historical-provider drift.
 **Deployment boundary:** this plan serves KRISTOU SCHOOL only. It does not design support for additional schools, a school signup registry, inter-school membership, or data shared between schools.
 
+**Telegram account-flow clarification (2026-11-11):** the owner approved app-account signup/sign-in through the shared app (including its Telegram WebView) followed by explicit Web-account-to-Telegram linking. Telegram `initData` confirms that one-time link; it does not provision a new account or issue a Supabase session. The older Telegram-first provisioning/session alternatives in this historical plan are superseded for the current slice. Future protected Telegram domain operations still require their own reviewed authorization path.
+
 ---
 
 ## 1. Current-state diagnosis
@@ -169,33 +171,28 @@ Tasks:
 
 ---
 
-### Phase 3 — Identity/session threat model and decision
+### Phase 3 — Web identity/session and explicit Telegram-link threat model
 
-**Purpose:** implement the approved Supabase Auth credential mapping and Telegram canonical identity linking safely.
+**Purpose:** implement the approved Supabase Auth credential mapping and explicit Telegram identity linking safely.
 
 The product policy is not open for replacement:
 
 - Web uses email, full international phone number, or normalized username + password;
 - username resolution is server-side and contact identifiers are not exposed to the browser;
-- Telegram WebApp validates `initData` server-side;
-- Web and Telegram resolve to one canonical User;
+- a signed-in shared-app account may link Telegram through server-validated Mini App `initData`;
+- Web and Telegram identity records attach to one canonical User;
 - account linking is explicit, expiring, one-time, conflict-failing;
 - no heuristic merge.
 
 The design must answer:
 
-1. How passwords are hashed and verified server-side.
-2. How username normalization and uniqueness work.
-3. How generic errors avoid username enumeration.
-4. How failed attempts, lockouts, rate limits, and audit events work.
-5. How an opaque Web session is minted, rotated, stored hashed, expired, revoked, and transported.
-6. How the verified actor is represented to Postgres/RLS.
-7. Whether a reviewed Supabase Auth mapping is used without changing the login identifier policy.
-8. If custom session verification is used, which protected operations go through Edge Functions and how direct Data API access remains closed.
-9. How Telegram `initData` HMAC validation, replay/expiry checks, and bot-token secrecy work.
-10. How Web -> Telegram and Telegram -> Web linking challenges are created, consumed, expired, and conflict-checked.
-11. How a conflicting valid Web and Telegram identity fails closed.
-12. How logout, revocation, device/session listing, and security audit behave.
+1. How Supabase Auth handles the shared-app email/phone credentials, sessions, expiry, and logout.
+2. How username normalization/uniqueness and the server-side username resolver avoid exposing contact identifiers.
+3. How generic errors, rate limits, and account conflict behavior work.
+4. How fresh Telegram Mini App `initData` is HMAC-validated for the explicit link confirmation and bot-token secrecy is preserved.
+5. How the Web-created challenge is one-time, expiring, hashed at rest, atomically consumed, and bound to the authenticated Web user.
+6. How Telegram identity conflicts fail closed without heuristic account merging.
+7. Which future school-domain operations require additional server authorization beyond this link-confirmation slice.
 
 **Deliverables:**
 
@@ -538,7 +535,7 @@ Frontend hosting remains a separate decision. Do not infer it from the database 
 
 ### Agent D — Identity/session design steward
 
-**Mission:** produce the accepted Supabase-compatible username/password + Telegram identity design.
+**Mission:** produce the accepted Supabase-compatible shared-app username/password and explicit Telegram-link design.
 
 **Owns:** ADR/threat model/sequence diagrams/auth contracts/test matrix.
 
@@ -679,7 +676,7 @@ Read-only only. Produce the table ownership/mismatch report and decide how to es
 
 ### Ticket 2 — `auth-identity-design`
 
-Threat-model and document username/password plus Telegram canonical identity/session mapping. No production login code yet.
+Threat-model and document shared-app username/password plus explicit one-time Telegram identity linking. No production deployment or protected school-domain API authorization is implied.
 
 ### Ticket 3 — `local-supabase-reproducibility`
 

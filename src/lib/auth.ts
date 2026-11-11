@@ -1,5 +1,6 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase';
+import { createTelegramLinkUrl } from './telegram';
 import type { User, UserRole } from '../types';
 
 export type SignupRole = 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER' | 'SCHOOL_STAFF' | 'ADMINISTRATIVE_PERSONNEL';
@@ -79,11 +80,16 @@ export async function signInAccount(identifier: string, password: string): Promi
 export async function loadCanonicalUser(authUser: SupabaseUser): Promise<User> {
   const client = requireSupabaseClient();
   const typedClient = client as any;
-  const [{ data: profile, error: profileError }, { data: assignments, error: roleError }] = await Promise.all([
+  const [
+    { data: profile, error: profileError },
+    { data: assignments, error: roleError },
+    { data: telegramIdentity, error: telegramError },
+  ] = await Promise.all([
     typedClient.from('profiles').select('id,username,full_name,email,avatar_url').eq('id', authUser.id).single(),
     typedClient.from('role_assignments').select('role').eq('user_id', authUser.id).eq('active', true),
+    typedClient.from('telegram_identities').select('telegram_user_id').eq('user_id', authUser.id).maybeSingle(),
   ]);
-  if (profileError || roleError || !profile) throw profileError ?? roleError ?? new Error('Profile unavailable');
+  if (profileError || roleError || telegramError || !profile) throw profileError ?? roleError ?? telegramError ?? new Error('Profile unavailable');
   const roles = (assignments ?? []).map((row: { role: string }) => row.role);
   const role = roleMap[roles.includes('APP_ADMIN') ? 'APP_ADMIN' : roles.find((candidate: string) => candidate !== 'GENERAL_USER') ?? 'GENERAL_USER'] ?? 'GENERAL_USER';
   return {
@@ -94,7 +100,7 @@ export async function loadCanonicalUser(authUser: SupabaseUser): Promise<User> {
     avatarUrl: profile.avatar_url ?? undefined,
     role,
     capabilities: roles,
-    telegramLinked: false,
+    telegramLinked: Boolean(telegramIdentity),
   };
 }
 
@@ -102,7 +108,23 @@ export async function createTelegramLinkChallenge() {
   const client = requireSupabaseClient();
   const { data, error } = await client.functions.invoke('telegram-link-challenge', { body: {} });
   if (error || !data?.linkCode) throw error ?? new Error('Unable to start Telegram linking');
-  return data as { linkCode: string; expiresInSeconds: number };
+  return {
+    linkUrl: createTelegramLinkUrl(data.linkCode as string),
+    expiresInSeconds: Number(data.expiresInSeconds) || 600,
+  };
+}
+
+let lastTelegramLinkAttempt: { initData: string; result: Promise<void> } | null = null;
+
+export function completeTelegramLinkFromInitData(initData: string): Promise<void> {
+  if (lastTelegramLinkAttempt?.initData === initData) return lastTelegramLinkAttempt.result;
+  const result = (async () => {
+    const client = requireSupabaseClient();
+    const { data, error } = await client.functions.invoke('telegram-auth', { body: { initData } });
+    if (error || data?.linked !== true) throw new Error('Telegram link could not be confirmed');
+  })();
+  lastTelegramLinkAttempt = { initData, result };
+  return result;
 }
 
 export async function signOutAccount() {

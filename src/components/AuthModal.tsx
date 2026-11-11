@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Send, Lock, User as UserIcon, Mail, Phone, Shield, Badge } from 'lucide-react';
+import { X, Lock, User as UserIcon, Mail, Phone, Shield, Badge } from 'lucide-react';
 import type { SignupRole } from '../lib/auth';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white';
@@ -8,7 +8,7 @@ const inputClass = 'w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 p
 type RegistrationRole = Exclude<SignupRole, 'GENERAL_USER'>;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { login, signup, connectTelegram, t, dir } = useApp();
+  const { login, signup, t, dir } = useApp();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
@@ -64,13 +64,6 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setIdentifier(email || phone || username);
       setPassword('');
     } finally { setBusy(false); }
-  };
-
-  const startTelegram = async () => {
-    setError('');
-    const result = await connectTelegram();
-    if (result.error) setError(result.error);
-    else setMessage(`Telegram linking challenge created. Open the KRISTOU Telegram WebApp within 10 minutes. Code: ${result.linkCode}`);
   };
 
   const roleLabel = (role: RegistrationRole) => ({
@@ -146,10 +139,6 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <button disabled={busy} type="submit" className="w-full rounded-xl bg-k-brand py-3 text-sm font-semibold text-white shadow-lg shadow-k-brand/25 transition-all hover:bg-k-brand-strong disabled:opacity-50">{busy ? t('loading') : mode === 'login' ? t('login') : t('register')}</button>
           </form>
 
-          <div className="mt-5 border-t border-gray-100 pt-5 text-center dark:border-gray-800">
-            <p className="mb-3 text-xs text-gray-500">{t('telegramInitData')}</p>
-            <button onClick={startTelegram} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:bg-[#1e8bc3]"><Send className="h-4 w-4" /><span>{t('telegramAccess')}</span></button>
-          </div>
         </div>
       </div>
     </div>
