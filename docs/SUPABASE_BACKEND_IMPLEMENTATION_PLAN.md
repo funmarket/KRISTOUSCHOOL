@@ -40,7 +40,7 @@ Supabase Edge Functions are server-side TypeScript/Deno functions. They are appr
 ### 0. Snapshot and product decisions
 
 1. Confirm the target repository/default branch and latest HEAD. Keep this plan as subordinate to `AGENTS.md` and the accepted requirements.
-2. Record that the current frontend uses mock state and that no backend/schema/auth has been verified. Do not import the old repository's CI, deployment, project references, user records, or historical completion claims.
+2. Record that school-domain frontend views still use mock state, while a Supabase Auth/profile foundation and Edge Function source exist. The hosted project is active but migration IDs and the deployed Telegram handler drift from current source; see `docs/REMOTE_SCHEMA_INVENTORY.md`.
 3. Preserve the approved email/phone/username shared-app credential model and explicit Telegram identity-linking model. Keep school admission separate from app signup; do not add Telegram-first account creation or a Telegram-issued Supabase session.
 4. Confirm that Supabase is the approved managed database/function provider and choose a project owner, organization, region, and project separation strategy. Do not create a hosted project implicitly as part of code work.
 
@@ -48,9 +48,9 @@ Supabase Edge Functions are server-side TypeScript/Deno functions. They are appr
 
 ### 1. Add reproducible local Supabase development
 
-1. Pin a Supabase CLI version in the project toolchain (choose the repo's supported installation method; do not depend on an unpinned global binary).
+1. Pin the Supabase CLI invocation in the project toolchain (`npx --yes supabase@3.1.0`; do not depend on an unpinned global binary).
 2. Initialize `supabase/config.toml` and configure local Auth/session behavior for the approved shared-app credentials; Telegram `initData` is used only to confirm the explicit link in this slice.
-3. Add local migration, reset, test, function-serve, type-generation, and status commands to `package.json` only when they work in this repository.
+3. Use the committed `db:start`, `db:reset`, and `db:test` package scripts. They are defined, but local execution remains blocked until Docker is available; do not mark the local database gate passed before reset and pgTAP succeed.
 4. Keep `.env.example` to placeholders such as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and server-side-only secret names. Remove fallback project IDs, mock keys, and embedded credentials from source. The publishable key may be present in browser configuration; secret/service-role keys may not.
 5. Verify `.gitignore` excludes actual environment files and local Supabase state. Create local-only synthetic `supabase/seed.sql` fixtures with no real student, family, staff, contact, medical, enrollment, or pickup records.
 

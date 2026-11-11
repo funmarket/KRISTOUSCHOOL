@@ -60,14 +60,14 @@ PostgreSQL is durable business truth. Redis or another cache is transient only u
 
 ## 4. Supabase safety gates
 
-1. Supabase is an accepted provider direction, not a verified deployment. Inspect the actual target project and environment before any remote operation.
+1. Supabase is the accepted provider and a hosted KRISTOUSCHOOL project exists. Its migration identifiers and deployed Telegram handler currently drift from repository source. Re-check the exact project and reconcile that drift before any remote operation.
 2. Use Supabase CLI local development and committed migrations as the schema source of truth. Avoid dashboard-only schema changes.
 3. Use the approved Supabase Auth/profile foundation for email, phone, and custom username Web credentials. Keep username resolution server-side and preserve explicit Telegram identity linking.
 4. Before exposing any table/view/function/storage path, document access rules and explicitly inspect grants and RLS. Test allowed and denied operations with pgTAP and function/API tests.
 5. Do not put service-role keys or database credentials in browser code. For any server-side RLS bypass, show why it is necessary and implement independent server-side identity/resource authorization and deny-case tests.
 6. Prefer local synthetic data; never import child/family data into development fixtures.
 7. Safety-critical pickup release must be staff-authorized, atomic, auditable, and distinct from parent arrival.
-8. Keep local, staging, and production credentials/data isolated. Do not link or migrate production without explicit owner authorization and a verified recovery plan.
+8. Keep local, staging, and production credentials/data isolated. Do not link, repair migration history, migrate, or deploy production without explicit owner authorization and a verified recovery plan.
 
 ## 5. One-product topology gate
 
