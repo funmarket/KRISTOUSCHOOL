@@ -41,7 +41,7 @@ npx --yes supabase@3.1.0 functions deploy telegram-auth --project-ref ofppapwofh
 
 ## Separate Vercel browser configuration
 
-The browser client needs the public Vite build variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (the code also supports the legacy anon-key aliases). These are separate from Edge Function secrets. Vite replaces these values during the frontend build; add them to the Vercel environment(s) that need the app and create a fresh deployment after changing them. Only the URL and publishable/anon key belong in the browser build—never `SERVICE_ROLE_KEY` or a bot token.
+The browser client needs the public Vite build variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`). For compatibility, `vite.config.ts` selectively maps `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` into browser-safe build constants; it does not expose the `SUPABASE_` prefix globally. These are separate from Edge Function secrets. Vite embeds the selected values during the frontend build, so add them to the Vercel environment(s) that need the app and create a fresh deployment after changing them. Only the URL and publishable/anon key belong in the browser build—never `SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, or a bot token.
 
 ## Local verification
 

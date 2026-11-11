@@ -5,26 +5,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve only public runtime configuration. Never embed a project URL or key in source.
-const getEnvVar = (key: string): string => {
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-    const val = (import.meta as any).env[key];
-    if (val) return val;
-  }
-  if (typeof process !== 'undefined' && process.env) {
-    const val = process.env[key];
-    if (val) return val;
-  }
-  return '';
-};
+declare const __KRISTOU_SUPABASE_URL__: string;
+declare const __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: string;
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL');
-const supabasePublishableKey =
-  getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') ||
-  getEnvVar('VITE_SUPABASE_ANON_KEY') ||
-  getEnvVar('SUPABASE_PUBLISHABLE_KEY') ||
-  getEnvVar('SUPABASE_ANON_KEY');
-
+// vite.config.ts selectively injects only public config, never a service-role key.
+const supabaseUrl = __KRISTOU_SUPABASE_URL__;
+const supabasePublishableKey = __KRISTOU_SUPABASE_PUBLISHABLE_KEY__;
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 
 export interface DatabaseSchema {
@@ -225,7 +211,7 @@ export const supabase = isSupabaseConfigured
 export function requireSupabaseClient() {
   if (!supabase) {
     throw new Error(
-      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the runtime environment.',
+      'Supabase public configuration was not included in this frontend build. Check the deployment build variables and rebuild.',
     );
   }
 
