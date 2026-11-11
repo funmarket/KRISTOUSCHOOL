@@ -35,27 +35,64 @@ Deno.serve(async (request) => {
     if (!botToken || !url || !serviceKey) return json({ error: 'telegram_unavailable' }, 503);
 
     const validated = await validateInitData(body.initData, botToken);
-    if (!validated || !validated.startParam) return json({ error: 'invalid_or_expired_link' }, 409);
-
-    const verifierDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(validated.startParam));
-    const verifierHash = [...new Uint8Array(verifierDigest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    if (!validated) return json({ error: 'invalid_telegram_auth' }, 401);
     const db = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-    const { error } = await db.rpc('claim_telegram_account_link', {
-      p_verifier_hash: verifierHash,
-      p_telegram_user_id: validated.user.id,
-      p_telegram_username: validated.user.username ?? null,
-      p_first_name: validated.user.first_name ?? null,
-      p_last_name: validated.user.last_name ?? null,
-      p_language_code: validated.user.language_code ?? null,
-    });
 
-    if (error) {
-      if (error.message.includes('telegram_identity_conflict')) return json({ error: 'telegram_identity_conflict' }, 409);
-      if (error.message.includes('link_challenge_invalid') || error.code === '23505') return json({ error: 'invalid_or_conflicting_link' }, 409);
-      return json({ error: 'telegram_link_failed' }, 500);
+    let linked = false;
+    if (validated.startParam) {
+      const verifierDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(validated.startParam));
+      const verifierHash = [...new Uint8Array(verifierDigest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+      const { error } = await db.rpc('claim_telegram_account_link', {
+        p_verifier_hash: verifierHash,
+        p_telegram_user_id: validated.user.id,
+        p_telegram_username: validated.user.username ?? null,
+        p_first_name: validated.user.first_name ?? null,
+        p_last_name: validated.user.last_name ?? null,
+        p_language_code: validated.user.language_code ?? null,
+      });
+
+      if (error) {
+        if (error.message.includes('telegram_identity_conflict')) return json({ error: 'telegram_identity_conflict' }, 409);
+        if (error.message.includes('link_challenge_invalid') || error.code === '23505') return json({ error: 'invalid_or_conflicting_link' }, 409);
+        return json({ error: 'telegram_link_failed' }, 500);
+      }
+      linked = true;
     }
 
-    return json({ linked: true });
+    const { data: identity, error: identityError } = await db
+      .from('telegram_identities')
+      .select('user_id')
+      .eq('telegram_user_id', validated.user.id)
+      .maybeSingle();
+    if (identityError) return json({ error: 'telegram_account_lookup_failed' }, 500);
+    if (!identity) return json({ error: 'telegram_not_linked' }, 404);
+
+    const [profileResult, roleResult] = await Promise.all([
+      db.from('profiles').select('id,username,full_name,email,avatar_url').eq('id', identity.user_id).single(),
+      db.from('role_assignments').select('role').eq('user_id', identity.user_id).eq('active', true),
+    ]);
+    if (profileResult.error || !profileResult.data || roleResult.error) {
+      return json({ error: 'telegram_account_lookup_failed' }, 500);
+    }
+
+    const capabilities = (roleResult.data ?? []).map((assignment) => String(assignment.role));
+    const role = capabilities.includes('APP_ADMIN')
+      ? 'APP_ADMIN'
+      : capabilities.find((assignedRole) => assignedRole !== 'GENERAL_USER') ?? 'GENERAL_USER';
+    const profile = profileResult.data;
+    return json({
+      linked,
+      user: {
+        id: profile.id,
+        username: profile.username,
+        fullName: profile.full_name || profile.username,
+        email: profile.email,
+        avatarUrl: profile.avatar_url,
+        role,
+        capabilities,
+        telegramLinked: true,
+      },
+    });
   } catch {
     return json({ error: 'telegram_link_failed' }, 400);
   }

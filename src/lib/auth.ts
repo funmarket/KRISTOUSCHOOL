@@ -1,6 +1,7 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase';
 import { createTelegramLinkUrl } from './telegram';
+import { isValidUsername } from './username';
 import type { User, UserRole } from '../types';
 
 export type SignupRole = 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER' | 'SCHOOL_STAFF' | 'ADMINISTRATIVE_PERSONNEL';
@@ -41,6 +42,7 @@ export async function signUpAccount(input: {
   staffId?: string;
   admissionId?: string;
 }) {
+  if (!isValidUsername(input.username)) throw new Error('invalid_username_format');
   const client = requireSupabaseClient();
   const email = input.email?.trim().toLowerCase() || undefined;
   const phone = input.phone ? normalizePhone(input.phone) : undefined;
@@ -52,6 +54,9 @@ export async function signUpAccount(input: {
     ...credentials,
     options: { data: { username: input.username.trim(), full_name: input.fullName.trim(), requested_role: input.requestedRole, staff_id: input.staffId?.trim() || undefined, admission_id: input.admissionId?.trim() || undefined } },
   });
+  if (error?.message.toLowerCase().includes('database error saving new user')) {
+    throw new Error('username_unavailable_or_invalid');
+  }
   if (error) throw error;
   return data;
 }
@@ -114,17 +119,51 @@ export async function createTelegramLinkChallenge() {
   };
 }
 
-let lastTelegramLinkAttempt: { initData: string; result: Promise<void> } | null = null;
+export type TelegramAuthResult = { user: User; linked: boolean };
 
-export function completeTelegramLinkFromInitData(initData: string): Promise<void> {
-  if (lastTelegramLinkAttempt?.initData === initData) return lastTelegramLinkAttempt.result;
+let lastTelegramAuthAttempt: { initData: string; result: Promise<TelegramAuthResult> } | null = null;
+
+export function authenticateTelegramInitData(initData: string): Promise<TelegramAuthResult> {
+  if (lastTelegramAuthAttempt?.initData === initData) return lastTelegramAuthAttempt.result;
   const result = (async () => {
     const client = requireSupabaseClient();
     const { data, error } = await client.functions.invoke('telegram-auth', { body: { initData } });
-    if (error || data?.linked !== true) throw new Error('Telegram link could not be confirmed');
+    if (error || !data?.user) throw new Error(data?.error || 'Telegram account is not linked');
+
+    const rawUser = data.user as {
+      id: string;
+      username: string;
+      fullName?: string;
+      email?: string | null;
+      avatarUrl?: string | null;
+      role?: string;
+      capabilities?: string[];
+      telegramLinked?: boolean;
+    };
+    const capabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
+    const roleName = rawUser.role || capabilities.find((role) => role === 'APP_ADMIN') || 'GENERAL_USER';
+    return {
+      linked: data.linked === true,
+      user: {
+        id: rawUser.id,
+        username: rawUser.username,
+        fullName: rawUser.fullName || rawUser.username,
+        email: rawUser.email ?? undefined,
+        avatarUrl: rawUser.avatarUrl ?? undefined,
+        role: roleMap[roleName] ?? 'GENERAL_USER',
+        capabilities,
+        telegramLinked: rawUser.telegramLinked ?? true,
+      },
+    };
   })();
-  lastTelegramLinkAttempt = { initData, result };
+  lastTelegramAuthAttempt = { initData, result };
   return result;
+}
+
+export async function completeTelegramLinkFromInitData(initData: string): Promise<User> {
+  const result = await authenticateTelegramInitData(initData);
+  if (!result.linked) throw new Error('Telegram link could not be confirmed');
+  return result.user;
 }
 
 export async function signOutAccount() {

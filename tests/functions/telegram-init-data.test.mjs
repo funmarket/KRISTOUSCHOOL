@@ -41,6 +41,13 @@ test('accepts valid signed Telegram initData and returns its signed start_param'
   });
 });
 
+test('accepts a normal Mini App launch without start_param for linked-account lookup', async () => {
+  const { start_param: _startParam, ...fields } = validFields;
+  const result = await validateInitData(makeInitData(fields), TEST_ONLY_BOT_TOKEN, NOW_SECONDS);
+  assert.equal(result?.user.id, 123456789);
+  assert.equal(result?.startParam, null);
+});
+
 test('rejects a tampered signed user payload', async () => {
   const valid = makeInitData(validFields);
   const tampered = valid.replace('first_name%22%3A%22Test', 'first_name%22%3A%22Mallory');

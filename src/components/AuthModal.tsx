@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Lock, User as UserIcon, Mail, Phone, Shield, Badge } from 'lucide-react';
 import type { SignupRole } from '../lib/auth';
+import { usernameRuleMessage } from '../i18n/authMessages';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white';
 
 type RegistrationRole = Exclude<SignupRole, 'GENERAL_USER'>;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { login, signup, t, dir } = useApp();
+  const { login, signup, t, dir, language } = useApp();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
@@ -118,7 +119,8 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </label>}
 
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')}
-                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className={inputClass} /></div>
+                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required minLength={3} maxLength={50} pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,49}" title={usernameRuleMessage(language)} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className={inputClass} /></div>
+                <p className="mt-1 font-normal text-gray-500">{usernameRuleMessage(language)}</p>
               </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{isStaffLike ? t('schoolEmail') : 'Email'}
