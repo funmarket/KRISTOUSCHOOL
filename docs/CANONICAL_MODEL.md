@@ -4,7 +4,7 @@ Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
 This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`. The model is only for KRISTOU SCHOOL. This repository defines only the KRISTOU SCHOOL data model.
 
-The authentication foundation is now implemented as a source-controlled Supabase migration and server-side function boundary. The remaining domain models below are contracts and must not be treated as implemented until their own migrations, RLS, and tests exist. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. Supabase Auth verifies the shared app's Web credentials; application identity and roles remain in KRISTOU-linked public tables. Telegram is explicitly linked to an existing authenticated canonical User through a short-lived one-time challenge and server-validated Mini App `initData`.
+The authentication foundation is now implemented as a source-controlled Supabase migration and server-side function boundary. The remaining domain models below are contracts and must not be treated as implemented until their own migrations, RLS, and tests exist. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. Supabase Auth verifies the shared app's Web credentials; application identity and roles remain in KRISTOU-linked public tables. Telegram is explicitly linked to an existing authenticated canonical User through a short-lived one-time challenge and server-validated Mini App `initData`; later Mini App opens use fresh signed `initData` to restore that linked identity in the app without creating a Supabase Auth session.
 
 During implementation, the following must agree with this document:
 
@@ -116,7 +116,7 @@ createdAt
 updatedAt
 ```
 
-Telegram profile metadata is not permission to merge with an existing User heuristically. In the currently approved flow, Telegram is linked only after the person creates/signs into the shared app account and confirms the one-time challenge in the Mini App. Telegram-only account provisioning is not part of this implementation slice.
+Telegram profile metadata is not permission to merge with an existing User heuristically. In the currently approved flow, Telegram is linked only after the person creates/signs into the shared app account and confirms the one-time challenge in the Mini App. Later Telegram launches restore that already-linked canonical profile from fresh signed `initData`; they do not create a new account or a Supabase Auth session. Telegram-only account provisioning is not part of this implementation slice.
 
 **Write owner:** Identity & Authentication.
 

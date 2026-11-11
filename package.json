@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test:auth": "node --test tests/auth-username.test.mjs tests/functions/telegram-init-data.test.mjs",
     "test:telegram-auth": "node --test tests/functions/telegram-init-data.test.mjs",
     "db:start": "npx --yes supabase@3.1.0 start",
     "db:stop": "npx --yes supabase@3.1.0 stop",

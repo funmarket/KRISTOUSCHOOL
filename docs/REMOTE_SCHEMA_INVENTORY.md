@@ -1,12 +1,12 @@
 # KRISTOU SCHOOL — REMOTE SUPABASE SCHEMA INVENTORY
 
-**Status:** Read-only reconciliation evidence; not a migration baseline
+**Status:** Updated after owner-authorized Telegram linking changes; not a migration baseline
 **Updated:** 2026-11-11
 **Repository:** `funmarket/KRISTOUSCHOOL`
 
 ## Scope and safety boundary
 
-This document records read-only Supabase MCP and public Vercel bundle evidence. No remote SQL, migration, table, policy, grant, storage, function, secret, deployment, or data change was performed. Do not infer deployment authorization from this inventory.
+Initial inventory work was read-only. Since then, the owner authorized and applied the atomic Telegram link migration, deployed `telegram-auth` v8, and saved the exact production `ALLOWED_ORIGIN`. No reset or user-data deletion was performed.
 
 ## Verified active project
 
@@ -18,7 +18,7 @@ This document records read-only Supabase MCP and public Vercel bundle evidence. 
 
 ## Live schema and migration history
 
-The authorized project contains these public tables; all four were reported with RLS enabled and zero rows during the read-only inspection:
+The authorized project contains these public tables, all with RLS enabled. The earlier zero-row observation predates owner account creation and Telegram linking and is not a current row-count statement:
 
 - `profiles`
 - `role_assignments`
@@ -32,29 +32,29 @@ The live migration history records:
 | `20261110212125` | `authentication_foundation` | Local source is `20261110210000_authentication_foundation.sql`; version IDs differ. |
 | `20261110212204` | `revoke_auth_trigger_execute` | Reviewed PR #9 source is `20261110222200_revoke_auth_trigger_execute.sql`; version IDs differ. |
 | `20261110212239` | `revoke_auth_trigger_execute_public` | Reviewed PR #9 source is `20261110222300_revoke_auth_trigger_execute_public.sql`; version IDs differ. |
-| — | — | `20261111030000_atomic_telegram_account_link.sql` is in repository source but absent from live history. |
+| `20261111150532` | `atomic_telegram_account_link` | Owner-authorized application of `20261111030000_atomic_telegram_account_link.sql`; it creates the atomic claim RPC and revokes authenticated SELECT on link challenges. |
 
-Do not run `supabase db push`, `migration repair`, or apply the atomic-link migration until a non-destructive migration-history mapping/baseline has been reviewed and the owner explicitly authorizes the exact remote operation. Never mark a migration applied merely to suppress a version mismatch.
+Do not run `supabase db push` or `migration repair` to reconcile the remaining version-ID differences. Never mark an unrelated migration applied merely to suppress a version mismatch.
 
 ## Grants, policies, and advisors
 
 - RLS is enabled on the four public tables.
 - The inspected `profiles`, `role_assignments`, and `telegram_identities` policies are self-scoped.
-- The live `authenticated` role still has `SELECT` on `account_link_challenges`, while the current source-controlled atomic-link migration revokes that grant.
+- The owner-authorized atomic-link migration revokes authenticated `SELECT` on `account_link_challenges` and grants the claim RPC only to `service_role`.
 - The read-only Supabase security advisor returned no lints. This does not resolve the source/live drift or prove that every future access path is safe.
-- Live public routines included `current_profile_id`, `handle_new_user`, and `set_updated_at`; `claim_telegram_account_link` was absent.
+- Live public routines include `current_profile_id`, `handle_new_user`, `set_updated_at`, and `claim_telegram_account_link`.
 
 ## Live Edge Functions versus repository source
 
-The live project reports these functions active at version 5:
+The last verified live list reports `telegram-auth` active at version 8; the other two functions remain at version 6:
 
 - `auth-username-signin` (`verify_jwt=false`)
 - `telegram-auth` (`verify_jwt=false`)
 - `telegram-link-challenge` (`verify_jwt=true`)
 
-The deployed `auth-username-signin` source accepts `SERVICE_ROLE_KEY` with backward compatibility for `SUPABASE_SERVICE_ROLE_KEY`; repository source is being reconciled to match. The deployed `telegram-auth` v5 is older than the merged PR #10 source: it accepts the legacy request-body `linkCode`, uses an older HMAC derivation, and does not call the atomic `claim_telegram_account_link` RPC. The link-challenge deployment also must be checked against source before any production flow is treated as verified.
+The deployed `auth-username-signin` accepts `SERVICE_ROLE_KEY` with backward compatibility for `SUPABASE_SERVICE_ROLE_KEY`. The deployed `telegram-auth` v8 verifies signed `initData`, confirms explicit one-time links through the live RPC, and returns the linked account profile for a normal Mini App launch. The matching frontend auto-entry change is on the current feature branch and is not yet deployed to Vercel.
 
-Therefore source in `main` or this reconciliation branch is **not** evidence that the deployed Telegram linking path works. Do not use the live v5 endpoint for a real linking attempt until the migration and source-matched function deployments are separately approved and verified.
+The owner completed a real successful Web-to-Telegram link against v7. Backend support for normal Mini App re-entry is now live in v8; the Vercel frontend change still needs review/merge and deployment before users can sign in automatically from Telegram.
 
 ## Production Vercel Supabase configuration diagnosis
 

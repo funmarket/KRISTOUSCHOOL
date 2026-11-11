@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   User,
   UserRole,
@@ -33,9 +33,10 @@ import {
   MOCK_ADMIN,
 } from '../data/mockData';
 import { translations, type TranslationKey } from '../i18n/translations';
+import { usernameRuleMessage, usernameUnavailableMessage } from '../i18n/authMessages';
 import { contentT } from '../i18n/content';
-import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, completeTelegramLinkFromInitData, type SignupRole } from '../lib/auth';
-import { getTelegramLinkInitData, initializeTelegramWebApp } from '../lib/telegram';
+import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, authenticateTelegramInitData, type SignupRole } from '../lib/auth';
+import { getTelegramWebAppInitData, initializeTelegramWebApp } from '../lib/telegram';
 
 interface NotificationItem {
   id: string;
@@ -93,6 +94,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const telegramIdentityUser = useRef<User | null>(null);
   const [currentRole, setCurrentRoleState] = useState<UserRole>('PUBLIC');
   const [language, setLanguageState] = useState<Language>(() => {
     return (localStorage.getItem('kristou_lang') as Language) || 'fr';
@@ -144,13 +146,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     initializeTelegramWebApp();
-    const initData = getTelegramLinkInitData();
+    const initData = getTelegramWebAppInitData();
     if (!initData) return;
+    const isLinkAttempt = Boolean(new URLSearchParams(initData).get('start_param'));
 
     let active = true;
-    void completeTelegramLinkFromInitData(initData)
-      .then(() => { if (active) setTelegramLinkNotice('success'); })
-      .catch(() => { if (active) setTelegramLinkNotice('error'); });
+    void authenticateTelegramInitData(initData)
+      .then(({ user, linked }) => {
+        if (!active) return;
+        telegramIdentityUser.current = user;
+        setCurrentUser(user);
+        setCurrentRoleState(user.role);
+        if (isLinkAttempt && linked) setTelegramLinkNotice('success');
+      })
+      .catch(() => { if (active && isLinkAttempt) setTelegramLinkNotice('error'); });
     return () => { active = false; };
   }, []);
 
@@ -170,14 +179,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     import('../lib/supabase').then(({ supabase }) => {
       if (!supabase) return;
       supabase.auth.getSession().then(async ({ data }) => {
-        if (!active || !data.session?.user) return;
+        if (!active) return;
+        if (telegramIdentityUser.current) {
+          setCurrentUser(telegramIdentityUser.current);
+          setCurrentRoleState(telegramIdentityUser.current.role);
+          return;
+        }
+        if (!data.session?.user) return;
         try {
           const user = await loadCanonicalUser(data.session.user);
           if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
         } catch { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } }
       });
       const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (!active || !session?.user) { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } return; }
+        if (!active) return;
+        if (telegramIdentityUser.current) {
+          setCurrentUser(telegramIdentityUser.current);
+          setCurrentRoleState(telegramIdentityUser.current.role);
+          return;
+        }
+        if (!session?.user) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); return; }
         try {
           const user = await loadCanonicalUser(session.user);
           if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
@@ -281,11 +302,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await signUpAccount(input);
       return { success: true, confirmationRequired: !data.session };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unable to create account' };
+      const code = error instanceof Error ? error.message : '';
+      if (code === 'invalid_username_format') return { success: false, error: usernameRuleMessage(language) };
+      if (code === 'username_unavailable_or_invalid') return { success: false, error: usernameUnavailableMessage(language) };
+      return { success: false, error: code || 'Unable to create account' };
     }
   };
 
   const logout = () => {
+    telegramIdentityUser.current = null;
     void signOutAccount();
     setCurrentUser(null);
     setCurrentRoleState('PUBLIC');

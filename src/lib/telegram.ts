@@ -18,9 +18,15 @@ declare global {
   }
 }
 
-/** Returns raw initData for a link attempt; the server verifies both signature and start_param. */
-export function getTelegramLinkInitData(): string | null {
+/** Returns raw initData; the server must verify Telegram's signature before using it. */
+export function getTelegramWebAppInitData(): string | null {
   const initData = window.Telegram?.WebApp?.initData;
+  return initData || null;
+}
+
+/** Returns initData only when the Mini App was opened with an explicit linking challenge. */
+export function getTelegramLinkInitData(): string | null {
+  const initData = getTelegramWebAppInitData();
   if (!initData) return null;
   const startParam = new URLSearchParams(initData).get('start_param');
   return startParam ? initData : null;

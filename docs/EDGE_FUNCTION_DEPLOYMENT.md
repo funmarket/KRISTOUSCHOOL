@@ -19,15 +19,15 @@ Supabase's hosted runtime supplies project URL and anon key variables to functio
 
 - `auth-username-signin`: `verify_jwt=false`; it validates the submitted credentials itself and returns the normal Supabase Auth session only after successful password verification.
 - `telegram-link-challenge`: `verify_jwt=true`; it requires the existing signed-in app user's bearer token to create a short-lived linking challenge.
-- `telegram-auth`: `verify_jwt=false`; it validates signed Telegram `initData` itself and confirms a one-time link. It must not create users or mint Supabase sessions.
+- `telegram-auth`: `verify_jwt=false`; it validates signed Telegram `initData` itself, confirms a one-time link when `start_param` is present, and returns the already-linked canonical profile on ordinary Mini App opens. It does not create users or mint Supabase Auth sessions.
 
-The deployed live `telegram-auth` v5 was read-only inspected and does **not** match the merged source contract: it still accepts the legacy request-body `linkCode`, uses an older HMAC derivation, and does not call the source-controlled atomic link RPC. Do not run a real linking flow against that runtime as evidence for merged source.
+The deployed live `telegram-auth` v8 has the corrected HMAC verifier, atomic link RPC, and lookup for already-linked users on ordinary Mini App opens. The matching frontend change is on the feature branch and must be merged/deployed through Vercel before automatic Telegram entry is available in the UI. Telegram login is a verified app identity, not a Supabase Auth session; future private database operations must continue through server-verified Telegram paths unless a separate Supabase session design is approved.
 
 ## Safe order before any hosted change
 
 1. Review and merge the source-only reconciliation PR; confirm the exact commit on `main`.
 2. Complete a clean local `supabase db reset` and `supabase test db` using the pinned CLI and synthetic fixtures.
-3. Reconcile the live migration-history identifiers with the repository filenames. The live history currently records the same three names with different version IDs, and does not include `atomic_telegram_account_link`. Do not run `db push`, mark migrations applied, or attempt to baseline the remote project until an explicit non-destructive mapping/baseline is reviewed.
+3. The owner-authorized `atomic_telegram_account_link` migration is applied; the live migration history still uses different version IDs for the original three migrations. Do not run `db push`, mark unrelated migrations applied, or attempt to baseline the remote project until a non-destructive mapping is reviewed.
 4. Obtain explicit owner authorization for the exact production migration and function deployment. Apply the required migration before deploying the functions that call its RPC; record the exact project, migration IDs, function versions, and smoke-test outcomes.
 5. Verify required secret **names** are configured in the correct project without displaying or logging their values. Test preflight/CORS and invalid-request protection first. A real link test requires a fresh Telegram WebApp session and the configured bot short name.
 
