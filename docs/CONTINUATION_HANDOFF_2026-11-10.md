@@ -475,3 +475,14 @@ This section supersedes the older Telegram-first signup/session alternatives abo
 - Current code work is isolated to local branch `feature/telegram-visitor-linking`; PR #9 remains a separate database/function branch. No remote migration, deployment, or production change is authorized by this addendum.
 
 The owner specifically asked to keep this flow simple: use the existing app signup/login and then connect the Telegram identity. Do not reopen the rejected Telegram-first account-provisioning/session alternatives unless the owner changes the product direction.
+
+## 14. Supabase/Vercel reconciliation update (2026-11-11)
+
+This section supersedes the older generic “remote schema has 49 tables/no migration history” and “auth foundation not applied” statements in earlier handoff sections. Read `docs/REMOTE_SCHEMA_INVENTORY.md` for the exact current evidence.
+
+- The active Supabase project is `KRISTOUSCHOOL` (`ofppapwofhovhroyjtkc`). Its four public auth tables are empty and RLS-enabled. The live migration names match three source migrations, but the live version IDs differ; the source atomic Telegram-link migration and RPC are absent remotely.
+- PR #9 remains conflicting and must not be merged as-is. Preserve only the reviewed trigger-execute hardening, service-role secret-name compatibility, and still-correct deployment notes. Do not restore its older Telegram auth/verifier over PR #10's link-only source.
+- The live `telegram-auth` v5 still uses the older `linkCode` request and HMAC behavior. No production migration, secret change, or function deployment has occurred in this reconciliation.
+- Production Vercel's published JavaScript bundle contains the exact Supabase configuration error path, but neither the configured project URL nor a publishable/anon key token. Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the Vercel build environment and redeploy; Vercel dashboard settings were not inspected or changed.
+- Reconciliation work is on `chore/reconcile-live-auth-foundation`, based on current `main`. This branch adds the reviewed permission-hardening migrations, pinned local DB scripts, synthetic pgTAP tests, deployment guidance, and current evidence docs. CLI `3.1.0` was verified, but clean reset and pgTAP remain unverified because Docker is unavailable.
+- Next sequence: get Docker-backed local reset/tests passing; review a non-destructive live migration-history mapping; only deploy after separate explicit authorization. Then build the read-only public Teachers/Administration Directory after the owner approves exact public fields/content. Keep internal People data private.

@@ -14,29 +14,27 @@
 
 ### 1.1 What exists locally
 
-The current app has a coherent visual prototype but not a production backend:
+The current app combines a mock-driven school-domain prototype with a partial Supabase authentication foundation:
 
-- Vite/React entrypoint and one shared shell;
-- mock state in `src/context/AppContext.tsx`;
-- mock records in `src/data/mockData.ts`;
-- tab-based feature views;
-- typed trilingual shell translations;
-- stable LTR shell for Arabic language selection;
-- placeholder Supabase client;
-- no server transport, Edge Functions, generated DB types, database tests, RLS policies, or real auth/session flow.
+- one Vite/React app and shared Browser/Telegram shell; school feature views and most data remain mock-driven;
+- a browser Supabase client contract that fails closed when URL/key configuration is absent;
+- source for Supabase Auth signup/sign-in, the Auth-backed profile/role foundation, username sign-in, and explicit one-time Telegram account linking;
+- source migrations for `authentication_foundation` and atomic Telegram linking; this reconciliation branch additionally carries the two reviewed trigger-permission hardening migrations from PR #9;
+- source Edge Functions for username sign-in, authenticated challenge creation, and Telegram link confirmation;
+- focused Node verifier tests plus a new synthetic-fixture pgTAP test and pinned local database scripts;
+- no implemented private school-domain backend slice; the local pgTAP suite cannot yet be run here because Docker is unavailable.
 
 ### 1.2 What exists remotely
 
-The active Supabase project has a broad schema with canonical PascalCase tables and legacy snake_case tables. The schema is empty in the observed audit, but the schema itself is not empty. RLS is enabled without policies, and browser roles have broad grants. There is no proven migration-history table.
+The active project is `KRISTOUSCHOOL` (`ofppapwofhovhroyjtkc`, `eu-west-3`, `ACTIVE_HEALTHY`). Its public schema contains `profiles`, `role_assignments`, `telegram_identities`, and `account_link_challenges`; all were reported RLS-enabled and empty. Live migration IDs are `20261110212125 authentication_foundation`, `20261110212204 revoke_auth_trigger_execute`, and `20261110212239 revoke_auth_trigger_execute_public`. The repository filenames use different versions, and `20261111030000_atomic_telegram_account_link` is absent remotely.
 
-This creates two different risks:
-
-1. **Security risk:** broad grants and zero policies are not a deliberate production access matrix. Do not expose the browser to private tables.
-2. **Migration risk:** the repository draft migration is not a valid baseline for this remote schema. Do not replay it as if the project were empty, and do not delete the legacy family.
+The live `authenticated` role still has `SELECT` on `account_link_challenges`, despite source revoking it. The live security advisor returned no lints, but that does not resolve the grant/source mismatch. All three live Edge Functions are active at v5; deployed `telegram-auth` is the older request-body `linkCode`/incorrect-HMAC implementation and does not call the source-controlled atomic RPC. No production migration or function change was made during this reconciliation.
 
 ### 1.3 Immediate architectural mismatch
 
-The local model is intentionally smaller than the remote schema. The remote schema already contains concepts from later domains such as Enrollment, Pickup, Food Menu, Broadcasts, Notifications, and Directory. The next work must reconcile what is actually there with the canonical ownership documents before adding more tables.
+The hosted schema is now a small auth foundation, not the unrelated 49-table project described by an older supplied reference. The remaining risk is history/runtime drift, not a broad legacy-table family. Do not run `db push`, `migration repair`, or a production function deployment until a non-destructive version mapping is reviewed and the owner authorizes the exact action.
+
+Separately, the published Vercel bundle was read-only inspected: it contains the Supabase configuration error path but neither the expected project URL nor an actual publishable/anon key token. The signup error is consistent with missing `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` during the Production build. Vercel's private settings were not inspected; the owner should set those public build values and redeploy.
 
 ---
 
@@ -121,23 +119,24 @@ Tasks:
 
 Tasks:
 
-1. Pin the supported Supabase CLI installation/version in the repository toolchain.
-2. Verify `supabase start`, `supabase db reset`, local function serving, and local test commands in the current environment.
-3. Add only working package scripts; do not copy scripts from the old repository without verifying them here.
-4. Keep `.env.example` limited to public URL/publishable key and placeholders for server-only secrets.
+1. Pin the CLI invocation; this branch uses `npx --yes supabase@3.1.0` and verifies the CLI version.
+2. Run `npm run db:start`, `npm run db:reset`, and `npm run db:test` with Docker available. In the current environment the CLI is present through `npx`, but Docker is absent, so database reset/tests remain unverified.
+3. Keep the pinned package scripts and synthetic-only pgTAP fixtures; no real school data belongs in tests.
+4. Keep `.env.example` limited to placeholders for public URL/publishable key and server-only secret names.
 5. Keep `supabase/seed.sql` empty or synthetic-only; no actual children, families, staff, medical data, enrollment documents, or pickup records.
-6. Create a read-only schema snapshot artifact outside production data, containing table/column/FK/index/enum/RLS/grant inventory.
-7. Add a schema inventory test or script that detects accidental reintroduction of the legacy family or unreviewed public tables without deleting them.
+6. Maintain `docs/REMOTE_SCHEMA_INVENTORY.md` as a read-only inventory of the authorized project, exact migration IDs, grants, RLS state, and runtime drift.
+7. Add a schema inventory test or script only if a subsequent feature requires it; do not create legacy-table cleanup behavior.
 
 **Deliverables:**
 
 - reproducible local config;
-- verified local reset command;
+- pinned CLI and package commands; clean local reset/test is pending Docker;
 - synthetic seed policy;
-- schema snapshot/inventory script;
-- documented mismatch between local draft migration and remote schema.
+- read-only live schema/migration/function inventory;
+- synthetic pgTAP allow/deny tests;
+- documented mismatch between local migration filenames and live history.
 
-**Gate:** clean local checkout can reset deterministically and the agent can inspect the remote schema without mutation.
+**Gate:** clean local checkout resets deterministically, pgTAP allow/deny assertions pass, and the remote history can be read without mutation. This gate is not yet passed because Docker is unavailable here.
 
 ---
 
@@ -147,33 +146,28 @@ Tasks:
 
 Tasks:
 
-1. Inventory every remote table, column, enum, FK, index, trigger, function, view, grant, RLS flag, policy, storage bucket, and realtime publication relevant to `public`.
-2. Group tables into:
-   - canonical model candidates;
-   - legacy prototype candidates;
-   - unknown/unowned candidates;
-   - infrastructure/security candidates.
-3. Map each canonical remote table to the owner table in `structure.md` and `docs/CANONICAL_MODEL.md`.
-4. Identify schema differences from the repository’s draft `supabase/migrations/20261110020000_canonical_foundation.sql`.
-5. Decide whether the project should adopt an introspection baseline, create a new non-destructive baseline, or rebuild a separate staging project from clean migrations. This is a decision gate, not an automatic migration.
-6. Record that existing legacy tables remain untouched and are not allowed to receive new feature writes once a canonical owner is selected.
-7. Do not add a second version of existing remote canonical tables merely because local migrations are incomplete.
+1. Preserve the exact read-only live table, RLS, grant, routine, advisor, and Edge Function evidence in `docs/REMOTE_SCHEMA_INVENTORY.md`.
+2. Map each live migration name/version to its repository filename and compare the actual migration contents before selecting a baseline strategy.
+3. Resolve the three version-ID mismatches without deleting objects or falsely marking a migration applied; the atomic-link migration is source-only and absent remotely.
+4. Do not merge PR #9 as-is: port only its reviewed trigger-hardening migrations, `SERVICE_ROLE_KEY` compatibility, and current deployment guidance. Do not reintroduce its older Telegram handler/verifier or remote-state assumptions.
+5. Keep existing live tables and data untouched. Do not create duplicate identity tables or add private school-domain tables during reconciliation.
+6. Prepare a non-destructive migration-history mapping/baseline proposal for review. No remote migration/history repair is part of this branch unless separately authorized.
 
 **Deliverables:**
 
 - `docs/REMOTE_SCHEMA_INVENTORY.md` or equivalent authoritative inventory;
-- table ownership matrix;
+- exact live-to-local migration version map and source/function drift summary;
 - non-destructive baseline proposal;
 - list of unknowns requiring owner approval;
 - no remote changes.
 
-**Gate:** every table used by the first vertical slice has a known owner, schema shape, grant state, and access policy plan.
+**Gate:** migration history is reconciled in a reviewed plan, local migrations and pgTAP tests pass, and every table used by the first vertical slice has a known owner, schema shape, grant state, and access policy plan. No remote mutation is implied.
 
 ---
 
-### Phase 3 — Web identity/session and explicit Telegram-link threat model
+### Phase 3 — Web identity/session and explicit Telegram-link validation
 
-**Purpose:** implement the approved Supabase Auth credential mapping and explicit Telegram identity linking safely.
+**Purpose:** validate the already-accepted and source-implemented Supabase Auth credential mapping and explicit Telegram identity linking; do not reopen the product policy or confuse source with deployment.
 
 The product policy is not open for replacement:
 
@@ -184,7 +178,7 @@ The product policy is not open for replacement:
 - account linking is explicit, expiring, one-time, conflict-failing;
 - no heuristic merge.
 
-The design must answer:
+The local/source verification must answer:
 
 1. How Supabase Auth handles the shared-app email/phone credentials, sessions, expiry, and logout.
 2. How username normalization/uniqueness and the server-side username resolver avoid exposing contact identifiers.
@@ -194,16 +188,15 @@ The design must answer:
 6. How Telegram identity conflicts fail closed without heuristic account merging.
 7. Which future school-domain operations require additional server authorization beyond this link-confirmation slice.
 
-**Deliverables:**
+**Current evidence:** product behavior is captured in ADR-012/ADR-015 and the source link flow is in PR #10/main. The deployed `telegram-auth` v5 is stale and does not implement that contract; see `docs/REMOTE_SCHEMA_INVENTORY.md`.
 
-- accepted ADR update or new ADR;
-- threat model;
-- identity sequence diagrams;
-- session/claim representation decision;
-- auth error contract;
-- unit and integration test matrix.
+**Remaining deliverables:**
 
-**Gate:** owner-approved technical design before any protected account flow or allow policy is implemented.
+- local Edge Function request tests for authentication, replay/conflict, CORS, and malformed `initData`;
+- successful clean database reset and pgTAP allow/deny test run;
+- an explicit source-versus-live deployment comparison.
+
+**Gate:** local function/database verification is clean. Any hosted function/migration deployment remains a separate, explicitly authorized task.
 
 ---
 

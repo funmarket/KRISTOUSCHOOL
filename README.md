@@ -4,7 +4,9 @@ KRISTOU SCHOOL is the mobile-first school application for École Primaire Privé
 
 ## Current state
 
-The current application is a Vite/React prototype with mock-driven client state. It is not a production backend, authentication system, or safe store of student/family data. Supabase integration is planned, not yet implemented or verified. Do not treat any prototype login, role switch, pickup action, sample student record, or Supabase client placeholder as real security or production behavior.
+The current application remains a mock-driven prototype for school-domain views; it is not a safe store of student/family data and does not provide production authorization for those domains. A Supabase Auth/profile foundation, source-controlled migrations, and Edge Function source now exist. The live Supabase migration history and deployed Telegram function still differ from current source, so source presence does not prove those flows are deployed or secure.
+
+The production Vercel JavaScript bundle was read-only inspected on 2026-11-11: it contains the Supabase configuration error path but neither the configured project URL nor a publishable/anon key token. Signup/login therefore cannot initialize Supabase in that deployment. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the Vercel environment used for the deployment, then create a fresh deployment. These are public browser configuration values; never add a service-role key or Telegram bot token to Vercel `VITE_` variables.
 
 ## Canonical project documents
 
@@ -25,11 +27,11 @@ The old `funmarket/Kristou` repository is a read-only source of migrated product
 
 ## Platform direction
 
-Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. The active project and current integration status must be verified from fresh evidence before any remote operation. Frontend hosting is a separate decision. Preserve the accepted Web username/password and Telegram WebApp login/linking behavior; ADR-015 gates only the compatible technical implementation, not a change in login policy.
+Supabase is the selected platform for managed PostgreSQL and Edge Functions; a hosted `KRISTOUSCHOOL` project is active. Its migration version IDs differ from repository migration filenames, its authenticated role can still read link challenges, and its active `telegram-auth` v5 is older than the merged one-time-link source. Do not deploy or repair migration history until a reviewed, non-destructive mapping and explicit owner authorization exist. Frontend hosting is Vercel; its missing browser build configuration is separately documented in `docs/EDGE_FUNCTION_DEPLOYMENT.md`.
 
 ## Development
 
-The current prototype exposes Vite scripts in `package.json`. Backend-specific commands will be added only as their owners are implemented. Do not copy commands from old-repository documentation as proof that this repo has those workspaces or scripts.
+Use `npm run db:start`, `npm run db:reset`, and `npm run db:test` with Docker available; these invoke the pinned Supabase CLI `3.1.0`. The database test uses synthetic fixtures only. See `docs/EDGE_FUNCTION_DEPLOYMENT.md` for deployment boundaries and secret names. No remote migration or Edge Function deployment is implied by these local commands.
 
 ## Security boundary
 

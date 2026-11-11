@@ -10,8 +10,8 @@ major_version = 17
 enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000"]
-email.enable_signup = true
-phone.enable_signup = true
+email.enabled = true
+sms.enabled = true
 
 [functions.auth-username-signin]
 verify_jwt = false

@@ -93,7 +93,7 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 ## ADR-014 — Supabase is the selected backend/database platform direction
 
-**Status:** Accepted direction; provisioning and implementation are pending.
+**Status:** Accepted; a hosted KRISTOUSCHOOL project and source-controlled authentication foundation exist. Migration/runtime reconciliation remains pending.
 
 **Context:** The product owner selected Supabase as the backend and database platform direction for `funmarket/KRISTOUSCHOOL`.
 
@@ -101,10 +101,10 @@ This file records explicit architecture decisions only. Product behavior belongs
 
 **Security consequences:** Exposed tables require least-privilege grants and tested RLS; Edge Functions verify identity and resource policy; any secret/service-role key remains server-side and every RLS-bypass path receives explicit authorization and deny-case tests. Do not use dashboard-only schema changes as the source of truth.
 
-**Status consequence:** This decision does not prove that a Supabase project has been provisioned, connected, or deployed. Record those facts only in `progress.md` after verification.
+**Status consequence:** This decision does not prove that repository migrations or Edge Function source match the hosted project. Record current project state only in `progress.md` after read-only verification; do not reconcile or deploy without explicit authorization.
 
 ## ADR-015 — Supabase Auth mapping and Telegram identity linking
-**Status:** Accepted; implementation covers the shared-app Web account foundation and explicit Web-account-to-Telegram linking.
+**Status:** Accepted; source implements the shared-app Web account foundation and explicit Web-account-to-Telegram linking. The hosted Edge Function/schema do not yet match this source.
 **Context:** Visitors may browse school-approved public content without an account. App accounts are created through the shared app's normal signup form using Web credentials, whether opened in Browser or Telegram WebView; school admission remains separate. A signed-in account holder may explicitly link Telegram to that same canonical User.
 **Decision:** Use Supabase Auth as the credential verifier for Web credentials and link every Auth user one-to-one to a KRISTOU profile. Store the custom username and requested role in the profile created by the `auth.users` trigger. Resolve username sign-in only in a server-side Edge Function, then establish the normal Supabase Auth session. To link Telegram, create a short-lived, one-time challenge bound to the verified Web user, pass it as the `startapp` parameter to the configured KRISTOU Mini App, validate fresh Telegram `initData` server-side, and atomically attach the Telegram identity to that same canonical User. The Telegram linking handler does not create accounts or issue Supabase Auth sessions. Requested signup categories, including School Staff and Administrative Personnel, never grant privileged access by themselves. No profile-field-based account merging is allowed.
 

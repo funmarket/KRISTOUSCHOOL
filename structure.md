@@ -2,14 +2,14 @@
 
 Status: **PRIMARY ARCHITECTURE CONTRACT**
 Repository: `funmarket/KRISTOUSCHOOL`
-Backend platform direction: **Supabase** (authentication foundation source-controlled; live deployment not yet verified)
+Backend platform direction: **Supabase** (authentication foundation source-controlled; hosted project exists, but migration/function drift remains)
 Deployment model: **KRISTOU SCHOOL only**
 
 This document defines architecture, runtime boundaries, data ownership, and dependency rules. It is not a progress ledger, feature backlog, or permission to create speculative structures. Product behavior belongs in `requirements.md`; data authority belongs in `docs/CANONICAL_MODEL.md`; decisions belong in `docs/DECISIONS.md`; verified status belongs in `progress.md`.
 
 ## 1. Current state and target
 
-The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It now contains the source-controlled Supabase authentication foundation, migrations, and Edge Function boundaries; private school-domain backend slices remain unimplemented. UI data, login, roles, and pickup transitions are prototype-only.
+The current repository contains one Vite/React frontend and mock-driven school-domain context state, plus a configured Supabase client contract, source-controlled Auth/profile foundation, migrations, and Edge Function boundaries. Private school-domain backend slices remain unimplemented. Login/signup source exists, but the production Vercel bundle is missing the public Supabase build configuration; live migration history and the deployed Telegram handler also differ from current source. UI data, roles, and pickup transitions remain prototype-only.
 
 The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the shared app's normal email/phone/username + password signup/sign-in in either host, then explicitly link a signed-in user's Telegram identity through the one-time challenge flow; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
@@ -58,7 +58,7 @@ Use private buckets for child/family/enrollment/class media and documents. Use s
 
 ### Local and hosted environments
 
-Local development uses Supabase CLI and versioned migrations. Local, preview/staging, and production projects must be isolated by URL, keys, data, and authentication configuration. Seed files contain synthetic data only. The authentication migration is not yet applied to the hosted project; remote deployment still requires review of project ownership, region, recovery, and secrets.
+Local development uses the pinned Supabase CLI and versioned migrations. Local, preview/staging, and production projects must be isolated by URL, keys, data, and authentication configuration. Seed files contain synthetic data only. A hosted project exists, but its recorded migration version IDs do not match repository filenames and it lacks the source-controlled atomic Telegram-link RPC; do not push migrations or functions until migration history is reconciled and deployment is explicitly authorized.
 
 ## 3. Dependency direction and module shape
 
