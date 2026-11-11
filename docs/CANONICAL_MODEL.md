@@ -4,7 +4,7 @@ Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
 This file defines canonical product data ownership and write authority for KRISTOU SCHOOL in `funmarket/KRISTOUSCHOOL`. The model is only for KRISTOU SCHOOL. This repository defines only the KRISTOU SCHOOL data model.
 
-The authentication foundation is now implemented as a source-controlled Supabase migration and server-side function boundary. The remaining domain models below are contracts and must not be treated as implemented until their own migrations, RLS, and tests exist. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. Supabase Auth is selected for Web credential verification; application identity and roles remain in KRISTOU-linked public tables, and Telegram remains a separately validated identity transport.
+The authentication foundation is now implemented as a source-controlled Supabase migration and server-side function boundary. The remaining domain models below are contracts and must not be treated as implemented until their own migrations, RLS, and tests exist. Where the exact relational shape is not yet approved, the authority and invariants are locked while storage details remain **TBD**. Supabase Auth verifies the shared app's Web credentials; application identity and roles remain in KRISTOU-linked public tables. Telegram is explicitly linked to an existing authenticated canonical User through a short-lived one-time challenge and server-validated Mini App `initData`.
 
 During implementation, the following must agree with this document:
 
@@ -82,8 +82,7 @@ Rules:
 - Web sign-in accepts username, email, or full international phone number plus password;
 - email and phone credentials are verified by Supabase Auth;
 - username resolution is server-side and must not expose contact identifiers to the browser;
-- a Telegram-originated canonical User may later add exactly one WebCredential to the same `User.id`;
-- creating Web credentials must never create a second canonical User for an already authenticated Telegram-originated account.
+- app accounts are created through the shared app's credential signup in either Browser or Telegram WebView; the current flow does not provision Telegram-only users.
 
 **Write owner:** Identity & Authentication.
 
@@ -117,13 +116,13 @@ createdAt
 updatedAt
 ```
 
-Telegram profile metadata is not permission to merge with an existing User heuristically.
+Telegram profile metadata is not permission to merge with an existing User heuristically. In the currently approved flow, Telegram is linked only after the person creates/signs into the shared app account and confirms the one-time challenge in the Mini App. Telegram-only account provisioning is not part of this implementation slice.
 
 **Write owner:** Identity & Authentication.
 
 ## AccountLinkChallenge
 
-Short-lived one-time authority for explicit Web <-> Telegram linking.
+Short-lived one-time authority for explicit shared-app-account -> Telegram linking.
 
 Rules:
 

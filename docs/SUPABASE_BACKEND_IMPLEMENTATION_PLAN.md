@@ -12,9 +12,9 @@ Supabase is selected for the backend/database direction. This does not by itself
 
 ## Fixed product policy and technical authentication gate
 
-The product owner approved Supabase Auth for Web credential verification with email, phone, or custom username plus password. The custom username is stored in the KRISTOU profile linked one-to-one to `auth.users`; username resolution occurs only in a server-side Edge Function. Telegram WebApp authentication remains a separate direct transport with explicit account linking to the same canonical User. The school admission/registration form remains separate from app signup.
+The product owner approved Supabase Auth for shared-app credential verification with email, phone, or custom username plus password. The same signup/sign-in form is available in Browser and Telegram WebView. The custom username is stored in the KRISTOU profile linked one-to-one to `auth.users`; username resolution occurs only in a server-side Edge Function. A signed-in app user explicitly links Telegram to that same canonical User through a short-lived one-time challenge and server-validated Mini App `initData`. Telegram linking does not create an account or issue a Supabase session. The school admission/registration form remains separate from app signup.
 
-The authentication foundation defines the server-side profile trigger, role assignment storage, protected username resolver, Telegram `initData` validation boundary, and one-time linking challenge. Strong provider password handling, generic errors, contact confirmation, rate limits, conflict handling, and service-role isolation remain required at deployment review. Do not treat service-role access as a substitute for authorization.
+The authentication foundation defines the server-side profile trigger, role assignment storage, protected username resolver, Telegram `initData` validation for explicit link confirmation, and one-time linking challenge. Strong provider password handling, generic errors, contact confirmation, rate limits, conflict handling, and service-role isolation remain required at deployment review. Do not treat service-role access as a substitute for authorization.
 
 Private school data remains behind feature-specific access matrices, RLS policies, and allow/deny tests. Supabase Auth documentation describes native email and phone password identifiers; the server-side username resolver supplies the approved custom identifier.[1]
 
@@ -23,7 +23,7 @@ Private school data remains behind feature-specific access matrices, RLS policie
 ```text
 React/Vite browser
   -> publishable Supabase key (public project identifier, not a secret)
-  -> server-verified Web or Telegram session (per the preserved identity policy)
+  -> Supabase Auth session for the shared app account
   -> Row Level Security for caller-scoped reads/writes
 
 React/Vite browser
@@ -41,15 +41,15 @@ Supabase Edge Functions are server-side TypeScript/Deno functions. They are appr
 
 1. Confirm the target repository/default branch and latest HEAD. Keep this plan as subordinate to `AGENTS.md` and the accepted requirements.
 2. Record that the current frontend uses mock state and that no backend/schema/auth has been verified. Do not import the old repository's CI, deployment, project references, user records, or historical completion claims.
-3. Preserve the approved email/phone/username Web credential model and Telegram WebApp identity/linking model. Keep school admission separate from app signup.
+3. Preserve the approved email/phone/username shared-app credential model and explicit Telegram identity-linking model. Keep school admission separate from app signup; do not add Telegram-first account creation or a Telegram-issued Supabase session.
 4. Confirm that Supabase is the approved managed database/function provider and choose a project owner, organization, region, and project separation strategy. Do not create a hosted project implicitly as part of code work.
 
-**Gate:** the Supabase Auth/profile/role mapping, username resolver, Telegram validation/linking boundary, and deployment secret requirements are recorded in `docs/DECISIONS.md`; private school-domain writes still require separate security gates.
+**Gate:** the Supabase Auth/profile/role mapping, username resolver, explicit Telegram link confirmation boundary, and deployment secret requirements are recorded in `docs/DECISIONS.md`; private school-domain writes still require separate security gates.
 
 ### 1. Add reproducible local Supabase development
 
 1. Pin a Supabase CLI version in the project toolchain (choose the repo's supported installation method; do not depend on an unpinned global binary).
-2. Initialize `supabase/config.toml` and configure local Auth/session behavior only after the technical design shows how the accepted username/password and Telegram transports are preserved.
+2. Initialize `supabase/config.toml` and configure local Auth/session behavior for the approved shared-app credentials; Telegram `initData` is used only to confirm the explicit link in this slice.
 3. Add local migration, reset, test, function-serve, type-generation, and status commands to `package.json` only when they work in this repository.
 4. Keep `.env.example` to placeholders such as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and server-side-only secret names. Remove fallback project IDs, mock keys, and embedded credentials from source. The publishable key may be present in browser configuration; secret/service-role keys may not.
 5. Verify `.gitignore` excludes actual environment files and local Supabase state. Create local-only synthetic `supabase/seed.sql` fixtures with no real student, family, staff, contact, medical, enrollment, or pickup records.
@@ -62,8 +62,8 @@ Supabase's local-development workflow supports tracked migrations, repeatable da
 
 1. Implement only the approved path from Phase 0.
 2. Preserve the canonical KRISTOU User as the shared Web/Telegram product identity. If a reviewed design uses Supabase Auth, define an explicit one-to-one mapping from `auth.users.id` to canonical `User.id`; do not copy Supabase-managed passwords into application tables.
-3. Web username/password is fixed product behavior. Do not build an improvised browser-side username lookup. Design credential verification and session issuance server-side; define a strong one-way password hash, opaque high-entropy sessions or otherwise reviewed tokens, hashed-at-rest session verifiers, expiry/revocation, generic errors, rate limits, and a documented database-policy identity bridge. Require a security review before exposing any protected table through the Data API.
-4. Define account-link behavior for Telegram as a separate explicit one-time, expiring, conflict-failing flow. Telegram identity must resolve to the same canonical KRISTOU User and never merge heuristically.
+3. Web username/password is fixed product behavior. Do not build an improvised browser-side username lookup. Use Supabase Auth for password verification, session issuance, expiry, and revocation; resolve username only in the server-side function and return the provider's normal session. Do not create a parallel password store or custom Web session format. Require a security review before exposing any protected table through the Data API.
+4. Define account-link behavior for Telegram as a separate explicit one-time, expiring, conflict-failing flow. Validate signed Telegram `initData`, consume the challenge atomically, attach the Telegram identity to the existing canonical KRISTOU User, and never merge heuristically. This linking operation does not mint or refresh a Supabase Auth session.
 5. Add auth integration tests for unauthorized access, expiry/revocation, conflicting identities, and any signup/recovery policy before relying on auth in RLS.
 
 **Gate:** a threat model and tests establish how the database and Edge Functions learn the verified canonical actor for every protected request.

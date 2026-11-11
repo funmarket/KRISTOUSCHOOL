@@ -34,7 +34,8 @@ import {
 } from '../data/mockData';
 import { translations, type TranslationKey } from '../i18n/translations';
 import { contentT } from '../i18n/content';
-import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, type SignupRole } from '../lib/auth';
+import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, completeTelegramLinkFromInitData, type SignupRole } from '../lib/auth';
+import { getTelegramLinkInitData, initializeTelegramWebApp } from '../lib/telegram';
 
 interface NotificationItem {
   id: string;
@@ -75,7 +76,9 @@ interface AppContextType {
   login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signup: (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => Promise<{ success: boolean; confirmationRequired?: boolean; error?: string }>;
   logout: () => void;
-  connectTelegram: () => Promise<{ linkCode?: string; error?: string }>;
+  connectTelegram: () => Promise<{ linkUrl?: string; error?: string }>;
+  telegramLinkNotice: 'success' | 'error' | null;
+  dismissTelegramLinkNotice: () => void;
   addParentNote: (childId: string, topic: ParentNote['topic'], content: string, teacherId?: string) => { success: boolean; error?: string };
   addClassQuestion: (classId: string, content: string) => { success: boolean; error?: string };
   replyClassQuestion: (questionId: string, content: string) => void;
@@ -98,6 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (localStorage.getItem('kristou_theme') as ThemeMode) || 'light';
   });
   const [notificationSound, setNotificationSound] = useState<string>('Kristou Bell');
+  const [telegramLinkNotice, setTelegramLinkNotice] = useState<'success' | 'error' | null>(null);
 
   const [childrenList] = useState<Child[]>(MOCK_CHILDREN);
   const [classesList] = useState<ClassItem[]>(MOCK_CLASSES);
@@ -137,6 +141,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.dir = dir;
     document.documentElement.lang = language;
   }, [dir, language]);
+
+  useEffect(() => {
+    initializeTelegramWebApp();
+    const initData = getTelegramLinkInitData();
+    if (!initData) return;
+
+    let active = true;
+    void completeTelegramLinkFromInitData(initData)
+      .then(() => { if (active) setTelegramLinkNotice('success'); })
+      .catch(() => { if (active) setTelegramLinkNotice('error'); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (theme === 'pitch-black') {
@@ -279,7 +295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser) return { error: 'Authentication required' };
     try {
       const challenge = await createTelegramLinkChallenge();
-      return { linkCode: challenge.linkCode };
+      return { linkUrl: challenge.linkUrl };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Unable to start Telegram linking' };
     }
@@ -451,6 +467,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signup,
         logout,
         connectTelegram,
+        telegramLinkNotice,
+        dismissTelegramLinkNotice: () => setTelegramLinkNotice(null),
         addParentNote,
         addClassQuestion,
         replyClassQuestion,

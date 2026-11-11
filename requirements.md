@@ -60,7 +60,7 @@ The following are locked:
 
 Unauthenticated visitor.
 
-May access school-approved public information only.
+May access school-approved public information only, in both a normal Browser and the Telegram WebView. Opening the app from Telegram does not itself create an account or grant authenticated access.
 
 ## 3.2 GENERAL_USER
 
@@ -164,7 +164,7 @@ After signup, Web sign-in accepts **email + password**, **phone + password**, or
 
 Email and phone confirmation behavior follows the configured Supabase Auth policy. An email or phone value is an authentication identifier only when it is attached to the verified Supabase Auth identity; it is not automatically a recovery authority outside the configured provider flow.
 
-The requested signup role is informational and never grants authority. Server-side role assignments control access. A Telegram-originated canonical User may later attach Web credentials to the same User rather than creating a second User.
+The requested signup role is informational and never grants authority. Server-side role assignments control access. App accounts are created through the shared app's existing signup form using its Web credentials, whether the form is opened in a normal browser or Telegram WebView. School admission remains separate.
 
 
 ## 4.2.2 App signup is separate from school admission
@@ -180,15 +180,16 @@ Expected behavior:
 1. Web session is authenticated.
 2. Backend verifies no conflicting Telegram link.
 3. Backend creates a short-lived, one-time account-link code/challenge.
-4. User opens/authenticates in the KRISTOU Telegram Mini App.
-5. Telegram `initData` is validated server-side.
-6. The code is claimed.
-7. Backend attaches TelegramIdentity to the same canonical `User.id`.
-8. Conflicts fail closed.
+4. User opens the KRISTOU Telegram Mini App through its configured direct link carrying the challenge as `startapp`.
+5. The server validates fresh Telegram `initData` and reads the challenge from its signed `start_param`.
+6. One database operation claims the challenge and attaches TelegramIdentity to the same canonical `User.id` atomically.
+7. Conflicts, invalid/expired challenges, and replays fail closed.
 
-## 4.4 Telegram -> Web
+## 4.4 Telegram Mini App account use
 
-A Telegram-originated canonical user may later attach Web credentials to the same `User.id`; a second User must not be created.
+The shared app signup form is available in Telegram WebView and uses the same app credentials as Browser. Telegram `initData` is used only to confirm the explicit link to an already-created and signed-in app account; it does not create an account or issue a Supabase Auth session. A visitor remains unauthenticated until they explicitly create an app account or sign in.
+
+Do not treat a Telegram username, name, phone, or email claim as app credentials or as authority to merge accounts.
 
 ## 4.5 Credential conflict
 
@@ -1171,9 +1172,8 @@ Critical areas require focused tests appropriate to implementation.
 Test:
 
 - Web registration/login;
-- Telegram validation;
+- Telegram link-proof validation;
 - Web -> Telegram linking;
-- Telegram -> Web credential attach;
 - link-code expiry/reuse denial;
 - auth conflict.
 

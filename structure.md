@@ -11,7 +11,7 @@ This document defines architecture, runtime boundaries, data ownership, and depe
 
 The current repository contains one Vite/React frontend, mock-driven context state, and a placeholder Supabase client. It now contains the source-controlled Supabase authentication foundation, migrations, and Edge Function boundaries; private school-domain backend slices remain unimplemented. UI data, login, roles, and pickup transitions are prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the approved Web email/phone/username + password flow and Telegram WebApp authentication/linking; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the shared app's normal email/phone/username + password signup/sign-in in either host, then explicitly link a signed-in user's Telegram identity through the one-time challenge flow; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 
@@ -36,7 +36,7 @@ Do not create a Node monorepo, separate API runtime, worker, package, Telegram f
 
 Owns the React application entry, routing, product shell, responsive/RTL/theme behavior, user-facing features, and client-side presentation state. It calls the approved Supabase client/API boundary. It must not own durable business truth, authorization policy, protected role grants, pickup release authority, private storage access decisions, or server secrets.
 
-Browser and Telegram WebView must use the same frontend, feature implementations, API behavior, and canonical records. Telegram-specific work is limited to host/runtime adaptations such as validated `initData` transport, lifecycle, viewport/safe area, BackButton, haptics, and deep links. Do not create a second router, shell, feature tree, data store, API client, or source of business truth.
+Browser and Telegram WebView must use the same frontend, feature implementations, API behavior, and canonical records. Telegram-specific work is limited to host/runtime adaptations such as validated `initData` for the explicit account-link confirmation, lifecycle, viewport/safe area, BackButton, haptics, and deep links. Do not create a second router, shell, feature tree, data store, API client, or source of business truth.
 
 ### `supabase/migrations/` — canonical schema and database security
 
