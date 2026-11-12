@@ -56,7 +56,7 @@ export const MOCK_USERS: User[] = [
     id: 'user-admin-1',
     username: 'admin_kristou',
     fullName: 'Direction Kristou',
-    role: 'ADMIN',
+    role: 'APP_ADMIN',
     email: 'direction@kristou.edu.tn',
     avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
     capabilities: ['ALL'],
