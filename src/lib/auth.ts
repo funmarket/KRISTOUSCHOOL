@@ -4,7 +4,22 @@ import { createTelegramLinkUrl } from './telegram';
 import { isValidUsername } from './username';
 import type { User, UserRole } from '../types';
 
-export type SignupRole = 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER' | 'SCHOOL_STAFF' | 'ADMINISTRATIVE_PERSONNEL';
+export const REGISTRATION_ROLES = [
+  'APP_ADMIN',
+  'MANAGER',
+  'PARENT',
+  'STUDENT',
+  'TEACHER',
+  'SCHOOL_STAFF',
+  'ADMINISTRATIVE_PERSONNEL',
+] as const;
+
+export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
+export type SignupRole = 'GENERAL_USER' | RegistrationRole;
+
+export function isRegistrationRole(value: unknown): value is RegistrationRole {
+  return typeof value === 'string' && (REGISTRATION_ROLES as readonly string[]).includes(value);
+}
 
 const roleMap: Record<string, UserRole> = {
   GENERAL_USER: 'GENERAL_USER',
@@ -32,18 +47,22 @@ export function isEmailIdentifier(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-export async function signUpAccount(input: {
-  username: string;
-  password: string;
-  email?: string;
-  phone?: string;
-  fullName: string;
-  requestedRole: SignupRole;
-  staffId?: string;
-  admissionId?: string;
-}) {
+export async function signUpAccount(
+  input: {
+    username: string;
+    password: string;
+    email?: string;
+    phone?: string;
+    fullName: string;
+    requestedRole: SignupRole;
+    staffId?: string;
+    admissionId?: string;
+  },
+  clientOverride?: { auth: { signUp: (credentials: any) => Promise<{ data: any; error: any }> } },
+) {
+  if (!isRegistrationRole(input.requestedRole)) throw new Error('invalid_requested_role');
   if (!isValidUsername(input.username)) throw new Error('invalid_username_format');
-  const client = requireSupabaseClient();
+  const client = clientOverride ?? requireSupabaseClient();
   const email = input.email?.trim().toLowerCase() || undefined;
   const phone = input.phone ? normalizePhone(input.phone) : undefined;
   if (!email && !phone) throw new Error('Provide an email address or full phone number.');

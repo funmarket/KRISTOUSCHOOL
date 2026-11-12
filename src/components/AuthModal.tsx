@@ -68,6 +68,8 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const roleLabel = (role: RegistrationRole) => ({
+    APP_ADMIN: t('roleAdmin'),
+    MANAGER: t('roleManager'),
     PARENT: t('roleParent'),
     TEACHER: t('roleTeacher'),
     SCHOOL_STAFF: t('roleSchoolStaff'),
@@ -104,6 +106,8 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <option value="SCHOOL_STAFF">{roleLabel('SCHOOL_STAFF')}</option>
                   <option value="ADMINISTRATIVE_PERSONNEL">{roleLabel('ADMINISTRATIVE_PERSONNEL')}</option>
                   <option value="STUDENT">{roleLabel('STUDENT')}</option>
+                  <option value="MANAGER">{roleLabel('MANAGER')}</option>
+                  <option value="APP_ADMIN">{roleLabel('APP_ADMIN')}</option>
                 </select></div>
               </label>
 

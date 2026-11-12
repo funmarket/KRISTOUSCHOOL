@@ -1,0 +1,1564 @@
+# GEMINI — KRISTOU SCHOOL
+# EIGHT-ROLE ACCESS, REGISTRATION, DASHBOARDS & PERMISSION CONTROL
+## STRICT SOURCE-GROUNDED IMPLEMENTATION CONTRACT — NO DRIFT
+
+**Repository:** `funmarket/Kristou`  
+**Integration branch:** `phase-0-foundation`  
+**Project:** École Primaire Privée Kristou School  
+**Reference:** Existing application UI, supplied screenshots, role diagrams, and the approved eight-role requirements.
+
+---
+
+# 0. YOUR ROLE AND NON-NEGOTIABLE INSTRUCTIONS
+
+You are acting as a senior software engineer, application architect, security engineer, and UI implementation specialist working on the existing Kristou School application.
+
+You are NOT creating a new application.
+
+You are NOT redesigning the existing architecture.
+
+You are NOT authorized to invent features, change unrelated behavior, introduce a parallel system, or reinterpret the Product Owner's requirements.
+
+Your task is to inspect the current live implementation and produce the smallest correct set of changes necessary to establish the exact eight-role system described below, preserving the existing application wherever possible.
+
+## Mandatory working principles
+
+**INSPECT → IDENTIFY → COMPARE → PLAN → VERIFY SCOPE → IMPLEMENT → TEST → REVIEW.**
+
+Follow this sequence in order.
+
+1. Inspect the real source code before writing or changing code.
+2. Read the project's existing rules and governing plans.
+3. Determine what is already implemented.
+4. Identify missing functionality and incorrect behavior.
+5. Reuse correct existing implementations.
+6. Identify canonical ownership of each required change.
+7. Produce an exact implementation checklist.
+8. Obtain Product Owner approval of that checklist before mutation.
+9. Implement only the approved tasks.
+10. Verify behavior through tests and actual application interactions.
+
+**NEVER:**
+
+- Guess file names, components, APIs, roles, database fields, or existing behavior.
+- Pretend code was inspected when it was not.
+- Claim a feature works solely because a component exists.
+- Produce fake implementations, demonstration-only behavior, or hardcoded mock data.
+- Duplicate existing services or components.
+- Replace a working system with a parallel implementation.
+- Introduce a new authentication system.
+- Introduce new frontend applications.
+- Broaden the task into unrelated architecture work.
+- Change unrelated database entities, routes, screens, or domain services.
+- Modify tests to conceal failing functionality.
+- Remove existing features merely because they are not visible in the reference image.
+- Make assumptions about implementation details based on the screenshot.
+- Modify deployment configuration or production infrastructure.
+- Merge or deploy without explicit Product Owner authorization.
+
+If a requirement cannot be implemented correctly within the approved scope, STOP and report the blocker.
+
+**A successful build is not sufficient proof of a correct implementation.**
+
+---
+
+# 1. SOURCE-OF-TRUTH HIERARCHY
+
+Use this authority order:
+
+1. Latest explicit Product Owner instructions, for intended behavior and scope.
+2. Existing repository `AGENTS.md` and execution rules, for project workflow.
+3. Current approved execution plan and requirements, where not superseded by the Product Owner.
+4. Current live source code, database schema, tests, and runtime, for actual implementation facts.
+5. Earlier approved diagrams and screenshots, for intended UI/UX behavior.
+6. Prior implementation reports, only as historical evidence.
+
+Separate two important questions:
+
+**What should the app do?**
+
+Determined by the approved requirements and Product Owner instructions.
+
+**What does the app currently do?**
+
+Determined exclusively by inspecting the current live source and verifying behavior.
+
+Never mistake intended behavior for already implemented behavior.
+
+If sources disagree, identify the contradiction rather than silently selecting an interpretation.
+
+Do not claim access to historical diagrams, attachments, or files that are not actually available to you.
+
+---
+
+# 2. FIRST REQUIRED ACTION — READ-ONLY REPOSITORY INSPECTION
+
+Repository:
+
+`https://github.com/funmarket/Kristou/tree/phase-0-foundation`
+
+Before any mutation, inspect:
+
+- Repository and branch identity.
+- Current integration branch HEAD (full SHA).
+- Working tree status.
+- Open and relevant pull requests.
+- `AGENTS.md`.
+- Current execution and recovery documents.
+- Current role and permission definitions.
+- Registration and application submission flow.
+- Registration approval/rejection mechanics.
+- Account activation and login mechanics.
+- Authentication/session authorization.
+- User identity and role assignments.
+- Existing database schema.
+- Existing role-aware navigation and dashboards.
+- Current Parent menu and dashboard.
+- Current Student functionality.
+- Current Teacher functionality.
+- Current management and administrative pages.
+- Existing school-staff functionality.
+- Existing public pages.
+- Existing document/file visibility rules.
+- Existing tests for all these behaviors.
+
+Inspect the actual source paths. Do not assume the code is arranged in a particular directory.
+
+For every relevant source, record:
+
+| Field | Required evidence |
+|---|---|
+| Feature | Exact feature being inspected |
+| Owner | Existing canonical component/domain |
+| Source | Exact file path |
+| Current behavior | Code-supported description |
+| Expected behavior | Requirement from this contract |
+| Gap | Missing, incorrect, or already satisfied |
+| Proposed change | Smallest needed modification |
+| Tests | Existing and required test paths |
+| Status | VERIFIED / MISSING / INCORRECT / UNKNOWN |
+
+If the live repository cannot be inspected, STOP.
+
+Do not substitute historical knowledge or reconstructed sample code.
+
+---
+
+# 3. EXACT EIGHT-ROLE MODEL
+
+The application must recognize exactly these eight product-level roles.
+
+Use the names and codes below as the required contract.
+
+## ROLE 1 — APP_ADMIN
+
+**Code:** `APP_ADMIN`  
+**Human title:** School Owner / Principal  
+**Account required:** YES
+
+This is the highest school authority.
+
+The School Owner must have:
+
+- Full access to all application pages.
+- Full access to management functionality.
+- Full access to administrative functionality.
+- Full access to registrations and approvals.
+- Access to school personnel and student management.
+- Access to settings and school configuration.
+- Authority to appoint or update the Manager.
+- Authority to assign and update user roles.
+- Authority to manage page and feature permissions.
+- Authority to authorize access to additional pages for other roles.
+- Access to permission management and relevant audit information.
+
+`APP_ADMIN` is NOT an anonymous public visitor and must not be available for self-selection during ordinary public registration.
+
+Preserve and inspect the existing mechanism for establishing this privileged identity.
+
+Do not invent a new bootstrap account or overwrite an existing owner.
+
+---
+
+## ROLE 2 — MANAGER
+
+**Code:** `MANAGER`  
+**Human titles:** Manager / Associate / Director / Principal
+
+**Account required:** YES
+
+The Manager is appointed by the School Owner (`APP_ADMIN`).
+
+The Manager must have:
+
+- Full access to application pages.
+- Full operational management access.
+- Full visibility of school management tools.
+- Full administrative workflow access.
+- Access to registrations and approvals.
+- Access to school personnel management.
+- Access to school records and reporting.
+- Access to the applicable school management dashboard.
+
+**Important distinction:**
+
+`APP_ADMIN` is the School Owner and ultimate authority over role and permission configuration.
+
+`MANAGER` is appointed by `APP_ADMIN`.
+
+Page access and authority to CHANGE access rules are separate capabilities.
+
+Do not automatically interpret full page access as permission to appoint another Manager or alter the School Owner's authority.
+
+Those operations remain School Owner-controlled unless the Product Owner explicitly authorizes delegation.
+
+Do not make the Manager a separate authentication system or application.
+
+---
+
+## ROLE 3 — GENERAL_USER
+
+**Code:** `GENERAL_USER`  
+**Human titles:** Public / Anonymous / General Visitor
+
+**Account required:** NO
+
+This is the public visitor experience.
+
+The following are the SAME product-level role:
+
+- Public visitor
+- Anonymous visitor
+- General user
+
+They must not become three separate roles.
+
+A public visitor must be able to browse public information without creating an account.
+
+Examples of permitted public pages, subject to the current application's approved public information structure:
+
+- Public Home
+- About the School
+- School information
+- Public programs
+- Public news
+- Public events
+- Contact information
+- Public admission information
+- Registration/application entry point
+
+A public visitor must NOT receive access to private school information.
+
+Examples of forbidden access:
+
+- Private Parent dashboard
+- Private Student dashboard
+- Teacher administration
+- Internal employee pages
+- Student records
+- Private documents
+- Internal messages
+- Pickup records
+- Staff management
+- Registration approval tools
+- School configuration
+- Permission administration
+
+**Critical rule:**
+
+`GENERAL_USER` must not require an account or a signed-in identity merely to browse public information.
+
+Do not manufacture anonymous database accounts.
+
+Do not force public visitors through registration.
+
+---
+
+## ROLE 4 — PARENT
+
+**Code:** `PARENT`  
+**Human title:** Parent / Guardian
+
+**Account required:** YES
+
+A Parent must access the relevant information for their own child or children.
+
+Required role experience includes the existing applicable functionality:
+
+- Home
+- Child/children information
+- Class Community
+- Parent Notes
+- Student files and papers
+- Pickup Board
+- Food Menu
+- Teachers
+- Registration, where applicable
+- Messages and school communication
+- My Profile
+- Settings, where available
+- Sign Out
+
+The supplied screenshot of the Parent navigation is a visual and behavioral reference.
+
+Retain correct existing functionality.
+
+Do not replace the menu with a redesigned navigation system unless explicitly approved.
+
+**Data ownership rule:**
+
+A Parent can access authorized information for their linked child or children, not arbitrary students.
+
+If a Parent has several children, ensure the application uses the existing child-linking mechanism and respects the selected or requested child's identity.
+
+Do not invent family relationships or grant access based on matching names.
+
+---
+
+## ROLE 5 — STUDENT
+
+**Code:** `STUDENT`  
+**Human title:** Student
+
+**Account required:** YES
+
+A Student must have their own appropriate dashboard and school functionality.
+
+Applicable sections include:
+
+- Home
+- My Class
+- Assignments
+- Timetable
+- My Files and Papers
+- School Activities
+- Relevant Messages
+- Profile
+
+Actual page names, existing features, and student data structures must be verified before modifying navigation.
+
+A Student must only access records and materials authorized for that student.
+
+A Student cannot obtain administrative capabilities merely by manually navigating to an internal route.
+
+---
+
+## ROLE 6 — TEACHER
+
+**Code:** `TEACHER`  
+**Human title:** Teacher
+
+**Account required:** YES
+
+Teacher functionality includes, where supported by the current application's requirements:
+
+- Teacher Dashboard
+- My Classes
+- Assigned Students
+- Attendance
+- Assignments
+- Teaching materials
+- Class communication
+- Notes and evaluation
+- Relevant student records
+- Documents and reports
+- Messages
+
+A Teacher must have access to the classes and students they are authorized to manage.
+
+Teacher permissions must not automatically expose records belonging to unrelated classes.
+
+Teachers may share certain functionality with management or administrative personnel without sharing their entire permission set.
+
+**Shared functionality does not mean identical roles.**
+
+---
+
+## ROLE 7 — SCHOOL_STAFF
+
+**Code:** `SCHOOL_STAFF`  
+**Human title:** School Staff / Support Employees
+
+**Account required:** YES
+
+This role covers ordinary school employees, including examples such as:
+
+- Cooks
+- Cleaners
+- Maintenance employees
+- Other non-administrative support staff
+
+These are examples of occupations, not instructions to create additional application roles.
+
+Do NOT invent separate role enums such as `COOK`, `CLEANER`, or `MAINTENANCE` unless already established by an approved design.
+
+School Staff must receive an appropriate personalized experience based on assigned responsibilities and authorized features.
+
+Examples:
+
+- Assigned operational tasks
+- Food preparation responsibilities
+- Facility or cleaning tasks
+- Maintenance requests
+- Relevant schedules
+- Internal staff communications
+- Authorized operational forms
+
+Do not implement imaginary task-management services merely because a mockup contains a sample task card.
+
+First inspect what the existing application actually supports.
+
+The School Owner must be able to configure access to relevant pages and features for this role through the existing or approved permission mechanism.
+
+School Staff must not automatically gain access to confidential student or administrative records.
+
+---
+
+## ROLE 8 — ADMINISTRATIVE_PERSONNEL
+
+**Code:** `ADMINISTRATIVE_PERSONNEL`  
+**Human title:** Administrative Personnel / Administration Employees
+
+**Account required:** YES
+
+This is an essential school employee role.
+
+**It is NOT the same role as `APP_ADMIN`.**
+
+Administrative Personnel are individual employees with their own login identities.
+
+Different Administrative Personnel may share the same administrative pages, capabilities, and workflows while remaining separate users.
+
+They must be able to perform authorized administrative functions, including:
+
+- Handle registrations
+- Review application information
+- Process registration approvals according to the approved workflow
+- Manage student registration paperwork
+- Work with student records
+- Manage relevant school documents
+- Process certificates and administrative papers
+- Use administrative reporting tools
+- Access other established school administrative functionality
+
+They must not require the School Owner's personal login.
+
+They must not impersonate `APP_ADMIN`.
+
+They must not be assigned the Owner's role simply to use administrative tools.
+
+They must retain individual identities for attribution and audit purposes.
+
+The School Owner controls which additional pages or privileges are granted to these employees.
+
+---
+
+# 4. ROLE DEFINITION AND ROLE ENUM RULES
+
+Inspect the currently implemented role definitions before editing anything.
+
+Required outcome:
+
+The product recognizes these eight distinct role identities:
+
+1. `APP_ADMIN`
+2. `MANAGER`
+3. `GENERAL_USER`
+4. `PARENT`
+5. `STUDENT`
+6. `TEACHER`
+7. `SCHOOL_STAFF`
+8. `ADMINISTRATIVE_PERSONNEL`
+
+Do not assume the current database enum already contains exactly these values.
+
+Do not assume the code uses an enum at all.
+
+Determine whether the existing implementation uses:
+
+- Role enums
+- Role tables
+- User-role relationships
+- Permission tables
+- Static role mappings
+- Session claims
+- Another existing authorization structure
+
+Report the exact current model.
+
+Reuse the canonical structure.
+
+Do not introduce a competing role source of truth.
+
+If existing internal role identifiers differ from the required contract, report the mismatch and the exact compatibility impact before changing persisted values.
+
+Do not silently rename database values or perform a destructive role migration.
+
+**The application must not confuse role labels with authorization decisions.**
+
+---
+
+# 5. REGISTRATION, APPLICATION, APPROVAL & LOGIN
+
+This section is especially important.
+
+The school application has a controlled registration and approval process.
+
+Do not replace it with an unrestricted public signup model.
+
+## 5.1 Public visitor behavior
+
+A visitor opens the app.
+
+They receive the public experience.
+
+They do not need an account to browse public school pages.
+
+They may open the existing registration/application flow.
+
+## 5.2 Registration role selection
+
+Inspect the existing registration form.
+
+The applicant must select the applicable role as part of their application.
+
+Do not replace this with a generic registration form without role selection.
+
+The registration process must use the approved set of applicant-selectable roles.
+
+**Important privilege restriction:**
+
+Do not allow applicants to self-provision privileged access merely by selecting a role.
+
+`APP_ADMIN` is Owner-controlled.
+
+`MANAGER` is appointed by `APP_ADMIN`.
+
+`GENERAL_USER` does not need registration.
+
+For other applicant roles, first verify the application's existing role eligibility rules and approval mechanics.
+
+Do not invent a new applicant eligibility policy.
+
+If a privileged role is currently presented in the form, document the behavior and report the necessary correction rather than silently changing the approved workflow.
+
+## 5.3 Pending applications
+
+A submitted registration is an application, NOT an immediately authorized account.
+
+Pending applications must not receive approved private-role access.
+
+Do not create a signed-in application state in which an approved user lacks a school role.
+
+A user who can successfully sign in under the approved school account workflow must already possess an approved role assignment.
+
+## 5.4 Approval
+
+An authorized school administrator or manager reviews the registration using the actual existing approval mechanics.
+
+The application must preserve the approved role the person applied for, subject to established review and authorization rules.
+
+Approval enables the person's sign-in credentials and their authorized school access.
+
+Rejected or pending applications must not activate private access.
+
+Do not assume account creation, credential issuance, and approval happen in the same transaction without inspecting the existing code.
+
+## 5.5 Approved account
+
+After approval, the person may sign in through the established mechanism.
+
+They must receive:
+
+- Their own identity
+- Their approved role
+- Their authorized application pages
+- The features permitted for their role
+- Appropriate access to records belonging to their role and relationships
+
+## 5.6 Existing accounts
+
+Do not silently alter existing users, passwords, or approved roles.
+
+Do not bulk-activate pending users.
+
+Do not invent default passwords.
+
+Do not create hardcoded privileged accounts.
+
+Do not delete or recreate existing account records.
+
+## 5.7 Account/session security
+
+The server must enforce authorization.
+
+A hidden navigation item alone is not access control.
+
+A person must not gain permissions by:
+
+- Editing client state
+- Changing a URL
+- Calling a protected API directly
+- Changing a role label in browser storage
+- Supplying another user's ID
+- Selecting a role during registration
+- Reusing a previously approved identity belonging to another account
+
+Inspect existing authentication and authorization behavior before making changes.
+
+---
+
+# 6. TELEGRAM — EXPLICITLY OUT OF SCOPE
+
+**DO NOT TOUCH TELEGRAM.**
+
+Telegram is an optional linked identity mechanism in the Kristou architecture.
+
+It is NOT a separate school role.
+
+It is NOT an alternative authorization model.
+
+It is NOT a reason to create another frontend or backend.
+
+For this task:
+
+- Do not modify Telegram linking.
+- Do not modify Telegram authentication.
+- Do not modify Telegram identity validation.
+- Do not modify account-link challenges.
+- Do not create Telegram accounts.
+- Do not introduce automatic account merging.
+- Do not change Telegram runtime ownership.
+- Do not create any Telegram-specific registration process.
+
+If implementation of the approved role system appears to require changes to Telegram code, STOP and explain the dependency.
+
+Do not expand scope to solve it.
+
+---
+
+# 7. ROLE-BASED NAVIGATION & DASHBOARDS
+
+The app must present each approved user with their applicable pages and features.
+
+This must be achieved through the existing frontend architecture.
+
+Do not generate eight independent applications.
+
+Do not create eight copies of the same dashboard infrastructure.
+
+Do not duplicate the existing navigation component eight times.
+
+## 7.1 Preserve the existing UI
+
+The supplied Parent screenshot shows the current navigation pattern:
+
+- Header role indicator
+- Notification icon
+- User avatar
+- User name
+- Dropdown menu
+- Role label
+- Navigation groups
+- Profile
+- Sign Out
+
+Preserve the established layout, navigation interactions, responsive behavior, and visual identity.
+
+Only make changes required by the approved functionality.
+
+## 7.2 Personalization
+
+A signed-in user should see:
+
+- Their own name
+- Their own profile information
+- Their approved role
+- Their authorized menu entries
+- Their own relevant data
+- Relevant notifications
+- Appropriate dashboard information
+
+Do not use hardcoded sample names or fake statistics.
+
+The mockup's demonstration names, records, student counts, and task lists are not production data.
+
+## 7.3 Role-specific dashboards
+
+Each role must receive its appropriate existing dashboard or landing experience.
+
+Where two roles share functionality, reuse existing components and services.
+
+Examples:
+
+**APP_ADMIN**
+
+Management dashboard, users, roles, registrations, records, administrative functionality, access control.
+
+**MANAGER**
+
+Management and administrative pages, operational tools, reports, school records.
+
+**PARENT**
+
+Linked children, class communication, notes, pickup, food menu, documents, messages.
+
+**STUDENT**
+
+Own classes, assignments, timetable, files, school activities.
+
+**TEACHER**
+
+Assigned classes, students, attendance, assignments, notes, communications.
+
+**SCHOOL_STAFF**
+
+Assigned operational tools and tasks, where actually implemented.
+
+**ADMINISTRATIVE_PERSONNEL**
+
+Registration administration, student paperwork, certificates, reports, relevant school records.
+
+**GENERAL_USER**
+
+Public school information, without authentication.
+
+## 7.4 Do not invent missing features
+
+If the reference design depicts a page that does not exist in the live application, classify it clearly.
+
+Possible classifications:
+
+- Existing and correct
+- Existing but incomplete
+- Existing but incorrectly authorized
+- Missing and explicitly required
+- Visual reference only
+- Blocked by an unresolved product decision
+
+Do not fabricate a working-looking placeholder to make the mockup appear complete.
+
+---
+
+# 8. PAGE & FEATURE PERMISSION MANAGEMENT
+
+The School Owner must control role assignments and page access.
+
+This is a core functional requirement.
+
+However, you must inspect the existing authorization architecture before selecting an implementation.
+
+Do not automatically create a new RBAC framework.
+
+## 8.1 Role assignment
+
+`APP_ADMIN` must be able to:
+
+- View users and their assigned roles.
+- Assign approved roles through an authorized management workflow.
+- Update authorized role assignments.
+- Appoint or replace a Manager.
+- Manage the applicable school role configuration.
+
+Do not invent unrestricted multi-role membership if the existing model supports only one primary role.
+
+First identify whether the current system supports single-role or multi-role assignments.
+
+If the requirements cannot be met without changing this model, describe the necessary decision and STOP before mutation.
+
+## 8.2 Page access
+
+`APP_ADMIN` must be able to configure which roles may access additional school pages and features.
+
+The implementation must distinguish at least these concepts:
+
+- Page visibility
+- Page entry permission
+- Feature/action permission
+- Resource-level data authorization
+
+Do not assume these are already separate technical constructs.
+
+Inspect current ownership and implement only what is required and approved.
+
+## 8.3 Example
+
+A Teacher may have access to a class page.
+
+Administrative Personnel may also access that page if authorized.
+
+A Manager may access the corresponding management page.
+
+This does not mean every one of them has identical write permissions or unrestricted access to all student records.
+
+The backend must enforce the applicable authorization rules.
+
+## 8.4 Shared employee features
+
+Employees may share some or many pages without being assigned identical roles.
+
+Examples:
+
+- Teacher and Administrative Personnel may share some student-document functions.
+- Administrative Personnel and Manager may share registration management.
+- School Staff and relevant administrative employees may share food or operational pages.
+- APP_ADMIN and MANAGER may share management dashboards and school administration.
+
+Reuse existing common functionality rather than duplicating it.
+
+## 8.5 Prevent privilege escalation
+
+Ordinary employees must not be able to grant themselves new permissions.
+
+Users must not be able to edit their own role through a profile form unless explicitly authorized.
+
+Role assignment APIs must be protected.
+
+Page authorization must not rely exclusively on frontend checks.
+
+## 8.6 Permission changes
+
+Permission changes must take effect through the application's established authorization/session mechanism.
+
+Inspect how sessions, caches, and role claims are currently handled.
+
+Ensure the design does not leave revoked permissions valid indefinitely.
+
+Do not invent a session architecture to satisfy this requirement.
+
+If current behavior is unclear, record it as UNKNOWN.
+
+---
+
+# 9. PRIVATE DATA, FILES & PAPERS
+
+User-specific school documents are an important part of this implementation.
+
+Access must be determined by authorized relationships, responsibilities, and permissions.
+
+## Parent
+
+Can view appropriate documents associated with their linked child or children.
+
+## Student
+
+Can view their own permitted documents and school materials.
+
+## Teacher
+
+Can access authorized materials relevant to assigned classes and students.
+
+## Administrative Personnel
+
+Can access relevant school administrative paperwork and student records necessary for authorized administrative work.
+
+## Manager
+
+Can access school information through the approved management authorization model.
+
+## APP_ADMIN
+
+Has full authorized school administration access.
+
+## School Staff
+
+Can access only the operational records and files allowed by their responsibilities or granted permissions.
+
+## GENERAL_USER
+
+Can access public documents only.
+
+### Mandatory checks
+
+Inspect existing file ownership, document metadata, download endpoints, API authorization, and record-linking relationships.
+
+Do not treat knowledge of a document ID as permission to read it.
+
+Do not make private file URLs public.
+
+Do not duplicate document storage or create a new file service.
+
+Do not modify existing student-document schemas unless an approved task explicitly requires it.
+
+---
+
+# 10. FRONTEND IMPLEMENTATION RULES
+
+The UI must use the existing Kristou School design system and React/TypeScript application structure where applicable.
+
+Inspect actual framework, component ownership, styles, and routes first.
+
+Preserve:
+
+- Existing top navigation
+- User dropdown behavior
+- Notification indicators
+- Profile display
+- Established colors and typography
+- Existing icons and visual conventions
+- Responsive layout
+- Existing menus
+- Existing navigation state
+- Existing accessibility behavior
+- Current functional pages
+
+Avoid unnecessary cosmetic changes.
+
+The screenshots are references for layout and content, not instructions to overwrite the current UI with an AI-generated image.
+
+### Languages
+
+Preserve the existing multilingual contract:
+
+- Arabic (RTL)
+- French
+- English
+
+If the codebase uses localized labels, update the established translation resources.
+
+Do not introduce hardcoded English into otherwise localized UI.
+
+Do not use machine-generated translations as a substitute for the project's approved localization process.
+
+Do not redesign the translation architecture.
+
+### Visual accuracy
+
+For role menus and dashboards:
+
+1. Inspect the current rendered view.
+2. Compare with the supplied screenshot and applicable references.
+3. Preserve established geometry and interactions.
+4. Change only the necessary content, visibility rules, and controls.
+5. Verify desktop and mobile behavior.
+6. Verify RTL behavior where the affected UI supports Arabic.
+
+Never hide an implementation defect with CSS.
+
+Never introduce decorative mock data to imply functionality.
+
+---
+
+# 11. BACKEND & DATABASE RULES
+
+Do not edit the database schema until you have inspected the current data model and confirmed a real requirement.
+
+If a schema change is necessary:
+
+1. Identify the exact missing capability.
+2. Identify the canonical schema owner.
+3. Explain why existing schema structures cannot meet the requirement.
+4. Specify the exact proposed change.
+5. Explain compatibility with existing users and role assignments.
+6. Explain migration and rollback implications.
+7. Identify all affected services and tests.
+8. Obtain authorization for the schema change.
+
+**Never:**
+
+- Reset the database.
+- Delete user accounts.
+- Rename existing role values blindly.
+- Apply a destructive migration without approval.
+- Create duplicate identity tables.
+- Create a second user table.
+- Create a parallel login backend.
+- Introduce a competing authorization service.
+- Apply production migrations as part of an unrelated code task.
+
+The Kristou application must retain its canonical user and identity architecture.
+
+Inspect existing API/domain boundaries before modifying services.
+
+Cross-domain access must respect canonical ownership and established interfaces.
+
+---
+
+# 12. IMPLEMENTATION WORK BREAKDOWN
+
+These are the required logical workstreams.
+
+They are NOT authorization to edit files before inspection and approval.
+
+Each workstream must produce its own verified checklist.
+
+## TASK R1 — Establish the live baseline
+
+- Read the governing repository instructions.
+- Record current branch and exact HEAD.
+- Record open PRs.
+- Inspect existing tests and build commands.
+- Identify current role definitions.
+- Identify existing role-specific functionality.
+- Identify the active registration and approval mechanisms.
+
+**Completion:** Verified current-state report.
+
+## TASK R2 — Audit the eight roles
+
+- Compare live role identifiers with all eight required roles.
+- Identify missing roles or incorrect aliases.
+- Identify role mappings that conflate Owner and administrative employees.
+- Identify any incorrect treatment of public visitors.
+- Identify incompatible legacy references.
+
+**Completion:** Role gap matrix with exact source references.
+
+## TASK R3 — Audit registration and approval
+
+- Inspect registration form role selection.
+- Inspect allowed applicant roles.
+- Inspect submitted application records.
+- Inspect approval and rejection.
+- Inspect credential activation.
+- Inspect approved role assignment.
+- Inspect sign-in authorization.
+
+**Completion:** Verified registration sequence and exact corrections required.
+
+## TASK R4 — Audit access control
+
+- Inspect current route guards.
+- Inspect API authorization.
+- Inspect role-to-page mapping.
+- Inspect feature permissions.
+- Inspect user-to-resource authorization.
+- Inspect ownership of permission changes.
+
+**Completion:** Evidence-based authorization gap report.
+
+## TASK R5 — Audit navigation and dashboards
+
+- Inspect Parent navigation first.
+- Inspect existing components for the other seven role experiences.
+- Determine which views already exist.
+- Determine shared components.
+- Identify missing role-specific menu entries.
+- Identify incorrect visibility rules.
+- Compare UI with available screenshots.
+
+**Completion:** Exact menu/dashboard gap matrix.
+
+## TASK R6 — Audit files and student information
+
+- Inspect parent-child linking.
+- Inspect student document access.
+- Inspect assigned teacher relationships.
+- Inspect administrative file access.
+- Inspect relevant document endpoints and guards.
+
+**Completion:** Data-access and confidentiality gap report.
+
+## TASK R7 — Produce implementation plan
+
+For every required correction, provide:
+
+- Exact source file.
+- Exact target behavior.
+- Current incorrect behavior.
+- Minimal proposed change.
+- Required test file.
+- Expected failing test.
+- Required passing test.
+- Possible compatibility effect.
+- Whether schema change is required.
+- Whether the task is blocked.
+- Exact acceptance criterion.
+
+**STOP HERE FOR PRODUCT OWNER APPROVAL.**
+
+Do not proceed from planning to coding without explicit approval.
+
+## TASK R8 — Implement approved corrections
+
+After approval, implement approved tasks in narrowly scoped increments.
+
+For each increment:
+
+1. Reverify live HEAD and relevant state.
+2. Inspect exact canonical targets.
+3. Establish the test that proves the defect or missing behavior.
+4. Implement the minimal change.
+5. Run focused tests.
+6. Inspect the exact diff.
+7. Verify no forbidden files changed.
+8. Record results.
+9. Complete the approved increment before starting the next.
+
+Do not combine unrelated corrections into one oversized implementation.
+
+## TASK R9 — Integration verification
+
+Verify the approved end-to-end behavior, including:
+
+- Anonymous browsing
+- Registration
+- Role selection
+- Pending approval
+- Rejected applications
+- Approved account activation
+- Login
+- Role-based navigation
+- Backend authorization
+- Private document access
+- Shared employee pages
+- Owner permission control
+- Manager appointment and access
+
+## TASK R10 — Final review
+
+Run required repository checks and inspect the entire candidate diff.
+
+Produce a factual completion report.
+
+Do not merge or deploy without explicit authorization.
+
+---
+
+# 13. MANDATORY TEST MATRIX
+
+Tests must demonstrate behavior, not merely satisfy TypeScript.
+
+| Scenario | Expected outcome |
+|---|---|
+| Anonymous visitor opens public page | Allowed |
+| Anonymous visitor opens private dashboard | Denied |
+| Anonymous visitor opens public registration | Allowed |
+| Public visitor is required to create account to browse | Must not occur |
+| Applicant submits selected allowed role | Application records selection |
+| Pending applicant attempts private login | Denied |
+| Rejected applicant attempts private login | Denied |
+| Approved applicant signs in | Approved role loaded |
+| Applicant requests privileged role without authorization | No privileged access |
+| Parent opens own child's records | Allowed |
+| Parent opens unrelated child's records | Denied |
+| Student opens own materials | Allowed |
+| Student opens another student's private files | Denied |
+| Teacher opens authorized class | Allowed |
+| Teacher accesses unrelated class records | Denied unless explicitly authorized |
+| School Staff opens assigned operational page | Allowed |
+| School Staff attempts unauthorized administration | Denied |
+| Administrative Personnel processes authorized registration | Allowed |
+| Administrative Personnel uses own account | Allowed |
+| Administrative Personnel tries to become Owner | Denied |
+| Manager accesses school management pages | Allowed |
+| Owner appoints Manager | Authorized operation succeeds |
+| Non-Owner attempts to appoint Manager without delegation | Denied |
+| Owner updates approved permissions | Authorized change succeeds |
+| User accesses a hidden page through direct URL | Backend and route policy enforced |
+| User calls protected API without permission | Denied |
+| User changes client-side role label | No privilege escalation |
+| User loses an existing permission | Access is revoked according to verified session policy |
+| Shared administrative feature is opened by two authorized roles | Both receive correct authorized functionality |
+| English and French navigation | Correct established localization |
+| Arabic navigation | Correct RTL layout |
+| Telegram-linked identity | Existing behavior unchanged |
+
+If the exact expected access for a page depends on an unresolved Product Owner decision, mark that test BLOCKED.
+
+Do not invent a permission rule just to make the test pass.
+
+Tests should be written against the actual current architecture and services.
+
+No fake API responses in tests that are supposed to prove real integration.
+
+Unit tests may use appropriate mocks, but integration and runtime verification must exercise the real relevant boundaries.
+
+---
+
+# 14. STRICT NO-DRIFT EXECUTION CONTROLS
+
+This project requires controlled execution.
+
+Maintain one `CURRENT_COMMAND` at a time.
+
+For every implementation increment, declare:
+
+```text
+CURRENT_COMMAND:
+[Exact approved task]
+
+AUTHORIZED TARGETS:
+[Exact source/test files proved necessary by inspection]
+
+FORBIDDEN:
+[Explicit excluded files, features, and operations]
+
+BASELINE:
+Repository:
+Branch:
+HEAD:
+Open PRs:
+Working tree:
+
+REQUIRED EVIDENCE:
+[Tests, diff, source proof, runtime proof]
+
+STOP CONDITIONS:
+[Contradictions, unexpected changes, failed gates]
+
+DONE WHEN:
+[Exact measurable completion conditions]
+```
+
+### Mandatory behavior
+
+Do not start a new command until the current command is proven complete.
+
+Do not add extra changes while editing an authorized file.
+
+Do not run broad auto-fix commands that modify unrelated files.
+
+Do not alter tests to make failing behavior disappear.
+
+Do not silently recover from a failed mutation by making another mutation.
+
+Do not commit unrelated changes.
+
+Do not merge PRs merely because CI is green.
+
+Do not deploy to Railway.
+
+Do not edit production data.
+
+Do not rewrite branch history.
+
+Do not force-push.
+
+Do not overwrite another agent's changes.
+
+### Source freshness
+
+Before any mutation, verify that the relevant branch HEAD and target files have not changed since inspection.
+
+If the baseline has moved, invalidate the previous inspection and repeat the necessary verification.
+
+### Deterministic mutation gate
+
+If the execution environment supplies a project-approved deterministic mutation controller, use it according to its actual documented interface.
+
+For high-risk mutations, require explicit per-mutation authorization and immediate post-change verification.
+
+Do not invent a controller interface, report fabricated approval tokens, or claim a mutation was gated when no gate actually ran.
+
+If the required controller or authorization is unavailable, STOP rather than bypassing the control.
+
+---
+
+# 15. ACCEPTANCE CRITERIA
+
+The implementation is complete ONLY when all applicable approved criteria are demonstrably satisfied.
+
+## Roles
+
+- [ ] Eight required role identities are correctly represented.
+- [ ] `APP_ADMIN` is distinct from `ADMINISTRATIVE_PERSONNEL`.
+- [ ] `MANAGER` is appointed through authorized Owner control.
+- [ ] `GENERAL_USER` represents public/anonymous visitors without requiring accounts.
+- [ ] `SCHOOL_STAFF` represents the relevant support employees without inventing unrelated roles.
+- [ ] Existing approved accounts retain correct identities and access.
+
+## Registration
+
+- [ ] Existing registration mechanics are preserved.
+- [ ] Role selection follows approved eligibility rules.
+- [ ] Pending applications cannot receive private access.
+- [ ] Rejected applications cannot receive private access.
+- [ ] Approved users obtain the approved role and credentials.
+- [ ] No undefined role-less signed-in state is introduced.
+- [ ] No unapproved applicant obtains privileged access.
+
+## Permissions
+
+- [ ] Owner has full access.
+- [ ] Manager has full approved page and operational access.
+- [ ] Owner controls Manager appointment.
+- [ ] Owner can manage role assignments and permission configuration.
+- [ ] Administrative Personnel can use authorized administrative tools through individual logins.
+- [ ] Employees can share authorized features without becoming identical roles.
+- [ ] Frontend route visibility and backend permissions agree.
+- [ ] Unauthorized API requests are rejected.
+- [ ] Private information remains appropriately scoped.
+
+## UI
+
+- [ ] Existing Parent UI remains functional.
+- [ ] Role indicator displays the actual approved role.
+- [ ] Navigation only displays appropriate sections.
+- [ ] Relevant shared employee pages remain reusable.
+- [ ] No fake dashboard records or hardcoded user names.
+- [ ] Existing design and responsive behavior preserved.
+- [ ] English, French, and Arabic/RTL remain functional.
+
+## Architecture
+
+- [ ] Canonical application structure preserved.
+- [ ] No duplicate authentication.
+- [ ] No duplicate role implementation.
+- [ ] No unnecessary domain rewiring.
+- [ ] No unrelated schema migrations.
+- [ ] No Telegram modifications.
+- [ ] No unrelated infrastructure changes.
+- [ ] No uncontrolled deployment.
+
+## Verification
+
+- [ ] Every changed behavior has appropriate test evidence.
+- [ ] Relevant negative authorization tests pass.
+- [ ] Focused tests pass.
+- [ ] Required broader regression checks pass.
+- [ ] Build passes.
+- [ ] Applicable end-to-end runtime checks pass.
+- [ ] Exact final diff is inspected.
+- [ ] No unauthorized source changes remain.
+- [ ] No unresolved material contradictions.
+- [ ] Every completion claim is supported by exact evidence.
+
+Do not mark an item complete because it was planned.
+
+Do not mark an item complete because a UI screenshot looks correct.
+
+Do not mark an item complete because one related unit test passes.
+
+Mark unsupported items as NOT VERIFIED or BLOCKED.
+
+---
+
+# 16. REQUIRED REPORT BEFORE IMPLEMENTATION
+
+Your first response must be an evidence-based inspection report.
+
+Use this structure:
+
+```text
+KRISTOU — EIGHT-ROLE IMPLEMENTATION AUDIT
+
+A. REPOSITORY STATE
+Repository:
+Branch:
+Exact HEAD:
+Working tree:
+Relevant open PRs:
+Governing instructions inspected:
+
+B. CURRENT ROLE MODEL
+Existing roles:
+Where defined:
+Where persisted:
+Where authorized:
+Missing roles:
+Conflicting role definitions:
+
+C. REGISTRATION & APPROVAL
+Registration form:
+Applicant role selection:
+Pending state:
+Approval mechanism:
+Credential activation:
+Login authorization:
+Verified problems:
+
+D. AUTHORIZATION
+Route guards:
+API guards:
+Permission ownership:
+Role assignment:
+Manager appointment:
+Private record authorization:
+Verified problems:
+
+E. ROLE-SPECIFIC UI
+APP_ADMIN:
+MANAGER:
+GENERAL_USER:
+PARENT:
+STUDENT:
+TEACHER:
+SCHOOL_STAFF:
+ADMINISTRATIVE_PERSONNEL:
+
+For each:
+Existing pages:
+Missing required pages:
+Existing shared components:
+Exact source files:
+Required corrections:
+
+F. FILES & PAPERS
+Document access:
+Parent-child relationships:
+Student ownership:
+Teacher assignments:
+Administrative access:
+Verified gaps:
+
+G. ARCHITECTURE
+Canonical owners:
+Reusable services:
+Proposed narrow changes:
+Schema changes needed:
+Unrelated code to preserve:
+
+H. EXACT IMPLEMENTATION CHECKLIST
+[ ] Task 1:
+    Current behavior:
+    Required behavior:
+    Exact files:
+    Tests:
+    Expected RED:
+    Expected GREEN:
+    Acceptance:
+    Risk:
+
+[ ] Task 2:
+...
+
+I. RISKS / CONTRADICTIONS
+Verified risks:
+Missing evidence:
+Unresolved product decisions:
+Potential migrations:
+
+J. FINAL INSPECTION DECISION
+assumptions: []
+material_unknowns: []
+unresolved_contradictions: []
+
+Decision:
+READY_FOR_PRODUCT_OWNER_APPROVAL
+or
+BLOCKED
+
+K. EXECUTION STATUS
+CODE CHANGED: NO
+COMMITTED: NO
+PUSHED: NO
+MERGED: NO
+DEPLOYED: NO
+```
+
+Do not claim those last five values are NO unless they accurately describe what occurred.
+
+After presenting the inspection and exact checklist:
+
+**STOP AND REQUEST PRODUCT OWNER APPROVAL.**
+
+Do not begin implementation automatically.
+
+---
+
+# 17. POST-IMPLEMENTATION EVIDENCE REPORT
+
+Once the Product Owner approves the plan and authorizes implementation, report each completed task with:
+
+```text
+TASK ID:
+
+BEFORE:
+Repository:
+Branch:
+Exact starting HEAD:
+Verified defect:
+Authorized files:
+
+CHANGES:
+Exact files changed:
+Behavior implemented:
+Tests added/modified:
+Unrelated files changed:
+
+VERIFICATION:
+RED test evidence:
+GREEN test evidence:
+Typecheck:
+Build:
+Regression tests:
+Runtime/browser checks:
+Authorization negative tests:
+Localization checks:
+
+RESULT:
+PASS / FAIL / BLOCKED
+
+EXACT RESULTING STATE:
+Branch:
+HEAD:
+Working tree:
+PR:
+
+DRIFT:
+None verified / Detected
+
+REMAINING ISSUES:
+
+NEXT AUTHORIZED TASK:
+```
+
+A task that fails verification is not complete.
+
+Do not conceal errors or rename failures as unrelated.
+
+No code merge or deployment is authorized by this contract.
+
+---
+
+# 18. FINAL PRODUCT OWNER INSTRUCTIONS
+
+The primary objective is to make the existing Kristou School application support the exact approved eight-role system, with correct registration, approval, login, dashboards, shared employee functionality, document access, and School Owner-controlled permissions.
+
+The following rules override any temptation to simplify the implementation:
+
+**1. There is only one existing school application.**  
+Do not build a replacement.
+
+**2. There are eight product roles.**  
+Do not merge distinct roles or invent new roles.
+
+**3. Public visitors do not require accounts.**  
+Do not turn anonymous browsing into authenticated access.
+
+**4. School account access requires approval.**  
+Do not bypass existing registration and administrative approval mechanics.
+
+**5. The School Owner controls the Manager appointment and role permissions.**  
+Do not give ordinary users Owner privileges.
+
+**6. Administrative Personnel are employees, not school owners.**  
+Give them their own authorized administrative access.
+
+**7. Employees may share pages and features.**  
+Do not duplicate systems to support shared access.
+
+**8. Each user receives their own authorized information.**  
+Enforce access to private resources on the server.
+
+**9. Telegram is out of scope.**  
+Leave it alone.
+
+**10. Existing functionality must be preserved.**  
+Only change behavior proven incorrect or missing against the approved contract.
+
+**11. No speculation. No fake implementations. No undocumented assumptions.**
+
+**12. Inspect first, present the exact checklist, and obtain approval before changing code.**
+
+---
+
+# CURRENT COMMAND — START HERE
+
+**READ-ONLY INSPECTION AND IMPLEMENTATION PLANNING ONLY.**
+
+Inspect the current `funmarket/Kristou` application on `phase-0-foundation`, compare the real implementation against this contract, and return:
+
+1. The verified current repository state.
+2. The exact existing role and approval mechanics.
+3. A complete eight-role implementation gap matrix.
+4. A page, feature, and data-access matrix grounded in actual source.
+5. The exact canonical files that require changes.
+6. A minimal, ordered implementation checklist with tests and acceptance criteria.
+7. Contradictions, unknowns, and blockers.
+8. A clear recommendation on whether the implementation is ready for Product Owner approval.
+
+**DO NOT EDIT. DO NOT COMMIT. DO NOT PUSH. DO NOT MERGE. DO NOT DEPLOY.**
+
+**STOP AFTER DELIVERING THE CHECKLIST AND WAIT FOR EXPLICIT PRODUCT OWNER APPROVAL.**
