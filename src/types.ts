@@ -7,10 +7,6 @@ export type AccountRole =
   | 'SCHOOL_STAFF'
   | 'ADMINISTRATIVE_PERSONNEL';
 
-export type PublicVisitorRole = 'GENERAL_USER';
-
-export type UserRole = PublicVisitorRole | AccountRole;
-
 export type Language = 'ar' | 'fr' | 'en';
 export type ThemeMode = 'light' | 'pitch-black';
 
@@ -18,7 +14,7 @@ export interface User {
   id: string;
   username: string;
   fullName: string;
-  role: UserRole;
+  role: AccountRole;
   email?: string;
   avatarUrl?: string;
   linkedChildrenIds?: string[];
