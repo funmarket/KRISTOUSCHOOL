@@ -162,7 +162,7 @@ export const RoleWorkspaceView: React.FC<{ setActiveTab: (tab: string) => void }
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {workspace.cards.map(key => {
-          const tile = tiles[key];
+          const tile: Tile = tiles[key];
           const Icon = tile.icon;
           return (
             <button
