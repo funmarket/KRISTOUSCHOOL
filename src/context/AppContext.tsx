@@ -95,7 +95,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const telegramIdentityUser = useRef<User | null>(null);
-  const [currentRole, setCurrentRoleState] = useState<UserRole>('PUBLIC');
+  const [currentRole, setCurrentRoleState] = useState<UserRole>('GENERAL_USER');
   const [language, setLanguageState] = useState<Language>(() => {
     return (localStorage.getItem('kristou_lang') as Language) || 'fr';
   });
@@ -189,7 +189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const user = await loadCanonicalUser(data.session.user);
           if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
-        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } }
+        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); } }
       });
       const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (!active) return;
@@ -198,11 +198,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCurrentRoleState(telegramIdentityUser.current.role);
           return;
         }
-        if (!session?.user) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); return; }
+        if (!session?.user) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); return; }
         try {
           const user = await loadCanonicalUser(session.user);
           if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
-        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('PUBLIC'); } }
+        } catch { if (active) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); } }
       });
       return () => listener.subscription.unsubscribe();
     });
@@ -313,7 +313,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     telegramIdentityUser.current = null;
     void signOutAccount();
     setCurrentUser(null);
-    setCurrentRoleState('PUBLIC');
+    setCurrentRoleState('GENERAL_USER');
   };
 
   const connectTelegram = async () => {
