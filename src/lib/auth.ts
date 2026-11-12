@@ -2,7 +2,7 @@ import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase';
 import { createTelegramLinkUrl } from './telegram';
 import { isValidUsername } from './username';
-import type { AccountRole, User, UserRole } from '../types';
+import type { AccountRole, User } from '../types';
 
 export const REGISTRATION_ROLES = [
   'APP_ADMIN',
@@ -15,7 +15,7 @@ export const REGISTRATION_ROLES = [
 ] as const satisfies readonly AccountRole[];
 
 export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
-export type SignupRole = 'GENERAL_USER' | RegistrationRole;
+export type SignupRole = RegistrationRole;
 
 export function isRegistrationRole(value: unknown): value is RegistrationRole {
   return typeof value === 'string' && (REGISTRATION_ROLES as readonly string[]).includes(value);
@@ -129,7 +129,7 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
     fullName: profile.full_name || profile.username,
     email: profile.email ?? authUser.email ?? undefined,
     avatarUrl: profile.avatar_url ?? undefined,
-    role: role as UserRole,
+    role,
     capabilities: roles.filter((candidate: string): candidate is AccountRole => Boolean(roleMap[candidate])),
     telegramLinked: Boolean(telegramIdentity),
   };
@@ -167,7 +167,8 @@ export function authenticateTelegramInitData(initData: string): Promise<Telegram
       telegramLinked?: boolean;
     };
     const capabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
-    const roleName = rawUser.role || capabilities.find((role) => role === 'APP_ADMIN') || 'GENERAL_USER';
+    const roleName = resolveCanonicalAccountRole([rawUser.role ?? '', ...capabilities]);
+    if (!roleName) throw new Error('account_not_approved');
     return {
       linked: data.linked === true,
       user: {
@@ -176,8 +177,8 @@ export function authenticateTelegramInitData(initData: string): Promise<Telegram
         fullName: rawUser.fullName || rawUser.username,
         email: rawUser.email ?? undefined,
         avatarUrl: rawUser.avatarUrl ?? undefined,
-        role: roleMap[roleName] ?? 'GENERAL_USER',
-        capabilities,
+        role: roleName,
+        capabilities: capabilities.filter((candidate): candidate is AccountRole => Boolean(roleMap[candidate])),
         telegramLinked: rawUser.telegramLinked ?? true,
       },
     };
