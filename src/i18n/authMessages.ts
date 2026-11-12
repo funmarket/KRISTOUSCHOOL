@@ -19,3 +19,19 @@ export function usernameRuleMessage(language: Language): string {
 export function usernameUnavailableMessage(language: Language): string {
   return usernameUnavailable[language];
 }
+
+const registrationPending: Record<Language, string> = {
+  en: 'Registration submitted for school review. You cannot access a school account until it is approved.',
+  fr: "Inscription envoyée pour validation par l'école. L'accès au compte scolaire reste bloqué jusqu'à son approbation.",
+  ar: 'تم إرسال طلب التسجيل لمراجعة المدرسة. لن تتمكن من الدخول إلى الحساب المدرسي قبل الموافقة عليه.',
+};
+
+const registrationPendingConfirmation: Record<Language, string> = {
+  en: 'Registration submitted. Verify your email or phone when prompted. School approval is also required before access.',
+  fr: "Inscription envoyée. Confirmez votre adresse e-mail ou numéro de téléphone si demandé. L'approbation de l'école est également obligatoire avant l'accès.",
+  ar: 'تم إرسال طلب التسجيل. يرجى تأكيد البريد الإلكتروني أو رقم الهاتف عند الطلب. وتلزم أيضاً موافقة المدرسة قبل الدخول.',
+};
+
+export function registrationPendingMessage(language: Language, confirmationRequired: boolean): string {
+  return confirmationRequired ? registrationPendingConfirmation[language] : registrationPending[language];
+}
