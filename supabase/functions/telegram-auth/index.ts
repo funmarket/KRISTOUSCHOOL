@@ -75,10 +75,16 @@ Deno.serve(async (request) => {
       return json({ error: 'telegram_account_lookup_failed' }, 500);
     }
 
-    const capabilities = (roleResult.data ?? []).map((assignment) => String(assignment.role));
+    const allowedRoles = [
+      'APP_ADMIN', 'MANAGER', 'PARENT', 'STUDENT', 'TEACHER', 'SCHOOL_STAFF', 'ADMINISTRATIVE_PERSONNEL',
+    ];
+    const capabilities = (roleResult.data ?? [])
+      .map((assignment) => String(assignment.role))
+      .filter((role) => allowedRoles.includes(role));
     const role = capabilities.includes('APP_ADMIN')
       ? 'APP_ADMIN'
-      : capabilities.find((assignedRole) => assignedRole !== 'GENERAL_USER') ?? 'GENERAL_USER';
+      : capabilities[0] ?? null;
+    if (!role) return json({ error: 'account_not_approved' }, 403);
     const profile = profileResult.data;
     return json({
       linked,
