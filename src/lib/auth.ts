@@ -2,7 +2,7 @@ import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase';
 import { createTelegramLinkUrl } from './telegram';
 import { isValidUsername } from './username';
-import type { User, UserRole } from '../types';
+import type { AccountRole, User, UserRole } from '../types';
 
 export const REGISTRATION_ROLES = [
   'APP_ADMIN',
@@ -12,7 +12,7 @@ export const REGISTRATION_ROLES = [
   'TEACHER',
   'SCHOOL_STAFF',
   'ADMINISTRATIVE_PERSONNEL',
-] as const;
+] as const satisfies readonly AccountRole[];
 
 export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
 export type SignupRole = 'GENERAL_USER' | RegistrationRole;
@@ -21,18 +21,24 @@ export function isRegistrationRole(value: unknown): value is RegistrationRole {
   return typeof value === 'string' && (REGISTRATION_ROLES as readonly string[]).includes(value);
 }
 
-const roleMap: Record<string, UserRole> = {
-  GENERAL_USER: 'GENERAL_USER',
+const roleMap: Record<string, AccountRole> = {
+  APP_ADMIN: 'APP_ADMIN',
+  MANAGER: 'MANAGER',
   PARENT: 'PARENT',
   STUDENT: 'STUDENT',
   TEACHER: 'TEACHER',
   SCHOOL_STAFF: 'SCHOOL_STAFF',
   ADMINISTRATIVE_PERSONNEL: 'ADMINISTRATIVE_PERSONNEL',
-  MANAGER: 'MANAGER',
-  PRINCIPAL: 'MANAGER',
-  EMPLOYEE: 'MANAGER',
-  APP_ADMIN: 'ADMIN',
 };
+
+export function resolveCanonicalAccountRole(roles: readonly string[]): AccountRole | null {
+  if (roles.includes('APP_ADMIN')) return 'APP_ADMIN';
+  for (const candidate of roles) {
+    const mapped = roleMap[candidate];
+    if (mapped) return mapped;
+  }
+  return null;
+}
 
 export function isPhoneIdentifier(value: string) {
   return /^\+?[1-9]\d{7,14}$/.test(value.trim().replace(/[\s()-]/g, ''));
@@ -101,8 +107,8 @@ export async function signInAccount(identifier: string, password: string): Promi
   return data as { session: Session; user: SupabaseUser };
 }
 
-export async function loadCanonicalUser(authUser: SupabaseUser): Promise<User> {
-  const client = requireSupabaseClient();
+export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?: any): Promise<User> {
+  const client = clientOverride ?? requireSupabaseClient();
   const typedClient = client as any;
   const [
     { data: profile, error: profileError },
@@ -115,15 +121,16 @@ export async function loadCanonicalUser(authUser: SupabaseUser): Promise<User> {
   ]);
   if (profileError || roleError || telegramError || !profile) throw profileError ?? roleError ?? telegramError ?? new Error('Profile unavailable');
   const roles = (assignments ?? []).map((row: { role: string }) => row.role);
-  const role = roleMap[roles.includes('APP_ADMIN') ? 'APP_ADMIN' : roles.find((candidate: string) => candidate !== 'GENERAL_USER') ?? 'GENERAL_USER'] ?? 'GENERAL_USER';
+  const role = resolveCanonicalAccountRole(roles);
+  if (!role) throw new Error('account_not_approved');
   return {
     id: profile.id,
     username: profile.username,
     fullName: profile.full_name || profile.username,
     email: profile.email ?? authUser.email ?? undefined,
     avatarUrl: profile.avatar_url ?? undefined,
-    role,
-    capabilities: roles,
+    role: role as UserRole,
+    capabilities: roles.filter((candidate: string): candidate is AccountRole => Boolean(roleMap[candidate])),
     telegramLinked: Boolean(telegramIdentity),
   };
 }

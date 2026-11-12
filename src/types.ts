@@ -1,4 +1,15 @@
-export type UserRole = 'PUBLIC' | 'GENERAL_USER' | 'PARENT' | 'STUDENT' | 'TEACHER' | 'SCHOOL_STAFF' | 'ADMINISTRATIVE_PERSONNEL' | 'MANAGER' | 'ADMIN';
+export type AccountRole =
+  | 'APP_ADMIN'
+  | 'MANAGER'
+  | 'PARENT'
+  | 'STUDENT'
+  | 'TEACHER'
+  | 'SCHOOL_STAFF'
+  | 'ADMINISTRATIVE_PERSONNEL';
+
+export type PublicVisitorRole = 'GENERAL_USER';
+
+export type UserRole = PublicVisitorRole | AccountRole;
 
 export type Language = 'ar' | 'fr' | 'en';
 export type ThemeMode = 'light' | 'pitch-black';

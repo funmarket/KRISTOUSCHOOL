@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     >
                       <span>🏠 {t('home')}</span>
                     </button>
-                    {(currentRole === 'PARENT' || currentRole === 'STUDENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
+                    {(currentRole === 'PARENT' || currentRole === 'STUDENT' || currentRole === 'TEACHER' || currentRole === 'APP_ADMIN') && (
                       <button
                         onClick={() => { setActiveTab('community'); setShowProfileMenu(false); }}
                         className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
@@ -217,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                         <span>📚 {t('classCommunity')}</span>
                       </button>
                     )}
-                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'ADMIN') && (
+                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'APP_ADMIN') && (
                       <button
                         onClick={() => { setActiveTab('notes'); setShowProfileMenu(false); }}
                         className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
@@ -225,7 +225,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                         <span>📝 {t('parentNotes')}</span>
                       </button>
                     )}
-                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'ADMIN') && (
+                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'APP_ADMIN') && (
                       <button
                         onClick={() => { setActiveTab('pickup'); setShowProfileMenu(false); }}
                         className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"

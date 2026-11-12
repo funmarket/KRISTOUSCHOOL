@@ -76,7 +76,7 @@ export const PickupBoardView: React.FC = () => {
       )}
 
       {/* Teacher / Manager / Admin Perspective: Pickup Board */}
-      {(currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'ADMIN') && (
+      {(currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'APP_ADMIN') && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('pickupBoard')}</h3>

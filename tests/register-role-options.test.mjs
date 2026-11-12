@@ -161,3 +161,115 @@ test('Test E — Existing form regression: conditional fields and username/conta
     /invalid_username_format/,
   );
 });
+
+test('Test F — G1 canonical role reconciliation: APP_ADMIN preserved, EMPLOYEE/PRINCIPAL/GENERAL_USER/PUBLIC/ADMIN fail closed', () => {
+  assert.equal(typeof authModule.resolveCanonicalAccountRole, 'function', 'Expected resolveCanonicalAccountRole helper in src/lib/auth.ts');
+
+  // All 7 canonical account roles resolve to themselves (APP_ADMIN never maps to ADMIN)
+  for (const role of EXPECTED_SEVEN_ROLES) {
+    assert.equal(authModule.resolveCanonicalAccountRole([role]), role, `Expected ${role} to resolve to ${role}`);
+    assert.equal(authModule.resolveCanonicalAccountRole(['GENERAL_USER', role]), role, `Expected ['GENERAL_USER', '${role}'] to resolve to ${role}`);
+  }
+
+  // APP_ADMIN takes precedence when multiple roles exist
+  assert.equal(authModule.resolveCanonicalAccountRole(['PARENT', 'APP_ADMIN']), 'APP_ADMIN');
+
+  // Pending applicant with only GENERAL_USER or no active roles fails closed (null)
+  assert.equal(authModule.resolveCanonicalAccountRole([]), null);
+  assert.equal(authModule.resolveCanonicalAccountRole(['GENERAL_USER']), null);
+
+  // Legacy / unverified database roles EMPLOYEE and PRINCIPAL fail closed when alone (never promoted to MANAGER)
+  assert.equal(authModule.resolveCanonicalAccountRole(['EMPLOYEE']), null);
+  assert.equal(authModule.resolveCanonicalAccountRole(['PRINCIPAL']), null);
+  assert.equal(authModule.resolveCanonicalAccountRole(['GENERAL_USER', 'EMPLOYEE']), null);
+  assert.equal(authModule.resolveCanonicalAccountRole(['GENERAL_USER', 'PRINCIPAL']), null);
+
+  // If a user has both a legacy role and a valid canonical role, the valid canonical role is preserved without promoting the legacy role
+  assert.equal(authModule.resolveCanonicalAccountRole(['EMPLOYEE', 'TEACHER']), 'TEACHER');
+  assert.equal(authModule.resolveCanonicalAccountRole(['PRINCIPAL', 'APP_ADMIN']), 'APP_ADMIN');
+
+  // Obsolete frontend aliases PUBLIC and ADMIN fail closed
+  assert.equal(authModule.resolveCanonicalAccountRole(['PUBLIC']), null);
+  assert.equal(authModule.resolveCanonicalAccountRole(['ADMIN']), null);
+
+  // Verify src/types.ts defines AccountRole with APP_ADMIN and excludes PUBLIC and ADMIN from UserRole
+  const typesSource = fs.readFileSync(new URL('../src/types.ts', import.meta.url), 'utf8');
+  assert.match(typesSource, /\bexport type AccountRole\b/);
+  assert.match(typesSource, /'APP_ADMIN'/);
+  assert.doesNotMatch(typesSource, /'PUBLIC'/);
+  assert.doesNotMatch(typesSource, /'ADMIN'/);
+});
+
+test('Test G — loadCanonicalUser behavioral verification and AppContext session-restore signOut on account_not_approved', async () => {
+  const makeMockClient = (assignedRoles) => ({
+    from: (table) => ({
+      select: () => ({
+        eq: () => {
+          if (table === 'profiles') {
+            return {
+              single: async () => ({
+                data: {
+                  id: 'user-1',
+                  username: 'test_user',
+                  full_name: 'Test User',
+                  email: 'test@example.com',
+                  avatar_url: null,
+                },
+                error: null,
+              }),
+            };
+          }
+          if (table === 'role_assignments') {
+            return {
+              eq: async () => ({
+                data: assignedRoles.map((r) => ({ role: r })),
+                error: null,
+              }),
+            };
+          }
+          if (table === 'telegram_identities') {
+            return {
+              maybeSingle: async () => ({ data: null, error: null }),
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+      }),
+    }),
+  });
+
+  // 1. Pending user with only GENERAL_USER fails closed with account_not_approved
+  await assert.rejects(
+    () => authModule.loadCanonicalUser({ id: 'user-1', email: 'test@example.com' }, makeMockClient(['GENERAL_USER'])),
+    /account_not_approved/,
+  );
+
+  // 2. Legacy EMPLOYEE or PRINCIPAL without canonical role fails closed with account_not_approved
+  await assert.rejects(
+    () => authModule.loadCanonicalUser({ id: 'user-1', email: 'test@example.com' }, makeMockClient(['EMPLOYEE'])),
+    /account_not_approved/,
+  );
+  await assert.rejects(
+    () => authModule.loadCanonicalUser({ id: 'user-1', email: 'test@example.com' }, makeMockClient(['PRINCIPAL'])),
+    /account_not_approved/,
+  );
+
+  // 3. Approved APP_ADMIN resolves to role 'APP_ADMIN' and strips GENERAL_USER from capabilities
+  const ownerUser = await authModule.loadCanonicalUser(
+    { id: 'user-1', email: 'test@example.com' },
+    makeMockClient(['GENERAL_USER', 'APP_ADMIN']),
+  );
+  assert.equal(ownerUser.role, 'APP_ADMIN');
+  assert.deepEqual(ownerUser.capabilities, ['APP_ADMIN']);
+
+  // 4. Verify AppContext session restoration paths clear session via signOutAccount() when account_not_approved is thrown
+  const appContextSource = fs.readFileSync(new URL('../src/context/AppContext.tsx', import.meta.url), 'utf8');
+  const signOutMatches = [...appContextSource.matchAll(/signOutAccount\(\)/g)];
+  assert.equal(
+    signOutMatches.length >= 4,
+    true,
+    `Expected signOutAccount() in getSession, onAuthStateChange, login catch, and logout (found ${signOutMatches.length})`,
+  );
+});
+
+
