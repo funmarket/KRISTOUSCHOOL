@@ -1,0 +1,1334 @@
+# GEMINI — KRISTOU SCHOOL: EIGHT SEPARATE, SECURE, ROLE-AWARE HOMEPAGES
+
+**Task type:** Frontend implementation, routing, role isolation, responsive UI and verification  
+**Repository:** `funmarket/KRISTOUSCHOOL`  
+**Priority:** High  
+**Current command:** Replace the single shared `HomeView` with eight distinct homepage experiences while preserving authorized access to existing shared school features.
+
+## 0. READ THIS FIRST — EXACT PRODUCT OWNER DECISION
+
+The Product Owner has corrected the previous homepage architecture.
+
+**The application must have exactly eight separate homepage components:**
+
+1. `PublicHomePage` — anonymous/public visitors, no account required.
+2. `ParentHomePage` — `PARENT`.
+3. `StudentHomePage` — `STUDENT`.
+4. `TeacherHomePage` — `TEACHER`.
+5. `SchoolStaffHomePage` — `SCHOOL_STAFF`.
+6. `AdministrativePersonnelHomePage` — `ADMINISTRATIVE_PERSONNEL`.
+7. `ManagerHomePage` — `MANAGER`.
+8. `OwnerHomePage` — `APP_ADMIN`.
+
+There are **seven authenticated account roles and one public homepage**.
+
+This is not permission to create an eighth authenticated role.
+
+### Mandatory architecture correction
+
+The existing single `HomeView` must no longer render all roles.
+
+**Do not implement one giant shared homepage that simply changes its tiles according to a `role` prop.**
+
+Each homepage must have its own React component, its own role-specific composition, its own relevant actions, and its own access requirements.
+
+Shared presentation components—such as cards, badges, icons, headers and responsive layout primitives—are permitted.
+
+Shared feature implementations—such as Food Menu, School Directory, Class Community, Parent Notes and Pickup—must remain canonical and reusable where access is authorized.
+
+**Shared component code does not mean shared authority.**
+
+The only common homepage is the public school homepage, which every visitor may open.
+
+Authenticated users may also visit that public homepage, but their private dashboard remains separate.
+
+Do not create eight duplicated applications, eight databases, or eight authentication systems.
+
+---
+
+# 1. FRESH INSPECTION BEFORE ANY MODIFICATION
+
+The earlier inspection identified:
+
+- Repository: `funmarket/KRISTOUSCHOOL`
+- Previously observed `main` HEAD: `df54412b22fc9eee0e72eccd55212b929e7abe17`
+- `src/App.tsx` currently routes the Home tab to one `HomeView`.
+- `src/components/views/HomeView.tsx` currently mixes public homepage content with role-dependent content.
+- `src/context/AppContext.tsx` contains `currentUser`, `currentRole` and legacy role-switching behavior.
+- `src/types.ts` contains the seven account roles but also obsolete `GENERAL_USER` definitions.
+- `src/components/Navbar.tsx` contains account, navigation and role-dependent menu behavior.
+- `src/components/views/KristouHome.css` contains existing public homepage styling.
+- `src/data/mockData.ts` contains prototype data.
+- Existing application views include class community, pickup, Parent Notes, Food Menu, directory and registration.
+
+**These are previously inspected facts, not permission to assume that the code is unchanged.**
+
+Before editing, freshly verify:
+
+- Repository, branch and exact HEAD.
+- Open PRs and overlapping work.
+- Actual current file contents.
+- Current routing method.
+- Authentication initialization and session restoration.
+- How the current approved role is determined.
+- How account approval status is represented, if implemented.
+- Existing feature ownership and role-specific guards.
+- Available test and browser execution environment.
+
+Read `AGENTS.md`, `requirements.md`, `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`, relevant backend planning documents and `progress.md`.
+
+Review the older KRISTOU UI plan for feature coverage, especially Parent, Student, Teacher, Pickup, notifications, Food Menu and mobile experience.
+
+**Authority order:**
+
+1. Latest explicit Product Owner instructions.
+2. Current accepted requirements and architecture documents.
+3. Older plans for requirements not superseded.
+4. Current code and runtime as evidence of implementation.
+5. Historical agent reports for context only.
+
+Do not copy the old repository's directory structure, deployment commands or obsolete roles into the current repository.
+
+Do not mistake old plans for proof of completed functionality.
+
+---
+
+# 2. STRICT ROLE-HOMEPAGE ISOLATION
+
+The Product Owner's rule:
+
+**Ordinary roles cannot open another role's private homepage. Only the School Owner and specifically appointed Managers may access authorized cross-role oversight.**
+
+## Required access matrix
+
+| Acting identity | Allowed homepage access |
+|---|---|
+| Anonymous visitor | Public only |
+| Pending applicant | Public + own application-status screen |
+| Rejected/revoked applicant | Public + own restricted account-status screen |
+| `PARENT` | Public + Parent |
+| `STUDENT` | Public + Student |
+| `TEACHER` | Public + Teacher |
+| `SCHOOL_STAFF` | Public + School Staff |
+| `ADMINISTRATIVE_PERSONNEL` | Public + Administrative Personnel |
+| `MANAGER` | Public + Manager + explicitly delegated cross-role oversight |
+| `APP_ADMIN` | Public + Owner + authorized cross-role oversight |
+
+### Critical distinction
+
+A Parent who shares Food Menu access with a Teacher does not gain access to `TeacherHomePage`.
+
+A Teacher who uses Pickup does not gain access to `ParentHomePage`.
+
+School Staff who process office tasks do not gain access to `AdministrativePersonnelHomePage` unless independently authorized.
+
+A Manager does not automatically gain every role's permissions.
+
+An Owner may oversee other role areas, but entering an oversight view does not mean becoming another user or bypassing resource-specific safeguarding rules.
+
+**Role homepage access, feature permission, resource scope and user identity must remain distinct.**
+
+### Required protection
+
+- No unauthorized cross-role homepage navigation.
+- No direct-URL bypass.
+- No unauthorized access after refresh.
+- No privilege increase by changing browser state.
+- No use of requested signup roles as approved authority.
+- No use of client-provided role names as authorization.
+- No production role-preview dropdown that impersonates another role.
+- No accidental exposure of private records through shared feature components.
+- No private content displayed while authentication is still loading.
+- No stale role content displayed after logout, rejection, revocation or role change.
+
+Frontend guards are necessary for presentation, but backend authorization remains authoritative.
+
+If the backend approval or authorization foundation is unfinished, fail closed. Do not manufacture an approved role merely to make a dashboard visible.
+
+Use synthetic fixtures in isolated frontend tests for visual coverage, not as production security.
+
+---
+
+# 3. HOMEPAGE ROUTING AND COMPONENT ARCHITECTURE
+
+## Required structure
+
+Create eight independently maintained homepage components.
+
+Suggested logical structure:
+
+```text
+src/
+  components/
+    homepages/
+      PublicHomePage.tsx
+      ParentHomePage.tsx
+      StudentHomePage.tsx
+      TeacherHomePage.tsx
+      SchoolStaffHomePage.tsx
+      AdministrativePersonnelHomePage.tsx
+      ManagerHomePage.tsx
+      OwnerHomePage.tsx
+
+      shared/
+        HomePageHeader.tsx
+        HomeShortcutCard.tsx
+        HomeCardGrid.tsx
+        HomeSection.tsx
+        EmptyFeatureState.tsx
+        HomePageLayout.css
+```
+
+These filenames are proposed targets, not assertions that they already exist. First inspect existing ownership and naming conventions; reuse canonical equivalents where present.
+
+The current `HomeView.tsx` should be converted into the public homepage, or replaced through a controlled migration that preserves its valid public functionality.
+
+Remove it as the universal account dashboard.
+
+## One small homepage resolver
+
+Provide one clearly defined routing/resolution boundary, integrated into the existing application architecture.
+
+Its responsibilities are limited to:
+
+- Resolving a verified authenticated identity.
+- Determining the approved account role.
+- Selecting the correct homepage component.
+- Handling loading and pending states.
+- Rejecting unauthorized homepage navigation.
+- Allowing authorized Owner/Manager oversight.
+
+**It must not contain all eight homepages or their card definitions.**
+
+Do not install a new routing framework unless the current architecture actually requires one and the change is authorized.
+
+If the existing application uses a state-based tab router, adapt that router cleanly. If it uses URL routes, preserve URL navigation, refresh, browser history and deep-link behavior.
+
+## Navigation behavior
+
+- Anonymous Home opens `PublicHomePage`.
+- An approved authenticated user's private Home opens their own dashboard.
+- Every authenticated user may navigate to the public school website.
+- Selecting the public homepage must not change the authenticated user's role.
+- Logging out returns to the public site.
+- Pending applicants never enter a protected dashboard.
+- Unknown, unsupported or conflicting roles must fail closed.
+
+---
+
+# 4. LOCKED VISUAL DESIGN — FOLLOW THE ATTACHED SCREENSHOTS
+
+The attached screenshots are the visual reference for all eight homepage designs.
+
+They define the desired visual language:
+
+- White/light background by default.
+- Blue uppercase label identifying the homepage.
+- Large dark-blue heading.
+- Friendly, colorful rectangular cards.
+- Rounded card corners.
+- Bright blue, green, purple, yellow, orange, teal, red and slate-blue palette.
+- Large friendly icons or emojis.
+- White card titles with a clear link/action treatment.
+- Subtle large translucent circle in a card corner.
+- Consistent card heights.
+- Small, clear supporting text.
+- Comfortable spacing with minimal wasted screen area.
+- No clutter, dense tables or administrative forms directly on Home.
+
+The key headline style is:
+
+**Everything important, without the clutter.**
+
+Keep this heading for authenticated dashboards where appropriate, but give each page its own meaningful supporting subtitle.
+
+For the public homepage use:
+
+**School life at a glance**
+
+with a subtitle describing public school information.
+
+## Card anatomy
+
+Every card should have:
+
+1. A large, friendly visual icon.
+2. A clear title.
+3. A very short description or action label.
+4. A clickable surface when the destination is genuinely available.
+5. A visible keyboard-focus state.
+6. Consistent colors, dimensions, padding and typography.
+
+Cards should feel like the supplied examples, not generic dashboard widgets.
+
+Use approximately the following palette as a starting visual reference, adjusting foreground/background contrast for accessibility:
+
+- Blue: `#3999EA`
+- Green: `#82BF4B`
+- Purple: `#8D6AC6`
+- Orange: `#F1A050`
+- Yellow: `#F2B126`
+- Teal: `#109A93`
+- Red: `#ED6064`
+- Slate blue: `#547BB9`
+
+Inspect the actual design assets before replacing any existing colors or iconography. Prefer the supplied screenshots for final visual comparison.
+
+Do not regenerate or replace the official KRISTOU logo.
+
+## Common page shell
+
+All eight pages use the existing school application shell:
+
+- KRISTOU logo and identity.
+- Language control.
+- Notifications where appropriate.
+- Profile/account menu for authenticated users.
+- Existing theme options.
+- Responsive navigation.
+- Appropriate page heading and role identification.
+
+This shared shell is not the shared homepage.
+
+## Prioritization
+
+Put the most useful actions first.
+
+Cards appearing on a role homepage must reflect what that person actually needs to do.
+
+Do not use the same layout content for Owner and Manager merely because their old screenshots look similar.
+
+Do not display invented counts, alerts or fictional data as live information.
+
+---
+
+# 5. HOMEPAGE 1 — PUBLIC SCHOOL WEBSITE
+
+**Component:** `PublicHomePage`  
+**Authentication:** Not required  
+**Account role:** None
+
+### Visual appearance
+
+Use the first attached screenshot as the primary reference.
+
+At the top:
+
+- Blue label: `PUBLIC SCHOOL SITE`
+- Heading: `School life at a glance`
+- Brief subtitle.
+- Two clean white information cards:
+  - About KRISTOU.
+  - Latest public announcement.
+
+Below, show the colorful service-card grid.
+
+### Required cards and sections
+
+| Card | Content |
+|---|---|
+| Teachers | Approved teacher directory |
+| Food Menu | Publicly published La Toque Gourmande menu |
+| Administration | Public School Board and administration |
+| Admissions | Information about joining the school |
+| Levels & Classes | Public description of school levels and programs |
+| Activities & Clubs | Public school life and extracurricular activities |
+| Public Gallery | Explicitly approved public media |
+| Apply / Register | School admission application entry or information |
+| Announcements | School-approved public news |
+| Contact | School contact information and location |
+
+Avoid duplicating two visually identical registration actions. Distinguish school admission from account-access requests.
+
+### Privacy rules
+
+The public website must never expose:
+
+- Private class conversations.
+- Student lists or profiles.
+- Linked children.
+- Parent Notes.
+- Private messages.
+- Pickup state.
+- Private class documents.
+- Private calendars.
+- Unapproved student photos or media.
+- Owner/Manager administration controls.
+
+**Public visitors do not need a Supabase account and must never be assigned `GENERAL_USER`.**
+
+Keep the public homepage pleasant and inviting, not an empty placeholder when there is no public announcement.
+
+---
+
+# 6. HOMEPAGE 2 — PARENT
+
+**Component:** `ParentHomePage`  
+**Role:** `PARENT`
+
+### Visual appearance
+
+Follow the attached Parent screenshot.
+
+Top:
+
+- Label: `PARENT HOME`
+- Headline: `Everything important, without the clutter.`
+- Supporting text: `Stay connected with your children's school life.`
+
+Directly below the heading, provide a compact child selector if the parent has more than one linked child.
+
+### Primary cards
+
+1. **My Children** — linked children and their profiles.
+2. **My Classes** — authorized class communities.
+3. **Homework & Classwork** — assignments for linked children.
+4. **Calendar** — relevant class and school dates.
+5. **Messages** — permitted school communication.
+6. **Parent Notes** — structured private communication.
+7. **Pickup** — arrival and release status.
+8. **Food Menu** — published weekly school menu.
+9. **Teachers** — approved teacher directory.
+10. **Administration** — public School Board.
+11. **Admissions / Registration** — school registration information and authorized applications.
+12. **Class Gallery** — photos approved for the linked child's class.
+
+Additional authorized features such as Documents and Announcements must remain accessible, even if grouped under the relevant class card rather than receiving duplicate homepage tiles.
+
+### Parent-specific UX improvements
+
+- Show the active child's name and class.
+- Switching children updates every child-scoped section correctly.
+- Show a notification indicator for genuinely unread class or Parent Note updates.
+- Make Pickup prominent when an actual pickup action is available.
+- Show an appropriate empty state when no child link exists.
+- Do not fabricate a child or class merely to fill the dashboard.
+
+### Locked Parent Notes rules
+
+Preserve:
+
+- Maximum 11 parent-originated notes per day.
+- Sending window from 08:00 inclusive to 18:00 exclusive, `Africa/Tunis`.
+- Child and teacher tagging rules.
+- Existing role- and resource-scoped privacy.
+- Teacher/admin replies outside the parent's sending quota.
+
+### Locked Pickup rules
+
+Parents may announce arrival where authorized.
+
+**`PARENT_ARRIVED` does not mean `RELEASED`.**
+
+Parents cannot release students or access another family's private pickup information.
+
+---
+
+# 7. HOMEPAGE 3 — STUDENT
+
+**Component:** `StudentHomePage`  
+**Role:** `STUDENT`
+
+### Visual appearance
+
+Use the Student screenshot.
+
+Friendly and visually simple, with a clear focus on learning.
+
+Top:
+
+- Label: `STUDENT HOME`
+- Headline: `Everything important, without the clutter.`
+- Supporting text: `Your classroom, learning, and school day.`
+
+Where available, display the student's actual assigned class in a small contextual header.
+
+### Primary cards
+
+1. **Announcements** — official class/school announcements.
+2. **Homework & Classwork** — assigned lessons and homework.
+3. **Class Questions** — class-wide peer questions.
+4. **Food Menu** — published school meals.
+5. **Calendar** — tests, activities and classroom events.
+6. **Documents** — approved class learning materials.
+
+A Class Gallery may be accessible through the student's authorized class community.
+
+### Student-specific UX
+
+- Prioritize today's class information.
+- Keep text simple and readable for primary-school students.
+- Use recognizable icons.
+- Keep long forms and unnecessary administrative details off the homepage.
+- Clearly distinguish official Teacher Announcements from student Class Questions.
+
+### Locked Class Questions rules
+
+- Class-wide communication only.
+- Maximum 200 characters per post/reply.
+- Only active class members may participate.
+- Assigned teachers moderate.
+- Reporting and rate limiting remain required.
+- No private student-to-student messaging.
+- No private student contact details.
+- No access to another class through guessed IDs or navigation.
+
+Student accounts must not display management, Parent Notes authoring, admission-review or pickup-release controls.
+
+---
+
+# 8. HOMEPAGE 4 — TEACHER
+
+**Component:** `TeacherHomePage`  
+**Role:** `TEACHER`
+
+### Visual appearance
+
+Use the Teacher screenshot as the foundation, then add the necessary features from the older plan.
+
+Top:
+
+- Label: `TEACHER HOME`
+- Same major headline.
+- Subtitle: `Everything you need for your classes.`
+
+Add a compact class selector for teachers assigned to multiple classes.
+
+### Primary cards
+
+1. **My Classes** — assigned classrooms.
+2. **Pickup Board** — assigned students, if authorized.
+3. **Homework & Classwork** — create/manage assignments.
+4. **Messages** — permitted school and family communication.
+5. **Parent Notes** — view/respond to authorized notes.
+6. **Food Menu** — published menu.
+
+### Additional required teaching tools
+
+7. **Class Announcements** — teacher-managed notices.
+8. **Class Calendar** — relevant class events.
+9. **Documents & Gallery** — class resources and approved media.
+10. **Class Questions** — review and moderate student questions.
+
+These may be arranged in two visual groups: `My Teaching` and `Communication & School Services`, without creating another homepage.
+
+### Teacher-specific UX improvements
+
+- Show currently selected class.
+- Keep assignment-related actions close together.
+- Highlight actual unread Parent Notes or student questions.
+- Provide clear actions such as `Open Class`, `Create Homework`, and `Review Questions`.
+- Do not show school-wide broadcast or administrative controls unless separately granted.
+
+### Security rules
+
+Teachers can act only within assigned classes, except where specifically authorized otherwise.
+
+Pickup release must remain a deliberate, server-verified operation performed only by authorized personnel.
+
+Do not allow a teacher to access arbitrary students simply because the teacher role is approved.
+
+---
+
+# 9. HOMEPAGE 5 — SCHOOL STAFF
+
+**Component:** `SchoolStaffHomePage`  
+**Role:** `SCHOOL_STAFF`
+
+This is one of the missing homepage designs and must be created as a genuinely distinct experience.
+
+School Staff may include cafeteria workers, security personnel, caretakers, nurses, librarians, transportation staff and other support employees.
+
+**The role alone must not grant every staff capability.**
+
+### Visual appearance
+
+- Label: `SCHOOL STAFF HOME`
+- Headline: `Everything important, without the clutter.`
+- Subtitle: `Your daily school duties, all in one place.`
+
+Use the same colorful card system, but organize the experience around actual assigned work.
+
+### Core cards
+
+1. **My Tasks** — assigned operational duties.
+2. **School Notices** — authorized internal announcements.
+3. **Work Calendar** — work-related events.
+4. **My Service** — assigned department/work area.
+5. **Team Messages** — authorized work communication.
+6. **Food Menu** — read access where allowed.
+
+### Conditional cards
+
+Show only where the person's actual capabilities allow:
+
+- **Pickup Desk** — arrival/release operational work.
+- **Cafeteria** — menu or meal-service operations.
+- **Library** — learning-resource operations.
+- **Facilities** — maintenance and assigned facility tasks.
+- **Transport** — assigned transport operations.
+- **Health Support** — narrowly scoped duties only.
+- **Security Desk** — permitted campus safety operations.
+
+These are proposed task surfaces, not evidence that matching backend modules already exist.
+
+Do not build new backend services merely to make these cards appear functional.
+
+### School Staff-specific rules
+
+A cafeteria worker must not automatically access student medical records.
+
+A security worker must not automatically access parent communications.
+
+A nurse must not gain unrelated school-wide administrative permissions.
+
+If an assigned service does not have a real implemented destination, display a clearly marked unavailable/coming-soon state instead of a fake working link.
+
+---
+
+# 10. HOMEPAGE 6 — ADMINISTRATIVE PERSONNEL
+
+**Component:** `AdministrativePersonnelHomePage`  
+**Role:** `ADMINISTRATIVE_PERSONNEL`
+
+This is the second missing homepage.
+
+Administrative Personnel are different from appointed Managers and the School Owner.
+
+Job titles do not automatically create privileged system permissions.
+
+### Visual appearance
+
+- Label: `ADMINISTRATION HOME`
+- Headline: `Everything important, without the clutter.`
+- Subtitle: `Organize the school day with ease.`
+
+Use colorful cards, but prioritize office workflow instead of global application configuration.
+
+### Primary cards
+
+1. **Office Desk** — assigned daily administrative work.
+2. **Admission Files** — school enrollment documents and workflows, if authorized.
+3. **Family Inquiries** — permitted parent inquiries.
+4. **Attendance** — assigned attendance operations.
+5. **Forms & Documents** — administrative paperwork.
+6. **School Calendar** — office events and schedules.
+7. **Notices** — internal administration updates.
+8. **My Work Queue** — assigned outstanding tasks.
+
+### Important separation
+
+`Admission Files` means school enrollment work.
+
+It does not automatically mean approval of application login accounts or assignment of app roles.
+
+Administrative Personnel do not automatically receive the Manager's permissions or the Owner's Control Center.
+
+Do not display role assignment, Manager delegation, Owner appointment, security settings or unrestricted audit access.
+
+All operational cards must be capability- and resource-scoped.
+
+---
+
+# 11. HOMEPAGE 7 — MANAGER / ASSOCIATE
+
+**Component:** `ManagerHomePage`  
+**Role:** `MANAGER`
+
+The Manager is appointed by the Owner and receives explicitly delegated responsibilities.
+
+### Visual appearance
+
+Follow the Manager screenshot, but do not simply duplicate Owner Home.
+
+- Label: `MANAGER HOME`
+- Headline: `Everything important, without the clutter.`
+- Subtitle: `Manage your assigned school responsibilities.`
+
+### Primary cards when delegated
+
+1. **Control Center** — overview of delegated operations.
+2. **Pickup** — delegated pickup oversight.
+3. **Registration Reviews** — delegated application review.
+4. **Broadcasts** — authorized school communication.
+5. **Food Menu** — delegated menu management.
+6. **Public Content** — delegated website publishing.
+
+### Additional delegated cards
+
+- **Teacher Directory** — public profile management.
+- **Administration Directory** — approved School Board information.
+- **School Calendar** — delegated schedule operations.
+- **Moderation** — explicitly assigned moderation work.
+
+### Absolute Manager rules
+
+A Manager must not:
+
+- Appoint another Manager without separate explicit Owner authority.
+- Appoint or replace the School Owner.
+- Grant themselves additional capabilities.
+- Access all role homepages automatically.
+- Access private child/family records without the required scope.
+- Override protected access policies.
+- Use delegated content publishing permission to gain user management permissions.
+
+### Cross-role access
+
+Managers may enter a role-specific oversight view only when:
+
+1. Their Manager account is approved.
+2. The Owner has granted the relevant capability.
+3. The target function and resource are within that grant.
+4. The server confirms current permission.
+
+For example, a Manager delegated Food Menu management may edit an authorized menu module. That alone does not authorize entering the Teacher dashboard or reading private Teacher communications.
+
+If the Product Owner authorizes cross-role homepage oversight, it must be an explicit, guarded feature—never automatic role switching.
+
+### UI improvement
+
+If no capability has been delegated, show a legitimate limited Manager homepage and an explanation that operational permissions are awaiting assignment.
+
+Do not render six working administrative tiles merely because the user has the `MANAGER` role.
+
+---
+
+# 12. HOMEPAGE 8 — SCHOOL OWNER / APP ADMIN
+
+**Component:** `OwnerHomePage`  
+**Role:** `APP_ADMIN`
+
+This must be visibly and functionally distinct from Manager Home.
+
+### Visual appearance
+
+- Label: `SCHOOL OWNER HOME`
+- Headline: `Everything important, without the clutter.`
+- Subtitle: `Your complete KRISTOU School management overview.`
+
+Use the colorful card style, but organize the page into two sections:
+
+**School Operations** and **Governance & Access**.
+
+### Required cards
+
+1. **Control Center** — school-wide operational overview.
+2. **Roles & Permissions** — review authoritative account assignments.
+3. **Account Applications** — review pending requests and approval decisions.
+4. **Manager Delegation** — appoint/delegate/revoke Managers.
+5. **Classes & Academics** — authorized school structure management.
+6. **Pickup & Safety** — pickup configuration and oversight.
+7. **Broadcasts** — school-wide announcements.
+8. **Public Content** — public school website management.
+9. **Directories** — public Teachers and School Board content.
+10. **Food Menu** — menu management and publishing.
+11. **Audit Log** — authorized activity/security review.
+12. **School Settings** — school configuration.
+
+### Priority ordering
+
+The first row should emphasize tasks requiring Owner attention, particularly pending account requests, delegated permissions and operational issues.
+
+Only show actual counts if the backend supplies real authorized values.
+
+### Owner oversight
+
+The Owner may access authorized role-specific operational overviews, but must never be silently impersonated as a Parent, Student, Teacher or other account.
+
+Implement a clear oversight entry point such as `View role workspace`, with:
+
+- An explicit Owner context.
+- The actual target workspace indicated.
+- A clear way back to Owner Home.
+- No mutation of the Owner's authenticated identity.
+- No automatically assumed access to unrelated sensitive records.
+- Server-enforced permissions for underlying operations.
+
+### Important security condition
+
+This homepage must not create a second role-management system.
+
+Role appointments, account approvals, delegation and revocation must use canonical backend operations.
+
+If those backend operations are not implemented or verified, display an honest unavailable state. Do not create fake approval buttons that only modify React state.
+
+---
+
+# 13. SHARED FEATURES — PRESERVE, DO NOT DUPLICATE
+
+Different roles may use the same school features without sharing homepages or gaining each other's permissions.
+
+Use the existing canonical feature implementation where one exists.
+
+## Feature-access policy
+
+| Shared feature | Authorized users and restrictions |
+|---|---|
+| Public Teachers directory | All, approved public information only |
+| Public Administration directory | All, approved public information only |
+| Food Menu | Public read if published; authorized users read; Owner/delegated Manager or explicitly authorized staff may edit |
+| Class Community | Linked Parent, enrolled Student, assigned Teacher; authorized oversight only |
+| Homework & Classwork | Teacher manages assigned class; enrolled Student and linked Parent read as authorized |
+| Announcements | Public news or scoped class announcements depending on audience |
+| Class Calendar | Relevant class members/staff and authorized oversight |
+| Class Gallery & Documents | Correct class/resource scope; public gallery separate |
+| Messages | Approved participants only; no initial private Student DMs |
+| Parent Notes | Linked Parent, relevant Teacher and authorized staff/oversight |
+| Pickup | Parent may announce arrival; authorized staff confirm release; permitted oversight |
+| Admissions / Registration | Public entry; private processing only for assigned personnel |
+| Broadcasts | Owner or specifically delegated Manager |
+| Public Content editing | Owner or specifically delegated Manager |
+| Role approvals/delegation | Protected Owner authorization and specifically permitted review workflows |
+
+### Implementation rules
+
+- Reuse feature components without duplicating their business logic into each homepage.
+- Restrict access based on verified actor, capability and resource.
+- A tile must never grant access.
+- If a feature is reused by two roles, its visible actions may differ.
+- Data must be fetched through the approved access-control boundary.
+- Do not render another role's private records and hide them with CSS.
+- Never infer access merely because a card appears in two dashboards.
+
+---
+
+# 14. MOBILE-FIRST UI — MANDATORY
+
+KRISTOU SCHOOL is a phone-first application, including Telegram Mini App usage.
+
+The screenshots show a four-column desktop layout. This must adapt intelligently to phones without becoming cluttered.
+
+## Required responsive layout
+
+| Screen size | Layout |
+|---|---|
+| Small phones, approximately 320–359px | Compact two-column layout where readable; one-column fallback for inaccessible long content |
+| Standard phones, 360–430px | Two-column colorful card grid |
+| Larger phones / small tablets | Two or three columns as space permits |
+| Tablets | Two or three balanced columns |
+| Desktop | Four columns, matching the screenshots |
+| Wide desktop | Four columns with a sensible maximum content width |
+
+These are design targets, not permission to force unreadable two-column cards at every width.
+
+### Mobile visual requirements
+
+- No horizontal page overflow.
+- No clipped titles.
+- No tiny unreadable descriptions.
+- No buttons requiring hover.
+- Cards remain easy to tap.
+- Card icons remain recognizable.
+- Long French/Arabic text wraps correctly.
+- Sufficient contrast in Light and Pitch Black themes.
+- Safe-area padding for phones.
+- No content hidden behind sticky navigation.
+- No oversized empty spacing.
+- No fake desktop controls squeezed into a narrow screen.
+
+Use a minimum comfortable touch target around 44×44 CSS pixels for interactive elements.
+
+### Mobile header
+
+Keep:
+
+- KRISTOU logo.
+- Compact school title.
+- Language control.
+- Separate notification bell.
+- Account/profile access.
+
+Do not place a giant role dropdown in the header.
+
+Use an appropriate mobile sheet or drawer for account/navigation menus.
+
+### Mobile navigation
+
+Retain the existing approved bottom-navigation behavior where present.
+
+A role should see only its own relevant navigation items.
+
+Allow access to the public site and account settings without exposing unrelated role dashboards.
+
+### Parent mobile enhancement
+
+Place the selected-child context just below the heading.
+
+Keep My Children, My Classes, Homework and Pickup among the most visible actions.
+
+### Student mobile enhancement
+
+Show Announcements, Homework, Class Questions and Calendar first.
+
+Avoid too many management-like controls.
+
+### Teacher mobile enhancement
+
+Keep My Classes, Homework, Parent Notes and class communication within easy reach.
+
+### Owner/Manager mobile enhancement
+
+Group long management menus into short categories rather than displaying a wall of twelve full-height cards before important tasks.
+
+Still preserve the colorful grid as the primary homepage visual.
+
+### Telegram Mini App
+
+Verify:
+
+- Small Telegram WebView heights.
+- Safe-area and viewport resizing.
+- Navigation behavior when launched from Telegram.
+- Existing identity-linking behavior.
+- No independent Telegram-only role authority.
+- No second frontend created for Telegram.
+- No protected content rendered merely because a Telegram identity exists.
+
+The same canonical frontend must serve Browser and Telegram contexts.
+
+---
+
+# 15. LANGUAGES, THEMES AND ACCESSIBILITY
+
+Support all existing application languages:
+
+- English.
+- French.
+- Arabic, fully RTL.
+
+No hard-coded English-only dashboard copy.
+
+Translate:
+
+- Role labels.
+- Page headings.
+- Card titles.
+- Card descriptions.
+- Empty states.
+- Pending/restricted states.
+- Accessible labels.
+- Navigation and dialogs.
+
+Use actual language keys in the existing translation system.
+
+Arabic must correctly mirror layout and directional controls while keeping readable iconography and school branding.
+
+Preserve the existing Light and Pitch Black modes.
+
+Make focus indicators, card labels and action text readable in both themes.
+
+Use semantic headings, buttons and links.
+
+Screen-reader labels must communicate the card's destination or unavailable state.
+
+Do not use color as the only indication of a warning or permission state.
+
+---
+
+# 16. ZERO FAKE FUNCTIONALITY
+
+The current project has prototype/mock-driven school-domain data in some views.
+
+You must not turn a visual homepage into a false promise of operational backend services.
+
+For every proposed card, determine one of these actual states:
+
+1. `AVAILABLE` — real route/feature exists and the actor is authorized.
+2. `AVAILABLE_READ_ONLY` — legitimate read-only feature.
+3. `COMING_SOON` — feature not implemented.
+4. `UNAUTHORIZED` — feature must not appear as an actionable card.
+5. `BLOCKED_BACKEND` — frontend exists, but secure backend authorization or data access is not ready.
+
+Do not invent backend operations or endpoints.
+
+Do not connect private information to mock records as though they were real school data.
+
+Do not create fake success messages for account approvals, pickup release, document upload or role assignment.
+
+A visual demo fixture is allowed only inside clearly isolated tests/previews and must not ship as real authority.
+
+---
+
+# 17. REGISTRATION AND ACCOUNT STATUS
+
+There are two separate processes:
+
+**A. Application account request**
+
+A person requests an account role; school authorization determines whether the account can enter a protected dashboard.
+
+**B. School admission/enrollment**
+
+A family applies for a child to attend KRISTOU School.
+
+These processes must not be confused.
+
+## Pending applicant
+
+Pending applicants receive a separate `ApplicationStatus` screen.
+
+They may see:
+
+- Requested role.
+- Actual server-reported application status.
+- Appropriate instructions.
+- Public school homepage.
+- Authorized account controls.
+
+They cannot access any of the seven private role homepages.
+
+Rejected/revoked accounts must similarly receive a restricted state.
+
+Do not use requested-role metadata to select a protected homepage before the account is actually approved.
+
+Do not turn the applicant-status screen into another school role.
+
+---
+
+# 18. IMPLEMENTATION SEQUENCE — FOLLOW EXACTLY
+
+## Task 0 — Baseline and source mapping
+
+Inspect all affected files, feature routes, current role handling, authentication dependencies, CSS and relevant tests.
+
+Record current HEAD and affected target list.
+
+Do not mutate anything before identifying the canonical owners.
+
+## Task 1 — Regression tests first
+
+Create focused tests establishing the current defect:
+
+- Every role currently reaches the shared `HomeView`.
+- Role isolation is missing or inadequate.
+- Pending/unauthorized role behavior is not correctly separated, if confirmed.
+
+Use actual runnable tests and report real RED results when appropriate.
+
+Do not manufacture RED.
+
+## Task 2 — Shared visual primitives
+
+Implement only the necessary shared homepage UI components:
+
+- Header.
+- Card.
+- Grid.
+- Section.
+- Empty/unavailable states.
+
+These must not own role authorization.
+
+Keep CSS scoped.
+
+## Task 3 — Public homepage
+
+Extract/preserve the current public school presentation.
+
+Ensure it renders without authentication.
+
+Do not break existing public routes or the school's visual identity.
+
+## Task 4 — Seven private homepage components
+
+Create the seven independent homepage components listed above.
+
+Implement each according to its exact role definition.
+
+Do not merely render the same shared `HomeView` with different title arrays.
+
+## Task 5 — Role-aware homepage resolution
+
+Update the existing app routing/navigation so that:
+
+- Anonymous Home resolves to Public.
+- An approved authenticated account resolves to its own homepage.
+- Unauthorized cross-role navigation is blocked.
+- Owner/Manager oversight follows explicitly authorized rules.
+- Pending/rejected/revoked states remain outside the role homepages.
+- Login/logout/session changes correctly update the page.
+
+Do not treat legacy mock `setCurrentRole()` behavior as server authorization.
+
+## Task 6 — Connect existing shared features
+
+Wire cards only to actual existing destinations or newly verified authorized routes.
+
+Preserve feature ownership.
+
+Do not implement unfinished backend domains as part of this UI-only task unless explicitly authorized separately.
+
+## Task 7 — Mobile, RTL and theme fidelity
+
+Test actual rendering.
+
+Verify at least:
+
+- 320px.
+- 375px.
+- 390px.
+- 430px.
+- 768px.
+- 1024px.
+- 1440px.
+
+Include:
+
+- English LTR.
+- French LTR with long labels.
+- Arabic RTL.
+- Light mode.
+- Pitch Black mode.
+- Browser and available Telegram WebView-compatible conditions.
+
+Fix layout overflow, tap-target and text-wrapping defects inside this task's scope.
+
+## Task 8 — Tests, screenshots and final audit
+
+Run available real tests, build and browser checks.
+
+Capture actual screenshots of every homepage.
+
+Compare against the provided references.
+
+Review the exact changed files and remove unintended changes.
+
+Only then prepare the reviewable source candidate.
+
+---
+
+# 19. MANDATORY BEHAVIORAL TEST MATRIX
+
+## Homepage resolution
+
+- [ ] Anonymous user gets Public Home.
+- [ ] Approved Parent gets Parent Home.
+- [ ] Approved Student gets Student Home.
+- [ ] Approved Teacher gets Teacher Home.
+- [ ] Approved School Staff gets Staff Home.
+- [ ] Approved Administrative Personnel gets Administrative Home.
+- [ ] Approved Manager gets Manager Home.
+- [ ] Approved Owner gets Owner Home.
+- [ ] Pending applicant gets restricted application-status screen.
+- [ ] Rejected/revoked account cannot open protected Home.
+
+## Cross-role denial
+
+Explicitly test:
+
+- [ ] Parent cannot open Student Home.
+- [ ] Student cannot open Parent Home.
+- [ ] Teacher cannot open Manager Home.
+- [ ] School Staff cannot open Administrative Home without an additional verified grant.
+- [ ] Administrative Personnel cannot open Owner Home.
+- [ ] Manager without delegation cannot enter unrelated role homepages.
+- [ ] Manager with narrow delegation cannot exceed its scope.
+- [ ] Owner oversight does not mutate the Owner's authenticated identity.
+- [ ] Direct navigation and refresh cannot bypass these rules.
+
+For all seven roles, test denial of every other protected homepage unless a specific authorized oversight exception applies.
+
+## Shared-feature authorization
+
+- [ ] Parent can access only linked-child resources.
+- [ ] Student can access only their active class.
+- [ ] Teacher can manage only assigned-class content.
+- [ ] Food Menu read access respects publication rules.
+- [ ] Parent Notes preserve their privacy and sending limits.
+- [ ] Pickup arrival does not cause release.
+- [ ] Only authorized staff can confirm pickup release.
+- [ ] Manager can use only delegated operations.
+- [ ] Owner can perform authorized global administration without impersonation.
+- [ ] Public visitors cannot open private school information.
+
+## Visual verification
+
+- [ ] All eight homepages render distinctly.
+- [ ] All eight follow the attached colorful-card design language.
+- [ ] All cards have valid content and actual destination states.
+- [ ] Phone layouts are readable and usable.
+- [ ] No horizontal overflow.
+- [ ] RTL works.
+- [ ] Light and Pitch Black work.
+- [ ] Unavailable features are not represented as working.
+- [ ] Actual browser screenshots match the expected structure.
+
+Use synthetic identities for isolation tests. Real production account testing requires the proper separate authorization and security controls.
+
+---
+
+# 20. REQUIRED TEST COMMANDS AND EVIDENCE
+
+Inspect the current `package.json` before selecting commands.
+
+Previously inspected scripts included:
+
+- `npm run lint`
+- `npm run test:auth`
+- `npm run build`
+
+Do not assume their names or behavior are unchanged.
+
+Run each applicable check against the actual modified source.
+
+Add focused role-dashboard unit or integration tests and browser-level checks where the environment permits.
+
+For every test report:
+
+- Actual command.
+- Exit code.
+- Exact tested source revision.
+- Real output.
+- Pass/fail counts where reported by the test runner.
+- Clear evidence category.
+- What was not tested.
+
+Do not call a TypeScript build proof of role authorization.
+
+Do not call isolated frontend mock tests production RLS proof.
+
+If backend authorization is incomplete, explicitly report protected runtime behavior as unverified or blocked.
+
+---
+
+# 21. CHANGE-SCOPE RESTRICTIONS
+
+**Authorized functional scope:** Eight separate homepage experiences, homepage resolution, role-specific navigation, presentation-level guards, reused feature entry points, responsive styles, translations and tests necessary for this change.
+
+Do not:
+
+- Rewrite the Supabase database.
+- Repair migration history.
+- Change the Owner bootstrap trigger.
+- Alter production authentication policies.
+- Rebuild the registration backend.
+- Create new role or identity tables.
+- Rewrite Telegram account linking.
+- Change unrelated features.
+- Replace the official logo.
+- Create fake school records.
+- Introduce another frontend or app shell.
+- Commit to `main` directly.
+- Merge or deploy without explicit approval.
+
+If the current authentication or approval system prevents a securely working role homepage, preserve the safe frontend implementation and identify the exact backend blocker.
+
+Do not weaken authorization to make screenshots look correct.
+
+---
+
+# 22. REQUIRED FINAL REPORT
+
+Do not submit another theoretical implementation plan as the final result.
+
+Report actual actions and evidence.
+
+### A. VERIFIED BASELINE
+
+- Repository.
+- Branch.
+- Starting HEAD.
+- Open PRs.
+- Existing homepage architecture.
+- Authentication/authorization state.
+- Existing test tooling.
+
+### B. ACTUAL FILE CHANGES
+
+For each changed file:
+
+- Path.
+- Purpose.
+- Specific behavior changed.
+- Reason it belongs in scope.
+
+### C. EIGHT HOMEPAGE CHECKLIST
+
+| Page | Separate component exists | Correct content | Role isolation | Mobile verified |
+|---|---|---|---|---|
+| Public | | | | |
+| Parent | | | | |
+| Student | | | | |
+| Teacher | | | | |
+| School Staff | | | | |
+| Administrative Personnel | | | | |
+| Manager | | | | |
+| Owner | | | | |
+
+### D. TEST EVIDENCE
+
+Actual commands, logs, test results, browser screenshots and unresolved failures.
+
+### E. SECURITY EVIDENCE
+
+Actual cross-role denial results and the boundaries of what those results prove.
+
+### F. SOURCE STATE
+
+Actual branch, commit SHA if committed, changed files, tests and PR URL if genuinely created.
+
+### G. UNFINISHED ITEMS
+
+Every unverified or blocked capability.
+
+### H. FINAL STATUS
+
+Use only an accurate state:
+
+- `IMPLEMENTED AND VERIFIED IN SOURCE`
+- `IMPLEMENTED BUT NOT FULLY VERIFIED`
+- `PARTIALLY IMPLEMENTED`
+- `BLOCKED`
+- `INSPECTION ONLY`
+
+Do not report deployed or production-complete unless the specific deployment and live behavior were actually verified.
+
+---
+
+# 23. DEFINITION OF DONE
+
+The implementation meets this command only when:
+
+- [ ] Eight separate homepage components exist.
+- [ ] The old shared `HomeView` is no longer the universal homepage.
+- [ ] Public Home works without an account.
+- [ ] Seven approved account roles resolve to their own separate homepages.
+- [ ] No obsolete `GENERAL_USER` homepage exists.
+- [ ] Unauthorized roles cannot enter other role homepages.
+- [ ] Manager oversight is restricted to explicit delegation.
+- [ ] Owner oversight preserves identity and resource-scope safeguards.
+- [ ] Existing shared feature access remains available where authorized.
+- [ ] No duplicate business logic or authentication systems were introduced.
+- [ ] The supplied visual reference is followed closely.
+- [ ] Phone layouts work, including Telegram WebView constraints.
+- [ ] English, French, Arabic RTL, Light and Pitch Black work.
+- [ ] Real tests and actual browser rendering were executed and reported accurately.
+- [ ] Exact source changes are reviewable.
+- [ ] No unauthorized live database or production changes occurred.
+
+## FINAL DIRECTIVE TO GEMINI
+
+The Product Owner has already made the architectural decision.
+
+**Eight separate homepages. One public homepage. Seven approved account-role dashboards. No ordinary cross-role homepage access. Authorized Owner and delegated Manager oversight only. Shared school features where explicitly permitted.**
+
+Inspect the current implementation first.
+
+Then execute the actual source changes in the defined order.
+
+Build the phone experience carefully, preserving the colorful appearance from the screenshots.
+
+Do not create a new plan instead of implementing the task.
+
+Do not fake role permissions to make the UI appear complete.
+
+Do not pretend unfinished features work.
+
+Do not claim tests passed without executing them.
+
+Do not claim implementation when only files or screenshots were generated.
+
+Do not claim deployment without live proof.
+
+**Your deliverable is a real, reviewable React/TypeScript implementation with eight distinct homepages, correct navigation, enforced access boundaries, responsive rendering and reproducible verification evidence.**

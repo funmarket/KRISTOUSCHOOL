@@ -7,24 +7,65 @@ export type AccountRole =
   | 'SCHOOL_STAFF'
   | 'ADMINISTRATIVE_PERSONNEL';
 
-export type PublicVisitorRole = 'GENERAL_USER';
-
-export type UserRole = PublicVisitorRole | AccountRole;
+export type UserRole = AccountRole;
 
 export type Language = 'ar' | 'fr' | 'en';
 export type ThemeMode = 'light' | 'pitch-black';
+
+export type AccountApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'REVOKED';
+
+export type HomePageKey =
+  | 'PUBLIC_HOME'
+  | 'PARENT_HOME'
+  | 'STUDENT_HOME'
+  | 'TEACHER_HOME'
+  | 'SCHOOL_STAFF_HOME'
+  | 'ADMINISTRATIVE_PERSONNEL_HOME'
+  | 'MANAGER_HOME'
+  | 'OWNER_HOME'
+  | 'APPLICATION_STATUS';
+
+export type CardAvailabilityState =
+  | 'AVAILABLE'
+  | 'AVAILABLE_READ_ONLY'
+  | 'COMING_SOON'
+  | 'UNAUTHORIZED'
+  | 'BLOCKED_BACKEND';
+
+export type AppTab =
+  | 'home'
+  | 'publicSite'
+  | 'community'
+  | 'notes'
+  | 'pickup'
+  | 'foodMenu'
+  | 'directory'
+  | 'classes'
+  | 'registration';
+
+export type CommunitySubTab =
+  | 'announcements'
+  | 'homework'
+  | 'calendar'
+  | 'questions'
+  | 'documents'
+  | 'gallery';
+
+export type DirectorySubTab = 'teachers' | 'admin';
 
 export interface User {
   id: string;
   username: string;
   fullName: string;
-  role: UserRole;
+  role: AccountRole;
   email?: string;
   avatarUrl?: string;
   linkedChildrenIds?: string[];
   assignedClassIds?: string[];
   capabilities?: string[];
   telegramLinked?: boolean;
+  accountStatus?: AccountApprovalStatus;
+  requestedRole?: AccountRole;
 }
 
 export interface Child {
@@ -47,6 +88,25 @@ export interface ClassItem {
   teacherName: string;
   academicYear: string;
   studentCount: number;
+}
+
+export interface SchoolClassSummary {
+  id: string;
+  name: string;
+  level: string;
+  academicYear: string;
+  homeroomTeacherName: string | null;
+  activeStudentCount: number;
+  roomLabel?: string | null;
+}
+
+export interface ClassStudentRosterItem {
+  studentId: string;
+  studentCode: string;
+  fullName: string;
+  enrollmentStatus: 'ACTIVE' | 'TRANSFERRED' | 'WITHDRAWN';
+  enrolledAt: string;
+  primaryGuardianName?: string | null;
 }
 
 export interface Announcement {

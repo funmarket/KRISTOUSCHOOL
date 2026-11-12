@@ -192,12 +192,13 @@ test('Test F — G1 canonical role reconciliation: APP_ADMIN preserved, EMPLOYEE
   assert.equal(authModule.resolveCanonicalAccountRole(['PUBLIC']), null);
   assert.equal(authModule.resolveCanonicalAccountRole(['ADMIN']), null);
 
-  // Verify src/types.ts defines AccountRole with APP_ADMIN and excludes PUBLIC and ADMIN from UserRole
+  // Verify src/types.ts defines AccountRole with APP_ADMIN and excludes PUBLIC, ADMIN, and GENERAL_USER from active types
   const typesSource = fs.readFileSync(new URL('../src/types.ts', import.meta.url), 'utf8');
   assert.match(typesSource, /\bexport type AccountRole\b/);
   assert.match(typesSource, /'APP_ADMIN'/);
   assert.doesNotMatch(typesSource, /'PUBLIC'/);
   assert.doesNotMatch(typesSource, /'ADMIN'/);
+  assert.doesNotMatch(typesSource, /'GENERAL_USER'/);
 });
 
 test('Test G — loadCanonicalUser behavioral verification and AppContext session-restore signOut on account_not_approved', async () => {
@@ -270,6 +271,73 @@ test('Test G — loadCanonicalUser behavioral verification and AppContext sessio
     true,
     `Expected signOutAccount() in getSession, onAuthStateChange, login catch, and logout (found ${signOutMatches.length})`,
   );
+  assert.doesNotMatch(appContextSource, /'GENERAL_USER'/, 'AppContext.tsx must not use GENERAL_USER as an active role state');
+  assert.doesNotMatch(appContextSource, /\bMOCK_USERS\b/, 'AppContext.tsx must not import or use MOCK_USERS role impersonation');
 });
+
+test('Test H — authenticateTelegramInitData rejects unapproved Telegram accounts and accepts canonical roles without GENERAL_USER fallback', async () => {
+  const makeTelegramClient = (returnedUser) => ({
+    functions: {
+      invoke: async (fnName) => {
+        assert.equal(fnName, 'telegram-auth');
+        return {
+          data: {
+            linked: true,
+            user: returnedUser,
+          },
+          error: null,
+        };
+      },
+    },
+  });
+
+  // 1. Unapproved Telegram user where server Edge Function returned role: 'GENERAL_USER' must fail closed with account_not_approved
+  await assert.rejects(
+    () =>
+      authModule.authenticateTelegramInitData(
+        'query_id=1&user=pending',
+        makeTelegramClient({
+          id: 'tg-pending-1',
+          username: 'pending_tg',
+          fullName: 'Pending Telegram User',
+          role: 'GENERAL_USER',
+          capabilities: ['GENERAL_USER'],
+        }),
+      ),
+    /account_not_approved/,
+  );
+
+  // 2. Unapproved Telegram user with legacy EMPLOYEE role fails closed
+  await assert.rejects(
+    () =>
+      authModule.authenticateTelegramInitData(
+        'query_id=2&user=legacy',
+        makeTelegramClient({
+          id: 'tg-legacy-1',
+          username: 'legacy_tg',
+          fullName: 'Legacy Telegram User',
+          role: 'EMPLOYEE',
+          capabilities: ['EMPLOYEE'],
+        }),
+      ),
+    /account_not_approved/,
+  );
+
+  // 3. Approved Telegram user with canonical role succeeds and strips GENERAL_USER from capabilities
+  const approvedResult = await authModule.authenticateTelegramInitData(
+    'query_id=3&user=approved',
+    makeTelegramClient({
+      id: 'tg-parent-1',
+      username: 'parent_tg',
+      fullName: 'Approved Parent',
+      role: 'PARENT',
+      capabilities: ['GENERAL_USER', 'PARENT'],
+    }),
+  );
+  assert.equal(approvedResult.linked, true);
+  assert.equal(approvedResult.user.role, 'PARENT');
+  assert.deepEqual(approvedResult.user.capabilities, ['PARENT']);
+});
+
 
 

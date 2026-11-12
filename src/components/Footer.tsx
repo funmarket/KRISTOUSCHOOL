@@ -11,7 +11,7 @@ export const Footer: React.FC = () => {
         
         {/* Col 1 */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+          <div className="flex items-center gap-3">
             <img
               src="/assets/kristou-logo.png"
               alt="KRISTOU SCHOOL"
@@ -24,8 +24,8 @@ export const Footer: React.FC = () => {
           <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
             {t('registrationDescription')}
           </p>
-          <div className="flex items-center space-x-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-            <ShieldCheck className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
             <span>{t('securityActive')}</span>
           </div>
         </div>
@@ -45,15 +45,15 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">{t('contactLocation')}</h4>
           <ul className="space-y-2.5 text-xs">
-            <li className="flex items-center space-x-2 rtl:space-x-reverse">
+            <li className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-k-brand shrink-0" />
               <span>{t('tunis')}</span>
             </li>
-            <li className="flex items-center space-x-2 rtl:space-x-reverse">
+            <li className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-k-brand shrink-0" />
               <span>+216 71 000 000</span>
             </li>
-            <li className="flex items-center space-x-2 rtl:space-x-reverse">
+            <li className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-k-brand shrink-0" />
               <span>contact@kristou.edu.tn</span>
             </li>
@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
           <p className="text-xs text-gray-500 mb-3">
             {t('platformDescription')}
           </p>
-          <div className="inline-flex items-center space-x-2 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand px-3 py-1.5 rounded-xl text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand dark:text-k-brand px-3 py-1.5 rounded-xl text-xs font-semibold">
             <span>🌐 Web & Telegram</span>
           </div>
         </div>

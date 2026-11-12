@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AuthModal } from './AuthModal';
 import { getTelegramLinkCopy } from '../i18n/telegram-link';
+import { canAccessAppTab } from './homepages/homepageAccess';
+import { HOMEPAGE_COMMON_TEXT, pickText } from '../i18n/homepages';
 import {
   Bell,
   Globe,
@@ -171,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 aria-label={currentUser ? t('account') : t('login')}
                 aria-expanded={showProfileMenu}
                 onMouseEnter={() => setShowProfileMenu(true)}
-                className="flex items-center space-x-2 rtl:space-x-reverse p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 {currentUser ? (
                   <img
@@ -205,49 +207,66 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                   <div className="py-1 border-b border-gray-100 dark:border-gray-800">
                     <button
                       onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                       <span>🏠 {t('home')}</span>
                     </button>
-                    {(currentRole === 'PARENT' || currentRole === 'STUDENT' || currentRole === 'TEACHER' || currentRole === 'APP_ADMIN') && (
+                    {currentUser && (
+                      <button
+                        onClick={() => { setActiveTab('publicSite'); setShowProfileMenu(false); }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                      >
+                        <span>🌐 {pickText(HOMEPAGE_COMMON_TEXT.publicSiteNav, language)}</span>
+                      </button>
+                    )}
+                    {canAccessAppTab(currentUser, 'community') && (
                       <button
                         onClick={() => { setActiveTab('community'); setShowProfileMenu(false); }}
-                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                       >
                         <span>📚 {t('classCommunity')}</span>
                       </button>
                     )}
-                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'APP_ADMIN') && (
+                    {canAccessAppTab(currentUser, 'notes') && (
                       <button
                         onClick={() => { setActiveTab('notes'); setShowProfileMenu(false); }}
-                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                       >
                         <span>📝 {t('parentNotes')}</span>
                       </button>
                     )}
-                    {(currentRole === 'PARENT' || currentRole === 'TEACHER' || currentRole === 'MANAGER' || currentRole === 'APP_ADMIN') && (
+                    {canAccessAppTab(currentUser, 'pickup') && (
                       <button
                         onClick={() => { setActiveTab('pickup'); setShowProfileMenu(false); }}
-                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                       >
                         <span>🛡️ {t('pickup')}</span>
                       </button>
                     )}
                     <button
                       onClick={() => { setActiveTab('foodMenu'); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                       <span>🍲 {t('foodMenu')}</span>
                     </button>
                     <button
                       onClick={() => { setActiveTab('directory'); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                       <span>👨‍🏫 {t('teachers')}</span>
                     </button>
+                    {canAccessAppTab(currentUser, 'classes') && (
+                      <button
+                        data-testid="navbar-menu-classes"
+                        onClick={() => { setActiveTab('classes'); setShowProfileMenu(false); }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                      >
+                        <span>🏫 {pickText(HOMEPAGE_COMMON_TEXT.classesNav, language)}</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => { setActiveTab('registration'); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                       <span>📝 {t('registration')}</span>
                     </button>
@@ -268,7 +287,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     {currentUser && <>
                     <button
                       onClick={() => { setActiveTab('home'); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                       <UserIcon className="w-4 h-4 text-gray-400" />
                       <span>{t('profile')}</span>
@@ -277,7 +296,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       <button
                         onClick={() => { void startTelegramLink(); setShowProfileMenu(false); }}
                         disabled={connectingTelegram}
-                        className="w-full text-start px-4 py-2 text-xs font-medium text-k-brand dark:text-k-brand hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2 rtl:space-x-reverse"
+                        className="w-full text-start px-4 py-2 text-xs font-medium text-k-brand dark:text-k-brand hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                       >
                         <Send className="w-4 h-4" />
                         <span>{connectingTelegram ? t('loading') : t('telegramConnect')}</span>
@@ -289,7 +308,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                   <div className="border-t border-gray-100 dark:border-gray-800 py-1">
                     {currentUser ? <button
                       onClick={() => { logout(); setShowProfileMenu(false); }}
-                      className="w-full text-start px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center space-x-2 rtl:space-x-reverse"
+                      className="w-full text-start px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>{t('logout')}</span>

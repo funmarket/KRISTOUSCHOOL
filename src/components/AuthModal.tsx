@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Lock, User as UserIcon, Mail, Phone, Shield, Badge } from 'lucide-react';
-import type { SignupRole } from '../lib/auth';
+import type { RegistrationRole } from '../lib/auth';
 import { usernameRuleMessage } from '../i18n/authMessages';
 
 const inputClass = 'w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 ps-10 pe-4 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-white';
-
-type RegistrationRole = Exclude<SignupRole, 'GENERAL_USER'>;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { login, signup, t, dir, language } = useApp();

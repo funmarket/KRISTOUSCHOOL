@@ -11,7 +11,7 @@ export const FoodMenuView: React.FC = () => {
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center space-x-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
             <Utensils className="w-3.5 h-3.5" />
             <span>{t('serviceRestaurant')}</span>
           </div>
@@ -23,7 +23,7 @@ export const FoodMenuView: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-4 py-2 rounded-2xl text-xs font-bold flex items-center space-x-2 rtl:space-x-reverse">
+        <div className="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2">
           <Calendar className="w-4 h-4" />
           <span>{foodMenu.weekRange}</span>
         </div>

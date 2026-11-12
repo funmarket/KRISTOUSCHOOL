@@ -1,0 +1,479 @@
+/* KRISTOU SCHOOL — Role-Aware Homepage Layout & Phone-First Card System */
+
+.kh-role-page {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: 1rem 0.75rem 2.5rem;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+@media (min-width: 640px) {
+  .kh-role-page {
+    padding: 1.5rem 1.25rem 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kh-role-page {
+    padding: 2rem 1.5rem 3.5rem;
+  }
+}
+
+/* Header block */
+.kh-role-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .kh-role-header {
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+  }
+}
+
+.kh-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background-color: #0D8AE8;
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.55rem;
+  box-shadow: 0 2px 6px rgba(13, 138, 232, 0.22);
+}
+
+.kh-role-title {
+  color: #1E3A6D;
+  font-weight: 900;
+  font-size: clamp(1.55rem, 4.8vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pitch-black .kh-role-title {
+  color: #FFFFFF;
+}
+
+.kh-role-subtitle {
+  color: #526581;
+  font-size: clamp(0.875rem, 2.2vw, 1.05rem);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 72ch;
+}
+
+.pitch-black .kh-role-subtitle {
+  color: #A1A1AA;
+}
+
+/* Info panels on Public Home (About KRISTOU / Latest announcement) */
+.kh-info-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .kh-info-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.kh-info-panel {
+  background: #FFFFFF;
+  border: 1px solid #E5EDF7;
+  border-radius: 1.125rem;
+  padding: 1.125rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(18, 42, 84, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.625rem;
+}
+
+.pitch-black .kh-info-panel {
+  background: #0A0A0A;
+  border-color: #242424;
+  box-shadow: none;
+}
+
+.kh-info-panel-title {
+  color: #1E3A6D;
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.pitch-black .kh-info-panel-title {
+  color: #F4F4F5;
+}
+
+.kh-info-panel-body {
+  color: #526581;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.pitch-black .kh-info-panel-body {
+  color: #A1A1AA;
+}
+
+.kh-info-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  background: #E6F3FF;
+  color: #174978;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+}
+
+.pitch-black .kh-info-chip {
+  background: #13283F;
+  color: #7CC4FA;
+}
+
+/* Phone-first responsive card grid */
+.kh-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  width: 100%;
+}
+
+@media (max-width: 339px) {
+  .kh-card-grid {
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 400px) {
+  .kh-card-grid {
+    gap: 0.85rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .kh-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kh-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.2rem;
+  }
+}
+
+/* Individual shortcut card matching the attached reference images */
+.kh-shortcut-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  text-align: start;
+  width: 100%;
+  min-height: 148px;
+  padding: 1rem 0.9rem;
+  border-radius: 1.125rem;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 640px) {
+  .kh-shortcut-card {
+    min-height: 176px;
+    padding: 1.35rem 1.35rem;
+    border-radius: 1.25rem;
+  }
+}
+
+.kh-shortcut-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+  filter: brightness(1.03);
+}
+
+.kh-shortcut-card:active {
+  transform: translateY(0);
+}
+
+.kh-shortcut-card:focus-visible {
+  outline: 3px solid #1E3A6D;
+  outline-offset: 3px;
+}
+
+.pitch-black .kh-shortcut-card:focus-visible {
+  outline: 3px solid #FFFFFF;
+}
+
+/* Decorative translucent corner circle */
+.kh-shortcut-card-circle {
+  position: absolute;
+  top: -18px;
+  inset-inline-end: -18px;
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .kh-shortcut-card-circle {
+    width: 118px;
+    height: 118px;
+    top: -20px;
+    inset-inline-end: -20px;
+  }
+}
+
+/* Icon & white pedestal underline */
+.kh-shortcut-icon-wrap {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.kh-shortcut-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0.28rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+@media (min-width: 640px) {
+  .kh-shortcut-icon {
+    font-size: 2.15rem;
+  }
+}
+
+.kh-shortcut-pedestal {
+  width: 2.6rem;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+@media (min-width: 640px) {
+  .kh-shortcut-pedestal {
+    width: 3.1rem;
+  }
+}
+
+/* Card text block */
+.kh-shortcut-body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kh-shortcut-title {
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: clamp(0.95rem, 2.5vw, 1.3rem);
+  line-height: 1.22;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+  margin: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.kh-shortcut-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.kh-shortcut-action {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: clamp(0.76rem, 1.8vw, 0.88rem);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.kh-shortcut-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: rgba(0, 0, 0, 0.24);
+  color: #FFFFFF;
+  text-decoration: none;
+}
+
+/* Color palette matching the screenshots */
+.kh-tone-blue {
+  background: linear-gradient(145deg, #3999EA 0%, #2B84D4 100%);
+}
+
+.kh-tone-green {
+  background: linear-gradient(145deg, #82BF4B 0%, #6FA939 100%);
+}
+
+.kh-tone-purple {
+  background: linear-gradient(145deg, #8D6AC6 0%, #7B57B5 100%);
+}
+
+.kh-tone-orange {
+  background: linear-gradient(145deg, #F1A050 0%, #E08A38 100%);
+}
+
+.kh-tone-yellow {
+  background: linear-gradient(145deg, #F2B126 0%, #DF9D12 100%);
+}
+
+.kh-tone-teal {
+  background: linear-gradient(145deg, #109A93 0%, #0C827C 100%);
+}
+
+.kh-tone-red {
+  background: linear-gradient(145deg, #ED6064 0%, #DA4B4F 100%);
+}
+
+.kh-tone-slate {
+  background: linear-gradient(145deg, #547BB9 0%, #4267A3 100%);
+}
+
+/* Section grouping */
+.kh-section {
+  margin-top: 1.75rem;
+}
+
+.kh-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+}
+
+.kh-section-title {
+  color: #1E3A6D;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+  margin: 0;
+}
+
+.pitch-black .kh-section-title {
+  color: #F4F4F5;
+}
+
+.kh-section-subtitle {
+  color: #64748B;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.pitch-black .kh-section-subtitle {
+  color: #A1A1AA;
+}
+
+/* Oversight banner (Owner / Delegated Manager) */
+.kh-oversight-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.875rem;
+  background: #FFFBEB;
+  border: 1px solid #F59E0B;
+  color: #92400E;
+}
+
+.pitch-black .kh-oversight-banner {
+  background: #1C1505;
+  border-color: #D97706;
+  color: #FDE68A;
+}
+
+/* Selector pills for child / class / workspace selection */
+.kh-selector-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.kh-selector-pill {
+  min-height: 40px;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E3A6D;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pitch-black .kh-selector-pill {
+  background: #111111;
+  border-color: #27272A;
+  color: #E4E4E7;
+}
+
+.kh-selector-pill-active {
+  background: #1E3A6D;
+  border-color: #1E3A6D;
+  color: #FFFFFF;
+}
+
+.pitch-black .kh-selector-pill-active {
+  background: #0D8AE8;
+  border-color: #0D8AE8;
+  color: #FFFFFF;
+}

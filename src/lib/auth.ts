@@ -15,7 +15,7 @@ export const REGISTRATION_ROLES = [
 ] as const satisfies readonly AccountRole[];
 
 export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
-export type SignupRole = 'GENERAL_USER' | RegistrationRole;
+export type SignupRole = RegistrationRole;
 
 export function isRegistrationRole(value: unknown): value is RegistrationRole {
   return typeof value === 'string' && (REGISTRATION_ROLES as readonly string[]).includes(value);
@@ -149,10 +149,15 @@ export type TelegramAuthResult = { user: User; linked: boolean };
 
 let lastTelegramAuthAttempt: { initData: string; result: Promise<TelegramAuthResult> } | null = null;
 
-export function authenticateTelegramInitData(initData: string): Promise<TelegramAuthResult> {
-  if (lastTelegramAuthAttempt?.initData === initData) return lastTelegramAuthAttempt.result;
+export function authenticateTelegramInitData(
+  initData: string,
+  clientOverride?: { functions: { invoke: (fn: string, opts: any) => Promise<{ data: any; error: any }> } },
+): Promise<TelegramAuthResult> {
+  if (!clientOverride && lastTelegramAuthAttempt?.initData === initData) {
+    return lastTelegramAuthAttempt.result;
+  }
   const result = (async () => {
-    const client = requireSupabaseClient();
+    const client = clientOverride ?? requireSupabaseClient();
     const { data, error } = await client.functions.invoke('telegram-auth', { body: { initData } });
     if (error || !data?.user) throw new Error(data?.error || 'Telegram account is not linked');
 
@@ -166,8 +171,18 @@ export function authenticateTelegramInitData(initData: string): Promise<Telegram
       capabilities?: string[];
       telegramLinked?: boolean;
     };
-    const capabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
-    const roleName = rawUser.role || capabilities.find((role) => role === 'APP_ADMIN') || 'GENERAL_USER';
+    const rawCapabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
+    const candidateRoles = [
+      ...(rawUser.role ? [rawUser.role] : []),
+      ...rawCapabilities,
+    ];
+    const resolvedRole = resolveCanonicalAccountRole(candidateRoles);
+    if (!resolvedRole) {
+      throw new Error('account_not_approved');
+    }
+    const canonicalCapabilities = rawCapabilities.filter((candidate: string) =>
+      Boolean(roleMap[candidate]),
+    );
     return {
       linked: data.linked === true,
       user: {
@@ -176,13 +191,15 @@ export function authenticateTelegramInitData(initData: string): Promise<Telegram
         fullName: rawUser.fullName || rawUser.username,
         email: rawUser.email ?? undefined,
         avatarUrl: rawUser.avatarUrl ?? undefined,
-        role: roleMap[roleName] ?? 'GENERAL_USER',
-        capabilities,
+        role: resolvedRole,
+        capabilities: canonicalCapabilities.length > 0 ? canonicalCapabilities : [resolvedRole],
         telegramLinked: rawUser.telegramLinked ?? true,
       },
     };
   })();
-  lastTelegramAuthAttempt = { initData, result };
+  if (!clientOverride) {
+    lastTelegramAuthAttempt = { initData, result };
+  }
   return result;
 }
 

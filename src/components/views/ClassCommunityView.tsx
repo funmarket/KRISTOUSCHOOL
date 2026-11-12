@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { CommunitySubTab } from '../../types';
 import {
   BookOpen,
   Calendar as CalendarIcon,
@@ -12,7 +13,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-export const ClassCommunityView: React.FC = () => {
+export interface ClassCommunityViewProps {
+  initialSubTab?: CommunitySubTab;
+}
+
+export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
+  initialSubTab = 'announcements',
+}) => {
   const {
     currentUser,
     classesList,
@@ -22,25 +29,37 @@ export const ClassCommunityView: React.FC = () => {
     classQuestions,
     addClassQuestion,
     replyClassQuestion,
+    language,
     t,
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'announcements' | 'homework' | 'calendar' | 'questions' | 'documents'>('announcements');
+  const [activeSubTab, setActiveSubTab] = useState<CommunitySubTab>(initialSubTab);
   const [newQuestionText, setNewQuestionText] = useState('');
   const [questionError, setQuestionError] = useState('');
   const [replyTextMap, setReplyTextMap] = useState<{ [key: string]: string }>({});
 
-  const selectedClass = classesList[0]; // 3ème Année A
+  useEffect(() => {
+    setActiveSubTab(initialSubTab);
+  }, [initialSubTab]);
+
+  const assignedClass =
+    currentUser?.assignedClassIds && currentUser.assignedClassIds.length > 0
+      ? classesList.find((cls) => currentUser.assignedClassIds?.includes(cls.id)) ?? null
+      : null;
 
   const handlePostQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestionText.trim()) return;
+    if (!assignedClass) {
+      setQuestionError(t('error'));
+      return;
+    }
     if (newQuestionText.length > 200) {
       setQuestionError(t('max200'));
       return;
     }
     setQuestionError('');
-    const res = addClassQuestion(selectedClass.id, newQuestionText);
+    const res = addClassQuestion(assignedClass.id, newQuestionText);
     if (res.success) {
       setNewQuestionText('');
     } else {
@@ -61,15 +80,21 @@ export const ClassCommunityView: React.FC = () => {
       {/* Header card */}
       <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-semibold mb-2">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>{t('classActive')}: {selectedClass.name}</span>
+            <span>
+              {assignedClass
+                ? `${t('classActive')}: ${assignedClass.name}`
+                : t('school')}
+            </span>
           </div>
           <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
             {t('classCommunity')}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            {t('teacherLabel')} : {selectedClass.teacherName} • {t('schoolYear')} {selectedClass.academicYear}
+            {assignedClass
+              ? `${t('teacherLabel')} : ${assignedClass.teacherName} • ${t('schoolYear')} ${assignedClass.academicYear}`
+              : `${t('school')} • ${t('tunis')}`}
           </p>
         </div>
 
@@ -98,6 +123,18 @@ export const ClassCommunityView: React.FC = () => {
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeSubTab === 'questions' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
           >
             {t('classQuestions')}
+          </button>
+          <button
+            onClick={() => setActiveSubTab('documents')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeSubTab === 'documents' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
+          >
+            {language === 'ar' ? 'الوثائق' : language === 'fr' ? 'Documents' : 'Documents'}
+          </button>
+          <button
+            onClick={() => setActiveSubTab('gallery')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeSubTab === 'gallery' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs' : 'text-gray-600 dark:text-gray-400'}`}
+          >
+            {language === 'ar' ? 'المعرض' : language === 'fr' ? 'Galerie' : 'Gallery'}
           </button>
         </div>
       </div>
@@ -140,17 +177,17 @@ export const ClassCommunityView: React.FC = () => {
       {activeSubTab === 'calendar' && (
         <div className="space-y-4">
           {calendarEvents.map(ev => (
-            <div key={ev.id} className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-center justify-between">
-              <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm">
+            <div key={ev.id} className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
                   {ev.date.split('-')[2]}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h4 className="font-bold text-sm text-gray-900 dark:text-white">{ev.title}</h4>
                   <p className="text-xs text-gray-500 mt-0.5">{ev.description}</p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-xl uppercase">
+              <span className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-xl uppercase shrink-0">
                 {ev.category}
               </span>
             </div>
@@ -188,7 +225,7 @@ export const ClassCommunityView: React.FC = () => {
                 </span>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 rtl:space-x-reverse"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{t('publish')}</span>
@@ -201,8 +238,8 @@ export const ClassCommunityView: React.FC = () => {
             {classQuestions.map(q => (
               <div key={q.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                       {q.studentName.charAt(0)}
                     </div>
                     <div>
@@ -218,7 +255,7 @@ export const ClassCommunityView: React.FC = () => {
 
                 {/* Replies */}
                 {q.replies && q.replies.length > 0 && (
-                  <div className="space-y-2 ps-4 rtl:ps-0 rtl:pe-4 border-s-2 rtl:border-s-0 rtl:border-e-2 border-blue-500">
+                  <div className="space-y-2 ps-4 border-s-2 border-blue-500">
                     {q.replies.map(r => (
                       <div key={r.id} className="bg-gray-50 dark:bg-gray-900/60 p-3 rounded-2xl text-xs space-y-1">
                         <div className="font-bold text-[11px] text-blue-600 dark:text-blue-400">{r.authorName}</div>
@@ -229,7 +266,7 @@ export const ClassCommunityView: React.FC = () => {
                 )}
 
                 {/* Reply Form */}
-                <div className="flex items-center space-x-2 rtl:space-x-reverse pt-2">
+                <div className="flex items-center gap-2 pt-2">
                   <input
                     type="text"
                     value={replyTextMap[q.id] || ''}
@@ -247,6 +284,55 @@ export const ClassCommunityView: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'documents' && (
+        <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
+            <FileText className="w-4 h-4" />
+            <span>
+              {language === 'ar'
+                ? `وثائق ومطبوعات القسم${assignedClass ? ` (${assignedClass.name})` : ''}`
+                : language === 'fr'
+                ? `Documents pédagogiques de la classe${assignedClass ? ` (${assignedClass.name})` : ''}`
+                : `Class Documents & Learning Materials${assignedClass ? ` (${assignedClass.name})` : ''}`}
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            {language === 'ar'
+              ? 'تُعرض هنا الوثائق البيداغوجية والمطبوعات المعتمدة الخاصة بالقسم الدراسي.'
+              : language === 'fr'
+              ? 'Les fiches de révision, supports de cours et documents officiels de la classe sont publiés ici par l’enseignant.'
+              : 'Approved worksheets, study guides, and class documents shared by your teacher appear in this space.'}
+          </p>
+        </div>
+      )}
+
+      {activeSubTab === 'gallery' && (
+        <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
+            <ImageIcon className="w-4 h-4" />
+            <span>
+              {language === 'ar'
+                ? 'معرض أنشطة القسم والمدرسة'
+                : language === 'fr'
+                ? 'Galerie des activités scolaires'
+                : 'Class & School Activity Gallery'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {['/kristou-2026-01.jpg', '/kristou-2026-02.jpg', '/kristou-2026-03.jpg'].map(
+              (src) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt="KRISTOU activity"
+                  className="rounded-2xl object-cover aspect-[4/3] w-full border border-gray-200 dark:border-gray-800"
+                />
+              ),
+            )}
           </div>
         </div>
       )}

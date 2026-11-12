@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
+  AccountRole,
   User,
-  UserRole,
   Language,
   ThemeMode,
   Child,
@@ -18,16 +18,12 @@ import {
   AdminDirectoryMember,
 } from '../types';
 import {
-  MOCK_USERS,
-  MOCK_CHILDREN,
-  MOCK_CLASSES,
   MOCK_ANNOUNCEMENTS,
   MOCK_HOMEWORK,
   MOCK_CALENDAR,
   MOCK_QUESTIONS,
   MOCK_PARENT_NOTES,
   MOCK_MESSAGES,
-  MOCK_PICKUP_RECORDS,
   MOCK_FOOD_MENU,
   MOCK_TEACHERS,
   MOCK_ADMIN,
@@ -49,8 +45,7 @@ interface NotificationItem {
 
 interface AppContextType {
   currentUser: User | null;
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
+  currentRole: AccountRole | null;
   language: Language;
   setLanguage: (lang: Language) => void;
   theme: ThemeMode;
@@ -83,8 +78,8 @@ interface AppContextType {
   addParentNote: (childId: string, topic: ParentNote['topic'], content: string, teacherId?: string) => { success: boolean; error?: string };
   addClassQuestion: (classId: string, content: string) => { success: boolean; error?: string };
   replyClassQuestion: (questionId: string, content: string) => void;
-  markPickupArrived: (childId: string) => void;
-  confirmPickupRelease: (recordId: string) => void;
+  markPickupArrived: (childId: string) => { success: boolean; error?: string };
+  confirmPickupRelease: (recordId: string) => { success: boolean; error?: string };
   markNotificationRead: (id: string) => void;
   notificationSound: string;
   setNotificationSound: (sound: string) => void;
@@ -95,7 +90,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const telegramIdentityUser = useRef<User | null>(null);
-  const [currentRole, setCurrentRoleState] = useState<UserRole>('GENERAL_USER');
+  const [currentRole, setCurrentRoleState] = useState<AccountRole | null>(null);
   const [language, setLanguageState] = useState<Language>(() => {
     return (localStorage.getItem('kristou_lang') as Language) || 'fr';
   });
@@ -105,15 +100,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notificationSound, setNotificationSound] = useState<string>('Kristou Bell');
   const [telegramLinkNotice, setTelegramLinkNotice] = useState<'success' | 'error' | null>(null);
 
-  const [childrenList] = useState<Child[]>(MOCK_CHILDREN);
-  const [classesList] = useState<ClassItem[]>(MOCK_CLASSES);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
+  const [childrenList] = useState<Child[]>([]);
+  const [classesList] = useState<ClassItem[]>([]);
+  const [announcements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
   const [homeworkList] = useState<Homework[]>(MOCK_HOMEWORK);
   const [calendarEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR);
   const [classQuestions, setClassQuestions] = useState<ClassQuestion[]>(MOCK_QUESTIONS);
   const [parentNotes, setParentNotes] = useState<ParentNote[]>(MOCK_PARENT_NOTES);
   const [messages] = useState<MessageThread[]>(MOCK_MESSAGES);
-  const [pickupRecords, setPickupRecords] = useState<PickupRecord[]>(MOCK_PICKUP_RECORDS);
+  const [pickupRecords] = useState<PickupRecord[]>([]);
   const [foodMenu] = useState<FoodMenuWeek>(MOCK_FOOD_MENU);
   const [teachers] = useState<TeacherDirectoryMember[]>(MOCK_TEACHERS);
   const [admins] = useState<AdminDirectoryMember[]>(MOCK_ADMIN);
@@ -159,7 +154,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentRoleState(user.role);
         if (isLinkAttempt && linked) setTelegramLinkNotice('success');
       })
-      .catch(() => { if (active && isLinkAttempt) setTelegramLinkNotice('error'); });
+      .catch(() => {
+        if (!active) return;
+        telegramIdentityUser.current = null;
+        setCurrentUser(null);
+        setCurrentRoleState(null);
+        if (isLinkAttempt) setTelegramLinkNotice('error');
+      });
     return () => { active = false; };
   }, []);
 
@@ -193,7 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (error instanceof Error && error.message === 'account_not_approved') {
             void signOutAccount();
           }
-          if (active) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); }
+          if (active) { setCurrentUser(null); setCurrentRoleState(null); }
         }
       });
       const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -203,7 +204,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCurrentRoleState(telegramIdentityUser.current.role);
           return;
         }
-        if (!session?.user) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); return; }
+        if (!session?.user) { setCurrentUser(null); setCurrentRoleState(null); return; }
         try {
           const user = await loadCanonicalUser(session.user);
           if (active) { setCurrentUser(user); setCurrentRoleState(user.role); }
@@ -211,31 +212,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (error instanceof Error && error.message === 'account_not_approved') {
             void signOutAccount();
           }
-          if (active) { setCurrentUser(null); setCurrentRoleState('GENERAL_USER'); }
+          if (active) { setCurrentUser(null); setCurrentRoleState(null); }
         }
       });
       return () => listener.subscription.unsubscribe();
     });
     return () => { active = false; };
   }, []);
-
-  const setCurrentRole = (role: UserRole) => {
-    setCurrentRoleState(role);
-    if (role === 'GENERAL_USER') {
-      setCurrentUser(null);
-      return;
-    }
-    const matched = MOCK_USERS.find(u => u.role === role) || {
-      id: `user-${role.toLowerCase()}`,
-      username: `${role.toLowerCase()}_user`,
-      fullName: `Utilisateur ${role}`,
-      role,
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      linkedChildrenIds: role === 'PARENT' ? ['child-1'] : undefined,
-      assignedClassIds: role === 'STUDENT' ? ['class-3a'] : role === 'TEACHER' ? ['class-3a'] : undefined,
-    };
-    setCurrentUser(matched as User);
-  };
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -309,7 +292,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       await signOutAccount();
       setCurrentUser(null);
-      setCurrentRoleState('GENERAL_USER');
+      setCurrentRoleState(null);
       return { success: false, error: error instanceof Error ? error.message : 'Invalid credentials' };
     }
   };
@@ -330,7 +313,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     telegramIdentityUser.current = null;
     void signOutAccount();
     setCurrentUser(null);
-    setCurrentRoleState('GENERAL_USER');
+    setCurrentRoleState(null);
   };
 
   const connectTelegram = async () => {
@@ -417,61 +400,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const markPickupArrived = (childId: string) => {
-    const targetChild = childrenList.find(c => c.id === childId);
-    if (!targetChild) return;
-
-    setPickupRecords(prev => {
-      const existing = prev.find(p => p.childId === childId);
-      if (existing) {
-        return prev.map(p =>
-          p.childId === childId
-            ? { ...p, state: 'PARENT_ARRIVED', parentArrivedAt: new Date().toISOString() }
-            : p
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: `pick-${Date.now()}`,
-            childId,
-            childName: targetChild.fullName,
-            classId: targetChild.classId,
-            className: targetChild.className,
-            state: 'PARENT_ARRIVED',
-            parentArrivedAt: new Date().toISOString(),
-            authorizedPerson: targetChild.pickupAuthorizedNames[0] || 'Parent',
-          },
-        ];
-      }
-    });
-
-    setNotifications(prev => [
-      {
-        id: `n-${Date.now()}`,
-        title: 'Arrivée signalée',
-        message: `Votre arrivée pour ${targetChild.fullName} a été transmise à l'école.`,
-        time: "À l'instant",
-        read: false,
-        type: 'pickup',
-      },
-      ...prev,
-    ]);
+  // Safety lock: Pickup arrival and physical child release require server-verified Supabase persistence
+  // (`pickup_events` + atomic RPCs). Never simulate local arrival or release success in production mode.
+  const markPickupArrived = (_childId: string) => {
+    return {
+      success: false,
+      error: 'pickup_backend_unavailable',
+    };
   };
 
-  const confirmPickupRelease = (recordId: string) => {
-    setPickupRecords(prev =>
-      prev.map(p =>
-        p.id === recordId
-          ? {
-              ...p,
-              state: 'RELEASED',
-              releasedAt: new Date().toISOString(),
-              releasedBy: currentUser?.fullName || 'Enseignant',
-            }
-          : p
-      )
-    );
+  const confirmPickupRelease = (_recordId: string) => {
+    return {
+      success: false,
+      error: 'pickup_backend_unavailable',
+    };
   };
 
   const markNotificationRead = (id: string) => {
@@ -485,7 +427,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         currentRole,
-        setCurrentRole,
         language,
         setLanguage,
         theme,

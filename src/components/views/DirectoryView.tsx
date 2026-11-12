@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { DirectorySubTab } from '../../types';
 import { BookOpen, Shield, Users, Mail, Globe } from 'lucide-react';
 
-export const DirectoryView: React.FC = () => {
+export interface DirectoryViewProps {
+  initialSubTab?: DirectorySubTab;
+}
+
+export const DirectoryView: React.FC<DirectoryViewProps> = ({
+  initialSubTab = 'teachers',
+}) => {
   const { teachers, admins, t } = useApp();
-  const [tab, setTab] = useState<'teachers' | 'admin'>('teachers');
+  const [tab, setTab] = useState<DirectorySubTab>(initialSubTab);
+
+  useEffect(() => {
+    setTab(initialSubTab);
+  }, [initialSubTab]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -39,9 +50,9 @@ export const DirectoryView: React.FC = () => {
       {tab === 'teachers' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {teachers.map(teach => (
-            <div key={teach.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start space-x-4 rtl:space-x-reverse">
+            <div key={teach.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4 sm:gap-5">
               <img src={teach.photoUrl} alt={teach.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-500 shadow-md shrink-0" />
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 flex-1 min-w-0">
                 <h3 className="font-bold text-base text-gray-900 dark:text-white">{teach.name}</h3>
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{teach.title}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{teach.bio}</p>
@@ -59,9 +70,9 @@ export const DirectoryView: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {admins.map(adm => (
-            <div key={adm.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start space-x-4 rtl:space-x-reverse">
+            <div key={adm.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4 sm:gap-5">
               <img src={adm.photoUrl} alt={adm.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500 shadow-md shrink-0" />
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 flex-1 min-w-0">
                 <h3 className="font-bold text-base text-gray-900 dark:text-white">{adm.name}</h3>
                 <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{adm.title}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{adm.bio}</p>

@@ -6,7 +6,12 @@ import { ParentNote } from '../../types';
 export const ParentNotesView: React.FC = () => {
   const { currentUser, childrenList, parentNotes, addParentNote, t } = useApp();
 
-  const [selectedChildId, setSelectedChildId] = useState(childrenList[0]?.id || '');
+  const linkedChildren =
+    currentUser?.linkedChildrenIds && currentUser.linkedChildrenIds.length > 0
+      ? childrenList.filter((c) => currentUser.linkedChildrenIds?.includes(c.id))
+      : [];
+
+  const [selectedChildId, setSelectedChildId] = useState(linkedChildren[0]?.id || '');
   const [topic, setTopic] = useState<ParentNote['topic']>('ABSENCE');
   const [content, setContent] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -20,7 +25,7 @@ export const ParentNotesView: React.FC = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!content.trim()) {
+    if (!selectedChildId || !content.trim()) {
       setErrorMsg(t('error'));
       return;
     }
@@ -48,8 +53,8 @@ export const ParentNotesView: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 px-4 py-2 rounded-2xl flex items-center space-x-3 rtl:space-x-reverse">
-          <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 px-4 py-2 rounded-2xl flex items-center gap-3">
+          <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
           <div>
             <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">{t('dailyQuota')}</div>
             <div className="text-sm font-bold text-gray-900 dark:text-white">{remainingQuota} / 11 {t('notesRemaining')}</div>
@@ -68,14 +73,14 @@ export const ParentNotesView: React.FC = () => {
           </p>
 
           {errorMsg && (
-            <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl font-medium flex items-center space-x-2">
+            <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl font-medium flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-xl font-medium flex items-center space-x-2">
+            <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-xl font-medium flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -87,13 +92,18 @@ export const ParentNotesView: React.FC = () => {
               <select
                 value={selectedChildId}
                 onChange={e => setSelectedChildId(e.target.value)}
+                disabled={linkedChildren.length === 0}
                 className="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white"
               >
-                {childrenList.map(child => (
-                  <option key={child.id} value={child.id}>
-                    {child.fullName} ({child.className})
-                  </option>
-                ))}
+                {linkedChildren.length === 0 ? (
+                  <option value="">—</option>
+                ) : (
+                  linkedChildren.map(child => (
+                    <option key={child.id} value={child.id}>
+                      {child.fullName} ({child.className})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -120,7 +130,7 @@ export const ParentNotesView: React.FC = () => {
                 onChange={e => setContent(e.target.value)}
                 rows={4}
                 placeholder={t('notePlaceholder')}
-                className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -146,7 +156,7 @@ export const ParentNotesView: React.FC = () => {
               userNotes.map(n => (
                 <div key={n.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <div className="flex items-center gap-2">
                       <span className="px-2.5 py-1 bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 font-bold text-[10px] rounded-xl uppercase">
                         {n.topic}
                       </span>
