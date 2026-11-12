@@ -15,8 +15,8 @@ const roleMap: Record<string, UserRole> = {
   ADMINISTRATIVE_PERSONNEL: 'ADMINISTRATIVE_PERSONNEL',
   MANAGER: 'MANAGER',
   PRINCIPAL: 'MANAGER',
-  EMPLOYEE: 'MANAGER',
-  APP_ADMIN: 'ADMIN',
+  EMPLOYEE: 'SCHOOL_STAFF',
+  APP_ADMIN: 'APP_ADMIN',
 };
 
 export function isPhoneIdentifier(value: string) {
