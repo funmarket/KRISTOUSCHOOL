@@ -698,3 +698,507 @@ test('9. Prepared SQL migration preserves 7-role model, avoids unsupported Postg
   assert.equal(/add\s+constraint\s+profiles_username_format/i.test(executableSql), true);
 });
 
+test('10. [Group A] Shared username validation and normalization contract (Frontend + Edge Function + SQL Migration whitelist parity)', async () => {
+  const fs = await import('node:fs/promises');
+  const Module = await import('node:module');
+
+  Module.default.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier === 'https://esm.sh/@supabase/supabase-js@2') {
+        return {
+          url: 'data:text/javascript,export const createClient = (...args) => globalThis.__KRISTOU_TEST_CREATE_CLIENT__?.(...args);',
+          shortCircuit: true,
+        };
+      }
+      return nextResolve(specifier, context);
+    },
+  });
+
+  const edgeMod = await import('../supabase/functions/auth-username-signin/index.ts');
+  const sql = await fs.readFile(
+    new URL('../supabase/migrations/20261113120000_human_friendly_usernames.sql', import.meta.url),
+    'utf8',
+  );
+  const executableSql = sql
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('--'))
+    .join('\n');
+
+  const sharedValidUsernames = [
+    'mohamed',
+    'Mohamed',
+    'Mohamed Ben Ali',
+    'Sarra Ben Amor',
+    'Fatma-Zahra',
+    'Ahmed_2026',
+    'Élodie',
+    'Amélie Martin',
+    'محمد',
+    'محمد علي',
+    'فاطمة الزهراء',
+    'أمينة بن عمر',
+  ];
+
+  const sharedInvalidUsernames = [
+    '',
+    '   ',
+    'ab',
+    'a'.repeat(51),
+    'parent@example.com',
+    '+21620123456',
+    '20 123 456',
+    'abc😀',
+    'abc§',
+    'abc--def',
+    '.abc',
+    'abc.',
+    'abc\u200Bdef',
+    'abc\u202Edef',
+  ];
+
+  for (const validName of sharedValidUsernames) {
+    assert.equal(
+      usernameModule.isValidUsername(validName),
+      true,
+      `Frontend validateUsername must accept "${validName}"`,
+    );
+    assert.equal(
+      edgeMod.isValidUsername(validName),
+      true,
+      `Edge Function isValidUsername must accept "${validName}"`,
+    );
+  }
+
+  for (const invalidName of sharedInvalidUsernames) {
+    assert.equal(
+      usernameModule.isValidUsername(invalidName),
+      false,
+      `Frontend validateUsername must reject ${JSON.stringify(invalidName)}`,
+    );
+    assert.equal(
+      edgeMod.isValidUsername(invalidName),
+      false,
+      `Edge Function isValidUsername must reject ${JSON.stringify(invalidName)}`,
+    );
+  }
+
+  // Normalization cases across Frontend and Edge Function
+  for (const [raw, expectedDisplay, expectedKey] of [
+    ['  Mohamed   Ben  Ali  ', 'Mohamed Ben Ali', 'mohamed ben ali'],
+    ['Élodie'.normalize('NFD'), 'Élodie'.normalize('NFC'), 'élodie'.normalize('NFC')],
+    ['  فاطمة   الزهراء ', 'فاطمة الزهراء', 'فاطمة الزهراء'],
+  ]) {
+    assert.equal(usernameModule.normalizeUsernameDisplay(raw), expectedDisplay);
+    assert.equal(edgeMod.normalizeUsernameDisplay(raw), expectedDisplay);
+    assert.equal(usernameModule.normalizeUsernameKey(raw), expectedKey);
+    assert.equal(edgeMod.normalizeUsernameKey(raw), expectedKey);
+  }
+
+  // SQL migration must NOT use the permissive translate(...) blacklist that accepts emoji (abc😀) and symbols (abc§);
+  // it must define explicit code-point whitelist helpers with zero \p{...} escapes and zero locale-dependent POSIX classes.
+  assert.equal(
+    /length\s*\(\s*translate\s*\(\s*input/i.test(executableSql),
+    false,
+    'SQL migration must not use a permissive translate(...) character blacklist that allows emoji (abc😀) and symbols (abc§)',
+  );
+  assert.equal(
+    /\[\[:space:\]\]|\[\[:cntrl:\]\]|\[\[:alpha:\]\]|\[\[:alnum:\]\]/i.test(executableSql),
+    false,
+    'SQL migration must not depend on locale-sensitive POSIX character classes',
+  );
+  assert.equal(
+    /create\s+or\s+replace\s+function\s+public\.is_username_letter_or_digit_codepoint/i.test(executableSql),
+    true,
+    'SQL migration must define explicit code-point whitelist helper public.is_username_letter_or_digit_codepoint(integer)',
+  );
+  assert.equal(
+    /create\s+or\s+replace\s+function\s+public\.is_username_mark_codepoint/i.test(executableSql),
+    true,
+    'SQL migration must define explicit code-point whitelist helper public.is_username_mark_codepoint(integer)',
+  );
+});
+
+test('11. [Group B] auth-username-signin Edge Function request/response classification (all 10 required scenarios)', async () => {
+  const Module = await import('node:module');
+
+  let mockEnv = {
+    SUPABASE_URL: 'https://kristou.supabase.co',
+    SUPABASE_ANON_KEY: 'anon-key-test',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-test',
+  };
+  let createClientHandler = null;
+  let capturedDenoHandler = null;
+
+  globalThis.Deno = {
+    env: {
+      get: (key) => mockEnv[key],
+    },
+    serve: (handler) => {
+      capturedDenoHandler = handler;
+    },
+  };
+
+  globalThis.__KRISTOU_TEST_CREATE_CLIENT__ = (...args) => {
+    if (!createClientHandler) {
+      throw new Error('Unexpected createClient call without handler');
+    }
+    return createClientHandler(...args);
+  };
+
+  Module.default.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier === 'https://esm.sh/@supabase/supabase-js@2') {
+        return {
+          url: 'data:text/javascript,export const createClient = (...args) => globalThis.__KRISTOU_TEST_CREATE_CLIENT__(...args);',
+          shortCircuit: true,
+        };
+      }
+      return nextResolve(specifier, context);
+    },
+  });
+
+  const edgeMod = await import('../supabase/functions/auth-username-signin/index.ts');
+  const handler = edgeMod.handleUsernameSignIn ?? capturedDenoHandler;
+  assert.equal(typeof handler, 'function', 'Edge Function handler must be callable');
+
+  const invokeEdge = async (bodyOrRaw, isRaw = false) => {
+    const req = new Request('https://kristou.supabase.co/functions/v1/auth-username-signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: isRaw ? bodyOrRaw : JSON.stringify(bodyOrRaw),
+    });
+    const res = await handler(req);
+    const json = await res.json();
+    return { status: res.status, body: json };
+  };
+
+  // 1. Missing username in profiles -> 401 { error: 'invalid_credentials' }
+  createClientHandler = () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+        }),
+      }),
+    }),
+  });
+  const res1 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'WrongOrRightPassword!' });
+  assert.equal(res1.status, 401);
+  assert.deepEqual(res1.body, { error: 'invalid_credentials' });
+
+  // 2. Wrong password for existing username -> 401 { error: 'invalid_credentials' }
+  createClientHandler = (_url, key) => {
+    if (key === 'service-role-key-test') {
+      return {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+    return {
+      auth: {
+        signInWithPassword: async () => ({
+          data: { session: null, user: null },
+          error: { code: 'invalid_credentials', message: 'Invalid login credentials', status: 400 },
+        }),
+      },
+    };
+  };
+  const res2 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'WrongPassword!' });
+  assert.equal(res2.status, 401);
+  assert.deepEqual(res2.body, { error: 'invalid_credentials' });
+  // Non-enumeration check: missing username and wrong password return identical status and body
+  assert.equal(res1.status, res2.status);
+  assert.deepEqual(res1.body, res2.body);
+
+  // 3. Valid username and password -> 200 { session, user }
+  const mockSession = { access_token: 'jwt-valid', refresh_token: 'ref-valid' };
+  const mockUser = { id: 'user-1', email: 'mohamed@example.com' };
+  createClientHandler = (_url, key) => {
+    if (key === 'service-role-key-test') {
+      return {
+        from: () => ({
+          select: () => ({
+            eq: (col, val) => {
+              assert.equal(col, 'username_normalized');
+              assert.equal(val, 'mohamed ben ali');
+              return {
+                maybeSingle: async () => ({
+                  data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                  error: null,
+                }),
+              };
+            },
+          }),
+        }),
+      };
+    }
+    return {
+      auth: {
+        signInWithPassword: async (creds) => {
+          assert.deepEqual(creds, { email: 'mohamed@example.com', password: 'CorrectPassword!' });
+          return { data: { session: mockSession, user: mockUser }, error: null };
+        },
+      },
+    };
+  };
+  const res3 = await invokeEdge({ username: '  Mohamed   Ben Ali  ', password: 'CorrectPassword!' });
+  assert.equal(res3.status, 200);
+  assert.deepEqual(res3.body, { session: mockSession, user: mockUser });
+
+  // 4. Missing backend configuration -> 503 { error: 'auth_unavailable' }
+  mockEnv = { SUPABASE_URL: '', SUPABASE_ANON_KEY: '', SUPABASE_SERVICE_ROLE_KEY: '' };
+  const res4 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(res4.status, 503);
+  assert.deepEqual(res4.body, { error: 'auth_unavailable' });
+  mockEnv = {
+    SUPABASE_URL: 'https://kristou.supabase.co',
+    SUPABASE_ANON_KEY: 'anon-key-test',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-test',
+  };
+
+  // 5. Database profile lookup failure -> 503 { error: 'auth_unavailable' }
+  createClientHandler = () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: null,
+            error: { message: 'connection refused', code: '08006' },
+          }),
+        }),
+      }),
+    }),
+  });
+  const res5 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(res5.status, 503);
+  assert.deepEqual(res5.body, { error: 'auth_unavailable' });
+
+  // 6. Supabase Auth provider service failure (non-credential error) -> 503 { error: 'auth_unavailable' }
+  createClientHandler = (_url, key) => {
+    if (key === 'service-role-key-test') {
+      return {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+    return {
+      auth: {
+        signInWithPassword: async () => ({
+          data: { session: null, user: null },
+          error: { code: 'unexpected_failure', message: 'Database error querying schema', status: 500 },
+        }),
+      },
+    };
+  };
+  const res6 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(
+    res6.status,
+    503,
+    `Expected 503 auth_unavailable on provider 500 failure, got ${res6.status} ${JSON.stringify(res6.body)}`,
+  );
+  assert.deepEqual(res6.body, { error: 'auth_unavailable' });
+
+  // 7. Unexpected thrown runtime exception -> 503 { error: 'auth_unavailable' }
+  createClientHandler = () => {
+    throw new Error('Unexpected runtime crash inside client initialization');
+  };
+  const res7 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(
+    res7.status,
+    503,
+    `Expected 503 auth_unavailable on thrown runtime exception, got ${res7.status} ${JSON.stringify(res7.body)}`,
+  );
+  assert.deepEqual(res7.body, { error: 'auth_unavailable' });
+
+  // 8. Malformed request JSON -> 400 { error: 'invalid_request' } (never 401 invalid_credentials)
+  const res8 = await invokeEdge('{malformed-json', true);
+  assert.equal(
+    res8.status,
+    400,
+    `Expected 400 invalid_request on malformed JSON, got ${res8.status} ${JSON.stringify(res8.body)}`,
+  );
+  assert.deepEqual(res8.body, { error: 'invalid_request' });
+
+  // 9. Contact-verification errors (email_not_confirmed / phone_not_confirmed) -> 403 { error: code }
+  createClientHandler = (_url, key) => {
+    if (key === 'service-role-key-test') {
+      return {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+    return {
+      auth: {
+        signInWithPassword: async () => ({
+          data: { session: null, user: null },
+          error: { code: 'email_not_confirmed', message: 'Email not confirmed', status: 400 },
+        }),
+      },
+    };
+  };
+  const res9 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(res9.status, 403);
+  assert.deepEqual(res9.body, { error: 'email_not_confirmed' });
+
+  // 10. Failed session creation (no error returned, but session/user missing) -> 503 { error: 'auth_unavailable' }
+  createClientHandler = (_url, key) => {
+    if (key === 'service-role-key-test') {
+      return {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+    return {
+      auth: {
+        signInWithPassword: async () => ({
+          data: { session: null, user: null },
+          error: null,
+        }),
+      },
+    };
+  };
+  const res10 = await invokeEdge({ username: 'Mohamed Ben Ali', password: 'CorrectPassword!' });
+  assert.equal(
+    res10.status,
+    503,
+    `Expected 503 auth_unavailable when provider returns neither error nor session, got ${res10.status} ${JSON.stringify(res10.body)}`,
+  );
+  assert.deepEqual(res10.body, { error: 'auth_unavailable' });
+});
+
+test('12. [AUTH-ID-01-SAFETY-FIX-02] 5xx or non-client-status provider errors never misclassify as 401 invalid_credentials regardless of code or message', async () => {
+  const Module = await import('node:module');
+
+  const mockEnv = {
+    SUPABASE_URL: 'https://kristou.supabase.co',
+    SUPABASE_ANON_KEY: 'anon-key-test',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-test',
+  };
+  let createClientHandler = null;
+  let capturedDenoHandler = null;
+
+  globalThis.Deno = {
+    env: {
+      get: (key) => mockEnv[key],
+    },
+    serve: (handler) => {
+      capturedDenoHandler = handler;
+    },
+  };
+
+  globalThis.__KRISTOU_TEST_CREATE_CLIENT__ = (...args) => {
+    if (!createClientHandler) {
+      throw new Error('Unexpected createClient call without handler');
+    }
+    return createClientHandler(...args);
+  };
+
+  Module.default.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier === 'https://esm.sh/@supabase/supabase-js@2') {
+        return {
+          url: 'data:text/javascript,export const createClient = (...args) => globalThis.__KRISTOU_TEST_CREATE_CLIENT__(...args);',
+          shortCircuit: true,
+        };
+      }
+      return nextResolve(specifier, context);
+    },
+  });
+
+  const edgeMod = await import('../supabase/functions/auth-username-signin/index.ts');
+  const handler = edgeMod.handleUsernameSignIn ?? capturedDenoHandler;
+
+  const invokeWithProviderError = async (providerError) => {
+    createClientHandler = (_url, key) => {
+      if (key === 'service-role-key-test') {
+        return {
+          from: () => ({
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { id: 'user-1', email: 'mohamed@example.com', phone: null },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        auth: {
+          signInWithPassword: async () => ({
+            data: { session: null, user: null },
+            error: providerError,
+          }),
+        },
+      };
+    };
+
+    const req = new Request('https://kristou.supabase.co/functions/v1/auth-username-signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Mohamed Ben Ali', password: 'SomePassword123!' }),
+    });
+    const res = await handler(req);
+    const body = await res.json();
+    return { status: res.status, body };
+  };
+
+  // Reproduced failure 1: {code:"unexpected_failure", message:"Invalid credentials", status:500}
+  const caseA = await invokeWithProviderError({
+    code: 'unexpected_failure',
+    message: 'Invalid credentials',
+    status: 500,
+  });
+
+  // Reproduced failure 2: {code:"invalid_credentials", message:"Database unavailable", status:503}
+  const caseB = await invokeWithProviderError({
+    code: 'invalid_credentials',
+    message: 'Database unavailable',
+    status: 503,
+  });
+
+  assert.deepEqual(
+    { caseA, caseB },
+    {
+      caseA: { status: 503, body: { error: 'auth_unavailable' } },
+      caseB: { status: 503, body: { error: 'auth_unavailable' } },
+    },
+    `Both 5xx provider errors must return 503 auth_unavailable; got caseA=${JSON.stringify(caseA)}, caseB=${JSON.stringify(caseB)}`,
+  );
+});
+
+
+

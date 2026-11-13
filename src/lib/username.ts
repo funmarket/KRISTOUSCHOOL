@@ -16,25 +16,83 @@ export interface UsernameValidationResult {
 }
 
 const CONTROL_OR_INVISIBLE_PATTERN = /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\r\n\u2028\u2029]/u;
-const ALLOWED_USERNAME_CHARS_PATTERN = /^[\p{L}\p{M}\p{Nd} ._-]+$/u;
-const VALID_START_PATTERN = /^[\p{L}\p{Nd}]/u;
-const VALID_END_PATTERN = /[\p{L}\p{M}\p{Nd}]$/u;
 const CONSECUTIVE_PUNCTUATION_PATTERN = /[._-]{2,}/;
 const PHONE_LIKE_CHARS_ONLY_PATTERN = /^[+\d\s().-]+$/u;
 
 /**
+ * Shared Unicode code-point whitelist contract (aligned with PostgreSQL
+ * public.is_username_letter_or_digit_codepoint and Edge Function validation):
+ * - ASCII digits (U+0030..U+0039), uppercase (U+0041..U+005A), lowercase (U+0061..U+007A)
+ * - Latin-1 letters (U+00C0..U+00D6, U+00D8..U+00F6, U+00F8..U+00FF; excludes §, ×, ÷)
+ * - Latin Extended-A/B (U+0100..U+024F) and Latin Extended Additional (U+1E00..U+1EFF)
+ * - Arabic letters (U+0621..U+063A, U+0641..U+064A, U+066E..U+066F, U+0671..U+06D3, U+06D5, U+06FA..U+06FC, U+06FF)
+ * - Arabic-Indic digits (U+0660..U+0669) and Extended Arabic-Indic digits (U+06F0..U+06F9)
+ */
+export function isUsernameLetterOrDigitCodePoint(cp: number): boolean {
+  return (
+    (cp >= 0x0030 && cp <= 0x0039) ||
+    (cp >= 0x0041 && cp <= 0x005a) ||
+    (cp >= 0x0061 && cp <= 0x007a) ||
+    (cp >= 0x00c0 && cp <= 0x00d6) ||
+    (cp >= 0x00d8 && cp <= 0x00f6) ||
+    (cp >= 0x00f8 && cp <= 0x00ff) ||
+    (cp >= 0x0100 && cp <= 0x024f) ||
+    (cp >= 0x1e00 && cp <= 0x1eff) ||
+    (cp >= 0x0621 && cp <= 0x063a) ||
+    (cp >= 0x0641 && cp <= 0x064a) ||
+    (cp >= 0x0660 && cp <= 0x0669) ||
+    (cp >= 0x066e && cp <= 0x066f) ||
+    (cp >= 0x0671 && cp <= 0x06d3) ||
+    cp === 0x06d5 ||
+    (cp >= 0x06f0 && cp <= 0x06f9) ||
+    (cp >= 0x06fa && cp <= 0x06fc) ||
+    cp === 0x06ff
+  );
+}
+
+/**
+ * Shared Unicode combining-mark whitelist (aligned with PostgreSQL
+ * public.is_username_mark_codepoint):
+ * - Combining Diacritical Marks (U+0300..U+036F)
+ * - Arabic Harakat / Tashkeel combining marks (U+064B..U+065F, U+0670)
+ */
+export function isUsernameMarkCodePoint(cp: number): boolean {
+  return (
+    (cp >= 0x0300 && cp <= 0x036f) ||
+    (cp >= 0x064b && cp <= 0x065f) ||
+    cp === 0x0670
+  );
+}
+
+/**
+ * Allowed internal separators: space (U+0020), hyphen-minus (U+002D),
+ * full stop (U+002E), low line (U+005F).
+ */
+export function isUsernameSeparatorCodePoint(cp: number): boolean {
+  return cp === 0x0020 || cp === 0x002d || cp === 0x002e || cp === 0x005f;
+}
+
+export function isAllowedUsernameCodePoint(cp: number): boolean {
+  return (
+    isUsernameLetterOrDigitCodePoint(cp) ||
+    isUsernameMarkCodePoint(cp) ||
+    isUsernameSeparatorCodePoint(cp)
+  );
+}
+
+/**
  * Normalizes a human-readable username for display:
  * - Applies Unicode NFC normalization
- * - Trims leading and trailing whitespace
- * - Collapses repeated internal spaces into a single space
+ * - Trims leading and trailing ASCII spaces (U+0020)
+ * - Collapses repeated internal ASCII spaces into a single space
  * - Preserves original letter casing, Arabic script, and French accents
  */
 export function normalizeUsernameDisplay(value: string): string {
   if (typeof value !== 'string') return '';
   return value
     .normalize('NFC')
-    .replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, '')
-    .replace(/[\s\u00A0]+/g, ' ');
+    .replace(/^ +| +$/g, '')
+    .replace(/ {2,}/g, ' ');
 }
 
 /**
@@ -105,7 +163,8 @@ export function validateUsername(value: string): UsernameValidationResult {
     return { valid: false, reason: 'empty' };
   }
 
-  const codePointLength = [...display].length;
+  const codePoints = Array.from(display, (ch) => ch.codePointAt(0)!);
+  const codePointLength = codePoints.length;
   if (codePointLength < 3) {
     return { valid: false, reason: 'too_short' };
   }
@@ -121,14 +180,26 @@ export function validateUsername(value: string): UsernameValidationResult {
     return { valid: false, reason: 'looks_like_phone' };
   }
 
-  if (!ALLOWED_USERNAME_CHARS_PATTERN.test(display)) {
-    return { valid: false, reason: 'invalid_characters' };
+  for (let i = 0; i < codePoints.length; i++) {
+    const cp = codePoints[i];
+    if (!isAllowedUsernameCodePoint(cp)) {
+      return { valid: false, reason: 'invalid_characters' };
+    }
+    if (isUsernameMarkCodePoint(cp)) {
+      const prev = i > 0 ? codePoints[i - 1] : -1;
+      if (!isUsernameLetterOrDigitCodePoint(prev) && !isUsernameMarkCodePoint(prev)) {
+        return { valid: false, reason: 'invalid_characters' };
+      }
+    }
   }
 
+  const firstCp = codePoints[0];
+  const lastCp = codePoints[codePoints.length - 1];
   if (
-    !VALID_START_PATTERN.test(display) ||
-    !VALID_END_PATTERN.test(display) ||
-    CONSECUTIVE_PUNCTUATION_PATTERN.test(display)
+    !isUsernameLetterOrDigitCodePoint(firstCp) ||
+    (!isUsernameLetterOrDigitCodePoint(lastCp) && !isUsernameMarkCodePoint(lastCp)) ||
+    CONSECUTIVE_PUNCTUATION_PATTERN.test(display) ||
+    display.includes('  ')
   ) {
     return { valid: false, reason: 'invalid_boundaries' };
   }
@@ -143,4 +214,5 @@ export function validateUsername(value: string): UsernameValidationResult {
 export function isValidUsername(value: string): boolean {
   return validateUsername(value).valid;
 }
+
 
