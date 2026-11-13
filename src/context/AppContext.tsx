@@ -29,7 +29,14 @@ import {
   MOCK_ADMIN,
 } from '../data/mockData';
 import { translations, type TranslationKey } from '../i18n/translations';
-import { usernameRuleMessage, usernameUnavailableMessage } from '../i18n/authMessages';
+import {
+  classifySignInError,
+  classifySignUpError,
+  resolveSignInErrorMessage,
+  resolveSignUpErrorMessage,
+  type SignInErrorCode,
+  type SignUpErrorCode,
+} from '../i18n/authMessages';
 import { contentT } from '../i18n/content';
 import { loadCanonicalUser, signInAccount, signOutAccount, signUpAccount, createTelegramLinkChallenge, authenticateTelegramInitData, type SignupRole } from '../lib/auth';
 import { getTelegramWebAppInitData, initializeTelegramWebApp } from '../lib/telegram';
@@ -69,8 +76,8 @@ interface AppContextType {
   notifications: NotificationItem[];
 
   // Actions
-  login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => Promise<{ success: boolean; confirmationRequired?: boolean; error?: string }>;
+  login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string; errorCode?: SignInErrorCode }>;
+  signup: (input: { username?: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => Promise<{ success: boolean; confirmationRequired?: boolean; secondaryPhoneVerificationRequired?: boolean; error?: string; errorCode?: SignUpErrorCode }>;
   logout: () => void;
   connectTelegram: () => Promise<{ linkUrl?: string; error?: string }>;
   telegramLinkNotice: 'success' | 'error' | null;
@@ -293,19 +300,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await signOutAccount();
       setCurrentUser(null);
       setCurrentRoleState(null);
-      return { success: false, error: error instanceof Error ? error.message : 'Invalid credentials' };
+      const errorCode = classifySignInError(error);
+      return {
+        success: false,
+        errorCode,
+        error: resolveSignInErrorMessage(language, errorCode),
+      };
     }
   };
 
-  const signup = async (input: { username: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => {
+  const signup = async (input: { username?: string; password: string; email?: string; phone?: string; fullName: string; requestedRole: SignupRole; staffId?: string; admissionId?: string }) => {
     try {
       const data = await signUpAccount(input);
-      return { success: true, confirmationRequired: !data.session };
+      return {
+        success: true,
+        confirmationRequired: !data.session,
+        secondaryPhoneVerificationRequired: Boolean(data.secondaryPhoneVerificationRequired),
+      };
     } catch (error) {
-      const code = error instanceof Error ? error.message : '';
-      if (code === 'invalid_username_format') return { success: false, error: usernameRuleMessage(language) };
-      if (code === 'username_unavailable_or_invalid') return { success: false, error: usernameUnavailableMessage(language) };
-      return { success: false, error: code || 'Unable to create account' };
+      const errorCode = classifySignUpError(error);
+      return {
+        success: false,
+        errorCode,
+        error: resolveSignUpErrorMessage(language, errorCode),
+      };
     }
   };
 

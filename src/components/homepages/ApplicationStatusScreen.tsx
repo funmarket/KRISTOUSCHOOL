@@ -23,9 +23,9 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
         en: 'Your account application is pending review',
       },
       body: {
-        ar: 'تم تسجيل طلبك بنجاح ولكن لم يتم منحك صلاحية الدخول إلى الفضاءات الداخلية للمدرسة بعد. يقوم مالك المدرسة (APP_ADMIN) أو المدير المفوض بمراجعة الطلبات قبل تفعيل الحساب.',
-        fr: 'Votre demande a bien été enregistrée mais l’accès aux espaces privés de l’école nécessite une approbation préalable par la direction (APP_ADMIN).',
-        en: 'Your registration request has been recorded, but private school workspaces remain locked until approved by the School Owner (APP_ADMIN) or an authorized Manager.',
+        ar: 'تم استلام طلب إنشاء حسابك بنجاح. يتطلب الدخول إلى فضاءات المدرسة الخاصة موافقة إدارة مدرسة كريستو. ستتمكن من الدخول إلى فضائك المدرسي بعد الموافقة على حسابك.',
+        fr: 'Votre demande de création de compte a bien été reçue. L’accès aux espaces privés nécessite l’approbation de l’administration de KRISTOU SCHOOL. Vous pourrez accéder à votre espace scolaire une fois votre compte approuvé.',
+        en: 'Your account registration has been received. Access to private school spaces requires approval from KRISTOU SCHOOL administration. You will be able to access your school workspace after your account is approved.',
       },
       chip: {
         ar: 'قيد الانتظار (PENDING)',

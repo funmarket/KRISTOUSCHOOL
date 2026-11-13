@@ -1,8 +1,14 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase, requireSupabaseClient } from './supabase';
-import { createTelegramLinkUrl } from './telegram';
-import { isValidUsername } from './username';
-import type { AccountRole, User, UserRole } from '../types';
+import { supabase, requireSupabaseClient } from './supabase.ts';
+import { createTelegramLinkUrl } from './telegram.ts';
+import {
+  isValidPhoneInput,
+  isValidUsername,
+  normalizePhoneInput,
+  normalizeUsernameDisplay,
+  normalizeUsernameKey,
+} from './username.ts';
+import type { AccountRole, User, UserRole } from '../types.ts';
 
 export const REGISTRATION_ROLES = [
   'APP_ADMIN',
@@ -40,22 +46,21 @@ export function resolveCanonicalAccountRole(roles: readonly string[]): AccountRo
   return null;
 }
 
-export function isPhoneIdentifier(value: string) {
-  return /^\+?[1-9]\d{7,14}$/.test(value.trim().replace(/[\s()-]/g, ''));
+export function isPhoneIdentifier(value: string): boolean {
+  return isValidPhoneInput(value);
 }
 
-export function normalizePhone(value: string) {
-  const compact = value.trim().replace(/[\s()-]/g, '');
-  return compact.startsWith('+') ? compact : `+${compact}`;
+export function normalizePhone(value: string): string {
+  return normalizePhoneInput(value);
 }
 
-export function isEmailIdentifier(value: string) {
+export function isEmailIdentifier(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 export async function signUpAccount(
   input: {
-    username: string;
+    username?: string;
     password: string;
     email?: string;
     phone?: string;
@@ -64,48 +69,200 @@ export async function signUpAccount(
     staffId?: string;
     admissionId?: string;
   },
-  clientOverride?: { auth: { signUp: (credentials: any) => Promise<{ data: any; error: any }> } },
+  clientOverride?: {
+    auth: {
+      signUp: (credentials: any) => Promise<{ data: any; error: any }>;
+      updateUser?: (attributes: any) => Promise<{ data: any; error: any }>;
+    };
+  },
 ) {
   if (!isRegistrationRole(input.requestedRole)) throw new Error('invalid_requested_role');
-  if (!isValidUsername(input.username)) throw new Error('invalid_username_format');
-  const client = clientOverride ?? requireSupabaseClient();
+
+  const rawUsername = input.username?.trim() || undefined;
+  if (rawUsername !== undefined && !isValidUsername(rawUsername)) {
+    throw new Error('invalid_username_format');
+  }
+
   const email = input.email?.trim().toLowerCase() || undefined;
-  const phone = input.phone ? normalizePhone(input.phone) : undefined;
-  if (!email && !phone) throw new Error('Provide an email address or full phone number.');
+  if (email !== undefined && !isEmailIdentifier(email)) {
+    throw new Error('invalid_email_format');
+  }
+
+  const rawPhone = input.phone?.trim() || undefined;
+  const phone = rawPhone !== undefined ? normalizePhoneInput(rawPhone) : undefined;
+
+  if (!email && !phone) {
+    if (rawUsername) {
+      throw new Error('username_only_requires_contact_or_backend_auth');
+    }
+    throw new Error('missing_login_identifier');
+  }
+
+  const client = clientOverride ?? requireSupabaseClient();
+  const usernameDisplay = rawUsername ? normalizeUsernameDisplay(rawUsername) : undefined;
+  const usernameKey = rawUsername ? normalizeUsernameKey(rawUsername) : undefined;
+  const secondaryPhoneVerificationRequired = Boolean(email && phone);
+
   const credentials = email
     ? { email, password: input.password }
     : { phone: phone as string, password: input.password };
+
   const { data, error } = await client.auth.signUp({
     ...credentials,
-    options: { data: { username: input.username.trim(), full_name: input.fullName.trim(), requested_role: input.requestedRole, staff_id: input.staffId?.trim() || undefined, admission_id: input.admissionId?.trim() || undefined } },
+    options: {
+      data: {
+        username: usernameDisplay,
+        username_normalized: usernameKey,
+        full_name: input.fullName.trim(),
+        requested_role: input.requestedRole,
+        staff_id: input.staffId?.trim() || undefined,
+        admission_id: input.admissionId?.trim() || undefined,
+        pending_phone: secondaryPhoneVerificationRequired ? phone : undefined,
+      },
+    },
   });
-  if (error?.message.toLowerCase().includes('database error saving new user')) {
+
+  if (error?.message?.toLowerCase().includes('database error saving new user')) {
     throw new Error('username_unavailable_or_invalid');
   }
   if (error) throw error;
-  return data;
+
+  if (secondaryPhoneVerificationRequired && data?.session && typeof client.auth.updateUser === 'function') {
+    await client.auth.updateUser({ phone }).catch(() => null);
+  }
+
+  return {
+    ...data,
+    secondaryPhoneVerificationRequired,
+  };
 }
 
-export async function signInAccount(identifier: string, password: string): Promise<{ session: Session; user: SupabaseUser }> {
-  const client = requireSupabaseClient();
-  const value = identifier.trim();
-  if (isEmailIdentifier(value)) {
-    const { data, error } = await client.auth.signInWithPassword({ email: value.toLowerCase(), password });
-    if (error || !data.session || !data.user) throw error ?? new Error('Invalid credentials');
-    return data as { session: Session; user: SupabaseUser };
+async function unwrapFunctionsError(error: any): Promise<Error> {
+  const context = error?.context;
+  const status = typeof context?.status === 'number' ? context.status : undefined;
+  let payload: any = null;
+
+  if (context) {
+    try {
+      if (typeof context.clone === 'function') {
+        payload = await context.clone().json();
+      } else if (typeof context.json === 'function') {
+        payload = await context.json();
+      }
+    } catch {
+      payload = null;
+    }
   }
-  if (isPhoneIdentifier(value)) {
-    const { data, error } = await client.auth.signInWithPassword({ phone: normalizePhone(value), password });
-    if (error || !data.session || !data.user) throw error ?? new Error('Invalid credentials');
+
+  const remoteCode =
+    typeof payload?.error === 'string'
+      ? payload.error
+      : typeof payload?.code === 'string'
+      ? payload.code
+      : '';
+
+  if (
+    remoteCode === 'email_not_confirmed' ||
+    remoteCode === 'phone_not_confirmed' ||
+    remoteCode === 'contact_not_confirmed'
+  ) {
+    return Object.assign(new Error(remoteCode), { code: remoteCode, status });
+  }
+
+  if ((status === 401 || status === 400) && remoteCode === 'invalid_credentials') {
+    return Object.assign(new Error('Invalid login credentials'), {
+      code: 'invalid_credentials',
+      status,
+    });
+  }
+
+  return Object.assign(new Error('sign_in_failed'), {
+    code: 'sign_in_failed',
+    status,
+  });
+}
+
+function normalizeProviderSignInError(error: any): Error {
+  if (!error) {
+    return Object.assign(new Error('sign_in_failed'), { code: 'sign_in_failed' });
+  }
+  const code = typeof error.code === 'string' ? error.code : '';
+  if (
+    code === 'email_not_confirmed' ||
+    code === 'phone_not_confirmed' ||
+    code === 'contact_not_confirmed'
+  ) {
+    return Object.assign(new Error(code), { code, status: error.status });
+  }
+  if (
+    code === 'invalid_credentials' ||
+    code === 'invalid_grant' ||
+    error.message === 'Invalid login credentials' ||
+    error.message === 'Invalid credentials'
+  ) {
+    return Object.assign(new Error('Invalid login credentials'), {
+      code: 'invalid_credentials',
+      status: error.status,
+    });
+  }
+  return Object.assign(new Error('sign_in_failed'), {
+    code: 'sign_in_failed',
+    status: error.status,
+  });
+}
+
+export async function signInAccount(
+  identifier: string,
+  password: string,
+  clientOverride?: any,
+): Promise<{ session: Session; user: SupabaseUser }> {
+  const client = clientOverride ?? requireSupabaseClient();
+  const value = identifier.trim();
+
+  if (isEmailIdentifier(value)) {
+    const { data, error } = await client.auth.signInWithPassword({
+      email: value.toLowerCase(),
+      password,
+    });
+    if (error || !data?.session || !data?.user) {
+      throw normalizeProviderSignInError(error);
+    }
     return data as { session: Session; user: SupabaseUser };
   }
 
-  const { data, error } = await client.functions.invoke('auth-username-signin', { body: { username: value, password } });
-  if (error || !data?.session || !data?.user) throw error ?? new Error('Invalid credentials');
+  if (isPhoneIdentifier(value)) {
+    const { data, error } = await client.auth.signInWithPassword({
+      phone: normalizePhone(value),
+      password,
+    });
+    if (error || !data?.session || !data?.user) {
+      throw normalizeProviderSignInError(error);
+    }
+    return data as { session: Session; user: SupabaseUser };
+  }
+
+  const usernameDisplay = normalizeUsernameDisplay(value);
+  const usernameKey = normalizeUsernameKey(value);
+  const { data, error } = await client.functions.invoke('auth-username-signin', {
+    body: { username: usernameDisplay, usernameKey, password },
+  });
+
+  if (error) {
+    throw await unwrapFunctionsError(error);
+  }
+
+  if (!data?.session || !data?.user) {
+    throw Object.assign(new Error('sign_in_failed'), { code: 'sign_in_failed' });
+  }
+
   const { error: sessionError } = await client.auth.setSession(data.session);
-  if (sessionError) throw sessionError;
+  if (sessionError) {
+    throw Object.assign(new Error('sign_in_failed'), { code: 'sign_in_failed' });
+  }
+
   return data as { session: Session; user: SupabaseUser };
 }
+
 
 export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?: any): Promise<User> {
   const client = clientOverride ?? requireSupabaseClient();

@@ -84,7 +84,8 @@ Rules:
 - Web sign-in accepts username, email, or full international phone number plus password;
 - email and phone credentials are verified by Supabase Auth;
 - username resolution is server-side and must not expose contact identifiers to the browser;
-- app accounts are created through the shared app's credential signup in either Browser or Telegram WebView; the current flow does not provision Telegram-only users.
+- app accounts are created through the shared app's credential signup in either Browser or Telegram WebView; the current flow does not provision Telegram-only users;
+- **AUTH-ID-01 review-branch refinement (`feature/auth-id-01-review-20261113`):** `loginUsername` is optional when a verified email or phone credential is provided (with `handle_new_user()` assigning `user_<uuid_hex>` when omitted) and supports 3–50 Unicode characters (Arabic script, French accented Latin, ASCII letters/digits, single internal spaces, `.`, `_`, `-`) normalized via Unicode NFC + whitespace collapse (`normalizeUsernameDisplay` / `normalizeUsernameKey`). `full_name` is a non-unique personal display name and is never a login identifier. Combination `A` (username-only without email or phone) remains blocked (`username_only_requires_contact_or_backend_auth`) unless a server-backed non-contact credential store is approved; synthetic email/phone aliases are forbidden. When both email and phone are entered at signup (`F`, `G`), `email` is the primary Supabase Auth credential and the normalized phone (`+216XXXXXXXX` or explicit E.164) is recorded in `pending_phone` metadata as not enabled for login until verified (secondary alias verification is not proven end-to-end). Database constraint updates in `supabase/migrations/20261113120000_human_friendly_usernames.sql` are `PREPARED — NOT VERIFIED`.
 
 **Write owner:** Identity & Authentication.
 

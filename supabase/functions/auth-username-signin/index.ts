@@ -12,13 +12,27 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+function normalizeUsernameKey(value: string): string {
+  return value
+    .normalize('NFC')
+    .replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, '')
+    .replace(/[\s\u00A0]+/g, ' ')
+    .toLowerCase();
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   try {
     const { username, password } = await request.json();
-    if (typeof username !== 'string' || typeof password !== 'string' || username.trim().length < 3 || password.length < 1) {
+    if (typeof username !== 'string' || typeof password !== 'string' || password.length < 1) {
+      return json({ error: 'invalid_credentials' }, 400);
+    }
+
+    const normalizedKey = normalizeUsernameKey(username);
+    const codePointLength = [...normalizedKey].length;
+    if (codePointLength < 3 || codePointLength > 50 || normalizedKey.includes('@')) {
       return json({ error: 'invalid_credentials' }, 400);
     }
 
@@ -31,21 +45,37 @@ Deno.serve(async (request) => {
     const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('email, phone')
-      .eq('username_normalized', username.trim().toLowerCase())
+      .eq('username_normalized', normalizedKey)
       .maybeSingle();
 
-    // Keep the same public response for missing and invalid credentials.
-    if (profileError || !profile || (!profile.email && !profile.phone)) return json({ error: 'invalid_credentials' }, 401);
+    if (profileError) {
+      return json({ error: 'auth_unavailable' }, 503);
+    }
+
+    // Keep the same public response for missing and invalid credentials to prevent enumeration.
+    if (!profile || (!profile.email && !profile.phone)) {
+      return json({ error: 'invalid_credentials' }, 401);
+    }
 
     const publicClient = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
     const identifier = profile.email ?? profile.phone;
     const { data, error } = await publicClient.auth.signInWithPassword(
       profile.email ? { email: identifier, password } : { phone: identifier, password },
     );
-    if (error || !data.session || !data.user) return json({ error: 'invalid_credentials' }, 401);
+
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'email_not_confirmed' || code === 'phone_not_confirmed') {
+        return json({ error: code }, 403);
+      }
+      return json({ error: 'invalid_credentials' }, 401);
+    }
+
+    if (!data.session || !data.user) return json({ error: 'invalid_credentials' }, 401);
 
     return json({ session: data.session, user: data.user });
   } catch {
     return json({ error: 'invalid_credentials' }, 401);
   }
 });
+

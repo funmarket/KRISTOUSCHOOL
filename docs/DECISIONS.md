@@ -116,6 +116,12 @@ The implementation must use strong provider password handling, confirmation sett
 
 **ADR-015 dated Owner governance addendum (2026-11-13):** Public visitors are anonymous; seven registered roles only. Requested roles never grant permission. Only APP_ADMIN appoints/governs APP_ADMIN and MANAGER. Approved ADMINISTRATIVE_PERSONNEL have automatic ordinary school-office powers and may take lifecycle actions on *other* ordinary accounts, never on themselves or privileged roles. These decisions require authoritative server implementation and deny-case tests; no current approval RPC is assumed.
 
+**Review-branch candidate (`feature/auth-id-01-review-20261113` — `AUTH-UX-01`, `AUTH-UX-01-FIX1`, `AUTH-ID-01`):**
+- Implements localized (`ar`, `fr`, `en`) registration and pending-approval feedback (`account_not_approved`, `contact_not_confirmed`, `invalid_credentials`, `sign_in_failed`) while preserving fail-closed denial of private workspaces and signing out unapproved sessions.
+- Repairs `signInAccount()` username transport by unwrapping `@supabase/supabase-js` `FunctionsHttpError` responses from `auth-username-signin`.
+- Implements human-friendly Unicode username validation/normalization (`src/lib/username.ts`), Tunisian (`+216`) and explicit E.164 phone normalization, and optional-username registration combinations `B`–`G` while explicitly blocking combination `A` (username-only without email or phone) and keeping secondary phone in `F`/`G` marked as unverified (`pending_phone`) and disabled for login until provider verification is completed.
+- Prepares `supabase/migrations/20261113120000_human_friendly_usernames.sql` (`PREPARED — NOT VERIFIED`) preserving the seven-role `app_role` enum, `handle_new_user()`, `username_normalized`, and `profiles_username_normalized_key` in place.
+
 ## ADR template
 
 ```markdown

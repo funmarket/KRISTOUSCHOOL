@@ -1,0 +1,780 @@
+# KRISTOU SCHOOL — STRICT GEMINI IMPLEMENTATION COMMAND
+
+## AUTH-ID-01 — Flexible Registration, Human-Friendly Usernames and Reliable Sign-In
+
+**SUPERSEDES:** AUTH-UX-01-FIX2
+
+**ENVIRONMENT:** Existing Google AI Studio application workspace
+
+**EXECUTION:** REAL IMPLEMENTATION — NOT AUDIT OR PLANNING
+
+**AUTHORIZED:** Modify the necessary local application source, focused tests, and relevant stale documentation. Prepare isolated backend source changes only where necessary and verifiable.
+
+**NOT AUTHORIZED:** GitHub push/merge, production Supabase modifications, deployment, real-account mutations or unapproved infrastructure changes.
+
+## PRIME DIRECTIVE
+
+**NO DRIFT. NO GUESSING. NO FAKE IMPLEMENTATIONS. NO FABRICATED TESTS. NO FALSE SUCCESS CLAIMS.**
+
+The Product Owner has personally experienced a test account failing to sign in with its username and receiving an "Invalid credentials" message.
+
+This must be addressed as an actual authentication problem, not merely hidden by changing the error message.
+
+This application serves school families. Parents, grandparents and older users must be able to register and sign in easily without learning technical username formatting rules.
+
+Your responsibility is to implement the requested behavior in the actual AI Studio files, preserve already-working authentication, and prove the result through meaningful execution evidence.
+
+Do not answer with another audit. Do not return a proposed feature without modifying the application.
+
+---
+
+# 1. EXACT PRODUCT REQUIREMENTS
+
+## 1.1 Flexible registration
+
+The user must be able to choose which login identifiers to provide.
+
+Support all seven combinations:
+
+| Registration choice | Username | Email | Phone |
+|---|---|---|---|
+| A | Yes | No | No |
+| B | No | Yes | No |
+| C | No | No | Yes |
+| D | Yes | Yes | No |
+| E | Yes | No | Yes |
+| F | No | Yes | Yes |
+| G | Yes | Yes | Yes |
+
+The registration form must no longer require all applicants to invent a technical username.
+
+It must not require an email when the user chooses phone registration, or require a phone when the user chooses email registration.
+
+The user's full name and password remain separate from the chosen login identifiers.
+
+A person's real full name must never be mistaken for a verified unique authentication identity merely because the text matches another person's name.
+
+**Important technical constraint:** Supabase's standard password-based authentication supports email/password and phone/password. It does not automatically provide username-only password accounts.
+
+For combination A, identify and implement a genuinely secure, supported server-backed account-authentication mechanism if one exists within the authorized local architecture and can be tested.
+
+Do NOT manufacture internal fake email addresses, fake phone numbers, false verified identities, or browser-only username accounts.
+
+Do NOT create an account request and falsely label it a working username/password credential.
+
+If username-only signup and later login require an unapproved identity architecture, record that combination as BLOCKED, preserve the safely implemented combinations, and provide the exact backend decision required. Do not silently weaken the requirement.
+
+This constraint does not excuse failing to implement the other supported cases.
+
+## 1.2 Flexible sign-in
+
+The user should see one clear login form:
+
+**Sign in using your username, email or phone number**
+
+The user enters their chosen identifier and password.
+
+The application must support:
+
+- A registered username and password.
+- A registered email address and password.
+- A registered phone number and password.
+- Accounts with two registered identifiers.
+- Accounts with all three registered identifiers.
+
+When multiple identifiers are attached to the same canonical account, each eligible, verified login identifier should resolve to that same account.
+
+Do not create separate accounts for different identifiers belonging to one person.
+
+Do not grant school privileges merely because credentials are valid.
+
+An unapproved account remains unable to access protected school workspaces.
+
+**Registration using an identifier is not proof that the identifier is verified, associated with Supabase Auth, or enabled for sign-in.** This distinction must be enforced in the implementation and user feedback.
+
+---
+
+# 2. ACCEPT NORMAL HUMAN USERNAMES AND NAMES
+
+The current application uses a strict ASCII-only username pattern:
+
+```typescript
+/^[a-z0-9][a-z0-9._-]{2,49}$/
+```
+
+The live database also has a matching `profiles_username_format` constraint.
+
+These rules reject many ordinary school-family names.
+
+The new implementation must support normal human names and culturally appropriate text.
+
+Examples that should be considered valid for a human-readable sign-in name when unique:
+
+```text
+Mohamed
+Mohamed Ben Ali
+Sarra Ben Amor
+Fatma Zahra
+Élodie
+Amélie Martin
+Ahmed_2026
+Sarra-Ben-Amor
+محمد
+محمد علي
+فاطمة الزهراء
+أمينة بن عمر
+```
+
+These are representative examples, not a complete language whitelist.
+
+### Mandatory username behavior
+
+1. Accept Unicode letters, combining marks, appropriate numbers and ordinary separators.
+2. Support Arabic script and accented Latin characters.
+3. Permit spaces inside human-readable usernames.
+4. Trim accidental leading/trailing spaces.
+5. Handle repeated whitespace consistently.
+6. Use a defined, tested Unicode-normalization policy.
+7. Preserve the correct visible spelling and accents in the display value.
+8. Apply reliable uniqueness rules to the canonical username key.
+9. Treat capitalization variations consistently under the approved normalization policy.
+10. Reject only genuinely unsafe, ambiguous or unsupported input, with understandable feedback.
+
+Do not arbitrarily restrict usernames to English characters.
+
+Do not strip Arabic letters or French accents.
+
+Do not silently transliterate a person's name into something they cannot recognize.
+
+Do not turn a full name into a globally unique login identifier without checking ambiguity.
+
+Protect against control characters, invisible-character abuse, bidirectional-control spoofing, excessive input length, normalization collisions and injection attempts.
+
+If a username resembles a phone number or email address, the authentication resolver must not silently select the wrong user. Use an explicit, accessible identifier-type choice when automatic resolution is ambiguous, or a safe collision-prevention policy proven by tests.
+
+Do not create account-enumeration vulnerabilities.
+
+### Full-name handling
+
+A person's real full name is not the same as a username.
+
+Full names must support spaces, accents, Arabic and other normal scripts, including families sharing the same surname.
+
+Two people can have the same full name without being the same user.
+
+Do not impose username uniqueness rules on full names.
+
+---
+
+# 3. MAKE THE REGISTRATION FORM EASY FOR FAMILIES
+
+Keep the existing KRISTOU SCHOOL visual design.
+
+The registration interface should present clear fields for:
+
+- Full name.
+- Username (optional).
+- Email (optional).
+- Phone number (optional).
+- Password.
+- Existing role selection and role-specific information.
+
+Explain simply:
+
+**"Choose at least one way to identify your account: username, email or phone number."**
+
+Only display this instruction as unconditional when all seven combinations are genuinely supported. If username-only account provisioning is blocked, the interface must accurately explain which methods are currently usable.
+
+Use clear field labels and examples.
+
+Avoid developer terminology such as "canonical principal", "E.164", "normalized identifier", or "JWT" in parent-facing UI.
+
+Use the existing Arabic, French and English localization system.
+
+Do not introduce a second registration modal.
+
+Keep the existing password security policy. Do not weaken passwords, disable account approval, or remove security checks to simplify the UI.
+
+Where appropriate, make password requirements understandable before submission, provide accessible validation feedback and preserve entered values after an error.
+
+### Phone-number usability
+
+KRISTOU SCHOOL operates in Tunisia.
+
+Provide a parent-friendly way to enter Tunisian phone numbers.
+
+Accept normal user formatting such as spaces, and correctly normalize validated local numbers with the selected Tunisia country code `+216`.
+
+Also support international numbers through explicit country selection or a valid international format.
+
+Do not prepend an arbitrary `+` to a local number and claim it has become a valid international number.
+
+Do not guess a foreign country code.
+
+Do not silently alter a phone number in a way that could authenticate another account.
+
+Only show a number as verified when the authentication provider has actually completed its required verification.
+
+---
+
+# 4. ACTUAL SOURCE DEFECTS TO ADDRESS
+
+The following were observed in the previously inspected GitHub source. Your latest AI Studio workspace is the implementation source of truth, so verify whether they remain before editing.
+
+## Defect A — Forced username
+
+`src/components/AuthModal.tsx` currently requires `username.trim()` and renders the username input as required.
+
+That prevents email-only and phone-only registration.
+
+The registration validation must reflect the supported identifier combinations, not require every applicant to provide a username.
+
+## Defect B — Strict ASCII-only validation
+
+`src/lib/username.ts` rejects spaces, Arabic and accented characters.
+
+The database's `profiles_username_format` constraint also rejects them.
+
+A frontend regex change alone is not sufficient.
+
+The relevant source, database normalization/uniqueness contract, signup trigger and username lookup must agree.
+
+If the real database schema requires a migration, prepare a separate, reviewable source migration for an isolated environment. Do not apply it to the shared live project.
+
+Do not modify old applied migration history.
+
+Preserve existing usernames and their ability to sign in.
+
+## Defect C — Email/phone registration precedence
+
+Existing `signUpAccount()` selects email/password when email is supplied, otherwise phone/password.
+
+When the user supplies both email and phone, the second identifier is not automatically guaranteed to become a verified Supabase Auth sign-in method.
+
+Implement or prepare the correct provider-supported linking/verification flow for the second identifier.
+
+Both methods must point to the same canonical user.
+
+Do not create two accounts.
+
+Do not treat a phone recorded in a profile as a verified Auth phone identity.
+
+If contact verification requires a separate session, OTP step or provider configuration, preserve that boundary and explain its state accurately.
+
+## Defect D — Username login failures
+
+Existing username sign-in uses:
+
+```typescript
+client.functions.invoke('auth-username-signin', ...)
+```
+
+The deployed Edge Function v6 returns:
+
+```text
+HTTP 401
+{"error":"invalid_credentials"}
+```
+
+Supabase wraps non-2xx responses in `FunctionsHttpError`.
+
+The correct frontend implementation must inspect the actual response status and safe error payload rather than interpreting a generic error wrapper.
+
+Implement the transport correction so a genuine wrong password is distinguishable from a network failure, function outage, unconfirmed contact or account without an approved active role.
+
+## Defect E — Incorrect phone normalization
+
+Existing `normalizePhone()` prepends `+` when missing.
+
+That can misinterpret local Tunisian phone numbers.
+
+Make phone validation and international normalization reliable without changing already-valid registered international numbers.
+
+## Defect F — Inconsistent identity resolution
+
+Inspect and correct the end-to-end identity path:
+
+```text
+Registration form
+    ↓
+Input validation and normalization
+    ↓
+Supabase account creation or supported server provisioning
+    ↓
+Canonical profile and verified identifiers
+    ↓
+Requested school role, pending approval
+    ↓
+Email / phone / username login transport
+    ↓
+Real credential verification
+    ↓
+Canonical User.id and active-role lookup
+    ↓
+Authorized homepage or safe restricted-access message
+```
+
+Every connection must be backed by working code or clearly marked as not yet implemented.
+
+Never confuse a signup request with an approved role.
+
+---
+
+# 5. AUTHENTICATION SECURITY INVARIANTS
+
+Preserve the seven existing account roles:
+
+```text
+APP_ADMIN
+MANAGER
+ADMINISTRATIVE_PERSONNEL
+TEACHER
+SCHOOL_STAFF
+PARENT
+STUDENT
+```
+
+Keep the seven-role selector.
+
+`GENERAL_USER` is an anonymous/public browsing concept, not a persisted account role.
+
+Only authorized `APP_ADMIN` personnel may appoint `APP_ADMIN` or `MANAGER`.
+
+Approved `ADMINISTRATIVE_PERSONNEL` may manage other ordinary school accounts according to the accepted governance specification, never their own account.
+
+These rules must not be bypassed by the new login flexibility.
+
+### Mandatory protection
+
+- Never store plaintext passwords in public tables or logs.
+- Never expose a Supabase service-role secret in a browser.
+- Never use signup metadata as active authorization.
+- Never create approved roles automatically from username, email or phone.
+- Never merge users solely because submitted names or unverified contacts match.
+- Never create duplicate canonical users for verified aliases belonging to one account.
+- Never resolve an ambiguous identifier to an arbitrary account.
+- Never bypass email/phone ownership verification.
+- Never use a public lookup endpoint that discloses another family's personal contact information.
+- Preserve rate limiting and generic public authentication failures.
+- Do not expose whether a specific parent's account exists through an unauthorized public response.
+- Preserve existing sessions and Telegram account linking.
+- Keep Pickup and student records inaccessible to unapproved accounts.
+
+If a proposed username-only authentication mechanism cannot satisfy secure credential verification, account recovery, account approval and session issuance, it is NOT an acceptable implementation.
+
+Do not use a fake internal email alias or an insecure custom password table as a shortcut.
+
+---
+
+# 6. IMPLEMENTATION SCOPE AND OWNERSHIP
+
+You are authorized to change necessary AI Studio source files associated with:
+
+**Frontend**
+
+```text
+src/components/AuthModal.tsx
+src/context/AppContext.tsx
+src/i18n/authMessages.ts
+src/i18n/translations.ts
+```
+
+**Identity and authentication**
+
+```text
+src/lib/auth.ts
+src/lib/username.ts
+src/lib/supabase.ts
+```
+
+**Existing username authentication function source**
+
+```text
+supabase/functions/auth-username-signin/index.ts
+```
+
+Only modify this Edge Function source if the current behavior genuinely requires it. Do not redeploy it.
+
+**Focused tests**
+
+```text
+tests/auth-username.test.mjs
+tests/register-role-options.test.mjs
+```
+
+Add narrowly scoped test files where behavioral tests cannot reasonably fit the existing test ownership.
+
+**Backend schema source**
+
+A new, narrowly scoped migration may be prepared only if essential to support the accepted Unicode/optional-username contract, without altering applied migrations.
+
+It must be validated against an isolated database before being called tested.
+
+If an isolated database is unavailable, mark the schema-dependent implementation unverified or blocked. Do not modify live Supabase to make it pass.
+
+**Documentation**
+
+Update relevant accepted requirements, canonical-model statements, implementation progress and testing status.
+
+Do not rewrite unrelated historical decisions.
+
+Do not modify Classes, Pickup, student records, Telegram integration, unrelated menus, homepage styling or deployment infrastructure.
+
+---
+
+# 7. REQUIRED RED/GREEN ACCEPTANCE TESTS
+
+Create actual behavioral tests.
+
+Do not merely grep source code and claim the application works.
+
+## A. Registration combination matrix
+
+Exercise all seven combinations from Section 1.1.
+
+For each one, verify:
+
+1. The user can enter the permitted identifiers.
+2. Validation recognizes the chosen combination.
+3. The real signup transport is called with the correct credential structure.
+4. No unrelated identifier is fabricated.
+5. An account is not accidentally duplicated.
+6. The requested role does not become active authority.
+7. The result correctly reports whether signup succeeded, requires verification, or is blocked by unsupported backend capabilities.
+
+**All seven combinations must be reported separately.**
+
+A passing frontend validation test is NOT proof that a backend account was created.
+
+## B. Username and human-name tests
+
+Test at least:
+
+```text
+mohamed
+Mohamed Ben Ali
+Élodie
+Fatma-Zahra
+محمد علي
+فاطمة الزهراء
+أمينة بن عمر
+```
+
+Also test:
+
+- Uppercase and lowercase.
+- Leading/trailing spaces.
+- Repeated internal spaces.
+- Arabic combining marks.
+- Accented Latin characters.
+- Two users with the same full name.
+- Two different users requesting equivalent normalized usernames.
+- Existing legacy ASCII usernames.
+- Very long input.
+- Empty or whitespace-only input.
+- Invisible/control characters.
+- Identifier-looking usernames.
+- Normalization collision cases.
+
+Use the same canonicalization rules in tests as the actual storage and lookup contract.
+
+Do not weaken the database constraint by simply dropping it without a replacement uniqueness and validation strategy.
+
+## C. Actual username authentication transport
+
+Test realistic SDK-wrapped responses:
+
+| Situation | Expected classification |
+|---|---|
+| HTTP 401, verified `invalid_credentials` response | `invalid_credentials` |
+| HTTP 503, `auth_unavailable` | `sign_in_failed` |
+| Network/relay error | `sign_in_failed` |
+| Malformed response | Safe failure |
+| Valid session and user | Successful authentication |
+| Credentials accepted, no active role | `account_not_approved` |
+| Contact not confirmed, supported provider code | `contact_not_confirmed` |
+
+These tests must exercise `signInAccount()`, not only a message-mapping helper.
+
+Inspect the actual installed SDK types.
+
+Do not use invented error shapes and call them Supabase integration tests.
+
+## D. Identifier linkage
+
+Where a verified account has multiple confirmed identifiers, test that signing in through each enabled identifier reaches the SAME canonical user ID.
+
+Test username-to-email, username-to-phone, email-to-phone and all-three combinations.
+
+Test wrong or unverified secondary identifiers.
+
+Test failed verification without creating an additional account.
+
+If the provider cannot be exercised in the AI Studio environment, separate locally simulated evidence from real provider verification.
+
+## E. Phone normalization
+
+Test Tunisian eight-digit numbers with explicit `+216` context, full international E.164 numbers, formatting spaces, malformed numbers and unsupported country assumptions.
+
+Verify the same normalized number is used for storage, uniqueness and sign-in.
+
+Do not silently alter existing accounts.
+
+## F. User-facing behavior
+
+Test all three languages.
+
+Test desktop and mobile rendering where the available preview permits.
+
+Ensure friendly error messages, accessible labels, keyboard navigation, password input behavior and no layout regression.
+
+Verify an older user can understand which fields are optional and how to sign in again.
+
+## G. Regression coverage
+
+Rerun the existing:
+
+- Authentication tests.
+- Registration role tests.
+- Role-homepage tests.
+- Telegram-related tests.
+- TypeScript checks.
+- Build checks.
+
+The actual test names and commands must come from the workspace.
+
+Do not claim browser tests or live database integration tests from compilation alone.
+
+---
+
+# 8. STRICT EXECUTION SEQUENCE
+
+Execute in the following order, without substituting another task:
+
+### Gate 1 — Existing workspace truth
+
+Inspect the current AI Studio source.
+
+Establish which AUTH-UX-01 and FIX1 changes are actually present.
+
+Inventory current identifier forms, validation rules, provider calls and relevant tests.
+
+Do not reset or replace the workspace.
+
+### Gate 2 — Username transport repair
+
+Write failing tests for the reported username-login failure.
+
+Observe RED.
+
+Implement the smallest legitimate transport correction.
+
+Observe GREEN.
+
+Confirm email and phone password paths remain intact.
+
+### Gate 3 — Human-friendly usernames
+
+Write failing tests for ordinary Arabic, French and multiword usernames.
+
+Determine the actual storage and uniqueness dependency.
+
+Implement the frontend and canonical normalization changes that can be proved locally.
+
+Do not claim a schema-dependent feature is live without a tested schema.
+
+### Gate 4 — Optional registration identifiers
+
+Implement supported registration combinations independently.
+
+Preserve one canonical User ID.
+
+Test each combination.
+
+Handle secondary identifier verification without inventing provider success.
+
+### Gate 5 — Username-only account feasibility
+
+Determine whether the existing backend can securely issue and later authenticate a genuine username-only account.
+
+If a supported, safely testable solution exists within this authorized workspace, implement and verify it.
+
+If not, record the technical blocker and exact proposed backend contract without pretending completion.
+
+Do not fabricate a workaround.
+
+### Gate 6 — Form accessibility and localization
+
+Implement the parent-friendly registration and login labels, explanations and supported validation feedback.
+
+Preserve the existing interface style.
+
+### Gate 7 — Final verification
+
+Run the focused tests and surrounding suite against the FINAL modified workspace.
+
+Inspect all changed files.
+
+Update directly relevant documentation.
+
+Export the actual source.
+
+Do not proceed to GitHub or production.
+
+---
+
+# 9. ABSOLUTE ANTI-FABRICATION RULES
+
+You have previously been asked to audit instead of implementing.
+
+That is not the task now.
+
+You must produce actual application changes.
+
+You are strictly forbidden to claim:
+
+- That a feature works because it was described.
+- That an input is supported because frontend validation accepts it.
+- That Unicode usernames work because a regex changed while the database rejects them.
+- That username-only signup works because an unapproved registration request was saved.
+- That phone login works because a phone was stored in a profile.
+- That email and phone are linked because both appear on the signup form.
+- That a backend migration was applied because a SQL file was created.
+- That an Edge Function was deployed because its local source changed.
+- That tests passed without genuine execution output.
+- That a mock provider proves real Supabase integration.
+- That a build proves account sign-in.
+- That a username error was fixed without testing its actual transport.
+- That AUTH-ID-01 is complete while one of its seven required combinations remains unsupported.
+
+Never hide a failed test, skipped case, incompatible backend dependency, unexpected changed file or unresolved identity-safety concern.
+
+Do not rename, delete, skip or weaken a failing test to manufacture green results.
+
+Do not change application requirements because an existing provider makes them difficult.
+
+Do not use a missing tool as justification for inventing success.
+
+If the environment lacks Docker, Git metadata or live Supabase configuration, report precisely which checks are unavailable and continue only with independently safe authorized work.
+
+Preserve an append-only execution ledger and command logs outside the publishable application assets where possible.
+
+---
+
+# 10. MANDATORY IMPLEMENTATION REPORT
+
+Your response MUST begin with an evidence table:
+
+| Requirement | Exact changed source | Actual test performed | Evidence | Status |
+|---|---|---|---|---|
+| Username login wrong-password fix | | | | |
+| Username login valid-session preservation | | | | |
+| Username-only registration | | | | |
+| Email-only registration | | | | |
+| Phone-only registration | | | | |
+| Username + email | | | | |
+| Username + phone | | | | |
+| Email + phone | | | | |
+| All three identifiers | | | | |
+| Arabic and French usernames | | | | |
+| Existing ASCII username compatibility | | | | |
+| Unicode database constraint compatibility | | | | |
+| Verified alias linkage | | | | |
+| Tunisian phone normalization | | | | |
+| Account approval protection | | | | |
+| Existing regression tests | | | | |
+| Typecheck and build | | | | |
+| AI Studio preview | | | | |
+| Complete source export | | | | |
+
+For each row, use only:
+
+`PASS`, `FAIL`, `BLOCKED`, `NOT VERIFIED`, `NOT STARTED`.
+
+A PASS must identify the actual executed check and the environment it proves.
+
+Then provide:
+
+**A. Starting workspace state** — actual files, modified-file inventory, tool availability and baseline fingerprint.
+
+**B. Source changes** — exact paths, changed functions and why.
+
+**C. Registration matrix** — result for all seven combinations, distinguishing UI acceptance, provider account creation, verification and sign-in readiness.
+
+**D. Username compatibility** — normal names, Unicode, uniqueness and existing-account preservation.
+
+**E. Authentication transport** — actual 401/503/network/valid-session results.
+
+**F. RED/GREEN proof** — commands, exit codes, runner counts, raw logs, final workspace fingerprint.
+
+**G. Backend requirements** — identify any unapplied schema/function changes and why they are necessary.
+
+**H. UI preview** — actual tested screens, languages, viewports and limitations.
+
+**I. Documentation corrections** — only accurate, source-grounded changes.
+
+**J. Complete changed-source export** — provide real files or actual workspace-generated ZIP, with SHA-256 hashes. If a ZIP cannot be produced, provide complete relevant files without inventing download links.
+
+**K. Blocked or incomplete cases** — no optimistic language.
+
+**L. Final implementation status** — distinguish implemented locally, locally tested, backend-blocked, live verified and not deployed.
+
+### Source-control truth
+
+```text
+GITHUB_PUSH: NONE
+GITHUB_MERGE: NONE
+PRODUCTION_SUPABASE_MIGRATION: NONE
+PRODUCTION_EDGE_FUNCTION_DEPLOYMENT: NONE
+PRODUCTION_ACCOUNT_MUTATION: NONE
+```
+
+If any unauthorized operation actually occurred, disclose it instead of falsely reporting NONE.
+
+---
+
+# 11. HARD STOP CONDITIONS
+
+Stop the affected implementation operation if:
+
+- The current AI Studio source differs materially from the inspected baseline.
+- You would need to replace existing working authentication rather than extend it.
+- A user identity could be confused with another.
+- Your normalization rule would silently rename an existing user.
+- A backend schema migration cannot preserve existing usernames or uniqueness.
+- A contact method cannot be securely verified.
+- A username-only authentication solution requires an unapproved privileged service.
+- A test fails in an authorization-sensitive area.
+- A proposed change would allow an unapproved account into private workspaces.
+- You cannot safely distinguish a provider error from a credential error.
+- An out-of-scope modification is required.
+- Final test evidence does not match the final workspace state.
+
+Continue only independently safe portions of this command and report any blocked items precisely.
+
+Do not widen authorization yourself.
+
+---
+
+# 12. FINAL EXECUTION ORDER
+
+**START THE IMPLEMENTATION NOW.**
+
+The priority is:
+
+1. **Fix the actual username sign-in failure.**
+2. **Accept normal Arabic, French and multiword human names.**
+3. **Support flexible username/email/phone registration combinations.**
+4. **Make the form understandable for school families, including elderly users.**
+5. **Keep security and school approval intact.**
+6. **Prove every completed part with actual tests and export the final source.**
+
+Do not deliver another audit in place of implementation.
+
+Do not claim complete support for a combination whose backend authentication path is unimplemented or unverified.
+
+Do not push or deploy.
+
+**IMPLEMENT. VERIFY. REPORT THE TRUTH. STOP BEFORE PUBLICATION.**
+
+END OF CURRENT COMMAND — AUTH-ID-01.
