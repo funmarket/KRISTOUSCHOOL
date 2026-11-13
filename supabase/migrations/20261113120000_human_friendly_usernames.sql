@@ -111,7 +111,7 @@ as $$
     and char_length(input) between 3 and 50
     and position('@' in input) = 0
     and position('  ' in input) = 0
-    and input !~ '^[+0-9 ()._-]+$'
+    and input !~ '^[+0-9 ().-]+$'
     and input !~ '[._-]{2,}'
     and public.is_username_letter_or_digit_codepoint(ascii(substr(input, 1, 1)))
     and (

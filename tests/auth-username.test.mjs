@@ -1200,5 +1200,120 @@ test('12. [AUTH-ID-01-SAFETY-FIX-02] 5xx or non-client-status provider errors ne
   );
 });
 
+test('13. [AUTH-ID-01-SAFETY-FIX-03] Username parity for 123_456 and phone-like strings across Frontend, Edge Function, and SQL migration contract', async () => {
+  const fs = await import('node:fs/promises');
+  const Module = await import('node:module');
+
+  Module.default.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier === 'https://esm.sh/@supabase/supabase-js@2') {
+        return {
+          url: 'data:text/javascript,export const createClient = (...args) => globalThis.__KRISTOU_TEST_CREATE_CLIENT__?.(...args);',
+          shortCircuit: true,
+        };
+      }
+      return nextResolve(specifier, context);
+    },
+  });
+
+  const edgeMod = await import('../supabase/functions/auth-username-signin/index.ts');
+  const sql = await fs.readFile(
+    new URL('../supabase/migrations/20261113120000_human_friendly_usernames.sql', import.meta.url),
+    'utf8',
+  );
+
+  // Extract the exact phone-like exclusion regex from public.is_valid_username in the SQL file
+  const phoneRegexMatch = sql.match(/and\s+input\s+!~\s+'(\^\[\+0-9[^']+\]\+\$)'/i);
+  assert.ok(phoneRegexMatch, 'public.is_valid_username must contain a phone-like exclusion regex');
+  const sqlPhoneExclusionRegex = new RegExp(phoneRegexMatch[1], 'u');
+
+  // Evaluate the SQL public.is_valid_username(normalize_username_display(raw)) contract using the SQL file's exact phone regex and code-point rules
+  const evaluateSqlMigrationUsernameContract = (raw) => {
+    if (typeof raw !== 'string') return false;
+    const normalized = raw
+      .normalize('NFC')
+      .replace(/^ +| +$/g, '')
+      .replace(/ {2,}/g, ' ');
+    const codePoints = Array.from(normalized, (ch) => ch.codePointAt(0));
+    if (codePoints.length < 3 || codePoints.length > 50) return false;
+    if (normalized.includes('@')) return false;
+    if (normalized.includes('  ')) return false;
+    if (sqlPhoneExclusionRegex.test(normalized)) return false;
+    if (/[._-]{2,}/.test(normalized)) return false;
+    if (!usernameModule.isUsernameLetterOrDigitCodePoint(codePoints[0])) return false;
+    const lastCp = codePoints[codePoints.length - 1];
+    if (
+      !usernameModule.isUsernameLetterOrDigitCodePoint(lastCp) &&
+      !usernameModule.isUsernameMarkCodePoint(lastCp)
+    ) {
+      return false;
+    }
+    for (let i = 0; i < codePoints.length; i++) {
+      const cp = codePoints[i];
+      if (!usernameModule.isAllowedUsernameCodePoint(cp)) return false;
+      if (usernameModule.isUsernameMarkCodePoint(cp)) {
+        if (i === 0 || usernameModule.isUsernameSeparatorCodePoint(codePoints[i - 1])) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const parityCases = [
+    ['123_456', true],
+    ['user_123', true],
+    ['abc123', true],
+    ['Mohamed Ben Ali', true],
+    ['Élodie', true],
+    ['محمد علي', true],
+    ['فاطمة الزهراء', true],
+    ['123-456', false],
+    ['123.456', false],
+    ['123456', false],
+    ['123 456', false],
+    ['abc😀', false],
+    ['abc§', false],
+    ['abc--def', false],
+    ['abc\u200Bdef', false],
+    ['abc\u202Edef', false],
+  ];
+
+  for (const [value, expected] of parityCases) {
+    const validateResult = usernameModule.validateUsername(value).valid;
+    const frontendResult = usernameModule.isValidUsername(value);
+    const edgeResult = edgeMod.isValidUsername(value);
+    const sqlContractResult = evaluateSqlMigrationUsernameContract(value);
+
+    assert.equal(
+      validateResult,
+      expected,
+      `Frontend validateUsername(${JSON.stringify(value)}).valid mismatch: expected ${expected}, got ${validateResult}`,
+    );
+    assert.equal(
+      frontendResult,
+      expected,
+      `Frontend isValidUsername(${JSON.stringify(value)}) mismatch: expected ${expected}, got ${frontendResult}`,
+    );
+    assert.equal(
+      edgeResult,
+      expected,
+      `Edge Function validator mismatch for ${JSON.stringify(value)}: expected ${expected}, got ${edgeResult}`,
+    );
+    assert.equal(
+      sqlContractResult,
+      expected,
+      `SQL migration contract mismatch for ${JSON.stringify(value)} (regex ${sqlPhoneExclusionRegex}): expected ${expected}, got ${sqlContractResult}`,
+    );
+  }
+
+  assert.equal(
+    phoneRegexMatch[1],
+    '^[+0-9 ().-]+$',
+    `Expected SQL phone-like exclusion regex to be '^[+0-9 ().-]+$', got '${phoneRegexMatch[1]}'`,
+  );
+});
+
+
 
 
