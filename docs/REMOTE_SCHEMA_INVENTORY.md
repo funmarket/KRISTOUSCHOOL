@@ -1,6 +1,8 @@
 # KRISTOU SCHOOL — REMOTE SUPABASE SCHEMA INVENTORY
+> **Fresh read-only delta — 2026-11-13:** The prior 2026-11-11 listings below are historical. Connected `KRISTOUSCHOOL` (`ofppapwofhovhroyjtkc`) currently has four RLS-enabled public tables (`profiles`, `role_assignments`, `telegram_identities`, `account_link_challenges`), five live migrations [`20261110212125`, `20261110212204`, `20261110212239`, `20261111150532`, `20261112190435`], seven canonical enum roles, one active APP_ADMIN, the atomic link RPC present and `authenticated` SELECT on link challenges **revoked**. Edge Functions: `auth-username-signin` v6; `telegram-auth` v9; `telegram-link-challenge` v6. No schema or function mutation was performed by this documentation check. GitHub contains only four SQL migrations; reconcile non-destructively. See `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`.
 
-**Status:** Updated after owner-authorized Telegram linking changes; not a migration baseline
+
+**Status:** 2026-11-11 historical inventory plus 2026-11-13 read-only delta; NOT a migration baseline
 **Updated:** 2026-11-11
 **Repository:** `funmarket/KRISTOUSCHOOL`
 

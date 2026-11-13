@@ -1,4 +1,6 @@
 # Supabase Backend and Database Integration Plan
+> **Historical ordering notice (2026-11-13):** This plan is a staged backend proposal, not the live schema inventory or authorization to run its steps. Current verified backend: four RLS auth tables, five live migrations, Edge Functions v6/v9/v6, with only four source SQL migrations. Follow `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md` and the Product Owner's newer packet plan when choosing work; F0-R1 is *local* reset/pgTAP, not production repair.
+
 
 Status: **ORDERED IMPLEMENTATION PLAN — NOT IMPLEMENTATION EVIDENCE**
 

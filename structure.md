@@ -1,4 +1,6 @@
 # KRISTOU SCHOOL — STRUCTURE AND ARCHITECTURE
+> **2026-11-13 live/source reconciliation:** This is the accepted architecture contract, not a current runtime inventory. The live database has five migrations and deployed `telegram-auth` v9, while source has four migration SQL files and older Telegram handler behavior. The 2026-11-11 Vercel-bundle concern is historical until rechecked. See `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`. The latest optional-identifier/Unicode username request is a desired AUTH-ID-01 contract, **not** current deployed behavior.
+
 
 Status: **PRIMARY ARCHITECTURE CONTRACT**
 Repository: `funmarket/KRISTOUSCHOOL`
@@ -98,7 +100,7 @@ Each durable concept has exactly one owner. These are product boundaries, not a 
 | Concept | Owner | Boundary |
 |---|---|---|
 | Canonical User, WebCredential/session, Telegram identity/link | Identity & Authentication | One user; Supabase Auth credential mapping, explicit Telegram linking, and no heuristic merges. |
-| Roles, capabilities, scoped grants | Access Control | Includes Parent, Student, Teacher, School Staff, Administrative Personnel, Manager/Associate, and App Admin categories; server-side RBAC and resource scope remain authoritative. |
+| Roles, capabilities, scoped grants | Access Control | Includes the seven canonical registered roles. `GENERAL_USER` is public/anonymous only; APP_ADMIN owns privileged appointments, approved Administrative Personnel automatically receive the ordinary admin bundle with no self or privileged-target lifecycle actions, and all private actions require server-side RBAC and resource scope. This is a target authority contract, not currently verified backend implementation. |
 | Parent/student/teacher/manager profiles | People | Presentation/profile facts, not credentials. |
 | Parent-child guardian relation | Family | Sole source for parent-to-child scope. |
 | Academic year, level, class, teacher/student assignments | Academics | Sole class identity, active membership, and assignment authority. |

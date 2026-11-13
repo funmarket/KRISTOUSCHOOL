@@ -1,4 +1,6 @@
 # Shared-App Signup and Telegram Account Linking
+> **Historical implementation packet (2026-11-11) — 2026-11-13 status:** An atomic account-link RPC is now present in the live KRISTOUSCHOOL backend, and `telegram-auth` v9 is deployed. The branch named below is an old implementation reference, not the current execution branch; no browser/Telegram end-to-end acceptance was run in this document reconciliation. Preserve explicit Web-signup-then-link and reject automatic identity merging. See `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`.
+
 
 **Status:** Active implementation scope, based on the owner's latest clarification on 2026-11-11.
 

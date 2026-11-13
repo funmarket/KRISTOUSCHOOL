@@ -1,4 +1,6 @@
 # KRISTOU SCHOOL — CANONICAL MODEL
+> **2026-11-13 precedence note:** New Owner-authored AUTH-ID-01 requires optional username/email/phone combinations and Unicode/multiword usernames, subject to secure verified Auth identities and one canonical User. The existing SQL/username constraint is still ASCII-only; username-only provisioning and multiple Auth aliases are NOT demonstrated. Accepted ADMINISTRATIVE_PERSONNEL standard-bundle/self-denial rules supersede older per-capability language. See `requirements.md` and the dated live checkpoint; do not treat target entities below as migrated tables.
+
 
 Status: **ACTIVE DATA + AUTHORITY CONTRACT**
 
@@ -153,7 +155,7 @@ The authentication foundation persists `RoleAssignment` in Supabase. Capability-
 Locked authority rules:
 
 - APP_ADMIN / School Owner is global authority;
-- Administrative Personnel authority is explicit, capability-specific, and scoped to assigned operational responsibilities;
+- Approved Administrative Personnel automatically receive the ordinary school-administration bundle: academic coordination, student/class management, teacher support, parent relations, school guidance, admission and both manual + validated CSV/XLSX import. They may govern OTHER ordinary-role accounts only, never themselves or APP_ADMIN/MANAGER. Server enforcement remains a future Access Control task;
 - School Staff authority is explicit, capability-specific, and scoped to assigned student, facility, health, meal, transport, or resource responsibilities;
 - Manager/Associate authority is explicit and capability-specific;
 - Teacher authority is class/resource-scoped;

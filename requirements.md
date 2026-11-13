@@ -22,7 +22,7 @@ This repository defines only KRISTOU SCHOOL, one school. Do not add other school
 It serves:
 
 - anonymous/public visitors;
-- registered general users;
+- approved school-member accounts (seven registered role categories);
 - parents/guardians;
 - students;
 - teachers;
@@ -62,11 +62,9 @@ Unauthenticated visitor.
 
 May access school-approved public information only, in both a normal Browser and the Telegram WebView. Opening the app from Telegram does not itself create an account or grant authenticated access.
 
-## 3.2 GENERAL_USER
+## 3.2 GENERAL_USER — anonymous public visitor only
 
-Authenticated user with no enrolled-child or staff/class authority.
-
-May access public/general school services and their own allowed account/inquiry surfaces.
+`GENERAL_USER` is the conceptual unauthenticated/public browsing experience, **not** a registered role, Auth account, Supabase enum value, or fallback. Visitors can browse school-approved public pages without signup. Private school services always require a verified, approved account and resource-scoped server authorization.
 
 ## 3.3 PARENT
 
@@ -103,7 +101,7 @@ The School Staff category includes:
 
 ## 3.7 ADMINISTRATIVE_PERSONNEL
 
-Administrative personnel oversee or coordinate school operations and educational leadership. This category includes Principals and Vice Principals, who oversee daily school operations, evaluate staff, and lead educational policies. It is a requested account category and does not grant global authority by itself.
+Approved `ADMINISTRATIVE_PERSONNEL` receive the standard ordinary school-administration bundle automatically: academic/curriculum coordination, class and student records, teacher support, school guidance, registration/admission, parent relations, individual data entry and validated CSV/XLSX import. They may approve, reject, suspend, revoke or reactivate **other** ordinary-role accounts, including other Administrative Personnel, but may never govern their own account or any `APP_ADMIN`/`MANAGER` target. Signup requesting this role grants nothing until separately approved. Actual backend enforcement remains to be implemented and tested; this is the Product Owner's accepted target.
 
 ## 3.8 MANAGER / ASSOCIATE
 
@@ -115,7 +113,7 @@ Initial owner preference: no more than approximately three managers/associates, 
 
 ## 3.9 APP_ADMIN / SCHOOL_OWNER
 
-Global school application authority.
+Global school application authority. Only an existing authorized `APP_ADMIN` may appoint or govern `APP_ADMIN` and `MANAGER` privileges. A public signup selection of either role is not authorization.
 
 ---
 
@@ -151,21 +149,17 @@ Never merge identities because of matching:
 
 Account linking must be explicit and verified.
 
-## 4.2.1 Web account and login policy
+## 4.2.1 Web account and login policy (Product Owner update — 2026-11-13)
 
-KRISTOU Web account access uses Supabase Auth for credential verification and a linked KRISTOU profile for application identity. During app signup, a user provides:
+**Accepted target:** a school-family member enters full name, password, requested role and at least one chosen login identifier: username, email or phone. All seven combinations of the three optional identifiers are desired (each alone; any pair; all three). Users should be able to sign in with any successfully registered **and verified/auth-provider-associated** identifier plus password, always resolving to the same canonical User. The form must be clear for older parents and support appropriate Tunisian/international phone formatting.
 
-- a unique normalized **username**;
-- a password;
-- either an email address or a full international phone number;
-- a full name and a requested account role.
+A human-readable username should accept ordinary Unicode names, including Arabic, accented French and multiword names, subject to stable normalization, uniqueness, anti-spoofing and length controls. A full name is presentation data, never proof of account ownership. Existing ASCII usernames must remain usable. Ambiguous identifiers may not resolve to an arbitrary user.
 
-After signup, Web sign-in accepts **email + password**, **phone + password**, or **username + password**. Username is stored in the canonical Supabase-linked profile and is resolved only through the protected server-side authentication function; the browser must not query profile email/phone values to implement username login.
+**Security/feasibility gate:** Supabase Auth password provisioning natively uses email/phone; its support for a genuinely username-only account must be designed and server-verified without fabricated email/phone aliases or insecure public password tables. A second contact typed into a form is not automatically a verified Auth sign-in alias. Phone/email ownership verification, identifier uniqueness, account recovery, no heuristic merging and fail-closed approval remain mandatory. If a combination is not supported by the currently approved backend, report it BLOCKED rather than falsely registering an unusable account.
 
-Email and phone confirmation behavior follows the configured Supabase Auth policy. An email or phone value is an authentication identifier only when it is attached to the verified Supabase Auth identity; it is not automatically a recovery authority outside the configured provider flow.
+**Verified source gap (2026-11-13):** committed GitHub source still requires a username **and** email/phone, uses ASCII-only username validation (also enforced by the live database constraint), and routes username login through `auth-username-signin`. Gemini is implementing `AUTH-ID-01` separately inside AI Studio; do NOT claim those changes are in GitHub or live until actual published source and end-to-end tests prove it.
 
-The requested signup role is informational and never grants authority. Server-side role assignments control access. App accounts are created through the shared app's existing signup form using its Web credentials, whether the form is opened in a normal browser or Telegram WebView. School admission remains separate.
-
+A signup role selection is a **request**, not an active role assignment; approval by authorized school personnel is mandatory before private workspace access. Only an authorized School Owner (`APP_ADMIN`) may appoint or govern `APP_ADMIN` and `MANAGER`. App signup and student admission are distinct.
 
 ## 4.2.2 App signup is separate from school admission
 

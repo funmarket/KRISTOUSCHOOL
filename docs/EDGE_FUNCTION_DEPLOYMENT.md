@@ -1,4 +1,6 @@
 # KRISTOU SCHOOL — Edge Function deployment notes
+> **Fresh read-only deployment inventory (2026-11-13):** `auth-username-signin` v6, `telegram-auth` v9, `telegram-link-challenge` v6. The committed `telegram-auth` source still has legacy role fallback behavior unlike deployed v9; never redeploy it blindly. Five live migrations include `atomic_telegram_account_link` and `canonical_account_roles`, but source contains four migration SQL files. No deployment or migration is authorized by this note. See `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`.
+
 
 **Status:** Operational guidance; deployment is not authorized by this document.
 **Target project:** `KRISTOUSCHOOL` (`ofppapwofhovhroyjtkc`) when the owner explicitly authorizes a deployment.
@@ -21,11 +23,11 @@ Supabase's hosted runtime supplies project URL and anon key variables to functio
 - `telegram-link-challenge`: `verify_jwt=true`; it requires the existing signed-in app user's bearer token to create a short-lived linking challenge.
 - `telegram-auth`: `verify_jwt=false`; it validates signed Telegram `initData` itself, confirms a one-time link when `start_param` is present, and returns the already-linked canonical profile on ordinary Mini App opens. It does not create users or mint Supabase Auth sessions.
 
-The deployed live `telegram-auth` v8 has the corrected HMAC verifier, atomic link RPC, and lookup for already-linked users on ordinary Mini App opens. The matching frontend change is on the feature branch and must be merged/deployed through Vercel before automatic Telegram entry is available in the UI. Telegram login is a verified app identity, not a Supabase Auth session; future private database operations must continue through server-verified Telegram paths unless a separate Supabase session design is approved.
+The deployed live `telegram-auth` v9 uses the atomic link RPC and handles already-linked Mini App identity. Source/runtime behavior is not yet reconciled, and a current browser/Telegram end-to-end acceptance run was NOT performed during this documentation update. Telegram app identity alone is not a Supabase Auth session; future private operations require server-verified authorization. Do not infer the current frontend deployment status from an old branch note.
 
 ## Safe order before any hosted change
 
-1. Review and merge the source-only reconciliation PR; confirm the exact commit on `main`.
+1. Fresh-check `main`, open PRs, current source and deployed v9 code. Do NOT blindly merge a historical PR, apply a missing migration by filename, or downgrade a live handler.
 2. Complete a clean local `supabase db reset` and `supabase test db` using the pinned CLI and synthetic fixtures.
 3. The owner-authorized `atomic_telegram_account_link` migration is applied; the live migration history still uses different version IDs for the original three migrations. Do not run `db push`, mark unrelated migrations applied, or attempt to baseline the remote project until a non-destructive mapping is reviewed.
 4. Obtain explicit owner authorization for the exact production migration and function deployment. Apply the required migration before deploying the functions that call its RPC; record the exact project, migration IDs, function versions, and smoke-test outcomes.

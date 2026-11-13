@@ -1,4 +1,6 @@
 # KRISTOU SCHOOL — SUPABASE-FIRST CONTINUATION PLAN
+> **SUPERSEDED LIVE SNAPSHOT (2026-11-13):** Section 1.2 below describes the 2026-11-11 historical state, NOT the present live backend. Fresh inspection found five live migration records (including atomic Telegram link and canonical account roles), revoked authenticated challenge SELECT, a present atomic link RPC and Edge Functions v6/v9/v6. Do not apply the old 'missing' atomic migration or downgrade deployed auth handlers. Newest proposed packet order is in the Owner handoff; current-state evidence lives in `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`. Existing phases below are historical proposals, not active commands.
+
 
 **Status:** Proposed execution plan for review; no remote database mutation is authorized by this document.
 **Backend direction:** Supabase PostgreSQL, Supabase Edge Functions, private Supabase Storage when needed.

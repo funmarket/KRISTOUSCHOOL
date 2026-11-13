@@ -12,6 +12,9 @@ This document defines how work is performed; it is not a feature backlog or prod
 - `docs/DECISIONS.md` — accepted and proposed architecture decisions.
 - `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md` — ordered Supabase implementation steps.
 - `progress.md` — verified implementation evidence only.
+- `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md` — dated evidence checkpoint and document-status index (not a competing product or architecture authority).
+
+**Execution freshness note (2026-11-13):** F0-R1 is isolated local Docker/Supabase reset + pgTAP, NOT source fixes or hosted migration. The newest AUTH-ID-01 work is occurring in Google AI Studio and must not be reported as GitHub implementation until actual changed files are published. No next packet is self-authorizing. Refer to the dated current-state checkpoint before using older continuation plans.
 
 The product owner's newest explicit instruction overrides older project documents. This plan controls execution quality, not product scope. The old `funmarket/Kristou` repository is historical reference and is not current implementation or deployment evidence. The current product scope is KRISTOU SCHOOL only; agents must not introduce other schools, shared-school registries, or data spanning schools unless the owner explicitly changes the decision.
 
