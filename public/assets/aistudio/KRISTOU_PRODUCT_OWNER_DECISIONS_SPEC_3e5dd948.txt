@@ -1,0 +1,136 @@
+# KRISTOU SCHOOL - Product Owner Decisions and Design Contract
+
+**Date:** 2026-11-13 (Africa/Tunis)  
+**Status:** Consolidated specification for review. The explicit Product Owner decisions below are accepted; proposed modeling details are not automatically accepted.  
+**Canonical repository:** `funmarket/KRISTOUSCHOOL` (`main` inspected at `ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372`)  
+**Backend:** existing Supabase project `KRISTOUSCHOOL` / `ofppapwofhovhroyjtkc`  
+**Authorization:** **DOCUMENTATION AND PLANNING ONLY.** No code, schema, credential, account, deployment, branch, or production operation is authorized by this document.
+
+## 1. Why this specification exists
+
+This is the recovered and newly agreed product contract for the current KRISTOU SCHOOL application. Another agent must be able to distinguish: (a) what the Product Owner explicitly decided, (b) what older KRISTOU plans established about domain authority, (c) what GitHub/Supabase currently implement, and (d) what still needs a design gate before code. It is not permission to rebuild an earlier `funmarket/Kristou` architecture or copy old source files into the current application.
+
+The current app is ONE school product, shown in ordinary Browser and Telegram WebView, with ONE canonical identity and shared backend. The React/TypeScript interface in `src/`, including eight homepages, current visuals and navigation, is protected source truth.
+
+## 2. Product Owner decisions - ACCEPTED
+
+### 2.1 Immutable-by-default UX and login surfaces
+
+- Keep the current sign-in and signup screens, role selector position/options, interaction design, password/credential experience, and the current visual language as the **protected baseline**.
+- Keep sign-in with email + password, phone + password, or username/handle + password, and the existing signup data contract. Do not reinvent authentication or introduce new screens or a second login system.
+- Keep **optional, explicit Telegram account linking** and shared Browser/Telegram identity. No automatic merge by email, phone, handle, Telegram username, display name, or photo; do not create a second Telegram product/data store.
+- Keep the seven canonical authenticated roles: `APP_ADMIN`, `MANAGER`, `ADMINISTRATIVE_PERSONNEL`, `TEACHER`, `SCHOOL_STAFF`, `PARENT`, `STUDENT`. The signup role is a *request only*.
+- **No `GENERAL_USER` role.** Anonymous public visitors browse school-approved public information without creating an account. Do not revive `GENERAL_USER` fallback. Legacy text or migrations containing it are history to reconcile, not a currently accepted role.
+- Keep the eight existing homepages and role-based experience. Preserve Light/Pitch Black appearance, FR/EN/AR language surfaces, and the **stable LTR top navigation**; do not impose full app-shell RTL based on outdated plans.
+- Keep the Owner's requested navigation order: **Teachers -> Classes -> Registration**.
+- Retain `src/data/mockData.ts` as test/reference material for now; synthetic data must never silently substitute for private real records or be represented as actual school records.
+
+### 2.2 Account eligibility and approval
+
+- The app is for a **single private primary school**. Authenticated school accounts are only for verified school employees, parents, and students; public visitors have no account requirement.
+- Signup is never role approval. A requested `APP_ADMIN`, `MANAGER`, or ordinary role cannot self-grant privileges by choosing it from the form.
+- After the school approves a person, that person uses the original signup credentials; optional Telegram linking remains independent of approval and does not grant new privileges.
+- The school must have an authoritative, durable, auditable approval lifecycle, implemented through Supabase server-side authorization, not client-only flags.
+
+### 2.3 Owner and Manager governance
+
+- The School Owner is `APP_ADMIN`, the highest application governance role.
+- An existing, authorized `APP_ADMIN` **alone** may appoint other `APP_ADMIN` or `MANAGER` accounts. Neither a Manager nor an Administrative Personnel account may appoint, elevate, reinstate, or govern these privileged roles.
+- `MANAGER` operational and ordinary-account review permissions are **explicitly delegated**; the role label does not automatically confer full Owner authority.
+- Preserve the existing valid Owner account. The email-dependent `handle_new_user()` Owner bootstrap is a current live defect/risk to replace with an authorized, reviewable Owner appointment process **without removing the existing Owner or enabling self-appointment**.
+
+### 2.4 Administrative Personnel - AUTOMATIC standard role authority
+
+Every **approved** `ADMINISTRATIVE_PERSONNEL` account automatically receives the complete standard school-administration bundle. Do **not** require individual assignment to Academic Coordinator, Parent Relations, or separate responsibility groups for routine administrative privileges.
+
+The bundle covers:
+
+- Academic administration: create/view/edit/manage classes, students, academic years, levels, membership, academic coordination and student transfers; view school-wide Classes and student rosters.
+- Teacher support: teacher-to-class assignments, class staffing coordination, learning/curriculum support, academic schedules and authorized educational resources.
+- Registration/admission: review school admission applications, coordinate required documents, enrollment processing and class placement *through the respective domain authorities*.
+- Parent Relations: school-family contact, inquiries, authorized school guidance, parent communications, school documents and administrative notices, subject to privacy and safeguarding rules.
+- Administrative data entry: **both individual forms and Excel (`.xlsx`) / CSV (`.csv`) import** for school records, using the same canonical validation, authorization, ownership and audit path.
+- Ordinary account governance: review applications, verify affiliation, **approve, reject, suspend, revoke, and reactivate** accounts in `PARENT`, `STUDENT`, `TEACHER`, `SCHOOL_STAFF`, and `ADMINISTRATIVE_PERSONNEL`.
+
+Boundaries of that automatic authority:
+
+- Cannot approve, appoint, suspend, revoke, reactivate, elevate, or otherwise manage `APP_ADMIN` or `MANAGER` authority.
+- Cannot perform approval, suspension, revocation, or reactivation actions on **their own account**.
+- May manage other Administrative Personnel accounts within the allowed five-role set, subject to the same server-verified checks.
+- Academic and office authority does not confer sovereign Owner governance, broad access to unrelated protected medical/child data, credential-reset authority, or child Pickup physical-release authority.
+- The administrative role remains **one role**; organizational job descriptions are not new account roles.
+
+### 2.5 Ordinary account review decision matrix
+
+| Account targeted | APP_ADMIN | MANAGER | ADMINISTRATIVE_PERSONNEL | TEACHER / STAFF / PARENT / STUDENT |
+| --- | --- | --- | --- | --- |
+| `APP_ADMIN` | Owner-only governance | Denied | Denied | Denied |
+| `MANAGER` | Owner-only governance | Denied | Denied | Denied |
+| `ADMINISTRATIVE_PERSONNEL` | Allowed | Allowed only with explicit Manager authorization | Allowed automatically, except self | Denied |
+| `TEACHER` | Allowed | Allowed only with explicit Manager authorization | Allowed automatically | Denied |
+| `SCHOOL_STAFF` | Allowed | Allowed only with explicit Manager authorization | Allowed automatically | Denied |
+| `PARENT` | Allowed | Allowed only with explicit Manager authorization | Allowed automatically | Denied |
+| `STUDENT` | Allowed | Allowed only with explicit Manager authorization | Allowed automatically | Denied |
+
+For the five ordinary roles, **allow** means authorized ordinary account review, suspension/revocation, and reactivation with required school verification and audit; it does not mean bypassing school affiliation or resource checks. This is a *product target matrix*, not a claim that the current DB has these policies.
+
+A request must be denied when the actor's authority is inactive, the actor is not approved, the actor is the target in the Administrative Personnel self-action case, the target currently holds any privileged role, the requested operation changes a role beyond the actor's authority, or the target's status/identity cannot be verified. Do not authorize from a caller-supplied `requested_role` or frontend `capabilities` value.
+
+### 2.6 Classes and Students
+
+- Keep current `Classes` page, class list -> student roster interaction, search/filters, and accepted design; wire it to authoritative Supabase data rather than replacing it.
+- Owner `APP_ADMIN` may manage and inspect school-wide classes/students.
+- `ADMINISTRATIVE_PERSONNEL` automatically has school-wide Classes/Students read/write/import authority upon approval.
+- `MANAGER` receives school-wide Classes/Students authority only under explicit approved delegation.
+- `TEACHER` sees assigned classes, class students and class features through **TeacherClassAssignment**, not by being given the general school-wide roster.
+- `PARENT` sees only verified linked children via **ParentChildLink** and their permitted class information. `STUDENT` sees only own active class scope. Ordinary `SCHOOL_STAFF` does not inherit full administrative roster access.
+- Preserve distinct owners: People (student identity), Enrollment (admission/enrollment), Academics (year/level/class, teacher assignment, student class membership), Family (guardian link), Access Control (who may act). Do not collapse these into a generic roster or attach all identities directly to `auth.users`.
+- A student can have a school record without an app account. Student admission or spreadsheet import never automatically creates credentials, approves an app account, or links a parent by matching contact details.
+
+### 2.7 Registration and student admission
+
+Account signup (`AuthModal`) and school admission (`RegistrationView`) are DIFFERENT workflows. Keep the present screens. The historical student-admission lifecycle is:
+
+`DRAFT -> SUBMITTED -> UNDER_REVIEW -> NEED_DOCUMENTS -> UNDER_REVIEW -> ACCEPTED / WAITLIST / REJECTED -> ENROLLED`.
+
+An accepted student is not automatically a class member; Academics owns class membership, Enrollment owns enrollment eligibility and review. Exact legal/age/document requirements belong to school configuration, not agent guesswork.
+
+### 2.8 Communication and Pickup safety
+
+- Parent Notes: real persistence must respect linked child/teacher context, audience privacy, **11 notes per school-defined day**, **08:00-18:00 Africa/Tunis** sending window and the previously specified 08:00 daily reset. A local React-state success is not delivery.
+- Student Class Questions: at most 200 characters, class-wide only, verified active membership, Teacher moderation, no student private DMs.
+- Pickup: `WAITING -> PARENT_ARRIVED -> RELEASED`, with server-controlled school/class window. Parent arrival is NOT release. Only **authorized staff** may confirm physical release after verifying the actual collector. Authoritative records, idempotency, concurrency safety, audit, realtime/recovery, and notification correctness are required before enabling Pickup.
+- Keep Pickup's current backend-unavailable **safety lock** until all safety acceptance gates are satisfied. Do not add Redis/worker/other infrastructure merely because old monorepo plans mentioned it.
+
+## 3. Verified source baseline - NOT an implementation claim for new features
+
+This snapshot was read from GitHub and the connected Supabase project on 2026-11-13. Recheck before all future tasks. `main@ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372`; zero open PRs; separate diverged branch `fix/anonymous-role-authorization-20261112@9540e9724996b38c45c851ce7e0131bbc0d60c67` (seven ahead, one behind relative to main at inspection). Do not merge that branch blindly.
+
+Live Supabase public tables: `profiles` (3), `role_assignments` (1), `telegram_identities` (1), `account_link_challenges` (2); all RLS enabled. Three Auth users and ONE active Owner role assignment at inspection. Five live migration versions, while the repository contains four migrations with different identifiers; latest deployed `telegram-auth` v9 differs from committed `telegram-auth` source with a `GENERAL_USER` fallback. `handle_new_user()` still contains email-based Owner bootstrapping. No canonical school-domain records/tables or approval RPC were verified.
+
+`src/lib/auth.ts` supports credentials, login and Telegram linking; `loadCanonicalUser()` rejects absent active roles instead of populating an account status. `src/components/homepages/homepageAccess.ts` defaults missing `accountStatus` to `APPROVED`. `src/context/AppContext.tsx` has React-local Parent Notes/Class Questions success but Pickup explicitly returns `pickup_backend_unavailable`. `src/components/views/ClassesManagementView.tsx` already implements filtered class/roster UI but defaults to `BACKEND_NOT_IMPLEMENTED` with no canonical Supabase data. `RegistrationView.tsx` currently uses a local `submitted` flag. The current eight homepage components, navbar and role selector exist. Static/source observation is NOT a browser or API acceptance test.
+
+Existing tooling: Vite + React 19 + TypeScript, Supabase JS 2, `bun.lock`, npm scripts `lint`, `build`, `test:auth`, `test:telegram-auth`, `db:start`, `db:reset`, `db:test`; local db scripts invoke pinned Supabase CLI `3.1.0`. `tests/role-homepages.test.mjs`, `tests/register-role-options.test.mjs`, and `supabase/tests/auth_foundation_security.test.sql` exist. No new tests were executed for this specification.
+
+## 4. Historical source and authority notes
+
+The older `KRISTOU_LIVING_PLAN_good.md`, Hooma-enhanced plan and UI rebase plan establish C4 People/Family/Academics/Access Control and C5 Enrollment ownership, plus later communication and Pickup rules. They **do not** specify an approved CSV/Excel data-import contract; **both manual and spreadsheet import are a NEW explicit Product Owner decision from this conversation**. Historical `apps/web`, `packages/*`, Railway API, Express/Prisma, Redis-worker design must not be copied as the architecture of the current Supabase project.
+
+Current repo source-authority hierarchy is defined in `AGENTS.md`: latest explicit Product Owner instruction, `requirements.md`, `structure.md`, `docs/DECISIONS.md`, `docs/CANONICAL_MODEL.md`, `docs/LIVING_BUILD_PLAN.md`, fresh implementation source as evidence, and `progress.md` only as evidence. The new decisions here supersede contradictory legacy `GENERAL_USER` and capability-limited Administrative Personnel wording; changes to those authoritative files require a separately authorized implementation/documentation packet.
+
+## 5. Design decisions still explicitly NOT approved
+
+These are NOT permission to improvise; they are decision gates for the relevant implementation task:
+
+- **DG-01 Suspension vs revocation representation:** Existing frontend account statuses are `PENDING`, `APPROVED`, `REJECTED`, `REVOKED`; the Product Owner explicitly authorized *both* suspension and revocation and reactivation. Choose and review whether to add `SUSPENDED` as a distinct state, or keep existing status with an additional auditable deactivation reason. Prevent false/misleading status UI; preserve current appearance. Do not silently collapse the business meanings.
+- **DG-02 Actual school import file contract:** column names, required data, school identifiers, duplicate matching rules, maximum batch size, and conflict/rollback semantics must be reviewed with school owners before real data uploads. The acceptance of both methods is fixed; the file schema is not.
+- **DG-03 School admission details:** actual document requirements, admissible levels, academic year windows, official student identifiers and enrollment decision criteria must be supplied/validated by the school; do not invent Tunisian regulations.
+- **DG-04 Account-role multiplicity and promotion semantics:** current `role_assignments` table can store several active roles. Server checks must deny ordinary-admin actions against any privileged role. Whether product policy will enforce exactly one active role needs an explicit reviewed migration and transition plan.
+- **DG-05 Temporary/local/staging isolation:** decide the actual isolated database environment before applying migrations; no automatic production changes or costly environment creation.
+- **DG-06 Operator recovery / support:** user-facing status display and suspension/revocation recovery should be specified without changing the protected login flow. Effective deactivation must apply to already-issued sessions and linked Telegram requests, not just newly issued tokens.
+
+## 6. Out-of-scope and absolute prohibitions
+
+Do not redesign UI; modify signup/sign-in/login semantics beyond necessary verified approval enforcement; replace optional Telegram linking; create `GENERAL_USER`; create a second Web/Telegram frontend; add multi-school tenancy; publish private student/family/pickup information; use mock student data as production records; hardcode owner emails or role assignments; auto-link by name/phone; let clients grant roles; bypass RLS without independently verified backend policy; add new paid deployment services without authorization; execute schema/history repair against production without approval; deploy; merge; or claim PASS without actual logs.
+
+**No mutation or implementation is authorized by this document.**

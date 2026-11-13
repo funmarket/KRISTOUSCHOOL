@@ -1,0 +1,987 @@
+# KRISTOU SCHOOL - Master Recovery and Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` (recommended for independent reviewer gates) or `superpowers:executing-plans`, one approved packet at a time. The repository's `AGENTS.md` and the Product Owner's current instructions take precedence. **Planning is not implementation authorization.** Checkboxes are NOT STARTED unless later accompanied by verifiable evidence.
+
+**Date prepared:** 2026-11-13 (Africa/Tunis)  
+**Goal:** Safely complete the current KRISTOU SCHOOL Supabase-backed product, beginning with source/runtime reconciliation and authoritative school-account governance, then canonical academic/people/family records, administration data entry and import, real Classes/Teacher/Parent/Registration workflows, communication, and finally safety-critical Pickup, while preserving the existing UI and authentication.
+
+**Architecture:** Keep one existing Vite/React/TypeScript frontend for Browser and Telegram WebView, one Supabase Auth-linked identity, one Supabase PostgreSQL product authority, narrow per-domain service/RPC/Edge Function boundaries, versioned migrations and audited server-side authorization. Reuse existing components rather than rebuilding homepages or introducing historical Express/Prisma/Railway monorepo infrastructure.
+
+**Tech stack verified at baseline:** Vite 8, React 19, TypeScript 7, Supabase JS 2, Supabase CLI pinned to `3.1.0` by current npm scripts, PostgreSQL/RLS/pgTAP, Supabase Edge Functions, `bun.lock`; Vercel reports a status but is not proof of functional acceptance.
+
+**Spec:** `KRISTOU_PRODUCT_OWNER_DECISIONS_SPEC_2026-11-13.md` (companion downloadable file). The implementation agent MUST additionally read current repository authorities; this document is a portable proposed plan until deliberately published inside the repository. Proposed in-repository location after authorization: `docs/superpowers/plans/2026-11-13-kristou-master-execution.md` with companion spec in `docs/superpowers/specs/`.
+
+**Current authorization:** Read-only inspection and creation of these downloadable plan/spec files only. **NO mutation of GitHub, Supabase, accounts, credentials, migration history, production data, or deployments.** All implementation tasks below require a fresh explicit command defining the single next packet.
+
+---
+
+## 0. Agent entry contract: read this before doing ANY work
+
+1. This is `funmarket/KRISTOUSCHOOL` (**not** the older `funmarket/Kristou`). Do not replace its architecture with source from the historical repository.
+2. **Source-authority order from current `AGENTS.md`:** (1) latest explicit Product Owner direction; (2) `requirements.md` product contract; (3) `structure.md`; (4) `docs/DECISIONS.md`; (5) `docs/CANONICAL_MODEL.md`; (6) `docs/LIVING_BUILD_PLAN.md`; (7) fresh repository/DB/runtime source for current behavior; (8) `progress.md` for evidence. Where this plan contains later Product Owner decisions not yet reflected in `requirements.md`, DO NOT let the old doc cancel them. Reconcile documentation in a separately authorized task.
+3. Other required reads: `README.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, `docs/SUPABASE_CONTINUATION_PLAN.md`, `docs/CONTINUATION_HANDOFF_2026-11-10.md`, relevant current tests, recent PRs and source owners. Old uploaded files are historical domain/design references only.
+4. **Fact != rule != authorization.** A plan does not grant permission to apply it. A working build does not prove RLS, functional behavior, correctness, or an actual deploy. Report `PASS`, `FAILED`, `BLOCKED`, `NOT RUN`, and `NOT VERIFIED` honestly; include exact commands, environment, revision, counts and output.
+5. Only one `CURRENT_COMMAND` and one logical mutation at a time. Deny-by-default; acquire fresh state before any write; stop on drift, missing evidence, overlap or unresolved critical design choice. Never write directly to `main` or mutate production because a packet lists an intended future file.
+6. Implement only the authorized small packet, including its owning source, necessary adjacent consumers and focused tests. Do not start the next packet automatically. Update the governing documentation and `progress.md` with evidence **only when the packet authorizes it**.
+7. Preserve current signup/sign-in and optional Telegram linking, Owner account, existing role-homepage UX and stable-LTR Navbar. Protect existing records and deployed Auth paths with isolated regression tests before attempting any change.
+8. No user secrets, actual student/parent personal data, or school records in tests, generated fixtures, logs or screenshots. Test against synthetic identities only.
+9. Production schema, Edge Function, account, migration-history, or release mutation requires separate explicit owner authorization, verified exact project/environment, forward/rollback plan, validated isolated tests and a one-time per-action gate. If that authorization is absent, STOP at a reviewable PR/plan.
+10. **Progress in this plan is NOT VERIFIED implementation.** All packets are `NOT STARTED`; only already existing code and runtime facts are labeled `VERIFIED BASELINE`.
+
+### Mandatory agent output BEFORE the first mutation
+
+```text
+CURRENT_COMMAND: <literal owner-approved task ID/text or NONE>
+REPOSITORY: funmarket/KRISTOUSCHOOL
+EXPECTED_BASELINE_FROM_THIS_PLAN: main@ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372 (HISTORICAL; RECHECK)
+ACTUAL_MAIN_HEAD: <fresh exact SHA or UNKNOWN>
+WORK_BRANCH_HEAD: <name + exact SHA or NONE>
+WORKTREE_STATUS: <clean / explicit changed-file list / UNKNOWN>
+OPEN_PRS_AND_OVERLAP: <numbers, head SHA and changed files / NONE / UNKNOWN>
+RELATED_LEGACY_BRANCH: fix/anonymous-role-authorization-20261112 (RECHECK; DO NOT AUTO-MERGE)
+SUPABASE_PROJECT: <name + exact ref from connected account or UNKNOWN>
+SUPABASE_SCHEMA_MIGRATIONS_FUNCTIONS: <fresh read-only inventory or UNKNOWN>
+OWNER_GUARD: <verified active Owner still exists / UNKNOWN>
+PROTECTED_UI_AUTH_SNAPSHOTS: <exact tests/references or UNKNOWN>
+ASSUMPTIONS: []
+MATERIAL_UNKNOWNS: []
+UNRESOLVED_CONTRADICTIONS: []
+DECISION: PROCEED_READ_ONLY | PROCEED_SINGLE_AUTHORIZED_PACKET | BLOCKED
+```
+
+If `ACTUAL_MAIN_HEAD` differs from this plan, compare before acting. If a live table/function/policy differs, refresh the packet and report it; do not guess the mutation.
+
+---
+
+## 1. Verified starting state and evidence register (read-only, 2026-11-13)
+
+### 1.1 Canonical GitHub source
+
+- Repository: `funmarket/KRISTOUSCHOOL`; default branch `main`; observed HEAD `ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372` (`feat: refactor homepage and tab navigation`, 2026-11-12). Prior HEAD `df54412b22fc9eee0e72eccd55212b929e7abe17` (`refactor: standardize user roles to AccountRole`). No open pull requests at inspection. The branch was not protected via GitHub's branch metadata: this is a process risk, **not** an invitation to commit directly.
+- Diverged pre-existing branch `fix/anonymous-role-authorization-20261112@9540e9724996b38c45c851ce7e0131bbc0d60c67`: seven commits ahead and one behind current main; changed files include `src/components/AuthModal.tsx`, `src/context/AppContext.tsx`, `src/i18n/authMessages.ts`, `src/lib/auth.ts`, `src/types.ts`, `supabase/functions/telegram-auth/index.ts`, `tests/public-role-authorization.test.mjs`. Its exact intended/working state is NOT accepted until it is compared with new governance requirements and current main. Preserve the branch as evidence; do not merge, cherry-pick or delete automatically.
+- Source layout: `src/` (canonical React product), `supabase/migrations/` (4 source SQL migrations), `supabase/functions/` (username sign-in, Telegram auth, link challenge), `supabase/tests/auth_foundation_security.test.sql` (existing synthetic security tests), `tests/` (Node auth/role/homepage tests), `docs/` authorities.
+- Current `package.json` commands: `npm run dev`, `npm run build`, `npm run lint`, `npm run test:auth`, `npm run test:telegram-auth`, `npm run db:start`, `npm run db:reset`, `npm run db:test`. Role-homepage and register-role tests exist but are **not** in `test:auth` and must be invoked explicitly or later incorporated in a separately reviewed script.
+- `src/components/AuthModal.tsx` contains existing seven-option role selector in signup only. `src/lib/auth.ts` supports email/phone/username+password and Telegram link. These are protected.
+- `src/components/Navbar.tsx` has an explicit `dir="ltr"` header, existing menu and optional Telegram-link dialog. `src/components/homepages/HomePageResolver.tsx` maps the eight homepages. `src/App.tsx` provides tab routing and uses `canAccessAppTab()` as UI gating only.
+- `src/components/views/ClassesManagementView.tsx` already contains class list, search, filters, student roster/details and page size 25. Defaults to `initialClasses=[]`, `initialRosters={}`, `backendStatus='BACKEND_NOT_IMPLEMENTED'`; no canonical DB data yet. Reuse it.
+- `src/components/homepages/OwnerHomePage.tsx` already contains pending approvals, account directory, Manager delegation and role governance cards marked `BLOCKED_BACKEND`, plus Classes/Registration shortcuts. `src/components/homepages/AdministrativePersonnelHomePage.tsx` contains office operational cards, not yet the full automatic access agreed now. `TeacherHomePage.tsx` filters `assignedClassIds`; `ParentHomePage.tsx` filters `linkedChildrenIds` with no mock fallback.
+- `src/components/homepages/homepageAccess.ts` defaults absent `accountStatus` to `APPROVED`; it checks `CLASSES_ROSTER_VIEW` for Manager/Admin roles, while `src/lib/auth.ts:loadCanonicalUser()` populates `capabilities` from active role names, **not actual capability grants**. These are confirmed design/implementation mismatches. `loadCanonicalUser()` throws `account_not_approved` without producing a pending actor for the existing `ApplicationStatusScreen`.
+- `src/context/AppContext.tsx:addParentNote`, `addClassQuestion`, `replyClassQuestion` still simulate success in React state; `markPickupArrived()` and `confirmPickupRelease()` instead return `pickup_backend_unavailable`. `src/components/views/RegistrationView.tsx` sets `submitted=true` locally. Treat Parent Notes, Questions and Registration success claims as **not yet persisted**; preserve Pickup's lock.
+
+### 1.2 Connected Supabase (live, read only)
+
+- Correct project: `KRISTOUSCHOOL`, ref `ofppapwofhovhroyjtkc`, not historical project `bzerboixpbwfvmbnbzxd` from the old 49-table audit.
+- Public tables and RLS: `profiles` (3), `role_assignments` (1), `telegram_identities` (1), `account_link_challenges` (2); all RLS enabled. There are three Auth users and exactly **one active `APP_ADMIN` role assignment** at inspection. Do not expose account names, emails, phone numbers, handles or tokens in the plan.
+- Actual current `public.app_role` enum: `APP_ADMIN`, `MANAGER`, `PARENT`, `STUDENT`, `TEACHER`, `SCHOOL_STAFF`, `ADMINISTRATIVE_PERSONNEL`. **No `GENERAL_USER` in live enum.** Historical source migration still contains `GENERAL_USER`/legacy roles; this is a reconciliation problem, not evidence that live roles are wrong.
+- Live migrations (IDs): `20261110212125 authentication_foundation`, `20261110212204 revoke_auth_trigger_execute`, `20261110212239 revoke_auth_trigger_execute_public`, `20261111150532 atomic_telegram_account_link`, `20261112190435 canonical_account_roles`. Source migrations have different timestamps, and `canonical_account_roles` source is absent on main. Do not rewrite applied migrations or claim replay parity until independently verified.
+- Active deployed Edge Functions: `auth-username-signin` v6, `telegram-auth` v9, `telegram-link-challenge` v6. Deployed Telegram auth v9 returns a null role for unapproved users; committed source has a `GENERAL_USER` fallback. Runtime/source drift must be reconciled WITHOUT breaking the approved link flow.
+- `public.handle_new_user()` still checks the new Auth user's email and contains an email-conditioned `APP_ADMIN` grant. One active Owner must remain accessible throughout any future bootstrap retirement; no destructive role cleanup or role reset without user approval and recovery proof.
+- No verified `students`, `school_classes`, academic-year, enrollment, guardian-link, approval-lifecycle, Parent Notes, or Pickup tables/RPCs. Supabase security advisor warned `auth_leaked_password_protection` disabled. Treat as a separately reviewed Auth configuration decision, not as permission to change Auth settings.
+- Existing pgTAP source tests show roughly 20 Auth foundation assertions in `supabase/tests/auth_foundation_security.test.sql`, **but this audit did not execute them**. Local reset needs Docker and an isolated Supabase environment. Existing Vercel status `success` does not prove an app login, role approval or security behavior.
+
+### 1.3 Historical plans - what survives
+
+- `KRISTOU_LIVING_PLAN_good.md`, `KRISTOU_LIVING_PLAN_HOOMA_ARCH_ENHANCED_2026-10-02.md`, and `KRISTOU_LIVING_PLAN_UI_REBASE_2026-09-30.md`: C4 People/Family/Academics/Access Control; C5 Enrollment; C6 Community; C7 Parent Notes; C8 Pickup. The later Hooma-enhanced document tightened owner boundaries. **Preserve concepts, not old directory layout/hosts.**
+- `KRISTOU_COMPLETE_CHAT_HANDOFF_2026-10-02.md`: cross-domain ownership, exact-state NoDrift lessons, Browser/Telegram single-user architecture. Its October repository/branch/commit data are HISTORY, not current state.
+- Historical HTML UI templates and reference images: concepts and regression references, not authoritative production React source. The present Owner-accepted UI is canonical.
+- Any older `GENERAL_USER`, mandatory full-RTL shell, Railway API, Prisma, workers or redis requirements that contradict newer accepted decisions are superseded, not to be silently reinstated.
+
+---
+
+## 2. Acceptance contract - product behavior that MUST NOT regress
+
+### 2.1 Protected frontend/UI invariants
+
+- Sign-in/sign-up modal is unchanged in layout, tabs, fields, seven role options, position, required data handling and credentials semantics. Choosing a privileged requested role must NEVER grant authority.
+- Optional Web-to-Telegram account linking remains a one-time expiring code with signed `initData` and atomic user association. Browser and Telegram use the SAME canonical product data; no automatic identity merge.
+- Public anonymous browsing works without an account, including within Telegram. No `GENERAL_USER` registered or fallback role.
+- Eight existing role homepages are retained; owner role inspection does NOT impersonate another actor. Role tab checks help UX but never replace server authorization.
+- Current design, card hierarchy, navigation and responsive behavior are source truth, especially Owner menu **Teachers -> Classes -> Registration**, stable-LTR Navbar and current FR/EN/AR texts/themes. Adding necessary account/academic operations must fit existing card/layout patterns; no restyle or large page redesign.
+- `mockData.ts` remains available for tests and local screenshots, but production-like private data loads never fallback to it when server state is missing or denied. Distinguish loading, empty, error, unauthorized and unavailable states.
+
+### 2.2 Authority hierarchy fixed by Product Owner
+
+- `APP_ADMIN`: sole app Owner governance. May appoint another `APP_ADMIN` or `MANAGER`; can manage all ordinary accounts. Protect at least one recoverable Owner.
+- `MANAGER`: operational actions, including ordinary account review, only with explicit delegation. Never gains `APP_ADMIN`/`MANAGER` appointment/governance by a broad `FULL_ACCESS` label.
+- `ADMINISTRATIVE_PERSONNEL`: automatically gets complete normal operational school-administration rights and ordinary account lifecycle actions once APPROVED. No extra responsibility-group delegation. Can approve, reject, suspend, revoke, and reactivate **other** ordinary school accounts, including other `ADMINISTRATIVE_PERSONNEL`, but **cannot act on own account** and cannot govern any existing or requested `APP_ADMIN`/`MANAGER` authority.
+- `TEACHER`: assigned classes only. `PARENT`: verified linked children only. `STUDENT`: own enrolled class only. `SCHOOL_STAFF`: no implicit universal roster, governance, or physical Pickup release.
+- Public/anonymous: approved public pages only, no app role/account.
+- Approval and reactivation must **not** grant access on the basis of requested role alone, an unchanged old token, an unverified relationship, or a client-supplied actor ID.
+
+### 2.3 Domain ownership constitution
+
+| Durable concept | Write owner | Not owned by |
+| --- | --- | --- |
+| Auth users / credentials / sessions / Telegram identity & link | Identity & Authentication (Supabase Auth plus controlled link) | Any feature frontend / Academics / Pickup |
+| Account approval, active role, Manager grants | Access Control | School enrolment / UI request data |
+| School student and staff profile identity | People | Auth credentials / class roster UI |
+| Verified guardian-to-student link | Family | App signup / Admissions / Pickup |
+| AcademicYear, Level, Class, TeacherClassAssignment, StudentClassMembership | Academics | Enrollment / community / UI |
+| EnrollmentApplication, student Enrollment, requirements/documents | Enrollment | Academics class membership |
+| ParentNote & reply | Parent Notes | Generic messaging/client state |
+| Class question/reply and class content | Class Community | Membership or Auth identity |
+| DismissalPolicy, AuthorizedPickupPerson, daily cycle, arrival/release events | Pickup | Parent profile, teacher dashboard or Notifications |
+| Outbox delivery / notification inbox | Async/Notifications | Source business event authority |
+| Public directory/menu/school pages | Respective Directory/Food/Public Content domain | Private profile/academic base table |
+
+One owner per concept. An Academics roster projection may join authorized student/enrollment/guardian information for display, but does not become the owner of those identities/relationships. A TeacherClassAssignment is different from an account's `TEACHER` role.
+
+### 2.4 Academic record entry and import, approved at product level
+
+- Authorized `APP_ADMIN`, automatically authorized `ADMINISTRATIVE_PERSONNEL`, and capability-authorized `MANAGER` can maintain school academic data. Preserve existing `Classes` UI.
+- **Two methods** must be supported: (a) individual add/edit forms; (b) `.xlsx` and `.csv` import with preview and confirmation. BOTH invoke the SAME verified domain validation and writer boundaries. Proposed UI details are subject to visual regression review.
+- Importing an existing child/student is NOT school admission, creating a login, role approval, or parent linking. Duplicates, conflicts, incomplete rows, invalid class/teacher references and malicious spreadsheet content must fail safely and be visible before commit.
+- `TEACHER` sees only assigned-class rosters via Teacher-specific data access; do not grant the school-wide Classes admin query to every Teacher. `PARENT` sees only linked children. No private rosters in public pages.
+
+### 2.5 Pickup safety invariant, permanently mandatory
+
+`WAITING -> PARENT_ARRIVED -> RELEASED`, with server-controlled `Africa/Tunis`/class dismissal windows. Parent announces arrival; authorized staff physically verify collector and confirm release via narrow server operation. Arrival cannot release; denied, duplicate, stale, concurrent and cross-class requests must be fail-closed. Durable audit and source-of-truth DB are required; realtime/notifications are projections, not authority. **Pickup button remains locked until full isolated+staging safety acceptance.**
+
+---
+
+## 3. Design alternatives and decisions
+
+| Area | Alternative | Why rejected or deferred | Selected/proposed approach |
+| --- | --- | --- | --- |
+| Backend | Rebuild old Express/Prisma monorepo | Violates current accepted Supabase architecture | Keep Supabase/PostgreSQL/Edge Functions, small domain boundaries |
+| Admin rights | Manually grant Academic Coordinator/Parent Relations capabilities | Product Owner explicitly rejected extra grouping | Approved `ADMINISTRATIVE_PERSONNEL` gets standard operations automatically |
+| Account approval | Trust signup role/client home page | Enables privilege escalation | Server-verified account state and role assignment; requested role remains declarative |
+| Student roster | One table mixing identities, guardians, enrollment, classes and auth | Violates older C4/C5 domain ownership | People + Family + Enrollment + Academics, with authorized read projections |
+| School data entry | Manual-only / spreadsheet-only | Product Owner approved BOTH | Manual forms + previewed CSV/XLSX import through same canonical writers |
+| Teacher access | Grant school-wide Classes admin permission | Violates class-scoped Teacher policy | Assigned-class query based on TeacherClassAssignment |
+| Pickup | React-local state + notifications | Unsafe, falsely signals release | Preserve disabled UI; implement transaction-safe backend later |
+| Suspension modeling | Implicitly equate suspension with permanent revocation | Misleading; status union lacks SUSPENDED | **PROPOSAL requiring DG-01 approval:** distinct `SUSPENDED` vs `REVOKED` semantics, with only necessary localized state copy change; do not redesign UI |
+
+### Explicit blocked decisions (not guesses)
+
+- **DG-01:** Confirm distinct suspension and revocation data semantics and exact state/recovery UX. The business actions are approved, the persistence/UI representation is **not**.
+- **DG-02:** School-approved import templates: column names, identifiers, duplicate match rules, maximum batch size, partial-vs-atomic failure policy, student/teacher and class historical records. Both methods are approved; these details are unknown.
+- **DG-03:** Enrollment requirements, documents, academic-year cutoffs and official school acceptance rules. No invented legal lists.
+- **DG-04:** Current `role_assignments` supports multiple active rows. Decide explicit future constraints and role-change transition rules after inspecting real data. Until then ordinary admins cannot act on an account possessing ANY active privileged role.
+- **DG-05:** Isolated database/test strategy (local Docker or owner-authorized branch/staging, never point automated destructive tests at production).
+- **DG-06:** Exact handling for pending/rejected/revoked actors in existing status view without changing protected auth form; safe session revocation, immediate DB authorization checks and Telegram parity are mandatory outcomes.
+- **DG-07:** Data retention/export/deletion rules for minors and school-protected files. Until approved, do not create broad delete/export actions.
+
+No implementation packet may bypass a relevant DG. A task not requiring it may proceed independently after authorization.
+
+---
+
+## 4. Source and file ownership map - verified vs proposed
+
+### Runtime/domain dependency diagram (solid = current verified topology; dashed = planned capability)
+
+```mermaid
+flowchart TD
+  WEB[Normal Browser] --> REACT[Current Vite/React product]
+  TG[Telegram WebView] --> REACT
+  REACT --> AUTH[Current Supabase Auth and linked-account functions]
+  AUTH --> ID[Current auth users, profiles, role assignments, Telegram identity]
+  REACT -. future domain clients .-> API[Planned narrow domain operations / authorized RPCs]
+  API -. future authoritative records .-> SCHOOL[Planned People, Academics, Enrollment, Family records]
+  SCHOOL -. validation .-> PICKUP[Planned Pickup state and audit]
+  ID -. current identity and future live approval checks .-> API
+```
+
+**Important:** This diagram is a design/dependency map, NOT a claim that the dashed services/tables exist today. Supabase is the selected current backend. Existing browser/Telegram auth integration is inspected in source/runtime, but genuine linked-account end-to-end behavior still requires tests; the arrows are not a PASS certificate.
+
+**Verified files at baseline (inspect fresh before editing):**
+
+| Existing source | Relevant ownership / observation |
+| --- | --- |
+| `AGENTS.md`, `requirements.md`, `structure.md`, `docs/DECISIONS.md`, `docs/CANONICAL_MODEL.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, `progress.md` | Governing contracts, not executable success proof |
+| `src/App.tsx`, `src/components/Navbar.tsx`, `src/components/AuthModal.tsx` | Protected routing/shell/credential UI |
+| `src/lib/auth.ts`, `src/lib/supabase.ts`, `src/lib/telegram.ts`, `src/context/AppContext.tsx` | Auth adapter, Supabase client, Telegram helper, state integration |
+| `src/components/homepages/homepageAccess.ts`, `HomePageResolver.tsx`, `ApplicationStatusScreen.tsx` | UI policy resolver/status view (not backend authority) |
+| `src/components/homepages/OwnerHomePage.tsx`, `ManagerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx` | Existing management workspaces and backend-blocked cards |
+| `src/components/homepages/TeacherHomePage.tsx`, `ParentHomePage.tsx`, `StudentHomePage.tsx` | Current assigned-class, linked-child and personal flows |
+| `src/components/views/ClassesManagementView.tsx`, `RegistrationView.tsx`, `ParentNotesView.tsx`, `ClassCommunityView.tsx`, `PickupBoardView.tsx` | Feature presentation, incomplete persistence; Pickup locked |
+| `src/types.ts`, `src/data/mockData.ts`, `src/i18n/homepages.ts`, `src/i18n/authMessages.ts` | Types, synthetic presentation fixtures, text mappings |
+| `supabase/config.toml`, `supabase/migrations/*.sql`, `supabase/functions/{auth-username-signin,telegram-auth,telegram-link-challenge}/index.ts` | Existing auth foundation; source/live drift |
+| `supabase/tests/auth_foundation_security.test.sql`, `tests/{auth-username,register-role-options,role-homepages}.test.mjs` | Current targeted test sources; must run for actual PASS |
+
+**Proposed implementation artifacts (do not claim they exist):**
+
+| Proposed new file / category | Single reason to create |
+| --- | --- |
+| `src/lib/accountGovernance.ts` | Typed account review/query/action boundary; no UI trusts caller roles |
+| `src/lib/schoolAcademics.ts` | Typed authorized Classes/roster read+write adapter |
+| `src/lib/schoolPeople.ts` | Student/profile identity adapter, no credentials |
+| `src/lib/schoolEnrollment.ts` | Admission/enrollment interface |
+| `src/lib/schoolFamily.ts` | Verified parent-child relation reads/admin operations |
+| `src/lib/schoolImport.ts` | Preview/validation/import client orchestration, never role grants |
+| `src/lib/parentNotes.ts`, `src/lib/classQuestions.ts`, `src/lib/schoolPickup.ts` | Domain-specific client operations, no React-local successful mutation |
+| `supabase/functions/account-governance/index.ts` | Optional privileged transport; if direct narrow RPC with caller JWT is sufficient, do NOT duplicate it |
+| `supabase/functions/school-import/index.ts` | Optional approved bulk import transport, no client service-role |
+| `supabase/functions/school-pickup/index.ts` | Optional Pickup transport; actual durable command in database transaction |
+| `supabase/migrations/<fresh_unique_timestamp>_<single_domain>.sql` | Forward-only migrations; placeholder is NOT an actual file path. Derive exact names only AFTER migration reconciliation/fresh inspect, then freeze in packet |
+| `supabase/tests/account_governance.test.sql`, `academics_access.test.sql`, `school_import.test.sql`, `parent_notes.test.sql`, `pickup_safety.test.sql` | pgTAP test suites for allow/deny/constraints/concurrency |
+| `tests/account-governance.test.mjs`, `tests/academics-ui.test.mjs`, `tests/school-import.test.mjs`, `tests/parent-relations.test.mjs` | Proposed Node adapter and UX logic tests; test harness may be refined only after source inspection |
+
+Never manufacture an import/module path or RPC signature during execution. Each packet's interface sketch is a proposal. Confirm it against existing patterns and lock it in the packet's read-only preflight; any material mismatch goes to STOP/decision rather than ad-hoc rewiring.
+
+---
+
+## 5. Domain contracts and proposed interfaces (review before implementation)
+
+### 5.1 Server-derived actor model
+
+The backend authorizes a canonical actor using session/validated Telegram proof plus live account status, active role assignments, scoped grants and resource relations. A **requested** role is never effective authority. Avoid a frontend `role: AccountRole` field as a substitute for approval.
+
+Proposed frontend-facing read model, conceptually (NOT committed code):
+
+```ts
+type AccountState = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED'; // DG-01 may add SUSPENDED
+interface CanonicalActorSnapshot {
+  id: string;
+  approvalStatus: AccountState;
+  requestedRole: AccountRole | null;
+  effectiveRole: AccountRole | null; // null unless approved and role assigned
+  capabilities: string[]; // derived server-side, includes automatic admin bundle
+  linkedChildrenIds: string[]; // server-verified Family relations only
+  assignedClassIds: string[]; // server-verified Academics assignments only
+}
+```
+
+This conceptual snapshot is separate from client-supplied sign-up data and does not dictate replacing the existing `User` interface without reviewed compatibility tests. Privileged operations must re-check live DB authority independently of any cached snapshot.
+
+### 5.2 Administrative account operations
+
+Recommended domain operation names (subject to packet-level interface freeze):
+
+```ts
+type OrdinaryRole = 'ADMINISTRATIVE_PERSONNEL' | 'TEACHER' | 'SCHOOL_STAFF' | 'PARENT' | 'STUDENT';
+type AccountDecision = 'APPROVE' | 'REJECT' | 'SUSPEND' | 'REVOKE' | 'REACTIVATE';
+interface ReviewAccountCommand { targetUserId: string; decision: AccountDecision; reasonCode?: string; expectedVersion: number; }
+interface OwnerAppointmentCommand { targetUserId: string; appointedRole: 'APP_ADMIN' | 'MANAGER'; expectedVersion: number; }
+```
+
+- Actor identity must come from verified session, not `actorId` in the request. Exactly one atomic account-state/role mutation plus append-only audit per accepted decision; use optimistic version/conditional update and idempotency as required by real concurrent flows.
+- Ordinary review denies any `APP_ADMIN`/`MANAGER` target or requested privilege elevation. Also deny Admin Personnel self-target actions; Owner-only appointment goes through a DISTINCT policy operation, not a `decision` parameter any staff member can abuse.
+- Preserve last valid Owner, existing identity rows and Telegram link. Do not physically delete accounts on ordinary revocation; disabling access is not deleting person records or academic memberships.
+- Approved Admin Personnel standard permissions are server-derived from effective active role; Manager delegated grants are separate. Do not copy role strings into `capabilities` and call that a capability store.
+
+### 5.3 Academics/People/Family/Enrollment interfaces
+
+Core domain concepts (naming proposals, not deployed tables):
+
+- **People:** `Student` record with immutable stable `studentId` and school-approved `studentCode`; optional verified account link distinct from student existence. Teacher/staff people profile may link canonical Auth user after verified association.
+- **Academics:** `AcademicYear`, `Level`, `SchoolClass`, `TeacherClassAssignment`, `StudentClassMembership`. Only Academics can establish/change class membership or assigned Teacher, and must verify Enrollment eligibility and correct year/level.
+- **Enrollment:** `EnrollmentApplication`, `Enrollment` eligibility. Accepted application -> enrollment decision does not itself write Academics membership. Enrollment invokes one narrow Academics command, not direct writes to foreign tables.
+- **Family:** `ParentChildLink` is verified, school-approved and scoped; no automatic link via same surname/contact.
+- **Read models:** `SchoolClassSummary` and `ClassStudentRosterItem` already exist in `src/types.ts`; maintain these contracts for existing `ClassesManagementView`. Roster fields are projected from authorized owners and filtered to the caller's scope.
+
+Proposed operation surface (freeze later):
+
+```ts
+interface SchoolAcademicReadPort {
+  listSchoolClasses(filters: { academicYearId?: string; levelId?: string; query?: string }): Promise<SchoolClassSummary[]>;
+  getClassRoster(classId: string): Promise<ClassStudentRosterItem[]>;
+  listMyAssignedClasses(): Promise<SchoolClassSummary[]>;
+}
+interface AdminSchoolRecordsPort {
+  createOrEditStudent(input: ValidatedStudentDraft): Promise<{ studentId: string }>;
+  assignTeacherToClass(input: ValidatedTeacherAssignment): Promise<void>;
+  establishClassMembership(input: VerifiedEnrollmentPlacement): Promise<void>;
+}
+interface FamilyReadPort { listMyLinkedChildren(): Promise<LinkedChildSummary[]>; }
+```
+
+`ValidatedStudentDraft`, `ValidatedTeacherAssignment`, `VerifiedEnrollmentPlacement`, `LinkedChildSummary` are **proposed packet-level types** whose exact fields must come from approved school forms and canonical model; do not create competing authority or ship these placeholder types without definition.
+
+### 5.4 Spreadsheet import design contract
+
+1. Staff picks canonical domain and template. Browser parses `.xlsx` or `.csv` in a bounded, explicitly reviewed tool chain; no hidden file uploads, macro execution, formula evaluation or external data enrichment.
+2. Preview shows row totals, field-level validation, duplicate/conflict candidates, suggested *explicit* actions (create/update/skip/reject), academic-year/class references and write effects. Never silently guess identity matches.
+3. Authorized staff confirms an exact preview fingerprint, domain scope and operation ID; backend revalidates every row and permissions at commit time. Reject mutated preview data, stale target rows, unauthorized actor, huge files and dangerous cell content.
+4. Domain writers persist only their own records and append audit. Teacher assignments, enrollment and guardian links are distinct explicitly reviewed operations, not side effects of simply importing a student.
+5. For retries: idempotency, duplicate prevention and clear per-row/atomic outcome contract. No silent partial success, no unverified `Saved` notification.
+6. Imported records never create Supabase Auth credentials, assign `APP_ADMIN`/`MANAGER`/ordinary roles, auto-approve accounts, auto-link guardians, or modify Pickup release authority.
+
+### 5.5 School admission and Parent/Teacher projections
+
+- `RegistrationView` is a student admission intake, **not** app signup. It must not say an application was saved until a durable Enrollment command confirms success. Public intake must be abuse-resistant and store any protected documents privately.
+- Parent home uses server-verified Family links and active class membership; empty links show an honest empty state. Teacher home uses active TeacherClassAssignment and class-scoped operations; no mock fallback or direct school-wide query.
+- The Owner's Classes roster is a read projection, not an alternative source of enrollment truth. Provide staff proper data from Academics/People/Family with tested SQL RLS or guarded RPC.
+
+---
+
+## 6. How implementation is divided and verified
+
+**Order:** F0 Source Safety -> F1 Governance -> F2 School Records -> F3 Family/Admission/Communication -> F4 Pickup -> F5 Release. Modules that need the same records may be implemented only when upstream domain contracts are verified; do not write all the tables in one huge migration. Reviewers should be able to approve/reject each packet independently.
+
+### Exact existing verification commands
+
+Execute only in an isolated, intentionally selected environment, after checking installation/toolchain and script meaning:
+
+```bash
+npm run lint
+npm run build
+npm run test:auth
+npm run test:telegram-auth
+node --test tests/register-role-options.test.mjs tests/role-homepages.test.mjs
+npm run db:start
+npm run db:reset
+npm run db:test
+```
+
+The final three commands require the pinned Supabase CLI, Docker and proof that the selected target is LOCAL TEST ONLY; **never** pass a production `--linked` or remote connection during test reset. `npm run lint` currently means `tsc --noEmit`, not ESLint; `npm run build` means Vite build. There is no verified, configured browser/E2E test command or existing full-test npm script; a later QA packet must set one up or record manual browser evidence. No command above has been run in this planning session.
+
+### Test ledger for every task
+
+```text
+TASK: <packet ID>
+SOURCE: <exact branch@HEAD, git status and relevant file SHA>
+DATABASE ENVIRONMENT: <isolated project/ref/schema fingerprint or NOT USED>
+RED TEST: <path, exact command, observed failure and exit code / NOT RUN>
+GREEN TEST: <path, exact command, observed pass/fail counts and exit code / NOT RUN>
+NEGATIVE AUTH TEST: <unauthorized actor/row/operation, expected error and actual result / NOT RUN>
+REGRESSION: <AuthModal/Telegram/navbar/roles/Owner affected tests and actual evidence>
+DIFF: <exact changed files>
+CI: <exact SHA/run/check result or NOT RUN>
+BROWSER: <environment, device/locale/theme, observed screenshots/actions or NOT RUN>
+PRODUCTION: NOT TOUCHED unless separate explicit Product Owner authorization exists
+VERDICT: PASS | FAILED | BLOCKED | NOT VERIFIED
+```
+
+No `PASS` without matching logs at exact revision; no synthesized test count. New tests listed below are **proposed paths**, not current files. RED must fail for the intended behavior, not for missing imports, disabled runtimes or unrelated infrastructure, unless a missing symbol is the deliberate first-step assertion.
+
+### Review focus: five high-risk input classes
+
+1. **Privilege escalation:** signup requested `APP_ADMIN`/`MANAGER`, forged `requested_role`, mixed active roles, ordinary Admin reviewing another Owner, self-target request, session-after-revocation -> all denied server-side (F1-G2/G3/G4).
+2. **School record identity/conflict:** imported duplicate students/invalid class/year, name collision, unknown teacher, admission accepted but not enrolled -> no accidental merge or private class access (F2-A1/A3/A4/A6).
+3. **Resource scope:** Teacher asks another class; Parent asks unrelated child; Staff guesses roster ID; anonymous visitor calls direct RPC -> denied with zero unintended row leakage (F2-A2/A3/A5/A8).
+4. **Cross-device state:** Browser and Telegram use same linked user, stale role status and repeated arrival requests; invalid Telegram link or old token -> safe identity/authorization, no duplicate state (F1-G5/F4-P2/P3).
+5. **Misleading success:** admission, Parent Note or student question when backend offline/denies/validation fails -> no `saved`, `delivered` or `released` UI unless durable service confirms it (F3-C1/C2/C3/F4).
+
+---
+
+## 7. PHASE F0 - Repository, migration and toolchain reconciliation
+
+### F0-R0: Fresh source/target inventory and evidence gate (READ-ONLY FIRST)
+
+**Purpose:** prohibit wrong-repo, stale-branch and wrong-Supabase execution.  
+**Inputs:** `AGENTS.md`, all governing docs, current `main`, branch inventory, current Supabase project/schema/migrations/functions.  
+**Files:** Read existing files only; optional authorized evidence report `docs/` after separate write permission.  
+**Produces:** `CURRENT_STATE` packet (template section 0), target tables/function inventory, current docs conflicts and plan decision `BLOCKED` or proceed to next separately approved packet.
+
+- [ ] Inspect fresh `main` exact HEAD, open PRs, working tree, feature branches and changed-file overlaps. Record all source URLs with ref SHA.
+- [ ] Verify Supabase account connection and exact project ref `ofppapwofhovhroyjtkc` before any SQL. Inventory public tables, RLS, grants, functions, enum, migrations, deployed Edge Functions and Owner count via SELECT/read APIs only.
+- [ ] Identify drift between current repo `requirements.md`/`docs/` and latest user decisions. **Do not decide by file age**: current Owner instructions override older text.
+- [ ] Compare divergence of `fix/anonymous-role-authorization-20261112` against current main. Preserve unmerged work; report conflicting and useful commits/file hunks, WITHOUT merging.
+- [ ] Output exact readiness status and unknowns. **DONE WHEN:** all material facts for the NEXT proposed packet are reported, not when the plan 'looks right'. If missing, mark BLOCKED.
+
+### F0-R1: Isolated Supabase local reproducibility (NOT PRODUCTION)
+
+**Purpose:** prove committed migration history works from a clean local database before any further schema design.  
+**Existing files:** `supabase/config.toml`, `supabase/migrations/*.sql`, `supabase/seed.sql`, `supabase/tests/auth_foundation_security.test.sql`, `package.json`.  
+**Allowed target after authorization:** focused local test setup and test-suite fixes only; do not rewrite old applied schema history merely to make a test green.  
+**Interface:** baseline db schema and Auth role fixtures reproducible from source.
+
+- [ ] RED: run `npm run db:start` in Docker-enabled isolated local environment and report exact version, database URLs, exit status and whether network/credentials are appropriately isolated. If Docker unavailable, STOP; do not fake local test proof using live Supabase.
+- [ ] Run `npm run db:reset` only after verifying it targets the local Supabase stack. Expected result is deterministic synthetic seed and committed migrations, not a production cleanup. Capture exit/log and schema fingerprint.
+- [ ] Run `npm run db:test`; check that the exact pgTAP tests are collected and real allow/deny assertions run, not merely `0 failed`.
+- [ ] If RED shows source/live mismatch, report which migration/function/grant is missing. Do not modify tests to hide the mismatch.
+- [ ] DONE WHEN: clean local reset + Auth tests have reproducible, unedited proof; or `BLOCKED` with exact reason. Protect existing Owner: never attempt local reset against linked production.
+
+### F0-R2: Non-destructive live/source schema migration reconciliation
+
+**Purpose:** make eventual source-controlled migrations reproducible without losing live Auth roles or corrupting migration history.  
+**Read:** all four source SQL migrations, live list of five migration entries, actual live schema objects (DDL/constraints/policies/function definitions) and any existing PR/branch holding `canonical_account_roles`.  
+**Proposed test:** `supabase/tests/migration_parity.test.sql` (NEW), plus current `auth_foundation_security.test.sql`.
+
+- [ ] RED: produce a normalized parity report: source migration version/intent vs live migration ID/actual object effects; identify `canonical_account_roles`, enum shape, role constraints, trigger bootstrap and deployed grants. Do not assert that a version-name match establishes SQL-body equivalence.
+- [ ] Decide a **reviewed forward-only reconciliation** that makes a fresh local reset reach the expected canonical model, preserving source history and all live users. Recovered SQL body must be evidenced, not invented to match a name. Classify unknown historic operations explicitly.
+- [ ] Add a focused migration/parity test in isolated DB that would fail if `GENERAL_USER` remains an effective active grant, `APP_ADMIN` auto-bootstraps by spoofed signup or a public role can read confidential Auth tables.
+- [ ] Implement ONLY approved local/branch-side migration/source changes. `npm run db:reset` and `npm run db:test` must show expected GREEN; review migration diff, grants, triggers and rollback/forward fix. **Do not apply or repair production migration history.**
+- [ ] DONE WHEN: fresh local test DB and documented live schema differences are well understood; no auth or Owner regression. Remote parity remains NOT VERIFIED until a separately authorized staged deployment.
+
+### F0-R3: Telegram Edge Function source/runtime parity without auth redesign
+
+**Purpose:** reconcile committed `supabase/functions/telegram-auth/index.ts` `GENERAL_USER` fallback with deployed v9's null-role behavior, while preserving verified `initData`, link challenge, atomic claim, current login UI and identity.  
+**Existing files:** `supabase/functions/telegram-auth/index.ts`, `_shared/telegram-init-data.ts`, `src/lib/auth.ts`, `src/lib/telegram.ts`, `tests/functions/telegram-init-data.test.mjs`.  
+**Proposed tests:** `tests/functions/telegram-account-status.test.mjs` and focused Edge Function integration suite (NEW).
+
+- [ ] RED: compare source function and freshly read deployed v9 file line-by-line; enumerate differences including null role, failure/expiry behavior and auth requirements. Never overwrite a working deployed version with an older source copy.
+- [ ] Add tests for valid linked approved account, linked but unapproved account, invalid/stale signed `initData`, challenge replay, unlinked Telegram, and distinct canonical-user conflict. All paths must match accepted shared-app flow.
+- [ ] Produce minimal reviewed source harmonization on a feature branch, not a deployment, and keep one-time challenge logic untouched unless the focused test proves a regression.
+- [ ] Run `npm run test:telegram-auth`, `npm run test:auth`, `npm run lint`, `npm run build`; run local function integration in isolated environment if available. Mark any unrun real Telegram WebView test NOT RUN.
+- [ ] DONE WHEN: versioned source is demonstrably compatible with target v9 behavior and current frontend semantics; no production deploy or login restyle.
+
+### F0-R4: Reconcile contract documentation without rewriting history
+
+**Purpose:** ensure the next agent no longer reads false active guidance on role list or Administrative Personnel grants.  
+**Existing files to update only in a separately approved docs packet:** `requirements.md`, `structure.md`, `docs/DECISIONS.md`, `docs/CANONICAL_MODEL.md`, `docs/LIVING_BUILD_PLAN.md`; update `progress.md` only to document actual verified work.  
+**Proposed verification:** diff review and explicit source vs Product Owner decision checklist.
+
+- [ ] RED: find contradictory accepted-language occurrences (`GENERAL_USER`, full RTL shell, Administrative Personnel capability-specific-by-default, Owner/Manager approval scope, account suspend/reinstate authority, Excel/CSV methods). Cite each actual section and the newer owner decision.
+- [ ] Write a **minimal** proposed additive/superseding ADR and requirement corrections; preserve historical text as superseded where necessary, not a fabricated history. Explicitly label governance behavior as PLANNED until backend shipped.
+- [ ] Verify current protected source/components stay unchanged; do not bundle this doc packet with auth SQL edits or a UI redesign.
+- [ ] Review precedence, cross-references and status labels, then perform `git diff --check` on an authorized branch. No tests may be claimed as UI/backend PASS for docs-only edits.
+- [ ] DONE WHEN: docs express seven roles, anonymous visitor, automatic Administration privileges, Owner-only privileged appointments, ordinary account lifecycle/self restriction, separate Academics/Enrollment and manual+import methods; without claiming implementation.
+
+---
+
+## 8. PHASE F1 - Authoritative account governance and school access
+
+**Ordering:** F0 safe local DB + reconciliation -> F1-G1 status core -> G2 ordinary administrative decisions -> G3 Manager grants -> G4 Owner appointment/bootstrap -> G5 frontend/status integration -> G6 governance UI/QA. Do not turn on privileged UI until the relevant policy and denial tests are proven.
+
+### F1-G1: Durable approval-state contract and restricted actor loading
+
+**Purpose:** separate login credentials, requested role, actual approved role and account status so unapproved users cannot receive private access.  
+**Existing sources:** `src/types.ts`, `src/lib/auth.ts`, `src/components/homepages/homepageAccess.ts`, `src/components/homepages/ApplicationStatusScreen.tsx`, `src/context/AppContext.tsx`; live `profiles`, `role_assignments`.  
+**Proposed new artifact:** forward migration `supabase/migrations/<fresh>_account_status.sql` (exact version selected after F0), plus `supabase/tests/account_governance.test.sql` (NEW).
+
+- [ ] RED: write pgTAP tests demonstrating current false approval assumptions: authenticated profile with requested role but no approved effective assignment; pending/rejected/revoked account with valid Auth session; anonymous; revoked session. Expected all private school queries DENIED. Also test Owner account remains approved.
+- [ ] Freeze approved state lifecycle (DG-01 for `SUSPENDED`), account reviewer/version fields, canonical role relationship and append-only audit design. Do not let frontend User.role be the decisive status flag.
+- [ ] Implement minimum domain-owned schema and restricted server-side approval-state read/RPC in isolated DB. One canonical status source; no parallel `account_approval_requests` and `account_statuses` unless distinct lifecycles are documented.
+- [ ] RED/GREEN: adapt `src/lib/auth.ts` to obtain a server-derived actor snapshot, without altering AuthModal credential semantics. If pending actor has no effective role, retain a safe restricted identity/status UI; server-side authorization denies private reads regardless of client state. `homepageAccess.ts` MUST NOT default missing status to APPROVED.
+- [ ] Run local `npm run db:reset`, `npm run db:test`, focused new Node tests, `npm run test:auth`, role-homepage tests, `npm run lint`, `npm run build`. DONE WHEN: authorized and denied cases are proven in isolated environment and there is no implicit approval fallthrough. Production remains unchanged.
+
+### F1-G2: Ordinary account approval, rejection, suspension, revocation, reactivation
+
+**Purpose:** implement Product Owner's five-role review matrix and self-account prohibition with durable audit.  
+**Proposed files:** extend the F1-G1 migration chain with one focused `..._ordinary_account_decisions.sql`; `src/lib/accountGovernance.ts` (NEW); optionally a narrow `supabase/functions/account-governance/index.ts` if an Edge Function is demonstrably needed. `supabase/tests/account_governance.test.sql`, `tests/account-governance.test.mjs` (NEW).  
+**Interface candidate:** `reviewAccount({targetUserId, decision, reasonCode, expectedVersion})` -> committed status, version and event ID or safe error. Actor obtained server-side.
+
+- [ ] RED: one actor-role x target-role x action allow/deny test table, including `ADMINISTRATIVE_PERSONNEL` approves another Admin Personnel; Admin cannot act on self; Admin cannot act on a target who has ANY active `APP_ADMIN` or `MANAGER`; no approval of privileged requested role; PARENT/TEACHER/STUDENT/STAFF/anonymous denied; and forged target/actor/role fields denied.
+- [ ] RED: concurrency tests for two reviewers racing same target/status; stale expectedVersion; reactivation of account whose requested/effective role no longer matches; suspended/revoked sessions with stale auth tokens. Confirm predictable failure/one authoritative result and immutable audit.
+- [ ] Implement a single central policy operation using current DB roles and status (not client claims), atomic mutation and audit insertion; log reviewer ID, subject, action, previous/next status, timestamp, reason and correlation ID without leaking private details.
+- [ ] Connect only the typed client boundary, not a blanket admin role mutation from browser. Tests must validate both immediate policy denial and **persisted database result**. Do not confuse an approved app account with school enrollment or class membership.
+- [ ] GREEN `npm run db:test`, focused Node suite, `npm run lint`, `npm run build`. DONE WHEN: all five ordinary roles are authorized for other Admin Personnel, verified privileged/self denial and audit pass in isolated environment.
+
+### F1-G3: Automatic Admin bundle and explicit Manager delegations
+
+**Purpose:** `ADMINISTRATIVE_PERSONNEL` privileges are automatic while Manager actions are explicitly delegated, both server-derived.  
+**Existing:** `src/components/homepages/homepageAccess.ts`, `src/lib/auth.ts`, `src/components/homepages/ManagerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx`; live `role_assignments`.  
+**Proposed new migration:** `..._manager_capability_grants.sql`; focused grant/deny tests in `supabase/tests/account_governance.test.sql` (do not invent a second role system).
+
+- [ ] RED: Admin Personnel approved with no extra grant gets Classes/Students CRUD+imports and ordinary account governance; rejected/revoked Admin gets NONE. Manager without a reviewed capability is denied ordinary approval/roster mutation; capability-granted Manager allowed only within approved scope; forged `FULL_ACCESS` or `OVERSIGHT:ALL` cannot appoint Owner/Manager.
+- [ ] Define one canonical Manager delegation store with explicit grantor `APP_ADMIN`, resource/action/scope, active/revoked, audited timestamp. Do NOT require per-task capability assignment for default Admin Personnel powers.
+- [ ] Update actor snapshot to derive role-default operations and real Manager grants, not `capabilities` as a list of active role names. Implement granular server checks for academic editing, parent relations, enrollment review, ordinary account decisions and non-impersonating oversight.
+- [ ] Keep Teacher/Staff/Parent/Student scoped roles unchanged; no automatic Pickup release. Check consistency with `canAccessAppTab` and `getDelegatedOversightTargets`, but never use these to authorize data.
+- [ ] GREEN: pgTAP grant policy tests (allow + deny), Node resolver tests, `npm run lint`, `npm run build`. DONE WHEN automatic Admin and explicit Manager behavior is proven in DB policy and frontend hints agree without cross-role elevation.
+
+### F1-G4: Owner appointment authority and safe email-bootstrap retirement
+
+**Purpose:** Only `APP_ADMIN` can appoint other Owners/Managers. Existing Owner survives migration and no email-based auto-owner is left active.  
+**Existing:** live `public.handle_new_user()`, `auth.users` trigger, `public.role_assignments`, `src/lib/auth.ts`; associated source migrations.  
+**Proposed:** forward migration `..._owner_appointment.sql`, distinct narrowly granted Owner-only RPC, pgTAP proof in `supabase/tests/account_governance.test.sql`.
+
+- [ ] RED: test ordinary signup with the previously privileged email metadata can no longer grant Owner; signup `requested_role=APP_ADMIN` never grants Owner; Manager/Admin cannot call Owner/Manager appointment or reactivate a privileged user; anonymous cannot execute appointment functions.
+- [ ] Confirm live Owner user/active role and safe administrative recovery path in a strictly read-only gate. STOP if Owner continuity/recovery cannot be proved. Avoid printing/copying Owner email in logs or test snapshots.
+- [ ] Implement a distinct Owner-only appointment/deactivation/reinstatement operation, verifying current Owner role and approved status, no last-Owner lockout, audit and an atomic role/status update; separate from ordinary account decision RPC. Use forward-only versioned migration; do not edit historical applied SQL.
+- [ ] Validate both local migration sequences and exact live-drift mapping. Verify retained Owner account and Web/Telegram link behavior in isolated representative fixtures. **No actual live Owner account mutation or trigger replacement without a separately authorized production release packet.**
+- [ ] GREEN pgTAP deny/allow, `npm run db:reset`, `npm run db:test`, auth regression. DONE WHEN the candidate is tested and reviewed; NOT when only the migration is written. Production action remains blocked separately.
+
+### F1-G5: Protected Browser/Telegram status enforcement integration
+
+**Purpose:** Preserve current signup/login/Telegram screens while making status and role protection correct for approved, pending, rejected, revoked and (if approved) suspended actors.  
+**Existing:** `src/lib/auth.ts`, `src/context/AppContext.tsx`, `src/components/AuthModal.tsx`, `src/components/homepages/{HomePageResolver,ApplicationStatusScreen,homepageAccess}.tsx`, `src/components/Navbar.tsx`, `supabase/functions/telegram-auth/index.ts`.  
+**Proposed tests:** `tests/account-status-routing.test.mjs` and function integration test.
+
+- [ ] RED: verify current pending/revoked user either signs out and loses status or risks `APPROVED` fallback; test that a signed-in nonapproved user can see only Public/appropriate existing application-status surface, cannot access private tab by direct navigation, and no signup choice grants role.
+- [ ] Preserve `signUpAccount`, `signInAccount`, `createTelegramLinkChallenge`, verified `initData`, atomic link claim, and existing AuthModal UI; implement only the needed actor/status data boundary and safe unavailable handling.
+- [ ] On Web and Telegram requests, re-check effective DB policy at each protected resource operation so old sessions/links cannot keep access after suspension or revocation. Telegram linked identity remains linked but unauthorized when status is inactive; do not delete/link another identity.
+- [ ] Run role selector tests, `npm run test:auth`, `npm run test:telegram-auth`, focus Node tests, `npm run lint`, `npm run build`; stage browser matrix for approved/unapproved actors, FR/EN/AR, Light/Pitch Black, LTR header, account status screen and link dialog (browser evidence separate).
+- [ ] DONE WHEN: no UI changes beyond required status copy, no login/Telegram regression, backend denials proven; never claim full Telegram Live PASS without a real WebView test.
+
+### F1-G6: Wire existing Owner/Manager/Admin governance cards (NO REDESIGN)
+
+**Purpose:** make existing governance UI operational against proven F1 backend and preserve presentation.  
+**Existing:** `src/components/homepages/OwnerHomePage.tsx`, `ManagerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx`, `src/components/homepages/shared/*`, `src/App.tsx`, `src/components/Navbar.tsx`; NEW `src/lib/accountGovernance.ts`.  
+**Proposed tests:** `tests/account-governance-ui.test.mjs`; browser integration after approved harness.
+
+- [ ] RED: clicking current Owner `Pending Account Approvals` / `User Directory` / delegation cards shows `BLOCKED_BACKEND`; verify role reviews have no working server mutation. Test unauthorized actor cannot summon effective privileged mutation by URL/direct API.
+- [ ] Connect current card language, hierarchy and panels to account list, status and review actions with typed client errors and server-derived permitted actions. Existing `ADMINISTRATIVE_PERSONNEL_HOME` gains **appropriate access using existing card idioms** without altering eight homepages or navigation geometry; Manager sees only delegated operations.
+- [ ] Add confirmation for sensitive suspend/revoke/reinstate operations, clear identity/role/status display, accurate server-confirmed success or failure, and audit ID where relevant. The UI cannot assert success when the RPC fails.
+- [ ] Run targeted unit/UI tests, `npm run lint`, `npm run build`, full role-homepage and login/Telegram regressions. Browser-check on mobile and desktop in FR/EN/AR, both themes; record screenshots/interaction results, not guessed PASS.
+- [ ] DONE WHEN: existing visible actions operate safely for allowed actors and remain absent/denied for others; Owner/Manager/Admin screens retain accepted design. Record deferred status-model DG-01 if not resolved.
+
+**F1 closure gate:** No ordinary approval without server-verified school authority; no Owner/Manager privilege escalation; no Admin Personnel self-action; no stale-session access; working role status; audit trail; isolated pgTAP allow/deny and browser auth/Telegram parity evidence. Do NOT start F2 with production student data until F1 is verified and separately approved for deployment.
+
+---
+
+## 9. PHASE F2 - Canonical student, class, enrollment, teacher and family foundations
+
+**Prerequisites:** F1 current-role/status security, policy test infrastructure, a selected isolated DB, approved domain ownership and a reviewed student-record privacy matrix. F2 may be built across multiple small PRs. The UI does not need redesign; its current components will be fed authorized data. Never create all student/family records as one denormalized roster.
+
+### F2-A1: People-owned Student identity independent of app credentials
+
+**Purpose:** register pupils already attending KRISTOU even if they have never signed up for the app.  
+**Existing to inspect:** `docs/CANONICAL_MODEL.md` People section, `src/types.ts`, `src/data/mockData.ts`, `supabase/migrations/`.  
+**Proposed migration:** `..._people_students.sql`; **proposed client:** `src/lib/schoolPeople.ts`; **proposed test:** `supabase/tests/student_identity.test.sql`.
+
+- [ ] RED: prove no canonical student table exists; write tests demanding stable student ID/code uniqueness, required school-approved fields, active/inactive student lifecycle, non-merging on similar names, and zero public/unauthorized read/write.
+- [ ] Confirm school-approved minimum identity fields with DG-02; do not import medical notes, full family dossiers, photos, contacts or unverified identifiers just because a mock `Child` type includes them.
+- [ ] Implement People-owned student identity record with stable IDs; treat optional app-account linkage as a separate explicitly school-verified action. No automatic `auth.users` creation and no role assignment.
+- [ ] Implement narrow authorized read/write interface for administrative roles and optional safe student projection for academics, with RLS/grants and audit. Confirm unauthenticated and unrelated Teacher/Parent/Student access is denied.
+- [ ] GREEN: local migration reset, pgTAP tests, typecheck/build; DONE WHEN existing-student record creation works in isolated DB without credentials or guardian/class side effects.
+
+### F2-A2: Academics-owned AcademicYear, Level and Class
+
+**Purpose:** establish one school-year/class identity source before class roster or Teacher access.  
+**Existing:** `src/types.ts:SchoolClassSummary`, `src/components/views/ClassesManagementView.tsx`.  
+**Proposed migration:** `..._academics_year_level_class.sql`; **client:** `src/lib/schoolAcademics.ts` (NEW); **tests:** `supabase/tests/academics_access.test.sql` (NEW).
+
+- [ ] RED: attempt to create duplicate class identity in same academic year/level; invalid year/level; overlapping active class config; anonymous, Parent, unassigned Teacher and ordinary School Staff writing class config. Expect constraint or policy denial.
+- [ ] Freeze school-approved academic-year/level codes (KRISTOU's existing CP-to-6eme context is not permission to hardcode scheduling/admission age rules). Class is one canonical Academics entity; never add separate ClassCommunity class authority.
+- [ ] Implement minimal approved schema and its authorized create/edit/archive actions; school-wide `APP_ADMIN` and approved `ADMINISTRATIVE_PERSONNEL` default permissions, scoped delegated `MANAGER`; all writes audited.
+- [ ] Provide server-projected `SchoolClassSummary` with ID, name, level, year, teacher display label (nullable), active student count (computed from membership, not independently editable) and optional room label. Do not grant broad base-table joins to public clients.
+- [ ] GREEN: local reset, pgTAP constraints/RLS, adapter tests and build. DONE WHEN isolated class/year/level records are canonical and no redundant roster/membership authority exists.
+
+### F2-A3: Academics-owned TeacherClassAssignment and scoped Teacher reads
+
+**Purpose:** connect existing Teacher 'My Classes' to actual current assignments.  
+**Existing:** `TeacherHomePage.tsx`, `homepageAccess.ts`, `src/types.ts:ClassItem`, verified `TEACHER` account.  
+**Proposed:** `..._teacher_class_assignments.sql`, `src/lib/schoolAcademics.ts` `listMyAssignedClasses()`, `supabase/tests/teacher_class_scope.test.sql`.
+
+- [ ] RED: approved Teacher without assignment -> no assigned classes; assigned Teacher -> only their classes; teacher requests another class -> denial; expired assignment/withdrawn teacher -> no access; ordinary School Staff -> no implicit Teacher roster permission.
+- [ ] Define teacher school-person identity linkage separately from signup `staff_id`, with school verification; do not grant assignment based on free-text staff ID or identical full names.
+- [ ] Implement add/remove/transfer TeacherClassAssignment using Academics operations, authorized by Owner/approved Admin Personnel/delegated Manager. Enforce academic year and date validity; audit changes.
+- [ ] Feed existing `TeacherHomePage` selected-class UI from server-verified assignedClassIds / class summaries; preserve class selector and empty state. Teacher reads the appropriate minimal permitted class roster/content, not the universal admin roster.
+- [ ] GREEN pgTAP allow/deny + class selection tests and visual regression. DONE WHEN assigned Teacher has exact class scope and removal immediately removes the associated private class access.
+
+### F2-A4: Enrollment eligibility and Academics-owned StudentClassMembership
+
+**Purpose:** avoid creating competing sources for whether a student is enrolled versus which class they belong to.  
+**Model:** `EnrollmentApplication`/`Enrollment` owned by Enrollment, `StudentClassMembership` owned by Academics, People-owned Student ID.  
+**Proposed migrations:** `..._enrollment_records.sql` and separately reviewed `..._student_class_membership.sql`; **proposed tests:** `supabase/tests/enrollment_membership.test.sql`.
+
+- [ ] RED: accepted application without actual Enrollment -> no private class access; enrolled student without class membership -> no arbitrary class access; transferred/withdrawn membership -> old class access denied; duplicate active membership in conflicting classes/year -> constraint denial; direct Enrollment table write to Academics membership -> denied.
+- [ ] Freeze minimum eligibility/placement contract from existing C4/C5 canonical model and school business records. Do NOT auto-enroll imported students or assign classes merely because a registration application is accepted.
+- [ ] Implement Enrollment's own row/lifecycle and a **narrow Academics-controlled command** to establish or end verified membership; support explicit transfer and academic-year rollover as reviewed transitions rather than silent overrides.
+- [ ] Ensure atomicity/recovery between enrollment decision and authorized class placement; record intent and finalized result if multi-domain transaction boundaries demand it. No duplicate source-of-truth rows; do not create a `class_enrollments` copy merely because placeholder UI text names that table.
+- [ ] GREEN local reset, pgTAP constraints/RLS, negative access tests and adapter tests. DONE WHEN real student class membership has one Academics owner and is consistent with Enrollment authority.
+
+### F2-A5: Family-owned ParentChildLink and verified guardian associations
+
+**Purpose:** enable Parent's existing child selector and prevent parent-child data leakage or heuristic linkage.  
+**Existing:** `ParentHomePage.tsx:resolveParentLinkedChildren`, `AppContext.tsx:childrenList`, `src/types.ts:linkedChildrenIds`.  
+**Proposed migration:** `..._family_parent_child_links.sql`; **client:** `src/lib/schoolFamily.ts`; **tests:** `supabase/tests/family_scope.test.sql`.
+
+- [ ] RED: Parent A asks for child of Parent B -> denied; parent account approved but no verified link -> empty; a matching surname/email/phone/admission ID -> still NO implicit link; inactive/removed link -> no access; unapproved parent token -> denied.
+- [ ] Define school-verification criteria for guardian/parent association and who can administer the link. Approved `ADMINISTRATIVE_PERSONNEL` has ordinary Parent Relations authority; Owner and delegated Manager are allowed according to explicit school rules. Preserve non-account authorized pickup-person concept separately.
+- [ ] Store one Family-owned verified ParentChildLink with status/audit. Use canonical user and People student IDs. Do not copy relationship flags into JWT or make the frontend the authority.
+- [ ] Build a narrow server reader for `listMyLinkedChildren()`; project permitted child/class details from Family + Academics without unrelated student dossiers. Update existing ParentHomePage context from verified data only.
+- [ ] GREEN pgTAP cross-parent and inactive-link denial, parent selector tests, build. DONE WHEN Parent sees exactly their linked children and never gets a mock/other-family fallback.
+
+### F2-A6: Individual administrative forms for student/class/teacher records
+
+**Purpose:** fulfill approved manual data-entry method in existing school administrative UX.  
+**Existing:** `ClassesManagementView.tsx`, `OwnerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx`, `ManagerHomePage.tsx`, `src/types.ts`.  
+**Proposed new components:** small role-consistent record form(s) colocated with existing `src/components/views/` conventions; do not create a parallel app/admin shell.  
+**Tests:** `tests/academics-ui.test.mjs` (NEW) and back-end pgTAP write authorization.
+
+- [ ] RED: current Classes page is read-only/pending backend. Test clicking an authorized Add Student/Add Class/Assign Teacher action, invalid fields, duplicate student code, unauthorized actor and server failure: no false 'saved' and no accidental edit.
+- [ ] Keep existing class list/search/filter/detail interactions and button/card style. Add minimal data-entry controls that fit current layout; no auth modal/navigation redesign. `ADMINISTRATIVE_PERSONNEL` automatic access; `MANAGER` only delegated; `TEACHER` read-own-classes.
+- [ ] Use one typed command path per owning domain. A student form creates/edits People identity, not ClassMembership by default; explicit separate controlled assignment uses Academics and verified Enrollment; teacher assignment is its own deliberate action.
+- [ ] Show field validation, saving/persisted confirmation, errors/unauthorized, duplicate conflict and audit result. Zero `mockData.ts` production fallback; no private child data leaked in toast/console.
+- [ ] GREEN Node/UI tests + local DB integration + `npm run lint`/`npm run build`; browser test FR/EN/AR at phone/desktop and both themes. DONE WHEN both roles can maintain approved records without layout or Auth regression.
+
+### F2-A7: CSV/XLSX import parser, template and DRY-RUN preview (NO WRITES)
+
+**Purpose:** implement first half of approved bulk entry as an inspectable preview.  
+**Proposed:** `src/lib/schoolImport.ts` (NEW), small import-preview component that uses current administrative card styles, `tests/school-import.test.mjs` (NEW).  
+**Test data:** synthetic sample CSV and XLSX created in isolated tests; no real pupil records or network fetching.
+
+- [ ] RED: malformed/empty files, wrong extension, CSV with quoted commas/newlines, non-UTF8 or BOM cases, extra/missing headers, formulas, size/row limits, duplicate school IDs, ambiguous students/teacher/class IDs, malicious spreadsheet field and wrong academic year. Errors must identify rows without leaking sensitive values.
+- [ ] Freeze the exact school-approved templates/identity match/row policy under **DG-02**. Do not invent required fields. Use a reviewed parser dependency if existing code has none; no macro/formula execution and no unrestricted remote fetch.
+- [ ] Parse client-side only where safe and within limits; produce a deterministic typed dry-run preview with per-row create/update/skip/conflict errors and a fingerprint/hash of the exact proposed set. No writes, no account/role operations, no auto-guardian link.
+- [ ] UI shows clear file/domain/year confirmation and validation summary using existing style, including 0 valid rows and mixed valid/invalid outcomes. The preview must not display 'import complete'.
+- [ ] GREEN parser unit tests and manual preview regression. DONE WHEN a staff member can review intended changes and the parser never silently merges distinct school identities; backend import has NOT yet been performed.
+
+### F2-A8: Authorized bulk import COMMIT and audit
+
+**Purpose:** take approved preview rows through the same owner-controlled writers as manual entry.  
+**Prerequisite:** F2-A7 plus DG-02 including import transaction/partial-failure policy.  
+**Proposed:** narrow `supabase/functions/school-import/index.ts` only if needed for authenticated bounded transport, database bulk operation(s) within owning domains, `supabase/tests/school_import.test.sql`, `tests/school-import.test.mjs`.  
+**Interfaces:** `previewHash`, `domain`, explicit confirmed actions, idempotency key -> persisted counts, immutable audit event IDs and row failures.
+
+- [ ] RED: authorized Admin Personnel import -> accepted; no-grant Manager -> denied; Parent/Teacher/public -> denied; unauthorized reference to another domain -> denied. A student file cannot change `role_assignments`, create Auth users, link Telegram or add guardians.
+- [ ] RED: concurrent import of same file twice -> idempotent/duplicate-safe; preview changed between display and commit -> denied; collision on student code -> safe conflict; partial/rollback behavior matches DG-02; user denied while processing -> no unauthorized write.
+- [ ] Implement bounded server validation + atomic domain-owned batch writes/audit. The import layer orchestrates, but does not become a second canonical Student/Academics/Enrollment owner. Only authorized explicit operations can establish class membership or teacher assignment.
+- [ ] Verify unique constraints, transaction behavior, refresh of roster, accurate inserted/updated/skipped/failed counts, error disclosure controls and safe retry. No use of live minor data in tests.
+- [ ] GREEN `npm run db:test`, focused import integration, `npm run lint`/`npm run build`; DONE WHEN a confirmed synthetic import produces exactly the expected durable records/audit, and all deny/conflict/retry cases pass in isolated DB.
+
+### F2-A9: Wire school-wide Classes list -> actual student roster
+
+**Purpose:** turn existing `ClassesManagementView` from `BACKEND_NOT_IMPLEMENTED` into truthful authorized school data.  
+**Existing:** `src/components/views/ClassesManagementView.tsx` props `initialClasses`, `initialRosters`, `backendStatus`; `src/types.ts:SchoolClassSummary,ClassStudentRosterItem`; `src/App.tsx`, `homepageAccess.ts`.  
+**Proposed:** `src/lib/schoolAcademics.ts` read-only API/hooks and focused `tests/academics-ui.test.mjs`.
+
+- [ ] RED: after synthetic classes/students/memberships, Owner sees only real returned classes; an unrelated Teacher cannot call school-wide roster RPC; Admin Personnel can read it automatically, Manager only if delegated; `SCHOOL_STAFF`/public/Parent/Student direct calls denied.
+- [ ] Implement the **server** authorized `listSchoolClasses()` and `getClassRoster(classId)` projections. Never return private guardian contact/medical fields by default; only show previously approved roster columns to authorized staff, with additional field-level minimization as needed.
+- [ ] Adapt `App.tsx`/existing view to load `initialClasses` and `initialRosters` or equivalent without changing the card list, search filters, 25-row pagination or current layout. Keep proper LOADING/READY/EMPTY/ERROR/DENIED labels and no fake class fixtures in production.
+- [ ] Confirm Owner menu order and both Admin/Manager navigation gating reflect **server-derived** permission; only add the minimal entry point if current Admin homepage lacks one. No Teacher school-wide roster route.
+- [ ] GREEN pgTAP scoped query denial, unit tests for 0 classes/large roster/filter, build and mobile/trilingual browser QA. DONE WHEN Classes/roster responds to real canonical data, never mock fallback, and the existing UI remains visually consistent.
+
+### F2-A10: Connect Teacher and Parent homepages to real relationships
+
+**Purpose:** finish the read-only projection dependencies needed before communication and Pickup.  
+**Existing:** `TeacherHomePage.tsx`, `ParentHomePage.tsx`, `StudentHomePage.tsx`, `AppContext.tsx`, `src/types.ts`.  
+**Proposed:** narrowly scoped hooks/adapters in existing `src/lib/schoolAcademics.ts` / `schoolFamily.ts` and `tests/parent-relations.test.mjs`.
+
+- [ ] RED: Teacher 1 sees class A, not B; Parent 1 sees child A, not B; Student sees only own enrollment/class; user with no verified link/assignment sees honest empty state; disabled/revoked actor denied after same-session revocation.
+- [ ] Project assigned classes and linked children from separate authoritative tables, not by selected user role, `mockData.ts`, profile text or imported unverified identifiers.
+- [ ] Connect existing selectors, cards and actions without altering the protected layout; ensure children/class selection resets safely when server grants are removed, class transferred or session expires.
+- [ ] Verify all private actions use the selected **verified ID** and server re-check, not a free-form client ID; no cross-school tenancy or public roster content.
+- [ ] GREEN pgTAP scope, Node tests, auth/Telegram unit regressions, browser FR/EN/AR mobile/desktop. DONE WHEN Teacher and Parent screens reflect current authorized relationships with no unsafe fallback.
+
+**F2 closure gate:** Actual synthetic Students, Classes, academic years, TeacherClassAssignments, Enrollments, StudentClassMemberships and ParentChildLinks exist in isolated DB with tested ownership and RLS; authorized Admin Personnel can manually edit and import; only exact class/guardian scopes appear; no credential/role/pickup side effects from imports. Production student data remains forbidden until independently authorized and verified release.
+
+---
+
+## 10. PHASE F3 - Enrollment application, Parent Notes and Class Questions
+
+These are **separate** domains and PRs. The owner requested to wire foundational school records first; do not prematurely make fake communication success or enroll a student from a simple account signup.
+
+### F3-C1: Real Registration / EnrollmentApplication intake and review
+
+**Purpose:** implement school admission separately from existing app-account signup.  
+**Existing:** `src/components/views/RegistrationView.tsx`, `OwnerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx`, `ManagerHomePage.tsx`; canonical model Enrollment.  
+**Proposed:** `..._enrollment_applications.sql`, `src/lib/schoolEnrollment.ts` (NEW), `supabase/tests/enrollment_applications.test.sql`, `tests/registration-intake.test.mjs` (NEW); private Storage only when school-approved documents require it.
+
+- [ ] RED: public form local `submitted` flag currently reports success without server persistence. Write tests for accepted valid submitted application, missing required information, unauthorized review, duplicate submission, expired/rejected account and backend failure (must NOT show persisted confirmation).
+- [ ] Freeze DG-03 school-approved admission form requirements and documents. The applicant may be public/anonymous without creating an application account; rate limits/abuse protection and privacy notice apply, but do not invent national legal requirements.
+- [ ] Implement Enrollment-owned application state (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `NEED_DOCUMENTS`, `ACCEPTED`, `WAITLIST`, `REJECTED`, `ENROLLED`) with actor/timestamp audit. Approval of an enrollment application is NOT app account approval; acceptance is NOT class membership.
+- [ ] Connect existing Registration UI and Owner/Admin review entry to a narrow authorized backend; approved `ADMINISTRATIVE_PERSONNEL` has operational admissions review, `MANAGER` when delegated, Owner always. Return accurate success, review status and private document permissions; no duplicate implicit StudentClassMembership.
+- [ ] GREEN local pgTAP, End-to-End API review flow, UI tests, mobile/trilingual visual regression, build. DONE WHEN an application survives reload, school reviewer state is durable, and class access remains denied until valid enrollment + Academics membership.
+
+### F3-C2: Parent Notes server persistence, quota and time window
+
+**Purpose:** replace unsafe React-local 'sent' confirmations with actual domain-validated communication.  
+**Existing:** `src/components/views/ParentNotesView.tsx`, `src/context/AppContext.tsx:addParentNote`, canonical model Parent Notes.  
+**Proposed:** `..._parent_notes.sql`, `src/lib/parentNotes.ts`, `supabase/tests/parent_notes.test.sql`, `tests/parent-notes.test.mjs` (NEW).
+
+- [ ] RED: a current React-local note appears sent when DB does not persist. Tests require no send success on timeout/denial; an unlinked parent cannot send about an unrelated child; an unassigned teacher cannot read/reply; private contents never become a class broadcast.
+- [ ] RED: **11 notes per school day**, **08:00-18:00 Africa/Tunis** send window, **08:00 day reset**, concurrent Web/Telegram duplicate/retry quota enforcement; validate topic, body/child/assigned teacher. Use server time, not browser time. Teacher/authorized staff replies do not consume Parent's quota.
+- [ ] Implement Parent Notes-owned record/Reply, server-constrained quota+window and restricted read/write operations; Family/Academics are external authoritative checks through narrow validated reads. Transactional counters only if genuinely required; no Redis dependency by default.
+- [ ] Connect existing ParentNotes UI states, accurate send/reply/read confirmation and quota indicator with backend data, retain current visual design. Parent sees their appropriate notes only; relevant Teacher/authorized staff see only their permitted audience.
+- [ ] GREEN pgTAP, real database concurrency/clock-boundary integration tests, UI tests and build. DONE WHEN a note is durable and visible to the intended recipient or honestly fails, with no bypass via generic Messages.
+
+### F3-C3: Student Class Questions persistence/moderation
+
+**Purpose:** make student peer questions class-wide, safe and auditable, never a private student direct message.  
+**Existing:** `src/components/views/ClassCommunityView.tsx`, `src/context/AppContext.tsx:addClassQuestion/replyClassQuestion`, `src/types.ts`.  
+**Proposed:** `..._class_questions.sql`, `src/lib/classQuestions.ts`, `supabase/tests/class_questions.test.sql`, `tests/class-questions.test.mjs` (NEW).
+
+- [ ] RED: no member -> denied; Student in class A asks class B -> denied; inactive class membership -> denied; 201 characters -> denied; Teacher unrelated to class cannot moderate; questions/replies never exposed to public/other classes.
+- [ ] Implement Class Community-owned question/reply/moderation with class scope sourced from Academics; one canonical class ID, 200-character limit and auditable report/moderation handling. Do not add student private DMs.
+- [ ] Replace React-only success with server-confirmed create/reply/read and safe error/loading/empty states in existing Community UI; no generic messaging shortcuts or fake published post.
+- [ ] Verify no class data appears in public/home projections, email/Telegram delivery remains a separate optional projection, and revoked/withdrawn members immediately lose protected access.
+- [ ] GREEN local DB + test suite, focused frontend tests and FR/EN/AR visual QA. DONE WHEN each question persists in its own authorized class and denies cross-class/private use.
+
+### F3-C4: Later content backlogs (explicitly deferred)
+
+The older plans also define Public Content, school broadcasts, Teacher/Administration directory, La Toque Gourmande menus, messaging and notifications. These should become **independent future packages** after the core school-data and access system works. The current `mockData.ts` is intentionally kept for testing and visual reference. Do not convert all mock content, add payment/grades/attendance, or implement unrelated content merely because it appears in old plans. No task may begin under F3-C4 without a new Product Owner implementation command and a source-grounded spec.
+
+**F3 closure gate:** Admission applications, Parent Notes and Class Questions have their own durable owners, server policy and real loading/success/error states. No false success; no unauthorized class/child/document information; account login and school enrollment remain independent.
+
+---
+
+## 11. PHASE F4 - Safety-critical Pickup (DO NOT ENABLE EARLY)
+
+**Prerequisite HARD LOCK:** completed and verified F1 authz + F2 canonical Student/Enrollment/Class/Teacher/Family contracts; a school-approved Pickup policy and authorized collector records; isolated and staged safety verification. The current `AppContext` functions intentionally return `pickup_backend_unavailable`. Preserve this behavior throughout preparation and do not activate UI merely because a schema or button exists.
+
+### F4-P0: Pickup domain contract, dismissal policy and authorized collector identities
+
+**Purpose:** define exactly who can announce, see, and physically release each pupil at a particular school-configured time.  
+**Existing:** `requirements.md` Pickup sections 28-39, `docs/CANONICAL_MODEL.md` Pickup section, `src/types.ts:PickupState`, `src/components/views/PickupBoardView.tsx`.  
+**Proposed:** `..._pickup_policy_authorized_people.sql`, `supabase/tests/pickup_safety.test.sql`.
+
+- [ ] RED: unapproved, unlinked guardian, wrong child/class, unknown/expired/non-school-approved collector, closed class window, inactive Enrollment, unassigned staff, stale role -> DENIED; no use of client timestamp, geofence or AI to authorize release.
+- [ ] Confirm school Pickup windows, teaching/staff release assignment, collector verification procedure, school holidays and exceptions. Historical 15:30-16:15 in reference HTML is an EXAMPLE, not general policy.
+- [ ] Implement Pickup-owned `DismissalPolicy` and `AuthorizedPickupPerson` records with restricted guardian/collector details. An authorized collector may NOT be an app user; this concept must not be auto-derived from Parent role or imported student contacts.
+- [ ] Expose narrow policy/collector verification to the planned Pickup commands, with server-derived current clock `Africa/Tunis`, active class and staff scope, and append-only audit for policy changes.
+- [ ] GREEN local policy and denial tests; DONE WHEN school policy/collector authority is durable, school-approved and impossible to overwrite through arbitrary frontend role claims; buttons stay locked.
+
+### F4-P1: Parent arrival is one durable, idempotent transition
+
+**Purpose:** from an authorized parent/collector request, persist `WAITING -> PARENT_ARRIVED` with correct actor/child/class/collector identity.  
+**Existing:** `src/context/AppContext.tsx:markPickupArrived`, `src/components/views/PickupBoardView.tsx`.  
+**Proposed:** `..._pickup_cycles_arrivals.sql`, `src/lib/schoolPickup.ts`, narrow `school-pickup` transport only if needed, `supabase/tests/pickup_safety.test.sql`.
+
+- [ ] RED: Parent A/child B, closed window, wrong class, unapproved collector, no enrollment/link, no active dismissal policy, unapproved account, public session, forged actor -> DENIED; repeated same request -> one durable arrival result; already RELEASED -> NEVER reopen.
+- [ ] Design exact per-day/per-class dismissal cycle key and uniquely constrained arrival record; server-generated time only, status transitions atomic, with explicit no-double-arrival/retry semantics; no transient Redis-as-source-of-truth.
+- [ ] Implement `announceArrival(childId, collectorId, idempotencyKey)` (signature proposal to freeze after data model review) through Pickup-owned transaction and audit. Parent may only submit arrival, NEVER release; actor and family eligibility are checked server-side.
+- [ ] Keep frontend `markPickupArrived()` fail-closed until after safety tests and release dependency. When permitted to wire, acknowledge **arrival only**, never 'child released'; show real persisted confirmation and unavailable handling.
+- [ ] GREEN DB transaction/retry/concurrency, FR/EN/AR parent flow and Browser/Telegram same-user parity in staging. DONE WHEN arrival persists once with correct audit and no path to release; staff release still separate/locked.
+
+### F4-P2: Staff-only physical release and immutable audit
+
+**Purpose:** prevent any parent/UI/AI/Manager oversight shortcut from changing physical Pickup state to RELEASED.  
+**Existing:** `confirmPickupRelease()` safety lock, `PickupBoardView.tsx` Teacher/Manager surfaces.  
+**Proposed:** `..._pickup_release.sql`, `supabase/tests/pickup_safety.test.sql`, end-to-end staff release test.
+
+- [ ] RED: Parent attempts `RELEASED` -> denied; Teacher assigned another class -> denied; Staff with no explicit release authority -> denied; Manager with `PICKUP_VIEW` but no release capability -> denied; pre-arrival release -> denied; collector mismatch -> denied; stale duplicate release -> idempotent or safely rejected, never double-handoff.
+- [ ] Implement **one atomic transaction** checking verified staff actor/role, current approval, class assignment/release capability, `PARENT_ARRIVED` state, same dismissal cycle, actual verified authorized collector and server clock. Persist release actor/time/collector ID with append-only events.
+- [ ] Require deliberate staff confirmation after physical identity check; teacher or school staff role alone does not prove handoff authority. No client-side UPDATE to `RELEASED`; no AI/geolocation/timer auto-release.
+- [ ] Add one verified read model for Teacher assigned class and separate Manager oversight aggregates. Manager inspection is not impersonation; privileged audit access is distinct from release authority. Do not leak child records across classes through realtime.
+- [ ] GREEN negative permission/concurrent requests/integration tests with durable audit proof. DONE WHEN exact staff release can be proven with actor, student, class, collector and timestamp, and forbidden actors cannot do it even through direct RPC.
+
+### F4-P3: Realtime, cross-device recovery, notifications and staged readiness
+
+**Purpose:** align Parent, assigned Teacher, authorized staff and oversight views after durable events without losing authoritative state.  
+**Existing:** `PickupBoardView.tsx`, `Navbar.tsx` notifications UI, `AppContext.tsx`, existing Browser/Telegram authentication adapters.  
+**Proposed:** narrow server-authorized realtime projections plus approved outbox/notification integration; no new Redis/worker service by default.
+
+- [ ] RED: two simultaneous Web/Telegram arrivals; network disconnect during arrival; retry after release; Teacher reconnect; failed notification; unauthorized realtime topic subscription; stale retained client state. Expected one DB transition, correct recovery and no false release or audience leakage.
+- [ ] Use PostgreSQL durable Pickup event as source. Where asynchronous delivery is required, implement transactionally recorded outbox or equivalent reviewed durable projection, idempotent delivery and server-authorized subscribers. Do not declare notification delivery as proof of child release.
+- [ ] Parent UI: selected linked child; active/closed window; I HAVE ARRIVED; pending/arrived/released/unavailable states with accurate copy. Teacher assigned-class board: student, permitted collector/relation and server time, deliberate CONFIRM RELEASE. Manager: authorized class aggregate, no unauthorized raw child access.
+- [ ] Test actual Browser/Telegram accounts against the same backend, including expiry/revocation, disconnect/reconnect, duplicate requests, concurrency and notification failure. Use staged synthetic pupils and test collectors only.
+- [ ] DONE WHEN staged end-to-end safety suite + manual physical-handoff workflow review + security negative suite are documented. **Only then** may a separate owner-approved production activation packet unlock Pickup.
+
+**Pickup hard-stop conditions:** no verified Family or class membership; no staff collector check; no real DB transaction; any Parent write route sets `RELEASED`; cross-class leakage; notification treated as state truth; incomplete negative/concurrency testing; an unreviewed change to current Pickup lock. STOP rather than invent optimistic UI.
+
+---
+
+## 12. PHASE F5 - Whole-product QA, release and permanent handoff
+
+### F5-V1: Staging readiness + UI/UX regression matrix
+
+**Purpose:** prove completed candidate against real isolated backend and accepted UI on both Browser and Telegram.  
+**Existing:** all current homepages, Navbar/AuthModal, App, shared styles, tests; Vercel and Supabase environments.  
+**New files:** targeted E2E tests/screenshot baselines only under a separately approved QA packet. Do not assume Playwright is already a declared dependency or pre-existing script.
+
+- [ ] Establish exact staging/preview deployment tied to branch SHA and isolated Supabase ref, using explicitly approved costs/configuration. Use synthetic actors for all seven roles plus anonymous and unapproved states.
+- [ ] Run actual browser click-through for signup/sign-in, failed login, Telegram link invitation (real WebView where feasible), eight homepages, Owner inspection non-impersonation, manager delegation, Admin Personnel account lifecycle, Classes/roster, manual entry, import preview/commit, Parent/Teacher scoping, Registration, Parent Notes, Questions and Pickup safety lock/activation as relevant.
+- [ ] QA across representative 360px/390px phone, tablet and desktop widths, FR/EN/AR, Light/Pitch Black; **Navbar must stay stable LTR** and Owner's Teachers -> Classes -> Registration order preserved. Compare current accepted screenshots/baseline, not old HTML template geometry; record screenshots, overflow/console errors, auth redirects, keyboard/mobile usability.
+- [ ] Verify no real user/student data or service-role secret in Vite/browser bundles, console, public routes, files, realtime or logs. Check SQL grants + RLS, exposed RPC privileges, storage security and Supabase advisor notices with links and justified disposition.
+- [ ] DONE WHEN every relevant acceptance item has per-SHA logs/screenshots and passed deny-case evidence. An incomplete staging matrix is NOT PASS and does not authorize production deployment.
+
+### F5-V2: Explicit production change authorization and release sequence
+
+**Purpose:** make production deployment an entirely separate Product Owner-approved action after final tests.  
+**Forbidden until separate authorization:** GitHub merge, remote migration repair, Supabase `apply_migration`, Edge Function deploy, Auth setting change, live Owner grant, real school data import, feature activation, Vercel promotion.
+
+- [ ] Re-verify exact candidate SHA, open PRs, CI status, diff, target Supabase project ID, backup/recovery plan, current Owner count, deployed Edge Function versions, DB migration list, and no concurrent production writers. Confirm actual change scope and fresh Product Owner approval for this one action.
+- [ ] Release ordering proposed: reviewed additive migrations -> restricted policies/RPCs -> verified Edge Functions -> compatible frontend -> guarded feature enablement; never deploy a client that assumes not-yet-deployed schema. An approved release plan must specify precise per-step rollback/forward-fix, downtime and session preservation.
+- [ ] One logical mutation, immediate authoritative postcheck, no hidden next-step writes. For Owner/migration/production permissions actions use deterministic one-time preflight/postcheck per project's NoDrift rules.
+- [ ] Confirm matching live application runtime with real staged/production-safe read-only checks and carefully bounded approved functional tests; compare activated roles, Owner access, Auth/Telegram link and private exposure. Green Vercel deployment only proves status for that deployment, not the whole product.
+- [ ] DONE WHEN deployment and runtime acceptance are truly verified at exact SHA; otherwise `BLOCKED`, `FAILED` or `NOT VERIFIED`, with no claim of completion.
+
+### F5-V3: Living documentation, evidence and next-agent transfer
+
+**Purpose:** a new agent can resume without inventing what happened.  
+**Existing:** `progress.md`, `docs/LIVING_BUILD_PLAN.md`, governing docs and historical handoff.  
+**Proposed handoff record:** `docs/CONTINUATION_HANDOFF_<date>.md` or a reviewed update of the current handoff, NOT a competing product authority.
+
+- [ ] For each completed task, append actual branch/HEAD, PR, changed files, migration names, tests with commands/counts, environment and focused behavior proof. Never mark predicted work PASS.
+- [ ] Keep `requirements.md` for product behavior, `structure.md` for architecture, `docs/CANONICAL_MODEL.md` for authority, `docs/DECISIONS.md` for accepted ADR, `docs/LIVING_BUILD_PLAN.md` for execution discipline, `progress.md` for verified facts only.
+- [ ] Identify next single `CURRENT_COMMAND`, its prerequisites, unresolved DGs, migration/runtime parity status, owner count guard, PR overlap, protected UI test references and **all unresolved failures**.
+- [ ] Revalidate fresh remote main/PR/Supabase state at handoff. Provide links to current source rather than copying old SHAs into present-tense claims; keep historical refs labeled HISTORICAL.
+- [ ] DONE WHEN another agent can independently reproduce the exact next packet's state/proofs without guessing, and no unapproved work is reported as completed.
+
+---
+
+## 13. Execution dependency and stop matrix
+
+| Packet group | Depends on | Blocks if |
+| --- | --- | --- |
+| F0-R0 inventory | Repository/connected read access | Wrong repo/project, missing fresh HEAD, unknown Owner count |
+| F0-R1 local baseline | Docker + isolated Supabase CLI | No local DB; reset target unverified |
+| F0-R2 migration parity | F0-R0/R1, source and live read | Irrecoverable historic schema ambiguity, schema loss risk |
+| F0-R3 function parity | Fresh deployed v9 and current source | Telegram auth/link behavior contradictory, no real verifier test |
+| F0-R4 docs | Latest Owner decisions, current governing docs | Authority conflict not resolvable by owner precedence |
+| F1-G1 approval status | F0 local safety and reconciled role model | DG-01 status design impacts code; no proper Owner preservation |
+| F1-G2 ordinary reviews | F1-G1 | Any Admin self-action or privileged target allowed |
+| F1-G3 default Admin + Manager grants | F1-G1/G2 | Manager can appoint Owner; Admin needs manual responsibility-grants |
+| F1-G4 Owner appointment | F1-G1-G3 + active Owner proof | Risk of locking out last Owner or automatic email Owner self-grant |
+| F1-G5/G6 frontend governance | Verified backend RPC/RLS | No real status/permissions data, auth or Telegram regression |
+| F2-A1/A2 People/Academics | F1 server authorization | Student identity tied to Auth credentials by default, duplicate class owner |
+| F2-A3 teacher assignment | F2-A2 + verified staff profile | Teacher sees unrelated class |
+| F2-A4 Enrollment/membership | F2-A1/A2 + eligibility contract | Accepting application alone grants class membership |
+| F2-A5 Family | F2-A1 + approved guardianship verification | Heuristic auto-link or cross-family row exposure |
+| F2-A6 manual entry | F2 canonical writers + F1 permissions | Client writes multiple domains directly or false success |
+| F2-A7 preview | DG-02 approved template | Import attempts writes or silently guesses identity |
+| F2-A8 commit | F2-A7 + domain writers + DB tests | Partial/duplicate silently applied or unreviewed role creation |
+| F2-A9/A10 classes/parent/teacher wiring | Verified F2 records and scoping | Mock private data fallback, school-wide Teacher query |
+| F3-C1 admission | F2 Enrollment and reviewed school rules | No official school document/age requirements |
+| F3-C2 notes | F2 Family/Academics + F1 Authz | Local success, wrong clock/quota, cross-child data |
+| F3-C3 questions | F2 Academics membership | Unrelated class/student DM path |
+| F4 Pickup | F1 + F2 + approved dismissal policy | Missing collector/staff authority or concurrency/deny proof |
+| F5-V1/V2/V3 | All relevant prior packet proof | Production approval missing, stale SHA, failed gates |
+
+### Program-level risk register
+
+| Risk | Verified evidence or reason | Mitigation packet |
+| --- | --- | --- |
+| Unapproved access from missing `accountStatus` | Current frontend fallback to APPROVED | F1-G1/G5 + backend denial tests |
+| Existing Owner privilege lost | Exactly one live Owner and email trigger | F1-G4 with last-owner invariant, separate prod approval |
+| `GENERAL_USER` resurrected by old source migration / committed handler | Live enum has seven; old source has fallback | F0-R2/R3, no blind old deploy |
+| Manager/Administrative rights wrong | `capabilities` currently role names, admin UI expects capability | F1-G3, F2-A9 |
+| Main branch changed after plan | Mutable `main`, unprotected, old feature branch diverged | Fresh per-packet preflight, no blind merge |
+| Private student data leak through read projection/import | Academics not yet deployed | F2 pgTAP allow/deny and sanitized importer |
+| Unverified guardian claims | Parent/child links absent | F2-A5, no matching by names/contact |
+| False note/application delivery | React-local mutation sets success | F3-C1/C2/C3 server confirmation |
+| Child released without staff | Pickup currently intentionally locked | F4 hard lock and atomic release tests |
+| Browser/Telegram mismatch | Deployed Telegram handler/source drift | F0-R3, F1-G5, F4-P3 |
+| Costly/unapproved environment/prod change | No authorized staging branch or prod mutation | F0-R1 and F5-V2 explicit gate |
+| General UI refactor damages accepted UX | User fixed UI as source truth | Focused component changes and F5 screenshots |
+
+---
+
+## 14. Role and resource test matrix - REQUIRED for real security claims
+
+| Acting principal | Operation / target | Expected authoritative result |
+| --- | --- | --- |
+| Anonymous | Read approved public school information | ALLOW |
+| Anonymous | Read `students`, private roster, ParentChildLink, credentials, Pickup | DENY |
+| Self-registered requested `APP_ADMIN` with no approval | Approve/appoint any role; read private pages | DENY |
+| Pending/rejected/revoked/suspended applicant | Protected read/write with valid old session or linked Telegram initData | DENY |
+| Active `APP_ADMIN` | Appoint ordinary + Owner/Manager; manage school academics | ALLOW, audited; preserve last Owner |
+| Active `MANAGER` without delegation | Appoint Owner/Manager or review ordinary account | DENY |
+| Active `MANAGER` with ordinary-review grant | Approve ordinary school account | ALLOW, audited; DENY Owner/Manager |
+| Active `MANAGER` with roster grant | Manage authorized school roster | ALLOW within scope; DENY Owner governance |
+| Active `ADMINISTRATIVE_PERSONNEL` with no extra grant | Approve ordinary accounts, create/edit/import classes/students, process admissions | ALLOW once approved, audited |
+| Active `ADMINISTRATIVE_PERSONNEL` | Approve/suspend/revoke/reactivate own account | DENY |
+| Active `ADMINISTRATIVE_PERSONNEL` | Approve/suspend/revoke/reactivate another Admin Personnel | ALLOW with audit and school verification |
+| Active `ADMINISTRATIVE_PERSONNEL` | Change any target currently holding APP_ADMIN/MANAGER or requested privilege elevation | DENY |
+| Active `ADMINISTRATIVE_PERSONNEL` | Trigger child physical release solely due to admin role | DENY |
+| `TEACHER` assigned class A | Read appropriately scoped class A student list / moderate class A question | ALLOW |
+| `TEACHER` assigned class A | Read class B roster/release class B child | DENY |
+| `PARENT` linked child X | View own linked child X and permitted class; announce valid arrival | ALLOW within policy |
+| `PARENT` linked child X | Read child Y or mark any child RELEASED | DENY |
+| `STUDENT` enrolled class A | Read permitted own class and ask class question up to 200 chars | ALLOW |
+| `STUDENT` enrolled class A | Private DM another student or read class B | DENY |
+| `SCHOOL_STAFF` without specific scope | Browse all rosters or release child by role label alone | DENY |
+| Bulk importer with ordinary school-admin authority | Preview valid CSV/XLSX + authorized canonical write | ALLOW, audited |
+| Bulk importer | Create Auth user, grant role, auto-merge guardian, or release child via spreadsheet | DENY |
+
+This matrix must be implemented in database/API security tests, not merely mocked inside React. Allow is conditional on valid active status, correct school relationships, server time/ownership rules and exact applicable resource.
+
+---
+
+## 15. Visual and functional regression matrix
+
+| View / action | Actors to test | Dimensions/modes | Must stay true |
+| --- | --- | --- | --- |
+| Signup / Login modal | Anonymous, new applicant | FR/EN/AR, Light/Pitch Black, phone 360/390 and desktop | Exact seven role options only on signup; email/phone/username+password; no new design |
+| Navbar / profile | Anonymous + approved roles | Same | LTR header, existing placement, role menu, Telegram-link entry and Owner menu order |
+| Public home | Anonymous/Telegram anonymous | Same | Works without registered role and without private school data |
+| All eight homepages | Seven approved roles + anonymous | Same | Distinct homes, no impersonation, identical accepted card style |
+| Status view | Pending/rejected/revoked and approved | Same | Restricted account sees only status/public; no private fallback |
+| Owner governance | APP_ADMIN | Same | Real approval/appointment only via backend; roles remain protected |
+| Manager governance | Granted vs non-granted Manager | Same | Privileges and oversight exactly delegated; no Owner escalation |
+| Administrative Personnel | Approved staff, same-role peer | Same | All standard operations auto-enabled; self-account action blocked |
+| Classes list/roster | Owner, Admin, delegated Manager; unauthorized roles | Same | School-wide scoped read for authorized; stable filters/pagination |
+| Teacher My Classes | Assigned/unassigned Teacher | Same | Assigned classes only; no mock fallback |
+| Parent My Children | Linked/unlinked Parent | Same | Verified children only; correct child-switching after relation revoked |
+| Manual student/class entry | Owner/Admin/delegated Manager | Same | Durable success/errors with existing layout patterns |
+| Spreadsheet import | Owner/Admin/delegated Manager | Same | Preview before commit, no unauthorized mutation, accurate summary |
+| Registration | Public applicant + authorized reviewer | Same | School admission separate from signup, correct saved/review state |
+| Parent Notes and Class Questions | Authorized participants | Same | Server-backed state, time/limit rules, class/guardian privacy |
+| Pickup | Parent, assigned Teacher, authorized staff, Manager oversight | Same + real Browser/Telegram | Arrival != release; real staff confirmation only, safe concurrency/notification |
+
+**Screenshots from the Product Owner and accepted current React UI are baseline references.** Historical standalone HTML was a prototype; do not copy its mobile overflow or its obsolete directionality into the current app. A test matrix entry is not PASS until actual browser evidence is captured for the exact candidate.
+
+---
+
+## 16. Priority order and deliverable ledger (ALL UNSTARTED for this plan)
+
+| Order | Packet | Expected deliverable | Status at plan creation |
+| ---: | --- | --- | --- |
+| 1 | F0-R0 | Fresh exact-state/GitHub/Supabase inventory and role branch comparison | NOT STARTED |
+| 2 | F0-R1 | Reproducible isolated Supabase reset + pgTAP | NOT STARTED |
+| 3 | F0-R2 | Reviewed forward-only schema/history reconciliation | NOT STARTED |
+| 4 | F0-R3 | Committed Telegram source/runtime parity candidate | NOT STARTED |
+| 5 | F0-R4 | Governing docs updated to owner decisions | NOT STARTED |
+| 6 | F1-G1 | Server-derived approval state + denied private access | NOT STARTED |
+| 7 | F1-G2 | Ordinary account review/suspend/revoke/reactivate with audit | NOT STARTED |
+| 8 | F1-G3 | Automatic Admin Personnel authority + Manager grants | NOT STARTED |
+| 9 | F1-G4 | Owner-only privileged appointment, email bootstrap retirement | NOT STARTED |
+| 10 | F1-G5 | Protected Web/Telegram status enforcement | NOT STARTED |
+| 11 | F1-G6 | Existing governance cards wired without redesign | NOT STARTED |
+| 12 | F2-A1 | Student identity records independent of credentials | NOT STARTED |
+| 13 | F2-A2 | Academic years, levels, classes | NOT STARTED |
+| 14 | F2-A3 | TeacherClassAssignment + Teacher own classes | NOT STARTED |
+| 15 | F2-A4 | Enrollment eligibility + StudentClassMembership | NOT STARTED |
+| 16 | F2-A5 | ParentChildLink + Parent scope | NOT STARTED |
+| 17 | F2-A6 | Manual school-record forms | NOT STARTED |
+| 18 | F2-A7 | CSV/XLSX preview-only validator | NOT STARTED |
+| 19 | F2-A8 | Authorized audited bulk import commit | NOT STARTED |
+| 20 | F2-A9 | Owner/Admin/Manager Classes/roster from DB | NOT STARTED |
+| 21 | F2-A10 | Teacher/Parent homepages wired to real scope | NOT STARTED |
+| 22 | F3-C1 | Durable school Registration/EnrollmentApplication | NOT STARTED |
+| 23 | F3-C2 | Parent Notes persistence and server quota/window | NOT STARTED |
+| 24 | F3-C3 | Class Questions persistence/moderation | NOT STARTED |
+| Deferred | F3-C4 | Public content/broadcasts/menu/directory etc. | NO AUTHORIZATION |
+| 25 | F4-P0 | Approved Pickup policy/collector authority | NOT STARTED |
+| 26 | F4-P1 | Safe durable Parent arrival | NOT STARTED |
+| 27 | F4-P2 | Authorized atomic staff release | NOT STARTED |
+| 28 | F4-P3 | Realtime and staged cross-device Pickup proof | NOT STARTED |
+| 29 | F5-V1 | Full staging UI/API/security matrix | NOT STARTED |
+| 30 | F5-V2 | Owner-authorized production release only | BLOCKED - requires separate authorization |
+| 31 | F5-V3 | Verified living progress and handoff | NOT STARTED |
+
+Packets may be re-ordered **only with an explicit reviewed dependency/authorization decision**. Do not merge any packet with unrelated work to 'save time'. If a packet is too large to review independently, split it BEFORE coding and document which subpacket owns the shared interface.
+
+---
+
+## 17. Standard literal execution packet template (copy, fill, then seek authorization)
+
+```text
+PLAN TASK: <e.g. F0-R0>
+CURRENT_COMMAND: <verbatim user authorization, not a paraphrased goal>
+REPOSITORY: funmarket/KRISTOUSCHOOL
+BASE_BRANCH: <exact verified branch>
+EXPECTED_START_SHA: <fresh SHA, not an old example>
+SUPABASE_TARGET: <exact ref + LOCAL/STAGING/PRODUCTION; NONE if not used>
+CURRENT_ACTOR / WRITER: <one authorized operator, no overlapping writers>
+SPEC SOURCES: <exact current docs + relevant owner decisions>
+SOURCE TRUTH: <file paths and function names inspected at SHA>
+TARGETS ALLOWED: <exact existing/proposed files, schema objects and action types>
+FORBIDDEN TARGETS: <AuthModal, Navbar, current Owner data, linked Telegram, unrelated domains, prod, etc. as relevant>
+MATERIAL_UNKNOWNS: []
+ASSUMPTIONS: []
+UNRESOLVED_CONTRADICTIONS: []
+TEST-FIRST RED: <exact test path + command + expected failure type>
+IMPLEMENTATION: <ONE narrow behavior and minimal owned files>
+GREEN: <exact focused command; exact exit and test count required>
+NEGATIVE AUTH TESTS: <actor/action/resource/expected denial and actual output>
+REGRESSION: <app/role/Telegram/UX tests and browser matrix if touched>
+POSTCHECK: <fresh state, exact diff, no forbidden mutations, current Owner still active>
+STOP CONDITIONS: <stale HEAD, overlap, missing Docker, missing actor proof, test failure, unauthorized production dependency>
+DONE WHEN: <explicit evidence, not 'CI green'>
+NEXT TASK: NONE until new explicit authorization
+```
+
+A completed plan packet is **not** a carte blanche to execute the next one. The actual user can authorize one packet, multiple specific packets, or a separate controlled sequence; the agent may not infer permission from this roadmap alone.
+
+---
+
+## 18. Resume-here instructions for a fresh agent
+
+1. Read this entire master plan **and** the companion Product Owner Decisions Spec. Read repo `AGENTS.md` and all current source authorities in their priority order.
+2. Say clearly that the accepted current React UI, AuthModal/signup/login behavior, optional Telegram link, seven roles, eight homepages, stable-LTR Navbar and Owner menu sequence are protected.
+3. Query fresh GitHub `main` SHA, open PRs and the existing diverged `fix/anonymous-role-authorization-20261112` branch. Compare source; do not use `ee4e912...` as automatically current.
+4. Query fresh Supabase project `KRISTOUSCHOOL` (`ofppapwofhovhroyjtkc`) read-only. Reconfirm one active Owner before contemplating account/bootstrap operations; list migration versions, RLS grants and deployed functions. Verify the intended account connection; never reuse historical `Kistou` 49-table project as source.
+5. Distinguish confirmed code/UI (already present) from backend to implement. Some docs still contain stale `GENERAL_USER`/manual Admin grants. Report newer Owner directions as authoritative and propose targeted reconciliation, never guess that stale docs outrank the Owner.
+6. **Proposed first CURRENT_COMMAND:** F0-R0 (fresh read-only inventory + branch overlap). It is not pre-authorized merely by being proposed. Present its scope and evidence to Product Owner for execution approval.
+7. After F0-R0, F0-R1 local isolated DB is prerequisite to security-sensitive migration development. Never point test reset at production. If unavailable, record BLOCKED and stop safely.
+8. Implement F1 governance before creating real private child/class data. Do not launch Pickup before its mandatory foundations.
+9. Preserve all source proof with exact SHA, environment, diff, test counts and logs. On failure/unknown, stop and report the blocker, not a fabricated PASS or a workaround that changes unrelated code.
+10. At each handoff, tell the Product Owner: current packet, actual source/DB state, exact changes (if any), proof, outstanding decision gates, next proposed command, and all untouched protected areas.
+
+## 19. Evidence and source references to use for reinspection
+
+- Canonical repository: https://github.com/funmarket/KRISTOUSCHOOL
+- Baseline exact commit: https://github.com/funmarket/KRISTOUSCHOOL/commit/ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372
+- Primary contributor authority: `AGENTS.md` at inspected `main` SHA.
+- Product behavior: `requirements.md` (some newer approved decisions not yet included), `src/components/AuthModal.tsx`, `src/lib/auth.ts`.
+- Architecture: `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`.
+- Supabase sequencing: `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, `docs/SUPABASE_CONTINUATION_PLAN.md`, `docs/REMOTE_SCHEMA_INVENTORY.md`, `supabase/config.toml`, `supabase/migrations/`, `supabase/tests/`.
+- Roles/UI: `src/components/homepages/homepageAccess.ts`, `HomePageResolver.tsx`, `OwnerHomePage.tsx`, `ManagerHomePage.tsx`, `AdministrativePersonnelHomePage.tsx`, `ParentHomePage.tsx`, `TeacherHomePage.tsx`, `src/components/Navbar.tsx`, `src/components/views/ClassesManagementView.tsx`.
+- Live Supabase project ref: `ofppapwofhovhroyjtkc`; remote state must always be re-read via authorized connector. Project URL/credentials are not copied into this plan.
+- Historical C4/C5: uploaded `KRISTOU_LIVING_PLAN_good.md`, `KRISTOU_LIVING_PLAN_HOOMA_ARCH_ENHANCED_2026-10-02.md`, and `KRISTOU_LIVING_PLAN_UI_REBASE_2026-09-30.md`; old October 2 handoff as history only.
+- Supabase references to check fresh before coding: https://supabase.com/docs/guides/local-development , https://supabase.com/docs/guides/database/postgres/row-level-security , https://supabase.com/docs/guides/database/testing , https://supabase.com/docs/guides/functions/auth . Documentation does not grant permission to deploy.
+
+## 20. Current report and authorization boundary
+
+This document and its companion spec were created from read-only source/connected-project inspections and explicit Product Owner decisions. Their file existence and internal structure can be verified locally; **NO implementation test, local Supabase reset, production security run, browser staging check, migration, commit, push, pull request, merge, release, actual account approval or school record import was executed as part of making the plan.**
+
+**Plan verdict:** WRITTEN FOR REVIEW.  
+**Source revision:** inspected `main@ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372`, historical as soon as main moves.  
+**Implementation status:** ALL TASKS NOT STARTED, except previously existing features noted in Section 1 as verified SOURCE only.  
+**Production status:** NOT TOUCHED.  
+**Next proposed action:** owner reviews this spec+plan; only then authorize F0-R0 read-only inspection packet, or explicitly approve a different bounded task.

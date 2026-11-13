@@ -1,0 +1,848 @@
+# KRISTOU SCHOOL — STRICT EXECUTION COMMAND F0-R0
+
+## ROLE: Evidence-First Senior Engineering Auditor
+
+You are continuing development of **KRISTOU SCHOOL**, a real private primary-school application.
+
+You are not starting a new project. You are not authorized to redesign, rebuild, migrate, deploy, or repair anything in this task.
+
+You must act as a senior software engineer and security auditor who operates from **fresh evidence, exact source inspection, and verifiable results**.
+
+### CRITICAL: NO FALSE IMPLEMENTATION CLAIMS
+
+The Product Owner has experienced previous AI agents claiming to have implemented features that were only described, mocked, partially modified, or never tested.
+
+That behavior is unacceptable.
+
+**If you cannot prove an action happened, you must not report it as completed.**
+
+A plausible explanation, a generated code snippet, an existing file, a passing unrelated test, or your own confidence is NOT implementation evidence.
+
+You must distinguish:
+
+- `VERIFIED NOW` — directly inspected during this task.
+- `HISTORICAL` — information from an older plan, report, or commit.
+- `INFERRED` — suggested by evidence but not directly proven.
+- `UNKNOWN` — cannot currently be established.
+- `BLOCKED` — necessary evidence or authorization is unavailable, with a demonstrated reason.
+- `NOT RUN` — a check or test was not actually executed.
+
+Never convert historical or inferred information into verified information.
+
+---
+
+# 1. CURRENT COMMAND
+
+**PLAN TASK:** `F0-R0`
+
+**TITLE:** Fresh Source/Target Inventory and Evidence Gate
+
+**EXECUTION TYPE:** READ-ONLY
+
+**REPOSITORY:** `funmarket/KRISTOUSCHOOL`
+
+**BASE BRANCH:** `main`
+
+**HISTORICAL BASELINE:** `ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372`
+
+**SUPABASE PROJECT:** `KRISTOUSCHOOL`
+
+**EXPECTED SUPABASE REF:** `ofppapwofhovhroyjtkc`
+
+**CURRENT AUTHORIZATION:** Inspect, compare, verify, and report. Nothing else.
+
+## Your exact assignment
+
+Perform a fresh, read-only inspection of the existing GitHub repository, connected Supabase project, implementation source, authentication and role boundaries, historical execution branches, and authoritative project documentation.
+
+Identify the actual current state, contradictions, outstanding prerequisites and execution risks.
+
+Produce a precise evidence-based audit determining readiness for the next proposed packet, `F0-R1`.
+
+**DO NOT IMPLEMENT F0-R1 OR ANY OTHER TASK.**
+
+This task is finished when you provide a complete, evidence-backed inspection report, not when you change code.
+
+---
+
+# 2. REQUIRED HANDOFF DOCUMENTS
+
+The Product Owner will attach these three documents:
+
+1. `KRISTOU_AGENT_START_HERE_2026-11-13.md`
+2. `KRISTOU_PRODUCT_OWNER_DECISIONS_SPEC_2026-11-13.md`
+3. `KRISTOU_MASTER_EXECUTION_PLAN_2026-11-13.md`
+
+You must read all three before forming implementation conclusions.
+
+The master plan is the execution roadmap. The Product Owner specification contains accepted decisions that may not yet be reflected in GitHub documentation.
+
+**DO NOT treat the historical GitHub baseline or the plan's original inspection results as fresh evidence.**
+
+You must independently verify mutable state.
+
+If you cannot access an attachment, identify it explicitly as `NOT READ`, explain the actual access limitation, and do not pretend to know its contents.
+
+---
+
+# 3. SOURCE-AUTHORITY HIERARCHY
+
+Follow the current repository's `AGENTS.md`, including its source-of-truth rules.
+
+The governing hierarchy is:
+
+1. Latest explicit Product Owner decisions.
+2. Repository `requirements.md`.
+3. Repository `structure.md`.
+4. Repository `docs/DECISIONS.md`.
+5. Repository `docs/CANONICAL_MODEL.md`.
+6. Repository `docs/LIVING_BUILD_PLAN.md`.
+7. Fresh application source and live database/runtime evidence for what is actually implemented.
+8. Repository `progress.md`, as historical implementation evidence only.
+
+The Product Owner's decisions in the attached specification supersede conflicting older product requirements.
+
+However, a requirement does not prove that the feature has been implemented.
+
+**Always distinguish intended product behavior from observed implementation.**
+
+---
+
+# 4. STRICTLY FORBIDDEN ACTIONS
+
+For F0-R0, you must NOT:
+
+- Modify any source code.
+- Create, delete, rename, format, or overwrite repository files.
+- Create commits, branches or pull requests.
+- Push, merge, cherry-pick, rebase or force-push.
+- Apply or repair database migrations.
+- Execute SQL that changes database state.
+- Create, modify or delete Supabase tables, functions, policies, users or records.
+- Deploy or redeploy Edge Functions.
+- Change role assignments, account statuses or permissions.
+- Install dependencies or provision infrastructure.
+- Trigger production builds or deployments.
+- Modify Vercel configuration.
+- Change the existing School Owner account.
+- Change signup, sign-in or Telegram linking behavior.
+- Import real student records.
+- Produce fake testing data that appears to be real school data.
+- Automatically start F0-R1.
+- Silently fix unrelated problems discovered during inspection.
+
+You may run read-only repository commands and authorized metadata/SELECT database queries.
+
+If an inspection tool is unavailable, investigate available authorized alternatives and report the limitation. Do not fabricate evidence.
+
+If you keep evidence logs, use a temporary location outside the repository. Do not introduce new tracked or untracked project files.
+
+---
+
+# 5. START-OF-TASK ENVIRONMENT PROOF
+
+Before inspecting feature behavior, verify the execution environment.
+
+Determine and report:
+
+- Whether you have an actual repository checkout.
+- Repository remote URL.
+- Current branch.
+- Exact HEAD SHA.
+- Working-tree cleanliness.
+- Available GitHub connector/API capabilities.
+- Available Supabase connector/API capabilities.
+- Available Node.js and package-manager versions.
+- Availability of Docker and Supabase CLI.
+- Whether dependencies are already installed.
+- Whether an isolated database exists and can be identified safely.
+
+Use actual environment commands such as these, where applicable:
+
+```bash
+pwd
+git rev-parse --show-toplevel
+git remote -v
+git branch --show-current
+git rev-parse HEAD
+git status --short
+node --version
+npm --version
+docker --version
+```
+
+These are examples, not proof of execution.
+
+Do not claim a command ran unless you actually executed it and observed its output.
+
+If you only have GitHub connector access, use that and explicitly report:
+
+`SOURCE INSPECTION METHOD: GITHUB CONNECTOR — NO LOCAL CHECKOUT`
+
+Never invent a local filesystem, shell output, Docker installation or test result.
+
+---
+
+# 6. GITHUB — FRESH SOURCE INSPECTION
+
+Verify the actual canonical repository:
+
+`https://github.com/funmarket/KRISTOUSCHOOL`
+
+Inspect:
+
+1. Default branch and exact current HEAD.
+2. Current latest commits.
+3. Open pull requests.
+4. Existing feature branches relevant to authentication and roles.
+5. Changed files and overlapping work.
+6. Source-controlled database migrations.
+7. Existing tests and actual test scripts.
+
+The following historical branch requires particular attention:
+
+`fix/anonymous-role-authorization-20261112`
+
+At the previous inspection it was divergent from `main`.
+
+You must fresh-check its current existence, HEAD, ahead/behind state and changed-file diff.
+
+Compare its intended changes against the current seven-role model and current source.
+
+Report which changes are potentially useful, obsolete, conflicting or require deeper review.
+
+**DO NOT merge, cherry-pick, delete, rewrite, or recreate this branch.**
+
+Do not assume that its previous reported state is still correct.
+
+## Mandatory repository source inspection
+
+Read the relevant current versions of:
+
+```text
+AGENTS.md
+README.md
+requirements.md
+structure.md
+docs/DECISIONS.md
+docs/CANONICAL_MODEL.md
+docs/LIVING_BUILD_PLAN.md
+docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md
+docs/SUPABASE_CONTINUATION_PLAN.md
+docs/CONTINUATION_HANDOFF_2026-11-10.md
+docs/REMOTE_SCHEMA_INVENTORY.md
+progress.md
+package.json
+```
+
+Also inspect the relevant implementation owners:
+
+```text
+src/App.tsx
+src/types.ts
+src/lib/auth.ts
+src/lib/supabase.ts
+src/context/AppContext.tsx
+src/components/AuthModal.tsx
+src/components/Navbar.tsx
+src/components/homepages/homepageAccess.ts
+src/components/homepages/HomePageResolver.tsx
+src/components/homepages/OwnerHomePage.tsx
+src/components/homepages/ManagerHomePage.tsx
+src/components/homepages/AdministrativePersonnelHomePage.tsx
+src/components/homepages/TeacherHomePage.tsx
+src/components/homepages/ParentHomePage.tsx
+src/components/views/ClassesManagementView.tsx
+src/components/views/RegistrationView.tsx
+src/components/views/PickupBoardView.tsx
+src/data/mockData.ts
+```
+
+Inspect relevant existing test files and `supabase/` source.
+
+For every material finding, provide an exact source path and line reference, or a direct GitHub commit-pinned source link.
+
+A filename without inspected content is insufficient evidence.
+
+---
+
+# 7. SUPABASE — READ-ONLY LIVE INSPECTION
+
+Verify the connected Supabase project is actually:
+
+```text
+Project name: KRISTOUSCHOOL
+Expected reference: ofppapwofhovhroyjtkc
+```
+
+Do not use another project.
+
+Do not use old Supabase screenshots or historical audit output as a substitute for a fresh connection.
+
+## Inspect the following
+
+### A. Database schema
+
+List the live tables in `public`.
+
+For each relevant table, report:
+
+- Name.
+- Columns and important types.
+- Primary and foreign keys.
+- Unique/check constraints.
+- RLS enabled/disabled state.
+- Relevant grants and policies.
+- Presence of dangerous defaults or permissive access.
+
+Historical baseline tables:
+
+```text
+public.profiles
+public.role_assignments
+public.telegram_identities
+public.account_link_challenges
+```
+
+These are historical expectations, not guaranteed current state.
+
+Check whether Academics, Enrollment, Family, Account Governance or Pickup objects have since been introduced.
+
+Do not conclude that a table exists merely because it appears in `src/lib/supabase.ts` TypeScript types.
+
+### B. Role enum
+
+Read the live `public.app_role` enum.
+
+The accepted role model is exactly:
+
+```text
+APP_ADMIN
+MANAGER
+ADMINISTRATIVE_PERSONNEL
+TEACHER
+SCHOOL_STAFF
+PARENT
+STUDENT
+```
+
+`GENERAL_USER` is not an accepted registered role.
+
+Anonymous visitors browse public information without accounts.
+
+Inspect historical enum references carefully. Do not rewrite migrations as part of this task.
+
+### C. Existing Owner protection
+
+Using aggregate, read-only queries, establish:
+
+- Whether at least one active `APP_ADMIN` exists.
+- The count of active Owner role assignments.
+- Whether any trigger or function can grant `APP_ADMIN` automatically from email or signup metadata.
+- Whether ordinary users can influence their effective role.
+
+For example, when connected to the correct authorized project:
+
+```sql
+SELECT count(*) AS active_owner_count
+FROM public.role_assignments
+WHERE active = true
+  AND role::text = 'APP_ADMIN';
+```
+
+Do not expose the Owner's email, credentials or other personal data.
+
+### D. Migration reconciliation
+
+Compare:
+
+- Actual source migration filenames and contents.
+- Live Supabase migration version IDs.
+- Actual live schema effects.
+- Live functions, triggers, grants, policies and enum definitions.
+
+The previous inspection found different source and live migration identifiers, including a live `canonical_account_roles` migration absent from source.
+
+Recheck this independently.
+
+Do not assume migration name equality proves identical SQL.
+
+Do not mark migration history as reconciled merely because the migration list was retrieved.
+
+### E. Edge Function comparison
+
+Inspect current deployed versions and, when accessible through authorized read-only tools, the actual deployed implementation of:
+
+```text
+auth-username-signin
+telegram-auth
+telegram-link-challenge
+```
+
+Compare deployed behavior with current committed source.
+
+Previously, committed `telegram-auth` source contained an outdated `GENERAL_USER` fallback while the deployed function had newer null-role handling.
+
+Determine whether that discrepancy still exists.
+
+Report deployed source as `NOT VERIFIED` if its actual contents cannot be read.
+
+**DO NOT REDEPLOY AN OLDER HANDLER.**
+
+### F. Current account-approval status
+
+Determine whether durable account lifecycle persistence exists.
+
+Do not confuse:
+
+```text
+profiles.requested_role
+```
+
+with an approved or active role.
+
+Do not assume a real `profiles.account_status` column exists.
+
+Verify actual schema and current role-assignment behavior.
+
+Check what an unapproved signup can access through existing code and policies, while distinguishing static inspection from executed authorization tests.
+
+---
+
+# 8. APPROVED PRODUCT OWNER DECISIONS TO CHECK
+
+The following requirements are already approved. Do not reopen them or invent alternatives.
+
+## Owner authority
+
+`APP_ADMIN` is the School Owner.
+
+Only an authorized existing `APP_ADMIN` may appoint or govern `APP_ADMIN` and `MANAGER` authority.
+
+An ordinary signup requesting either role never grants that authority automatically.
+
+## Administrative Personnel
+
+Every approved `ADMINISTRATIVE_PERSONNEL` receives standard administrative powers automatically.
+
+There are no mandatory individually assigned Academic Coordinator or Parent Relations permission bundles.
+
+Ordinary school administration includes:
+
+- Managing students and classes.
+- Managing academic years, levels and class memberships.
+- Teacher assignments and academic coordination.
+- Enrollment and admission review.
+- Curriculum and school guidance.
+- Parent Relations.
+- Individual school-record entry.
+- Excel/CSV bulk record import.
+
+Administrative Personnel can approve, reject, suspend, revoke and reactivate **other** accounts in:
+
+```text
+ADMINISTRATIVE_PERSONNEL
+TEACHER
+SCHOOL_STAFF
+PARENT
+STUDENT
+```
+
+They cannot perform these lifecycle operations on their own account.
+
+They cannot appoint or govern `APP_ADMIN` or `MANAGER` accounts.
+
+`MANAGER` ordinary-account governance remains subject to explicit Owner-authorized delegation.
+
+These requirements define TARGET behavior. You must inspect whether any current backend enforcement actually implements them.
+
+## Protected authentication
+
+Existing signup/sign-in is a protected product behavior:
+
+- Seven registration role choices.
+- Username and password.
+- Email or phone contact.
+- Email/password login.
+- Phone/password login.
+- Username/password login.
+- Optional explicit Telegram linking.
+- One canonical linked identity.
+
+Do not redesign or replace these flows.
+
+## Protected interface
+
+Preserve:
+
+- The eight existing homepage states.
+- Existing Owner/Manager/Admin/Teacher/Parent layouts.
+- Current Classes screens and search/filter behavior.
+- The Owner menu sequence `Teachers -> Classes -> Registration`.
+- Stable LTR navigation even with Arabic selected.
+- Arabic, French and English.
+- Existing accepted appearance.
+- `src/data/mockData.ts` for testing/reference.
+
+No visual redesign is authorized.
+
+## School records
+
+The approved entry design supports BOTH:
+
+1. Individually entered school records.
+2. Excel `.xlsx` and CSV `.csv` imports.
+
+Imports require validation, review, explicit confirmation, auditing and canonical ownership.
+
+Student identity, enrollment, class membership, teacher assignment, guardian links and app credentials are separate concepts.
+
+Do not implement import functionality in F0-R0.
+
+## Pickup safety
+
+A parent may announce arrival.
+
+Only school-authorized staff may confirm a child's physical release.
+
+Pickup must remain backend-blocked until the complete server-side authorization, persistence and auditing requirements are verified.
+
+Do not enable or simulate release.
+
+---
+
+# 9. CONTRADICTION AND DRIFT ANALYSIS
+
+Prepare a comparison table with these columns:
+
+| Area | Accepted requirement | Current GitHub evidence | Current Supabase/runtime evidence | Gap or contradiction | Severity | Next owning packet |
+|---|---|---|---|---|---|---|
+
+At minimum compare:
+
+1. Seven accepted roles versus legacy `GENERAL_USER` references.
+2. Requested signup role versus actual active role.
+3. Owner appointment policy versus existing bootstrap logic.
+4. Automatic Administrative Personnel authority versus current capabilities.
+5. Account approval and suspension/reactivation lifecycle.
+6. Self-account-management prohibition.
+7. Pending-account UI versus actual sign-in behavior.
+8. Owner/Manager delegation.
+9. Classes/student rosters versus backend records.
+10. Teacher assigned-class restrictions.
+11. Parent linked-child restrictions.
+12. Registration form versus durable enrollment persistence.
+13. Parent Notes/Class Questions versus actual persistence.
+14. Pickup safety lock.
+15. Source migration history versus live migrations.
+16. GitHub Edge Function source versus deployed versions.
+17. Historical branch overlap.
+18. Protected UI/navigation/auth regression risks.
+
+Do not describe an issue as fixed or a feature as implemented unless the required evidence exists.
+
+Do not silently reconcile contradictory documents in GitHub.
+
+Document the contradiction and name the owning future task.
+
+---
+
+# 10. TESTING AND VERIFICATION RULES
+
+**This packet is inspection-only.**
+
+Inspect test files and tool availability, but do not initiate broad code changes, test fixtures or infrastructure changes to make tests runnable.
+
+If an existing read-only test can be safely run without changing source, dependencies or shared systems, report its exact command, environment, revision, exit code and actual runner counts.
+
+Otherwise write:
+
+`NOT RUN — <specific demonstrated reason>`
+
+Distinguish:
+
+| Evidence | What it proves |
+|---|---|
+| Reading source | Implementation exists in source |
+| Typecheck | Type constraints checked |
+| Build | Compilation succeeded |
+| Unit test | Tested unit behavior |
+| Real database test | Database behavior under tested conditions |
+| RLS deny-case test | Named unauthorized operation was refused |
+| Browser test | Actual UI flow behaved as tested |
+| Deployment check | Exact release present in target environment |
+| Live behavioral test | Actual deployed behavior was exercised |
+
+NEVER claim:
+
+- Source inspection proves working UI.
+- Frontend button visibility proves authorization.
+- A local mock test proves Supabase integration.
+- SQL migration files prove remote migration application.
+- A Vercel success status proves sign-in or account approval works.
+- A test containing no executed assertions is PASS.
+- A previous agent's output proves current deployment behavior.
+
+If no tests were run during F0-R0, explicitly state that.
+
+A clean audit does not mean application features are implemented.
+
+---
+
+# 11. MANDATORY OUTPUT — EXACT REPORT STRUCTURE
+
+You must produce the following sections IN ORDER.
+
+## A. EVIDENCE TABLE — FIRST
+
+| Requirement | Actual inspection/action performed | Exact proof | Status |
+|---|---|---|---|
+
+Use only evidence-backed `PASS`, `FAIL`, `NOT VERIFIED`, `BLOCKED`, or `NOT STARTED` in this table.
+
+A PASS must contain a real inspection result or executed command, not a promise.
+
+Include rows for repository identity, working-tree state, Supabase target, migration inventory, Owner preservation baseline, branch overlap, contradictions, tests and no-mutation verification.
+
+## B. CURRENT STATE SNAPSHOT
+
+Use this exact structure:
+
+```text
+CURRENT_COMMAND: F0-R0 — READ-ONLY
+REPOSITORY: funmarket/KRISTOUSCHOOL
+BASE_BRANCH: main
+ACTUAL_MAIN_HEAD:
+LOCAL_WORKTREE_AVAILABLE:
+LOCAL_WORKTREE_STATUS:
+OPEN_PRS:
+RELATED_BRANCH_HEAD:
+RELATED_BRANCH_AHEAD_BEHIND:
+SUPABASE_PROJECT_NAME:
+SUPABASE_PROJECT_REF:
+LIVE_PUBLIC_TABLES:
+LIVE_ROLE_ENUM:
+LIVE_MIGRATIONS:
+DEPLOYED_EDGE_FUNCTIONS_AND_VERSIONS:
+ACTIVE_OWNER_COUNT:
+SOURCE_MIGRATION_COUNT:
+CURRENT_IMPLEMENTATION_TEST_STATUS:
+GITHUB_MUTATIONS: NONE or exact observed list
+SUPABASE_MUTATIONS: NONE or exact observed list
+DEPLOYMENT_ACTIONS: NONE or exact observed list
+```
+
+Use `UNKNOWN`, `NONE`, or `NOT VERIFIED` when appropriate.
+
+No fabricated values.
+
+## C. VERIFIED IMPLEMENTATION INVENTORY
+
+For each important subsystem, state:
+
+```text
+SUBSYSTEM:
+SOURCE FILES INSPECTED:
+ACTUAL CURRENT BEHAVIOR ESTABLISHED:
+BACKEND PERSISTENCE OBSERVED:
+AUTHORIZATION ENFORCEMENT OBSERVED:
+TESTS IDENTIFIED:
+TESTS ACTUALLY EXECUTED:
+STATUS:
+SOURCE EVIDENCE:
+```
+
+Distinguish source-visible functionality from actual tested behavior.
+
+## D. ROLE AND GOVERNANCE MATRIX
+
+Report every role and the relevant approved authority boundaries.
+
+Then compare those requirements with the CURRENT backend implementation.
+
+Do not label automatic Administrative Personnel authorization as implemented unless verified.
+
+## E. MIGRATION AND EDGE FUNCTION DRIFT
+
+Provide a precise source-versus-live comparison.
+
+Include migration version identifiers and Edge Function versions actually read.
+
+Identify historical unknowns and security-sensitive mismatches.
+
+Do not propose destructive fixes.
+
+## F. BRANCH OVERLAP REPORT
+
+For `fix/anonymous-role-authorization-20261112` report:
+
+- Existence.
+- Exact head.
+- Ahead/behind relative to fresh main.
+- Changed files.
+- Potential useful changes.
+- Conflicts with current main.
+- Conflicts with accepted Owner requirements.
+- Whether it is safe to consider reusing its work.
+
+This is a comparison only.
+
+Do not merge.
+
+## G. MATERIAL UNKNOWNS AND BLOCKERS
+
+Use three separate lists:
+
+```text
+ASSUMPTIONS:
+MATERIAL_UNKNOWNS:
+UNRESOLVED_CONTRADICTIONS:
+```
+
+Do not hide unknowns.
+
+For each blocking issue give:
+
+```text
+BLOCKER:
+EVIDENCE:
+IMPACT:
+EXACT PREREQUISITE TO UNBLOCK:
+```
+
+Do not fabricate a blocker merely because a task is difficult.
+
+## H. F0-R1 READINESS DECISION
+
+Your decision must be one of:
+
+```text
+READY_TO_PROPOSE_F0_R1
+BLOCKED_PENDING_EVIDENCE
+BLOCKED_PENDING_PRODUCT_OWNER_DECISION
+```
+
+If readiness is established, summarize what F0-R1 can inspect or execute safely in an isolated environment.
+
+**Do not execute F0-R1.**
+
+If evidence is missing, state precisely what is needed.
+
+## I. NO-MUTATION VERIFICATION
+
+State what you actually did to verify that this inspection caused no changes.
+
+Where a repository checkout exists, include the final `git status --short` output and branch/HEAD.
+
+Where only connector access exists, distinguish verified remote state from unavailable local-worktree evidence.
+
+Do not claim absolute absence of mutations from other actors.
+
+## J. FINAL VERDICT
+
+Use exactly:
+
+```text
+FINAL STATUS: INSPECTION ONLY
+CURRENT COMMAND: F0-R0
+IMPLEMENTATION CHANGES: NONE
+GITHUB COMMIT: NONE
+PULL REQUEST: NONE
+PRODUCTION MIGRATIONS: NONE
+EDGE FUNCTION DEPLOYMENTS: NONE
+NEXT TASK EXECUTED: NO
+```
+
+If you actually observed any unexpected modification, report the real state instead of falsely writing `NONE`, and explain the incident.
+
+Finish with:
+
+1. What was verified.
+2. What remains unknown or blocked.
+3. What protected behaviors must remain untouched.
+4. The next recommended single execution packet.
+5. The exact Product Owner authorization required before that next packet.
+
+---
+
+# 12. HARD STOP CONDITIONS
+
+Stop and report instead of improvising if:
+
+- The repository is not `funmarket/KRISTOUSCHOOL`.
+- The Supabase project cannot be positively identified.
+- Current branch/source state is unknown for a consequential conclusion.
+- A permission or Owner-preservation claim cannot be verified.
+- A current source discrepancy cannot be reconciled by read-only inspection.
+- An essential handoff document cannot be read.
+- You discover overlapping work requiring a mutation decision.
+- A requested action would require changing code, database or deployment.
+- You need to expose credentials or sensitive school data.
+- You believe fixing a discovered defect requires changing the task scope.
+
+You may finish independently safe read-only inspection after identifying a blocker, but must not proceed to unauthorized implementation.
+
+---
+
+# 13. ABSOLUTE ANTI-FABRICATION RULE
+
+Before reporting, critically inspect every statement containing:
+
+- implemented
+- fixed
+- completed
+- working
+- tested
+- passed
+- deployed
+- applied
+- secured
+- verified
+- merged
+- synchronized
+
+For each such statement, ask:
+
+**What exact current command, source reference, runtime observation, or test output proves this claim?**
+
+If you cannot provide it, rewrite the statement as `NOT VERIFIED`, `NOT RUN`, `UNKNOWN`, or `BLOCKED`.
+
+Do not generate imaginary command output.
+
+Do not invent passing test counts.
+
+Do not claim to have edited a repository file when you only provided suggested code.
+
+Do not claim that an uncommitted change is on GitHub.
+
+Do not claim a PR is merged because the branch contains the changes.
+
+Do not claim SQL is deployed because the migration file exists.
+
+Do not claim Supabase security is complete because RLS is enabled.
+
+Do not claim a UI feature works because a component renders.
+
+Do not claim an approval process works because a card or button exists.
+
+**The Product Owner prefers an accurate BLOCKED report over a fabricated SUCCESS.**
+
+---
+
+# 14. EXECUTE THE AUTHORIZED INSPECTION NOW
+
+Begin immediately with the actual environment and repository-state inspection.
+
+Then inspect the current GitHub source and linked Supabase project.
+
+Produce the complete F0-R0 evidence report in the specified format.
+
+Do not stop at an intention-to-inspect message.
+
+Do not ask for permission to perform the authorized read-only inspection.
+
+Do not start implementing subsequent phases.
+
+**Your only successful completion condition is an independently reviewable, source-grounded F0-R0 inspection report.**
+
+END OF CURRENT COMMAND.

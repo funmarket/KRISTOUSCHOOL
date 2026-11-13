@@ -1,0 +1,62 @@
+# KRISTOU SCHOOL - Agent Start Here
+
+**Read this first when continuing in a fresh chat/agent environment.**
+
+## Files in this handoff package
+
+1. `KRISTOU_PRODUCT_OWNER_DECISIONS_SPEC_2026-11-13.md`: the Product Owner's explicit accepted rules, protected design/auth and the unresolved modeling decisions.
+2. `KRISTOU_MASTER_EXECUTION_PLAN_2026-11-13.md`: full 31 actionable packet roadmap plus one explicitly deferred feature group, source and target map, test commands, refusal/stop gates, role/RLS matrix, QA, production release and handoff rules.
+
+## Important project identity
+
+- **Current product:** `funmarket/KRISTOUSCHOOL`, not the older `funmarket/Kristou`.
+- Baseline inspected on 2026-11-13: `main@ee4e912de4ed5a0d5ad6f62ce2b96b22b9b95372` (HISTORICAL; recheck fresh).
+- Supabase active project at inspection: `KRISTOUSCHOOL`, ref `ofppapwofhovhroyjtkc` (recheck; never use unrelated historical project).
+- 3 Auth users, 3 profiles, 1 active `APP_ADMIN`, 1 Telegram identity, 2 link challenges, 5 live migrations, 3 deployed Edge Functions, no school-domain tables at inspection. **DO NOT expose user identities.**
+- Existing branch `fix/anonymous-role-authorization-20261112` has diverged: 7 ahead/1 behind at inspection. Compare; do not blindly merge.
+
+## Approved Product Owner requirements that override stale documents
+
+- Protect current UI/UX, eight homepages, 7 account-role signup selector, sign-in/signup, email/phone/username+password, optional explicit Telegram linking, stable LTR Navbar, FR/EN/AR and Light/Pitch Black.
+- Owner menu order: **Teachers -> Classes -> Registration**.
+- No registered `GENERAL_USER`; anonymous public browsing needs no account.
+- `APP_ADMIN` alone appoints other `APP_ADMIN` or `MANAGER` accounts. Preserve current Owner; delete the email-based automatic Owner bootstrap only through a separately reviewed safe migration.
+- Approved `ADMINISTRATIVE_PERSONNEL` get **all standard school administrative permissions automatically**: Classes/Students create/edit/import, academic/teacher coordination, admissions, Parent Relations, school guidance and ordinary account lifecycle.
+- Admin Personnel can approve, reject, suspend, revoke and reactivate **other** accounts in `ADMINISTRATIVE_PERSONNEL`, `TEACHER`, `SCHOOL_STAFF`, `PARENT`, `STUDENT`; may NOT do so to their own account and cannot manage any `MANAGER`/`APP_ADMIN` authority.
+- Manager ordinary account powers and roster powers require explicit Owner delegation.
+- School record entry must support BOTH individual forms and CSV/XLSX import with preview and safe confirmation. Never auto-create Auth accounts, auto-enroll, assign roles or auto-link parents from import.
+- Preserve distinct People, Family, Enrollment, Academics and Access Control domain ownership. Teacher only assigned classes; Parent only linked children. Pickup parent arrival != authorized staff release.
+- Keep `mockData.ts` for testing; do not claim mock data are real records. Existing Pickup is disabled pending backend; do not unlock early.
+
+## Mandatory next action - proposed, not pre-authorized
+
+`F0-R0`: perform a new **READ-ONLY** current-state inventory, verify repository + Supabase live state + prior branch overlap, compare Product Owner decisions with governing docs, and report material unknowns. Require a fresh explicit user command before any implementation or external mutation. Then `F0-R1` isolated Supabase CLI/Docker reset+pgTAP, followed by source/migration/function parity. DO NOT jump to accounts/classes code without prerequisites.
+
+## Critical existing implementation gaps (at inspected SHA)
+
+- `loadCanonicalUser()` throws if no active role; missing `accountStatus` defaults to APPROVED in frontend resolver; pending-account screen is not reached through normal sign-in as intended.
+- Live `handle_new_user()` email condition can appoint `APP_ADMIN`; exactly one active Owner exists.
+- Source migrations and deployed auth handlers differ; committed Telegram auth still refers to `GENERAL_USER` but deployed v9 uses null for unapproved. Never deploy old source blindly.
+- `ADMINISTRATIVE_PERSONNEL` currently cannot get its automatic operational bundle from live DB; `capabilities` frontend list is mapped from roles, not actual grants.
+- `ClassesManagementView` provides UI but no data; `RegistrationView` shows local submission success; Parent Notes and Class Questions use React-local success, whereas Pickup correctly fails closed.
+- No real student, enrollment, class, guardian or Pickup tables. No actual full implementation tests or migrations executed in this handoff work.
+
+## Decision gates / blockers
+
+- DG-01: Represent suspension vs revocation without silently changing approved UI (current union lacks SUSPENDED); owner must approve exact business data semantics.
+- DG-02: School import column contracts, duplicate matching, row limits and transaction behavior need school-approved specification.
+- DG-03: Actual school admission/document requirements must not be invented.
+- DG-04: Multiple active role assignments require reviewed transition policy; ordinary Admin MUST deny any privileged target.
+- DG-05: Select isolated local/staging DB; no test reset against production.
+- DG-06: Pending/revoked status behavior and stale-session/Telegram denial must be provably safe without auth UI redesign.
+- DG-07: Minors' records retention/export/removal needs separate approved policy.
+
+## Source authorities
+
+Read repo `AGENTS.md`, `README.md`, `requirements.md`, `structure.md`, `docs/DECISIONS.md`, `docs/CANONICAL_MODEL.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, `docs/SUPABASE_CONTINUATION_PLAN.md`, latest `progress.md`, actual tests, and fresh source/DB. Latest explicit Product Owner decision outranks older text. Historical Hooma/Railway/Prisma files are references, not current architecture.
+
+## Behavior and reporting rules
+
+No guessing, no silent scope expansion, no fake PASS, no unauthorized production mutation. One packet at a time, read-only preflight, exact permitted targets, first RED, then minimal implementation, GREEN test execution, negative RLS/API verification, UI/auth regression, proof/logs, exact diff and postcheck. If missing evidence or Owner authorization, report BLOCKED and stop.
+
+**This package creates only plan/spec/handoff documents locally. It does not modify GitHub, Supabase or deployed KRISTOU SCHOOL.**
