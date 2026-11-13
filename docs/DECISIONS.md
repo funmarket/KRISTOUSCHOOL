@@ -83,6 +83,8 @@ This file records explicit architecture decisions only. Product behavior belongs
 **Decision:** KRISTOU Web signup requires a unique username, password, full name, and either email or full international phone number. Web sign-in accepts email, phone, or username plus password. Supabase Auth verifies email/phone credentials; a server-side username resolver maps the unique KRISTOU profile username to the linked Auth identity without exposing contact identifiers to the browser. All application users are stored in Supabase through `auth.users` plus the linked KRISTOU profile and role-assignment tables.
 **Reason:** Support the requested identifiers while keeping durable application identity and authorization in Supabase.
 
+**ADR-012 dated Product Owner addendum (2026-11-13; supersedes the mandatory-username clause above):** Registration is intended to allow username, email or phone individually, in any pair or all three, along with password and full name; the chosen identifier must be securely provisioned and verified before it can be used to authenticate the same canonical User. Human-readable usernames must support ordinary Arabic, accented Latin and multiword names with safe normalization/uniqueness. Username-only sign-in needs a genuine supported server-side Auth mechanism; no synthetic email/phone aliases, unverified secondary login identifiers or public password tables. This is approved **desired behavior**, not proof of current schema/UI/provider support. See AUTH-ID-01 in the current handoff.
+
 ## ADR-013 — One canonical product frontend
 
 **Status:** Accepted.
@@ -104,13 +106,15 @@ This file records explicit architecture decisions only. Product behavior belongs
 **Status consequence:** This decision does not prove that repository migrations or Edge Function source match the hosted project. Record current project state only in `progress.md` after read-only verification; do not reconcile or deploy without explicit authorization.
 
 ## ADR-015 — Supabase Auth mapping and Telegram identity linking
-**Status:** Accepted; the live database and `telegram-auth` support explicit linking and verified linked-account lookup. The matching frontend auto-entry change is on the current branch and awaits Vercel deployment.
+**Status:** Accepted; source and deployed runtime status must be checked against `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`. Deployed `telegram-auth` v9 was observed, but browser end-to-end acceptance and source/deployment parity remain unverified.
 **Context:** Visitors may browse school-approved public content without an account. App accounts are created through the shared app's normal signup form using Web credentials, whether opened in Browser or Telegram WebView; school admission remains separate. A signed-in account holder may explicitly link Telegram to that same canonical User.
 **Decision:** Use Supabase Auth as the credential verifier for Web credentials and link every Auth user one-to-one to a KRISTOU profile. Store the custom username and requested role in the profile created by the `auth.users` trigger. Resolve username sign-in only in a server-side Edge Function, then establish the normal Supabase Auth session. To link Telegram, create a short-lived, one-time challenge bound to the verified Web user, pass it as the `startapp` parameter to the configured KRISTOU Mini App, validate fresh Telegram `initData` server-side, and atomically attach the Telegram identity to that same canonical User. On later normal Mini App launches, validate fresh `initData` and resolve that linked User to the Telegram app context without issuing a Supabase Auth session or creating an account. Requested signup categories, including School Staff and Administrative Personnel, never grant privileged access by themselves. No profile-field-based account merging is allowed.
 
 The implementation must use strong provider password handling, confirmation settings, generic authentication errors, rate limits at the Edge Function/provider boundary, no browser-side contact lookup, explicit conflict failure, and no service-role credential in browser code. Any private operation initiated from Telegram must be authorized through a server-verified Telegram path; the Telegram app-context profile alone is not a Supabase Auth session and does not grant direct RLS access. Private school domains remain gated until their own access matrices and deny-case tests are implemented.
 
 **Reference:** [Supabase password-based authentication](https://supabase.com/docs/guides/auth/passwords).
+
+**ADR-015 dated Owner governance addendum (2026-11-13):** Public visitors are anonymous; seven registered roles only. Requested roles never grant permission. Only APP_ADMIN appoints/governs APP_ADMIN and MANAGER. Approved ADMINISTRATIVE_PERSONNEL have automatic ordinary school-office powers and may take lifecycle actions on *other* ordinary accounts, never on themselves or privileged roles. These decisions require authoritative server implementation and deny-case tests; no current approval RPC is assumed.
 
 ## ADR template
 

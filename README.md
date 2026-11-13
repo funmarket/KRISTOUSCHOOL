@@ -4,9 +4,9 @@ KRISTOU SCHOOL is the mobile-first school application for École Primaire Privé
 
 ## Current state
 
-The current application remains a mock-driven prototype for school-domain views; it is not a safe store of student/family data and does not provide production authorization for those domains. A Supabase Auth/profile foundation, source-controlled migrations, and Edge Function source now exist. The live Supabase migration history and deployed Telegram function still differ from current source, so source presence does not prove those flows are deployed or secure.
+**Source snapshot (2026-11-13):** `main@5d9f95c4cd96a8c1b83662f4605ef0bf668acabd` contains the one React/Vite Web/Telegram product, seven-role registration UI and source-controlled Supabase auth foundation. School-domain views remain largely prototype/local-state only; they are not verified private data services. The connected hosted KRISTOUSCHOOL project has four public auth tables, five live migrations and three active Edge Functions. Deployed `telegram-auth` v9 differs from committed source. See the [current evidence and agent handoff](docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md); refresh mutable facts before changes.
 
-The production Vercel JavaScript bundle was read-only inspected on 2026-11-11: it contains the Supabase configuration error path but neither the configured project URL nor a publishable/anon key token. Signup/login therefore cannot initialize Supabase in that deployment. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the Vercel environment used for the deployment, then create a fresh deployment. These are public browser configuration values; never add a service-role key or Telegram bot token to Vercel `VITE_` variables.
+**Historical deployment finding (2026-11-11):** a then-inspected Vercel bundle appeared to omit public Supabase build configuration. This was not reverified for the current deployment and must NOT be presented as a confirmed current outage or fixed status. Actual Browser sign-in needs a current build/browser check. Only public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or an intentionally supported public alias) may enter a browser build; never a service-role key or Telegram bot token.
 
 ## Canonical project documents
 
@@ -21,13 +21,14 @@ Read the following authorities before implementation:
 - [`docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`](docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md) — ordered plan for Supabase backend/database integration.
 - [`docs/CONTINUATION_HANDOFF_2026-11-10.md`](docs/CONTINUATION_HANDOFF_2026-11-10.md) — current collaboration context and mandatory continuation handoff.
 - [`docs/SUPABASE_CONTINUATION_PLAN.md`](docs/SUPABASE_CONTINUATION_PLAN.md) — detailed Supabase-first execution phases and agent work packets.
-- [`progress.md`](progress.md) — current repository implementation evidence only.
+- [`progress.md`](progress.md) — dated verified implementation evidence only.
+- [`docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`](docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md) — fresh 2026-11-13 snapshot, document status index, current owner decisions and AI Studio/GitHub separation. It is not a replacement for the authorities above.
 
 The old `funmarket/Kristou` repository is a read-only source of migrated product and architecture material. Its commits, branches, CI, deployments, database state, and progress entries are not evidence about this repository. HoomaUltimate is not a product or implementation authority.
 
 ## Platform direction
 
-Supabase is the selected platform for managed PostgreSQL and Edge Functions; a hosted `KRISTOUSCHOOL` project is active. Its migration version IDs differ from repository migration filenames, its authenticated role can still read link challenges, and its active `telegram-auth` v5 is older than the merged one-time-link source. Do not deploy or repair migration history until a reviewed, non-destructive mapping and explicit owner authorization exist. Frontend hosting is Vercel; its missing browser build configuration is separately documented in `docs/EDGE_FUNCTION_DEPLOYMENT.md`.
+Supabase is the selected backend. The hosted `KRISTOUSCHOOL` project currently has five live migration versions (versus four source SQL files), an existing atomic link RPC and revoked `authenticated` SELECT on link challenges; `telegram-auth` is deployed at v9. The repository/source parity is still unresolved, so do NOT apply old SQL or redeploy committed handlers blindly. Frontend hosting uses Vercel; the current browser environment's login behavior has not been verified by this documentation task.
 
 ## Development
 

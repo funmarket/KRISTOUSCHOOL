@@ -1,4 +1,6 @@
 # KRISTOU SCHOOL — CONTINUATION HANDOFF
+> **ARCHIVED HANDOFF — 2026-11-10.** Historical branch, project, migration, deployment and next-step assertions below are superseded by current GitHub and Supabase evidence from 2026-11-13. Read `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`, the primary authorities and the Product Owner's newest AUTH-ID-01 direction. Do not run the old immediate-next-task instructions or treat old 49-table/empty-database assertions as current.
+
 
 **Prepared:** 2026-11-10
 **Repository:** `funmarket/KRISTOUSCHOOL`

@@ -9,7 +9,7 @@ These rules apply to every developer, coding agent, automation, and delegated wo
 Before selecting an implementation task, editing files, creating a branch, delegating, committing, opening a pull request, or deploying:
 
 1. Read this entire `AGENTS.md`.
-2. Read `README.md`, `requirements.md`, `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, and `progress.md` in full. Read any other relevant documents under `docs/`, including `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` when present, and inspect the actual repository tree.
+2. Read `README.md`, `requirements.md`, `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, and `progress.md` in full. Read the dated evidence checkpoint `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md` and other relevant documents under `docs/`, including the older `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` as historical context, and inspect the actual repository tree.
 3. Confirm the repository, branch, and HEAD. Inspect open changes and overlapping work.
 4. Distinguish accepted product requirements, architecture/data-authority contracts, proposed/ordered plans, and currently verified implementation facts.
 5. Trace the owning source and affected consumers. Search for existing tables, policies, functions, components, environment variables, tests, and docs before creating a parallel owner.
