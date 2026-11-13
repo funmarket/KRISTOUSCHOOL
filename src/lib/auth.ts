@@ -277,6 +277,20 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
     typedClient.from('telegram_identities').select('telegram_user_id').eq('user_id', authUser.id).maybeSingle(),
   ]);
   if (profileError || roleError || telegramError || !profile) throw profileError ?? roleError ?? telegramError ?? new Error('Profile unavailable');
+  const rawProfileStatus =
+    typeof (profile as { account_status?: unknown }).account_status === 'string'
+      ? (profile as { account_status: string }).account_status
+      : typeof (profile as { accountStatus?: unknown }).accountStatus === 'string'
+      ? (profile as { accountStatus: string }).accountStatus
+      : undefined;
+  if (
+    rawProfileStatus === 'PENDING' ||
+    rawProfileStatus === 'REJECTED' ||
+    rawProfileStatus === 'SUSPENDED' ||
+    rawProfileStatus === 'REVOKED'
+  ) {
+    throw new Error('account_not_approved');
+  }
   const roles = (assignments ?? []).map((row: { role: string }) => row.role);
   const role = resolveCanonicalAccountRole(roles);
   if (!role) throw new Error('account_not_approved');
@@ -327,7 +341,18 @@ export function authenticateTelegramInitData(
       role?: string;
       capabilities?: string[];
       telegramLinked?: boolean;
+      accountStatus?: string;
+      account_status?: string;
     };
+    const rawTgStatus = rawUser.accountStatus ?? rawUser.account_status;
+    if (
+      rawTgStatus === 'PENDING' ||
+      rawTgStatus === 'REJECTED' ||
+      rawTgStatus === 'SUSPENDED' ||
+      rawTgStatus === 'REVOKED'
+    ) {
+      throw new Error('account_not_approved');
+    }
     const rawCapabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
     const candidateRoles = [
       ...(rawUser.role ? [rawUser.role] : []),

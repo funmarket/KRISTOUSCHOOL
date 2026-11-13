@@ -12,7 +12,7 @@ export type UserRole = AccountRole;
 export type Language = 'ar' | 'fr' | 'en';
 export type ThemeMode = 'light' | 'pitch-black';
 
-export type AccountApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'REVOKED';
+export type AccountApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'REVOKED';
 
 export type HomePageKey =
   | 'PUBLIC_HOME'

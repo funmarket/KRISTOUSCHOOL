@@ -50,9 +50,26 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
         en: 'Not Approved (REJECTED)',
       },
     },
+    SUSPENDED: {
+      title: {
+        ar: 'تم إيقاف الحساب مؤقتاً',
+        fr: 'Compte temporairement suspendu',
+        en: 'Account temporarily suspended',
+      },
+      body: {
+        ar: 'تم تعليق صلاحيات الدخول الخاصة بهذا الحساب مؤقتاً من قبل إدارة مدرسة كريستو. يمكنك تصفح الموقع العام للمدرسة أو التواصل مع الإدارة لمراجعة حالة حسابك.',
+        fr: 'L’accès aux espaces privés de ce compte a été temporairement suspendu par l’administration de KRISTOU SCHOOL. Vous pouvez consulter le site public ou contacter l’administration.',
+        en: 'Private school workspace access for this account has been temporarily suspended by KRISTOU School administration. You may browse the public school site or contact the administration office.',
+      },
+      chip: {
+        ar: 'موقوف مؤقتاً (SUSPENDED)',
+        fr: 'Suspendu (SUSPENDED)',
+        en: 'Suspended (SUSPENDED)',
+      },
+    },
     REVOKED: {
       title: {
-        ar: 'تم تعليق صلاحية الحساب',
+        ar: 'تم إلغاء صلاحية الحساب',
         fr: 'Accès au compte révoqué',
         en: 'Account access has been revoked',
       },
@@ -62,7 +79,7 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
         en: 'Private school access for this account has been suspended by school administration. You may view the public school site or contact the office.',
       },
       chip: {
-        ar: 'معلق (REVOKED)',
+        ar: 'ملغى (REVOKED)',
         fr: 'Révoqué (REVOKED)',
         en: 'Access Revoked (REVOKED)',
       },
@@ -72,6 +89,8 @@ export const ApplicationStatusScreen: React.FC<ApplicationStatusScreenProps> = (
   const activeCopy =
     status === 'REJECTED'
       ? statusCopy.REJECTED
+      : status === 'SUSPENDED'
+      ? statusCopy.SUSPENDED
       : status === 'REVOKED'
       ? statusCopy.REVOKED
       : statusCopy.PENDING;

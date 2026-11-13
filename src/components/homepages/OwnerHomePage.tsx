@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CardAvailabilityState, HomePageKey } from '../../types';
 import { HomePageHeader } from './shared/HomePageHeader';
@@ -7,6 +7,12 @@ import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import {
+  OwnerGovernanceSection,
+  OwnerGovernanceWorkspace,
+} from './OwnerGovernanceWorkspace';
+import { fetchGovernanceActorScope } from '../../lib/accountGovernance';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export interface OwnerHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -30,11 +36,35 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   onInspectRoleHome,
 }) => {
   const { language } = useApp();
+  const [activeGovernanceSection, setActiveGovernanceSection] =
+    useState<OwnerGovernanceSection | null>(null);
+  const [governanceBackendReady, setGovernanceBackendReady] = useState<boolean>(false);
   const [governancePanel, setGovernancePanel] = useState<{
     title: string;
     description: string;
     state: CardAvailabilityState;
   } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSupabaseConfigured) {
+      setGovernanceBackendReady(false);
+      return;
+    }
+    void fetchGovernanceActorScope().then((res) => {
+      if (!cancelled) {
+        setGovernanceBackendReady(Boolean(res.ok && res.data));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openGovernanceSection = (section: OwnerGovernanceSection) => {
+    setGovernancePanel(null);
+    setActiveGovernanceSection(section);
+  };
 
   const openCommunitySubTab = (subTab: string) => {
     if (onNavigateToSubTab) {
@@ -55,6 +85,14 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   const openActionLabel = pickText(HOMEPAGE_COMMON_TEXT.openAction, language);
   const blockedBackendLabel = pickText(HOMEPAGE_COMMON_TEXT.backendBlockedBadge, language);
   const comingSoonLabel = pickText(HOMEPAGE_COMMON_TEXT.comingSoonBadge, language);
+
+  const governanceCardState: CardAvailabilityState = governanceBackendReady
+    ? 'AVAILABLE'
+    : 'BLOCKED_BACKEND';
+  const governanceCardActionLabel = governanceBackendReady
+    ? openActionLabel
+    : blockedBackendLabel;
+  const governanceCardBadge = governanceBackendReady ? undefined : blockedBackendLabel;
 
   return (
     <div className="kh-role-page" data-testid="homepage-OWNER_HOME">
@@ -100,6 +138,15 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
         )}
       </HomePageHeader>
 
+      {activeGovernanceSection && (
+        <OwnerGovernanceWorkspace
+          activeSection={activeGovernanceSection}
+          onSelectSection={(sec) => setActiveGovernanceSection(sec)}
+          onClose={() => setActiveGovernanceSection(null)}
+          onScopeVerified={(available) => setGovernanceBackendReady(available)}
+        />
+      )}
+
       {governancePanel && (
         <EmptyFeatureState
           state={governancePanel.state}
@@ -130,23 +177,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             actionLabel={openActionLabel}
             icon="🛠️"
             tone="slate"
-            onClick={() =>
-              setGovernancePanel({
-                state: 'AVAILABLE_READ_ONLY',
-                title: pickText(
-                  { ar: 'مركز القيادة للمؤسس (APP_ADMIN)', fr: 'Centre de contrôle Fondateur (APP_ADMIN)', en: 'School Owner Control Center (APP_ADMIN)' },
-                  language,
-                ),
-                description: pickText(
-                  {
-                    ar: 'يمكنك الإشراف على جميع الوحدات المدرسية ومعاينة كل فضاء دور من شريط الإشراف أعلاه دون تغيير هويتك.',
-                    fr: 'Supervisez l’ensemble des modules scolaires et inspectez chaque espace de rôle ci-dessus sans modifier votre session APP_ADMIN.',
-                    en: 'Supervise all school modules and inspect any role workspace using the oversight bar above while keeping your APP_ADMIN identity.',
-                  },
-                  language,
-                ),
-              })
-            }
+            onClick={() => openGovernanceSection('control-center')}
           />
 
           <HomeShortcutCard
@@ -248,28 +279,12 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
               },
               language,
             )}
-            actionLabel={blockedBackendLabel}
-            statusBadge={blockedBackendLabel}
-            state="BLOCKED_BACKEND"
+            actionLabel={governanceCardActionLabel}
+            statusBadge={governanceCardBadge}
+            state={governanceCardState}
             icon="✅"
             tone="teal"
-            onClick={() =>
-              setGovernancePanel({
-                state: 'BLOCKED_BACKEND',
-                title: pickText(
-                  { ar: 'اعتماد طلبات الحسابات (Pending Account Approvals)', fr: 'Approbation des comptes en attente', en: 'Pending Account Approvals' },
-                  language,
-                ),
-                description: pickText(
-                  {
-                    ar: 'لا يتم حفظ أي موافقة وهمية في المتصفح. هذه الوحدة بانتظار عقد قاعدة البيانات (Supabase RPC) المعتمد لجدول طلبات الحسابات.',
-                    fr: 'Aucune approbation locale fictive n’est stockée dans le navigateur. En attente du contrat RPC Supabase pour les approbations.',
-                    en: 'No fake browser-side approvals are performed. This queue awaits the verified Supabase backend RPC contract for account approval persistence.',
-                  },
-                  language,
-                ),
-              })
-            }
+            onClick={() => openGovernanceSection('pending-approvals')}
           />
 
           <HomeShortcutCard
@@ -282,28 +297,12 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
               },
               language,
             )}
-            actionLabel={blockedBackendLabel}
-            statusBadge={blockedBackendLabel}
-            state="BLOCKED_BACKEND"
+            actionLabel={governanceCardActionLabel}
+            statusBadge={governanceCardBadge}
+            state={governanceCardState}
             icon="👥"
             tone="purple"
-            onClick={() =>
-              setGovernancePanel({
-                state: 'BLOCKED_BACKEND',
-                title: pickText(
-                  { ar: 'دليل الحسابات وحالات التفعيل', fr: 'Répertoire des utilisateurs & statuts', en: 'User Directory & Account Status' },
-                  language,
-                ),
-                description: pickText(
-                  {
-                    ar: 'عرض وتعديل حالات الحسابات (APPROVED / PENDING / REJECTED / REVOKED) يتطلب استعلاماً محمياً بسياسات RLS من الخادم.',
-                    fr: 'La consultation et la modification des statuts de compte (APPROVED / PENDING / REJECTED / REVOKED) nécessitent le contrat RLS Supabase.',
-                    en: 'Listing and mutating user account statuses (APPROVED / PENDING / REJECTED / REVOKED) requires the server-verified Supabase RLS contract.',
-                  },
-                  language,
-                ),
-              })
-            }
+            onClick={() => openGovernanceSection('user-directory')}
           />
 
           <HomeShortcutCard
@@ -321,7 +320,8 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             state="BLOCKED_BACKEND"
             icon="🛡️"
             tone="blue"
-            onClick={() =>
+            onClick={() => {
+              setActiveGovernanceSection(null);
               setGovernancePanel({
                 state: 'BLOCKED_BACKEND',
                 title: pickText(
@@ -336,8 +336,8 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
                   },
                   language,
                 ),
-              })
-            }
+              });
+            }}
           />
 
           <HomeShortcutCard
@@ -350,28 +350,12 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
               },
               language,
             )}
-            actionLabel={blockedBackendLabel}
-            statusBadge={blockedBackendLabel}
-            state="BLOCKED_BACKEND"
+            actionLabel={governanceCardActionLabel}
+            statusBadge={governanceCardBadge}
+            state={governanceCardState}
             icon="👑"
             tone="orange"
-            onClick={() =>
-              setGovernancePanel({
-                state: 'BLOCKED_BACKEND',
-                title: pickText(
-                  { ar: 'حوكمة الأدوار الـ 7', fr: 'Gouvernance des 7 rôles de compte', en: 'Role & Permission Governance' },
-                  language,
-                ),
-                description: pickText(
-                  {
-                    ar: 'تغيير دور أي مستخدم في جدول user_role_assignments يتطلب دالة خادم موثقة ولا يُقبل من المتصفح مباشرة.',
-                    fr: 'Toute modification dans user_role_assignments exige une fonction serveur vérifiée.',
-                    en: 'Role assignment mutations in user_role_assignments require a verified server RPC and never trust client-supplied role writes.',
-                  },
-                  language,
-                ),
-              })
-            }
+            onClick={() => openGovernanceSection('role-governance')}
           />
 
           <HomeShortcutCard
@@ -401,7 +385,8 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             state="COMING_SOON"
             icon="⚙️"
             tone="red"
-            onClick={() =>
+            onClick={() => {
+              setActiveGovernanceSection(null);
               setGovernancePanel({
                 state: 'COMING_SOON',
                 title: pickText(
@@ -416,11 +401,12 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
                   },
                   language,
                 ),
-              })
-            }
+              });
+            }}
           />
         </HomeCardGrid>
       </HomeSection>
     </div>
   );
 };
+

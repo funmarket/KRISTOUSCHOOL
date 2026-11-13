@@ -125,7 +125,12 @@ export function resolveHomePage(
   }
 
   const status = user.accountStatus ?? 'APPROVED';
-  if (status === 'PENDING' || status === 'REJECTED' || status === 'REVOKED') {
+  if (
+    status === 'PENDING' ||
+    status === 'REJECTED' ||
+    status === 'SUSPENDED' ||
+    status === 'REVOKED'
+  ) {
     const actor = isCanonicalAccountRole(user.role) ? user.role : null;
     if (requestedHomePage === 'PUBLIC_HOME') {
       return makeDecision('PUBLIC_HOME', true, false, actor);
