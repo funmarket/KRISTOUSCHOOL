@@ -8,14 +8,14 @@ These rules apply to every developer, coding agent, automation, and delegated wo
 
 Before selecting an implementation task, editing files, creating a branch, delegating, committing, opening a pull request, or deploying:
 
-1. Read this entire `AGENTS.md`.
+1. Read this entire `AGENTS.md` and `skills/evidence-first-execution/SKILL.md` (mandatory for every task; run its start-of-task protocol via `skills/evidence-first-execution/scripts/env_proof.sh` before making claims or edits).
 2. Read `README.md`, `requirements.md`, `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, and `progress.md` in full. Read the dated evidence checkpoint `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md` and other relevant documents under `docs/`, including the older `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` as historical context, and inspect the actual repository tree.
 3. Confirm the repository, branch, and HEAD. Inspect open changes and overlapping work.
 4. Distinguish accepted product requirements, architecture/data-authority contracts, proposed/ordered plans, and currently verified implementation facts.
 5. Trace the owning source and affected consumers. Search for existing tables, policies, functions, components, environment variables, tests, and docs before creating a parallel owner.
 6. Resolve any contradictions using the source-of-truth order below. If a material decision is unresolved, stop before implementing behavior that depends on it.
 
-A previous agent's summary, an old commit, a green build on another repository, or a plan checklist does not satisfy this gate.
+A previous agent's summary, an old commit, a green build on another repository, or a plan checklist does not satisfy this gate. Apply the Evidence-First Execution rule on every task: **if you cannot prove it, do not report it as done.**
 
 ## 2. Source-of-truth order
 
@@ -51,7 +51,7 @@ The Supabase backend plan is an ordered proposal subordinate to the owner's inst
 
 For each task, make the smallest complete change from authoritative source through affected consumers and tests. Use test-first development where useful. Do not weaken tests to make a change pass. Update all affected authorities in the same task: product behavior in `requirements.md`, architecture in `structure.md`, data authority in `docs/CANONICAL_MODEL.md`, decisions in `docs/DECISIONS.md`, method in `docs/LIVING_BUILD_PLAN.md`, and evidence in `progress.md`.
 
-Run relevant verification for the changed layer. Database work must include local migration/reset validation, pgTAP RLS policy tests for allow and deny cases, and function/API integration tests. Report exact commands and results; state explicitly what was not run. Never claim a remote migration, release, or deployment without fresh evidence.
+Run relevant verification for the changed layer using `skills/evidence-first-execution/scripts/run_logged.sh` and record proofs under `.evidence/` (kept out of version control). Database work must include local migration/reset validation, pgTAP RLS policy tests for allow and deny cases, and function/API integration tests. Report exact commands, exit codes, observed counts, and results using `skills/evidence-first-execution/references/report-template.md`; state explicitly what was not run or blocked. Never claim a remote migration, release, or deployment without fresh evidence.
 
 Before consequential writes, re-check HEAD and inspect incoming changes. Never force-push, reset a shared branch, overwrite another contributor, commit directly to `main`, or merge a pull request without explicit owner approval. Use a focused branch and repository contribution conventions. The current repository has no verified long-lived integration branch; create work from the latest reviewed default branch unless the owner establishes another workflow.
 
