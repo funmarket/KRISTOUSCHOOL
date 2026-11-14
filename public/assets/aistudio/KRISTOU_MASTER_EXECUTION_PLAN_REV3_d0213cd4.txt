@@ -1,0 +1,2083 @@
+# KRISTOU SCHOOL Master Execution Plan
+
+Revision: 2026-11-14, revision 3. Replaces the active instructions and queue in the 2026-11-13 master plan. Earlier revisions remain history, not another execution queue.
+
+Goal: Deliver one organized, maintainable, scalable and production-ready KRISTOU SCHOOL application, with complete school workflows, proven authorization and persistence, and continuity for a new engineer without guessing.
+
+Architecture: One existing Vite/React/TypeScript product in `funmarket/KRISTOUSCHOOL`, delivered in Browser and Telegram WebView, backed by the existing Supabase project. PostgreSQL is durable truth; Supabase Auth owns Web credentials; narrow RPCs/Edge Functions enforce domain operations. Preserve the current app's visual language and navigation.
+
+Execution method: Use evidence-first inspection and small authorized packets. `superpowers:executing-plans` may guide execution. Delegation is optional only when separately authorized or required by applicable instructions; this plan does not commission concurrent writers. A roadmap task is not permission to execute it.
+
+Current command: **DOC-M0 — update this master plan only. Backend and Supabase implementation are PAUSED.** No other document edit, application change, SQL execution that changes state, account action, commit, push, PR merge, deployment or infrastructure change is authorized by this document update.
+
+This revision incorporates the Product Owner's explicit acceptance of all eight additions: school calendar/holidays/cancellations; substitute assignments; absence justification; academic-year rollover; account recovery/contact changes; emergency contacts/minimal safety information; grades/report cards/teacher remarks; operational reports/recovery procedures. Their inclusion is settled. Detailed policies identified below remain decision gates, not permission to invent values.
+
+## 0. How a new engineer resumes
+
+1. Read this plan's current-command block, current-state table, protected rules, decision gates and task register. Read current repo `AGENTS.md` and relevant authorities before any repo change.
+2. Distinguish **product decisions**, **architecture contracts**, **observed implementation**, **manual user acceptance**, **test evidence**, and **authorization**. None substitutes for another.
+3. Recheck `main`, open PRs and working-tree state. If a database operation is relevant, verify the exact existing project `KRISTOUSCHOOL` / `ofppapwofhovhroyjtkc` and current schema read-only. Historical `funmarket/Kristou` and its projects are not current targets.
+4. While documentation reconciliation is active, perform only the next explicitly authorized document task. The next proposed document is `requirements.md` (DOC-D1). Do not automatically edit it after DOC-M0.
+5. After document reconciliation is accepted and backend work is explicitly resumed, continue GOV-C1, the paused GOV-01/AUTH-LOGIN-02 closeout against PR #15. Do not rebuild installed schema or start GOV-02 merely because its roadmap entry exists.
+6. Freeze one exact packet: allowed targets/actions, prerequisites, interfaces, RED/GREEN checks, postconditions and stop rules. Recheck target freshness before any consequential mutation.
+7. Preserve the current Owner, accounts, links and existing accepted UI. Use synthetic identities in an isolated environment for integration and deny-case tests. Never use production as a test reset target.
+8. Finish the packet with the exact diff, evidence, remaining failures and next proposed action. No silent jump to the next packet.
+
+### Authority during the document transition
+
+Latest explicit Product Owner instructions take precedence. Existing repo authority order remains: `requirements.md` for product behavior; `structure.md` for architecture; `docs/DECISIONS.md` for durable decisions; `docs/CANONICAL_MODEL.md` for data/write authority; `docs/LIVING_BUILD_PLAN.md` for execution discipline; current source/runtime for implementation evidence; `progress.md` for dated results. `AGENTS.md` governs contributor behavior.
+
+This plan is the consolidated execution roadmap, not a replacement role system or database. Its later Owner decisions supersede contradictory older policy wording until the relevant authority is reconciled. Other authorities have NOT been updated by DOC-M0. Record a conflict and follow explicit Owner precedence; do not silently choose an old instruction.
+
+The companion November 13 Decisions Spec, old Start Here file, static `public/assets/aistudio/` planning copies, and historical continuation plans must not supply a different active queue. Their retirement/pointers are scheduled below. They remain unchanged during DOC-M0. This plan is self-contained for current scope and resume instructions; the stale companion is not required to discover current policy.
+
+### Mandatory preflight output
+
+```text
+CURRENT_COMMAND: <literal authorized command or NONE>
+TARGET_DOCUMENT_OR_REPOSITORY: <exact target>
+ACTUAL_MAIN_HEAD: <fresh SHA or UNKNOWN>
+WORK_BRANCH_HEAD: <branch/SHA or NONE>
+WORKTREE_STATUS: <explicit list or clean>
+OPEN_PRS_AND_OVERLAP: <fresh evidence or UNKNOWN>
+SUPABASE_TARGET: <exact project + environment or NOT USED>
+OWNER_CONTINUITY: <read-only proof if relevant or NOT USED>
+ALLOWED_TARGETS_AND_ACTIONS: <exact allowlist>
+FORBIDDEN: <protected systems and adjacent documents>
+ASSUMPTIONS: []
+MATERIAL_UNKNOWNS_FOR_THIS_PACKET: []
+UNRESOLVED_CONTRADICTIONS_FOR_THIS_PACKET: []
+DECISION: PROCEED_READ_ONLY | PROCEED_AUTHORIZED_PACKET | BLOCKED
+```
+
+An unresolved grading policy does not block a document update or unrelated recovery work; it blocks only dependent grading implementation. Authorization is as broad as the Owner's actual instruction, never broader or artificially narrower.
+
+## 1. Current state and evidence provenance
+
+These are dated observations, not permanent facts. Refresh mutable state at the next execution gate.
+
+| Surface | Observed state | Evidence and limit |
+| --- | --- | --- |
+| Canonical repo | `funmarket/KRISTOUSCHOOL`; default `main` | GitHub metadata and local remote inspected during review |
+| Main | `32067aa961620facffe4ff906c5598f68d27d6ff` | Fresh `git ls-remote` and PR base checked during DOC-M0 |
+| PR #15 | Draft, open, unmerged; `fix/gov01-source-database-parity@473d889c1b8e86bf71f88f66b67779f4c3502f8e` | GitHub PR metadata refreshed during DOC-M0; do not merge during docs work |
+| Inspected local candidate | Local commit `2dc828a66968246c76f325edfd603a4771c83555`; tree `0c2b8e2b3880e4a0b892bead5d40536d68e29a5e` equals PR head tree | Content equivalence established by tree hashes; commit IDs are different and must not be conflated |
+| Migration source | Main has six SQL files; PR #15 has seven | PR recovers canonical roles migration and reconciles governance lock safeguards; not merged |
+| Existing hosted project | `KRISTOUSCHOOL`, `ofppapwofhovhroyjtkc`, PostgreSQL 17.11 | Read-only inspection earlier on 2026-11-14; not refreshed by a hosted write in DOC-M0 |
+| Hosted public schema | `profiles`, `role_assignments`, `telegram_identities`, `account_link_challenges`, `manager_capability_grants`, `account_governance_audit_logs`; all six RLS enabled | Presence/RLS flags observed; not a complete policy acceptance test |
+| Hosted records | 3 Auth users, 3 profiles; 1 APPROVED, 2 PENDING; 1 approved active APP_ADMIN; 1 Telegram link | Aggregate read-only snapshot earlier on 2026-11-14; no personal identifiers included |
+| Hosted migrations | Seven installed records, listed below | Do not rerun the earlier repair SQL or create a replacement database |
+| Functions | `auth-username-signin` v6; `telegram-auth` v9; `telegram-link-challenge` v6 | Active-version inventory earlier on 2026-11-14; version presence is not functional acceptance |
+| Username resolver drift | Deployed v6 uses trim/lowercase and generic credential errors; newer source adds Unicode normalization and differentiated errors | Deployed source read and compared with repo; matching-handler release remains pending |
+| Web UI | Published login says username/email; signup explains username requirement for phone without email | Browser observation of forms; no account created or credentials submitted by that inspection |
+| Owner live acceptance | Owner reports successful login, navigation across other role workspaces and working oversight flow | **MANUAL LIVE ACCEPTANCE — OWNER REPORTED**; screenshot shows PARENT HOME (APP_ADMIN), oversight banner and Return to My Home. Accept this evidence; do not label the deployed Owner navigation wholly unverified |
+| Scope of that acceptance | Login/navigation/oversight display work in the Owner's observed deployed app | Not proof of ordinary-account mutation, direct RLS isolation, concurrency, or the unmerged PR candidate |
+| Frontend deployment revision | UNKNOWN exact deployed SHA | GitHub shows Vercel success for main; Vercel metadata API denied access. Do not infer exact live SHA from matching wording |
+| School-domain persistence | No student/class/family/enrollment/attendance/grades/calendar/pickup product tables in inspected public schema | Existing private school views are prototypes or backend-blocked until their slices are implemented |
+| Storage buckets | **0 buckets in storage.buckets** at read-only recheck on 2026-11-14 | Private file/media storage is future provisioning and policy work in MED-01; no existing bucket or working upload/download is assumed |
+| Database Realtime publication | **0 public tables in supabase_realtime publication** at read-only recheck on 2026-11-14 | This establishes only no published public-table changes; it does not establish the state of all Broadcast/Presence channels. COM-01/F4-P3 must select, configure and test the required authorized update transport |
+| Fresh aggregate recheck | 6 public tables, 7 migrations, 3 Auth users, 1 approved active Owner, 1 Telegram link | Confirms the prior baseline; does not certify row isolation or run privileged account changes |
+| Document review status | Master plan updated first; other authority corrections queued | No claim that all repository documents already agree |
+
+### Installed migration register
+
+| Installed version | Name | Source treatment |
+| --- | --- | --- |
+| 20261110212125 | authentication_foundation | Historical source version 20261110210000; keep reviewed mapping |
+| 20261110212204 | revoke_auth_trigger_execute | Historical source version 20261110222200; keep mapping |
+| 20261110212239 | revoke_auth_trigger_execute_public | Historical source version 20261110222300; keep mapping |
+| 20261111150532 | atomic_telegram_account_link | Historical source version 20261111030000; keep mapping |
+| 20261112190435 | canonical_account_roles | Recovered in PR #15, absent on current main |
+| 20261113120000 | human_friendly_usernames | Installed; do not recreate as a new repair |
+| 20261113150000 | account_governance_foundation | Installed safeguards reconciled in PR #15; source review/replay gates remain |
+
+Installed governance routines include `governance_get_actor_scope`, `governance_list_pending_accounts`, `governance_list_account_directory`, `governance_get_account_detail`, `governance_review_account`, `governance_appoint_privileged_role`, and internal `governance_resolve_caller_role`. Reuse their actual interfaces rather than creating renamed parallel RPCs. `manager_capability_grants` exists; its table presence does not complete GOV-02 grant/revoke operations or UI.
+
+### PR #15 scope and documentation-overlap checkpoint
+
+Rechecked 2026-11-14: PR #15 remains draft/open/unmerged at head `473d889c1b8e86bf71f88f66b67779f4c3502f8e`, base `32067aa961620facffe4ff906c5598f68d27d6ff`. Its 14-file diff contains eight documents (README, requirements, structure, CANONICAL_MODEL, DECISIONS, LIVING_BUILD_PLAN, REMOTE_SCHEMA_INVENTORY, progress), AppContext, two migration files, two SQL test files and one Node test file. Review confirmed the protected Telegram-cache restoration, recovered canonical-roles source, governance entry-lock/READ COMMITTED/fresh-caller source guard, and corrected synthetic RLS fixture assumptions.
+
+The accepted calendar, substitutes, justification, rollover, recovery/contact, safety-contact, assessments/remarks and reporting/operations additions are deliberately in this MASTER ROADMAP, not bundled into PR #15. Do not expand that existing corrective PR into an all-features implementation.
+
+Future documentation edits overlap those eight pending PR documents. Before publishing/merging either line of work, inspect the exact incoming documentation hunks and preserve the newest Owner-approved contract. Reconcile/rebase under a separately authorized repository packet; never let merging old PR text reinstate phone sign-in, deferred Attendance or an obsolete next task. This warning does not authorize changing the PR during this document refinement.
+
+### Evidence classes and feature-readiness gates
+
+| Evidence class | What is actually established | What it cannot establish |
+| --- | --- | --- |
+| Previous 17 document checks | The earlier master had resolvable IDs, no dependency cycles, named feature/card coverage and preserved protected files | No future database connection, RLS behavior, live workflow or production readiness follows from those checks |
+| Fresh PR-equivalent Node execution | `node --import tsx --test tests/*.test.mjs tests/functions/*.test.mjs` exited 0 on the tree equal to PR #15: 49 passed, 0 failed, 0 skipped, 49 total | Existing suite includes isolated/mocked logic and source guards; this is not genuine two-session DB/RLS or complete live feature acceptance |
+| Owner manual live acceptance | Owner successfully signed in and navigated role workspaces; screenshot shows APP_ADMIN oversight and Return to My Home | Does not establish every privileged mutation or the unmerged candidate's exact live revision |
+| Read-only hosted inventory | Current objects, counts, routines, buckets and publication membership | Does not execute writes or prove every policy's allow/deny behavior |
+| Real DB/API integration | Only a recorded run against the named isolated schema with ordinary principals can establish constraints, grants, RLS, transactions and API behavior | Cannot be substituted by a bypass-RLS runner, Node mocks or a table's existence |
+| Staged/live feature acceptance | Exact candidate + correct backend + real UI/API/data readback and relevant deny/error/retry coverage | Cannot be inferred from a successful build, Open card, deployment status or completed planning task |
+
+For EVERY feature/operation the engineer must record separate maturity: planned → UI/contract source present → compatible backend installed → real isolated acceptance → staging acceptance → approved live acceptance. A partial state is explicitly partial. Do not tick a feature COMPLETE because this document validates. Each implementation packet supplies actual database/API/UI proof; recovery, performance and restore acceptance have their own OPS/F5 gates. No production-ready declaration is permitted until the applicable launch matrix passes. Missing evidence remains a release task, never a fabricated pass or a request to rewrite the working app.
+
+### Prior execution evidence carried forward honestly
+
+PR #15/progress records report 49 Node tests passing, typecheck/build passing, seven migrations replayed in standalone PostgreSQL 16.2, and 26 governance pgTAP assertions passing in that limited runner. These were prior executions, NOT rerun by DOC-M0. The standalone runner bypassed RLS: foundation assertions 19–21 for own-profile/role/Telegram isolation failed (18 passed, 3 failed). Clean Docker/Supabase reset failed with LocalDbRunningError. Genuine two-session concurrency was not run because server socket creation was denied. Preserve those failures and limits; do not claim the policy suite passed or assume the app is broken solely from a runner limitation.
+
+GOV-01 remains PARTIALLY IMPLEMENTED, tracked by GOV-C1. Future bootstrap retirement, missing-status hardening and new feature work must not be added as unrelated requirements for merging the existing PR #15 candidate. Paused closeout: genuine local Supabase/RLS acceptance; two-session last-Owner and post-wait revocation tests; PR review and explicit merge decision; matching username-handler release; candidate-specific live governance acceptance. User-confirmed deployed Owner navigation is retained and only repeated when changed behavior or candidate verification requires it.
+
+### Remaining source findings to track, not fix during documentation
+
+The Web loader reads `account_status` and rejects unknown/unapproved states. Some `homepageAccess.ts` helpers still default missing status to APPROVED, and the Web loader maps roles into `capabilities` rather than loading actual grants. Registration submission, Parent Notes and Class Questions contain local-state success paths. Pickup actions intentionally return `pickup_backend_unavailable`. The signup trigger still contains an email-conditioned role insert; bootstrap retirement must preserve the existing Owner. Each finding belongs to its task below; none authorizes an adjacent code edit now.
+
+## 2. Accepted product contract and protected boundaries
+
+### 2.1 Product and presentation
+
+- One school: École Primaire Privée Kristou School in Tunisia; CP through 6ème context. No school switching, multi-school registry or shared-school tenancy.
+- One canonical React app for Browser and Telegram WebView; same business features and durable data. No separate Telegram frontend, router, state store or feature copies.
+- Preserve current homepage/card language, navigation geometry, eight role/public homes and Owner Teachers → Classes → Registration ordering. Oversight is inspection, not impersonation or an actor-role mutation.
+- Arabic/French/English are foundational. Arabic text renders correctly within the accepted stable LTR shell/navbar; do not restore old global RTL mirroring. Local text direction may be appropriate without moving controls.
+- Light is default; optional Pitch Black uses black surfaces and readable light text. Preserve the exact supplied school logo and existing media/design system. Phone first; verify narrow phones, tablet and desktop, keyboard/touch/focus/contrast/safe areas and native scrolling.
+- Mock data may remain for synthetic tests/reference. Production private-data paths must not silently substitute mock people/classes, show false saved/sent/released states, or expose private data publicly.
+- Reuse existing views/components. Adding a real missing workflow is allowed only under its implementation packet; preservation does not mean pretending an absent backend or absent profile screen already exists.
+
+### 2.2 Authentication and account access
+
+- Public sign-in: chosen username/handle OR email, plus password. Direct phone-number input is rejected before provider/resolver calls with localized guidance.
+- Signup: full name, password, requested role, and email or phone (or both). Phone without email requires a chosen valid username. With email, username is optional. Full name is display information, not a login identifier. Username-only credential provisioning remains unsupported.
+- Preserve Unicode username normalization/uniqueness, supported Arabic/Latin names and valid numeric-underscore handles such as `123_456`. Reject phone-like usernames. Keep phone entry separate and retain existing Tunisian/international normalization.
+- Phone-backed accounts authenticate through the username resolver's internal phone credential path. Do not disable Supabase phone credentials. A secondary contact is not automatically a verified login/recovery alias. Prefill login with email or username, never phone.
+- Keep existing password policy and confirmation handling; re-inspect source before freezing exact policy changes. No custom public password table, synthetic contact alias, browser-side contact lookup or heuristic identity merge.
+- Seven account roles only: APP_ADMIN, MANAGER, ADMINISTRATIVE_PERSONNEL, TEACHER, SCHOOL_STAFF, PARENT, STUDENT. GENERAL_USER denotes anonymous public browsing only, never an account/enum/fallback role. Requested signup role never grants permission.
+- Approval is required before private access. Contact verification, app-account approval, student admission, enrollment, guardian linking and class placement are distinct transitions.
+- Preserve optional explicit Telegram linking, challenge/HMAC validation, established re-entry/cache/session behavior against the agreed `09ffacf80daa4f546140053db441abb96c68ef8b` reference. Telegram lifecycle modifications and handler redeployment remain outside GOV-01/AUTH-LOGIN-02. This plan does not revive the withdrawn Telegram rewrite.
+- Future private operations in Telegram require server-verified identity and the same resource policy. A restored profile is not by itself a Supabase Auth session. Define/verify each feature's transport without silently redesigning established authentication.
+
+### 2.3 Authority matrix
+
+| Actor | Accepted authority | Boundaries |
+| --- | --- | --- |
+| APP_ADMIN | School-wide application governance; ordinary account review; Owner/Manager appointments; school operations | Preserve at least one recoverable approved Owner; audited explicit actions |
+| MANAGER | Operational and ordinary-review actions explicitly delegated by Owner | No implicit full access, Owner/Manager governance or physical release authority |
+| ADMINISTRATIVE_PERSONNEL | Automatic standard school-office bundle after approval: classes/students, teacher coordination, admissions, family relations, manual entry/import and other ordinary-account lifecycle | No self-account lifecycle, no APP_ADMIN/MANAGER governance, no automatic full medical access or Pickup release |
+| TEACHER | Assigned class/subject/session work; attendance, grades and remarks within policy | No other teacher's register overwrite; no school-wide private roster by role label |
+| PARENT | Verified linked children, permitted class resources, explanations/communications and eligible pickup arrival | No attendance/grade authority, other-family records, private staff notes or physical release |
+| STUDENT | Own approved student-safe resources and active class scope | No classmate dossiers, private student DMs, or attendance/grade writes |
+| SCHOOL_STAFF | Explicit job/resource capability; reads school-wide notices/calendar as an approved school user | No implicit school-wide roster, health dossier, governance or release |
+| Anonymous | Approved public school information | No private school/global member calendar, rosters, family, class or release data |
+
+Administrative Personnel may approve/reject/suspend/revoke/reactivate other ordinary accounts, including peers. Deny actions against any target holding/requesting privileged authority beyond their scope. A Manager requires explicit grants. New academic/medical/assessment functions must refine field/action rules rather than treating the office bundle as unrestricted access to everything.
+
+### 2.4 Records, import, student profile and academic history
+
+People owns student identity, independent of login credentials. Enrollment owns eligibility/application decisions; Academics owns year/level/class/subject/teaching assignment/membership. Family owns verified guardian links. A student record/import does not create credentials, approve roles, merge people or establish pickup authority.
+
+Support individual forms AND CSV/XLSX preview/confirmed import using the same domain writers. Review templates, identifiers, duplicate/conflict policy, size/row limits and atomic-vs-partial behavior before commit implementation. Never infer identity from matching names/contacts, execute spreadsheet formulas/macros, or report partial success ambiguously.
+
+Student profile additions preserve existing information and layout where present. Inspect first: the current repository has roster/child presentation structures, not a completed persistent full Student Profile matching Gemini's proposal. Build only missing sections: identity/enrollment, authorized guardians/emergency contacts, attendance history, assessments/report cards, teacher remarks and minimal permitted safety information. Do not put all these into one denormalized `students` record. Scope each field/audience; history must survive transfer/year rollover.
+
+### 2.5 School calendar and class calendar
+
+Accepted: School calendar, holidays and cancelled sessions are accessible to all APPROVED registered school users across all seven roles **inside Global Announcements**. Class calendar remains inside Class Community for authorized members/linked guardians/staff. Pending/suspended/revoked accounts do not gain private access merely by being registered.
+
+Adopt Hooma Athletes → Communities calendar interactions: month arrows, Today, selected date, date markers/counts, agenda below, inline authorized creation/editing and visible cancellation. Use KRISTOU's existing styles and localized copy. The accepted reference is source + Owner screenshots, not a requirement to import Hooma's sports permissions, neon colors, Prisma/API/worker topology, Photo Board or Whistle Board.
+
+Required adaptation: Africa/Tunis school-time authority; date-only all-day holidays; multi-day spans shown on every affected date; school/global and class scope; loading/empty/error/denied states; upcoming agenda; cancellation reason and replacement date; audience-safe notifications. A school-wide event is referenced into relevant class views, not separately cloned and edited per class/homepage.
+
+Proposed architecture to ratify in DOC-D2/D3: Academics owns school operational calendar/closures and teaching-session changes; Class Community retains class-content calendar items; Broadcasts owns global notice publication linking to canonical event references. One shared calendar component consumes authorized view models from those owners. School-wide operational notice audience must include approved staff even without class membership; do not equate it with only ALL_CLASSES recipients.
+
+Optional event response follows type: RSVP may suit optional meetings/events; acknowledgement may suit important notices. RSVP, notice acknowledgement and teacher-recorded attendance are distinct. No automatic RSVP attendance. Notification preference must not become permission to hide a required in-app school notice.
+
+### 2.6 Teacher-specific Attendance and absence explanations
+
+Accepted: Different teachers record their own independent attendance in their assigned teaching context. Teacher A's entry must not overwrite Teacher B's. Include class, subject, teacher and date/session identity; class/day alone is insufficient. Preserve the Owner's clarification that teachers' registers are separate. Whether the SAME teacher takes a second register for repeated lessons on one day remains DG-08; do not silently decide it from a proposed schema.
+
+Statuses: Present, Absent, Late, Excused; untouched roster entries display Not recorded. No silent present/absent default. Teaching-session states (scheduled/cancelled/completed, with final vocabulary frozen in CAL-01) are separate from pupil attendance states.
+
+One authoritative attendance entry per pupil and approved register/session identity. Attendance history and totals read these same records. Updates amend an entry with actor/reason/version history; they do not append duplicate attendance counted twice. Preserve responsible teacher and actual recording/correcting actor separately, particularly for substitutes.
+
+Parent justification is a separate submitted explanation/document for a linked child's absence. Authorized staff accepts/rejects/requests clarification under an approved policy; a parent's submission does not change attendance to Excused by itself. Attachments remain private; reasons must not leak to class/public feeds.
+
+Statistics require defined eligibility, register unit, date range, Late/Excused treatment and denominator. Show honest counts before a percentage if policy is unresolved. Cancelled sessions and unrecorded registers are not pupil absences. Never derive a school-day absence simply from one teacher's lesson absence. Attendance does not change Pickup RELEASED or collector authority.
+
+### 2.7 Substitutes and academic-year rollover
+
+Substitute assignment records identify the real teacher, authorized class/subject/session scope and effective start/end. Preserve the original responsible teacher and history. Expiry/revocation removes current access; no credential sharing, new account roles or unbounded access. Replacement, co-teaching and past-record correction rights require DG-09 decisions.
+
+Rollover supports academic years, enrollment renewal, promotion/retention/transfer/withdrawal and new class/teacher memberships. Preview and confirm changes with audit/idempotency. Never overwrite previous-year records, copy grades into a new year as new marks, or auto-approve accounts/guardians/collectors. Decide access to historical records explicitly; immediate current-class access removal does not justify deleting history.
+
+### 2.8 Assessments, report cards and teacher remarks
+
+Accepted feature scope: teacher assignment/exam assessment entries, grades/subject summaries, term/semester/report-card publication and teacher remarks. Exact scale, weights, rounding, missing/exempt treatment, terms and publication/edit windows require school policy DG-11. Never invent a national or school grading scheme.
+
+Assigned teachers enter permitted assessments/remarks for their teaching scope. Authorized academic administration reviews/corrects with reason/audit under approved rules. Parents/students see only their permitted child's/own published results; draft marks and restricted behavioral/safeguarding notes require separate audiences. Cross-teacher editing, administrative override and historical access must be defined. Teacher remarks are distinct from parent-originated Parent Notes, attendance notes and confidential staff case notes. Do not create unrestricted clinical or disciplinary dossiers.
+
+### 2.9 Communication, public content and preferences
+
+- Class announcements, homework/classwork, class calendar, galleries and documents remain teacher/class scoped. No separate ClassCommunity membership truth.
+- Parent Notes: 11 parent-originated notes per school-defined day, 08:00 inclusive–18:00 exclusive Africa/Tunis, 08:00 quota reset; verified child/class/teacher scope; replies do not consume parent quota. Privacy is child/relevant guardian/teacher/authorized staff, not all class parents.
+- Student Class Questions and short operational Messages have 200-character limits. Questions are class-wide with moderation/reporting/rate limits; no private student-to-student DMs. Messaging must not bypass Parent Notes timing/quota rules.
+- Global Announcements/Broadcasts include school-wide, selected-level and selected-class audiences. A canonical publication may project into multiple feeds, never independent copied business records. Support drafts/scheduling/publication/revocation and explicit acknowledgement where configured. School-wide member notices reach all approved roles as specified above.
+- One notification inbox/bell with safe source links, read/unread and delivery states. Durable event/outbox commits with the source operation; delivery failure cannot rewrite it. Private message bodies must not leak into general notifications. Browser/Telegram background delivery and sound have actual platform limits.
+- Public school content: Home/About/Contact, activities/clubs/pedagogy, approved announcements, public gallery/calendar, general inquiry and enrollment entry. Public content is a deliberately published projection; the internal school calendar is not automatically public.
+- Public Teachers/Administration directory contains approved presentation only, separate from People profiles. Private contacts/health/student details are not inherited.
+- Food Menu is a full feature: La Toque Gourmande weekly/daily structure; draft/published/archived, week boundaries, translated text and governed menu/meal images; Owner/authorized Manager editing; public only when explicitly marked.
+- Preferences: language, Light/Pitch Black, sounds Kristou Bell/Soft Chime/Classroom Bell/Gentle Pop/Silent and relevant category/vibration settings. Persistence is user-scoped; preferences never grant authority.
+- Optional AI remains a later explicitly activated API client; public FAQ, navigation and authorized summaries/drafts only. Human confirmation before sending/publishing. No autonomous roles, admission decisions, pickup authorization/release or destructive changes. App works without AI; no second AI database authority.
+
+### 2.10 Safety data, account recovery, reports and operations
+
+Emergency contacts and narrowly scoped safety information are accepted. Define school-verified contact relationships, permitted staff audiences, expiry/review and restricted guardian/custody implications. Contacts are not automatically app identities or authorized pickup people. A minimal allergy/action indicator does not imply full medical history access. Privacy, consent, retention and safeguarding rules must be approved for the actual fields, without invented legal claims.
+
+Account recovery/contact changes must support real supported Supabase credential paths, including phone-backed username users and people who lose access to an identifier. No identity merge, unverified alias promotion or generic admin password-reading/reset bypass. School-assisted recovery requires an explicit verified process, audit and preservation of the canonical user/roles/links. Exact proof/channel/session policy is DG-10.
+
+Operational reporting includes scoped attendance, academics, enrollment, roster and communication/delivery information appropriate to role; exports are audited, bounded and safe from formula injection/private-field leakage. Data-retention/deletion/export requests require DG-07. Production readiness includes tested backups/restoration, deployment/rollback, monitoring/alerts, job retries, performance and incident procedures; these are engineering deliverables, not a claim that any provider feature is enabled.
+
+### 2.11 Pickup remains independently safety-critical
+
+WAITING → PARENT_ARRIVED → RELEASED. Parent/authorized arrival actor announces; only authorized staff physically verifies the collector and confirms release. Server checks current account, family/collector, enrollment/class, school-time dismissal window and state. Release is atomic/idempotent/audited. No parent action, attendance mark, timer, AI, geofence or notification may release a child. Keep current backend-unavailable lock until isolated + staging acceptance and explicit production activation.
+
+Early leave is a separate staff-authorized workflow. Non-account pickup people may be school-managed authorizations. School closure/cancellation may affect dismissal only through a reviewed Pickup policy, never an accidental calendar-side effect. Live board/reconnect and delivery failure need explicit safe behavior; a committed transition with delayed notification must not be falsely described as rolled back.
+
+## 3. Ownership and integration boundaries
+
+| Durable concept | Canonical owner | Integration rule |
+| --- | --- | --- |
+| Auth credentials/session, canonical account, Telegram link | Identity | Supabase Auth + existing profile mapping; no feature-owned passwords |
+| Approval, effective roles, grants | Access Control | Current server-derived actor; requested roles/client state never authority |
+| Student/staff identity and permitted contact/safety facts | People | School person can exist without account; split sensitive projections |
+| Verified guardian relation | Family | Sole parent-child scope; no contact-name matching |
+| Years/levels/classes/subjects, teacher/substitute/student assignments, teaching sessions, school operational dates | Academics | New calendar/session extension is proposed architecture; ratify before schema |
+| Applications/requirements/documents and enrollment eligibility | Enrollment | Does not write a second class-membership authority |
+| Teacher attendance register/entries, correction history, absence-justification decisions | Attendance | Proposed new bounded owner; references Academics/People/Family; confirm in DOC-D3 |
+| Assessment definitions/marks, report-card publication, educational teacher remarks | Assessment | Proposed new bounded owner; DG-11/DG-12 before schema; no Parent Notes duplication |
+| Announcements/homework/questions/class content calendar/gallery/docs | Class Community | Class from Academics; no duplicate class roster |
+| Parent-originated structured notes/replies/quota | Parent Notes | Separate audience/time authority from Messages |
+| Permitted short threads/messages | Messaging | No student private DM or Parent Notes loophole |
+| School/global announcements and publication audiences | Broadcasts | Links to calendar/source events; all-approved-school audience distinct from class targeting |
+| Arrival, collector authorization, dismissal/release/early leave | Pickup | Sole physical-release authority |
+| Inbox/read/delivery projection | Notifications | References source events and rechecks access |
+| Language/theme/sounds | Preferences | Presentation only |
+| Menu, public directory, other public school pages | Food Menu / Directory / Public Content | Each has a separate publication/write owner |
+| Media descriptor/bytes lifecycle | Media | Feature decides attachment/audience; private storage by default |
+| Safe sensitive-operation audit | Audit | Append-only safe metadata; no tokens/private bodies by default |
+| Durable delivery handoff | Async foundation | Outbox is infrastructure, not another feature owner |
+| Reports | Authorized read projections | No independent editable grade/attendance totals |
+| AI | Authorized API client | No parallel truth or autonomous sensitive authority |
+
+Scalability approach: small typed feature clients, bounded queries/pagination, indexed real policy/join patterns, transactional invariants, idempotent retries and measured performance. Do not add Redis, a worker fleet, microservices, a second API or multi-school tenancy solely because the goal says scalable. Add infrastructure only after a measured requirement and explicit architecture decision.
+
+## 4. Decision register
+
+Accepted feature inclusion does not freeze unknown school policies. Each gate identifies the blocked behavior and owner decision needed; unrelated work continues when authorized.
+
+| Gate | Current state and decision needed | Blocks |
+| --- | --- | --- |
+| DG-01 | SUSPENDED already exists in source/live enum. Confirm remaining suspension/revocation/reactivation messages and lifecycle acceptance against implemented policy; do not add it again | Remaining status UX/behavior changes |
+| DG-02 | Import templates/official IDs, matching/conflict rules, maximum sizes, atomic/partial behavior | Import commit design and real uploads |
+| DG-03 | School admission documents, eligibility/age/year windows | Admission validation/public claims |
+| DG-04 | Multi-active-role policy, precedence/promotion and privileged-target handling | Changes depending on exactly one effective role |
+| DG-05 | Isolated integration environment with ordinary RLS sessions and genuine concurrency; costs/config if hosted | Real DB acceptance and new security-sensitive migrations |
+| DG-06 | Pending/rejected/revoked/suspended experience and stale-session resource denial, within protected Telegram scope | Dependent status changes/private feature activation |
+| DG-07 | Retention/archive/export/deletion policy for minors, attachments, audit and backups | Broad export/delete and retention automation |
+| DG-08 | Attendance register unit, repeated SAME-teacher lessons/day, correction/finalization window, Late/Excused denominator and parent/student visibility | ATT-02 onward and percentages |
+| DG-09 | Substitute/co-teacher delegation, effective times, reassignment and historical edit access | Substitute activation and dependent attendance/grade writes |
+| DG-10 | Recovery proof/channels, lost phone/email, contact re-verification, session handling and school-assisted operator process | Recovery/contact-change implementation |
+| DG-11 | Terms/assessment scales/weights/rounding/missing/exempt rules/report approval and publication | Grades/calculations/report cards |
+| DG-12 | Teacher remarks vs restricted behavioral notes, allowed field types/audiences/correction/retention | Remarks/sensitive note exposure |
+| DG-13 | Emergency contacts/safety field schema, school verification, audiences and escalation | Safety projections/uploads |
+| DG-14 | School calendar editors, week start, event types, cancellation/reschedule/reopen and acknowledgement/reminder policy | Calendar publishing and automated effects |
+| DG-15 | Promotion/retention/transfer/withdrawal rules and historical access | Rollover execution |
+| DG-16 | Backup/restore objectives, scope, export controls, monitoring owners and incident response | Operations acceptance/production launch |
+| DG-17 | Allowed operational-message participants and abuse/moderation rules | Messaging writes |
+| DG-18 | Optional AI provider, allowed tools/data, costs/quotas and activation | AI implementation |
+| DG-19 | Existing Office Desk/staff service-card task/request types, assignment, status and data scopes; decide bounded workflow vs explicit deferral for each placeholder | STF-01 service writes |
+
+Close each gate by recording the actual decision in the relevant authority and task, with date/evidence. Never label a decision unresolved after it has been explicitly settled; never treat a code default as approval.
+
+### Existing-page completeness requirement
+
+The Product Owner explicitly requires existing Governance & Access, School Operations and every other page/card/menu action to be tracked through real integration, not only new features. Screenshots show Pending Account Approvals, User Directory & Account Status, Manager Delegation, Role & Permission Governance, Directory & Public Site Oversight, School Settings, Control Center, Pickup, Classes & Students, Registration, Broadcasts, Food Menu and Public content. UI-01/02 cover these and all other role homepages/actions. Labels such as Open, Pending backend and Coming soon are presentation states, not implementation proof.
+
+An owning feature is not closed until its existing entry points and consumers are wired, authorization enforced, mutations confirmed durable and denied/error/offline behavior demonstrated. A card that navigates to an unrelated page or opens explanatory text remains an integration gap. Readiness is per operation: an installed read RPC does not complete its write operations or role-specific consumers.
+
+## 5. Roadmap order and dependency rules
+
+1. **Document reconciliation:** DOC-M0, then one document per authorized task DOC-D1…DOC-D12. No backend work during this pause.
+2. **Resume existing foundation:** F0 inventory/local acceptance/parity as still needed; GOV-C1 closes the existing GOV-01 candidate within its scope. GOV-02 Manager grant/revoke is F1-G3 after GOV-C1 acceptance. Remaining F1 tasks extend/harden the accepted foundation under separate packets. Preserve successful existing work and manual live acceptance.
+3. **Foundational records and support:** recovery policy, People/Academics/Enrollment/Family, minimal private Media/Audit and student profile. Manual/import methods through canonical owners.
+4. **Scheduling and Attendance:** subjects/session identities and school operational calendar → substitute scope → teacher registers → justification → history/summaries. A full recurring timetable engine is not an implicit prerequisite to a reviewed minimal session workflow.
+5. **Learning and communication:** assessments/report cards/remarks; class content; Global Announcements/calendar integration; Parent Notes/Questions; Messages/Notifications. Required audit/outbox/media slices must precede their consumers; avoid circular dependency between events and delivery.
+6. **Public and administrative completeness:** directories, Food Menu, public content/inquiries, preferences, reports and rollover. These are tracked first-class work, not a vague deferred bucket. Exact relative ordering may follow reviewed dependencies and Owner priority.
+7. **Pickup:** only after verified identity/relationships/assignments/collectors, notifications/live coordination and safety policy. Implement arrival and release separately.
+8. **Production acceptance and operation:** per-slice staging happens throughout; final all-role, security, accessibility, recovery, load and release checks close F5. AI remains a separately activated later slice.
+
+Some tasks can be prepared independently, but no task gains mutation authorization from readiness. The dependency register below is a concrete proposed order, not approval to run a chain. Changes to order require a stated reason and proof no prerequisite is skipped.
+
+## 6. Source map and packet execution contract
+
+Existing source anchors: `src/App.tsx`; `src/types.ts`; `src/context/AppContext.tsx`; `src/lib/{auth,username,supabase,telegram,accountGovernance}.ts`; `src/components/{AuthModal,Navbar}.tsx`; `src/components/homepages/{OwnerHomePage,OwnerGovernanceWorkspace,ManagerHomePage,AdministrativePersonnelHomePage,TeacherHomePage,ParentHomePage,StudentHomePage,ApplicationStatusScreen}.tsx` and `src/components/homepages/homepageAccess.ts`; `src/components/views/{ClassesManagementView,RegistrationView,ParentNotesView,ClassCommunityView,PickupBoardView,FoodMenuView,DirectoryView,HomeView}.tsx`; `src/i18n/{translations,authMessages,homepages}.ts`; existing shared homepage components; `supabase/config.toml`, migrations/functions/tests; root `tests/`.
+
+A brace group above is reading shorthand, not a literal path. Inspect exact paths before edit. Proposed adapters below follow existing `src/lib` boundaries; proposed UI paths use existing views until an actual feature needs smaller colocated components. Search before creating. No speculative folder tree, catch-all management service, or new component-library/design dependency.
+
+Future SQL filenames are generated only after fresh schema/migration inspection with the approved CLI; `<fresh>_<domain>.sql` is notation, not a deployed migration. Actual RPC signatures/types/new filenames must be frozen in the packet after the relevant design gate, never invented by the executor to fill an omission. This is a complete program roadmap with bounded design tasks, not a claim every future school policy is already decided.
+
+### Common execution loop for implementation packets
+
+1. Inspect current owner/source/consumers/target. Freeze exact files, interfaces, permitted effects and design-gate decisions.
+2. Write the smallest relevant failing test in the existing harness; observe failure for the intended missing behavior, not a missing runtime. Document any justified test-first exception.
+3. Implement the narrow domain operation and necessary consumers. Use reviewed migrations/grants/RLS before protected reads/writes, transactions for invariants, and real server identity.
+4. Run focused GREEN plus neighboring regression; prove denied actors/rows and retry/concurrency cases through real enforcement. A source assertion or in-memory schedule is not database authorization/concurrency proof.
+5. Inspect exact diff and protected postconditions; update only the authorities authorized by that packet. Commit/push/merge/deploy require the relevant actual authorization, not a generic step copied from a template.
+6. Report evidence at the exact candidate and stop. Do not manufacture counts, claim old CI for new SHA, or treat a successful save in React state as persistence.
+
+### Mandatory schema, RPC and frontend contract-refresh gate
+
+Every future migration or RPC/function contract change must complete this gate within its authorized vertical slice:
+
+1. Inspect the actual owning schema, deployed/installed version and all consuming adapters. Freeze exact input/output/error shapes and compatibility expectations; do not invent a parallel RPC name or duplicate Database type owner.
+2. Replay the reviewed migration in a clean isolated Supabase environment. Validate constraints, grants, RLS and exposed Data API/RPC behavior as ordinary allowed and denied principals. A policy-present flag is insufficient.
+3. Generate/refresh Supabase TypeScript database types from the exact tested schema using the supported pinned toolchain. Freeze one authoritative generated-type path in the packet after source inspection. Record schema version/fingerprint and reproducible generation command; generated types do not grant access or prove RLS.
+4. Update every affected typed feature adapter, request/response validator and UI consumer against those contracts. Test real RPC/API success, errors, authorization denial and persisted readback. Compilation alone cannot prove the live endpoint returns that shape.
+5. Reject drift such as a frontend selecting a column absent from the installed schema, renamed RPC parameters, missing exposure/grants, stale generated types or a pending backend disguised by local success. CI/type/contract-diff checks and real integration must detect these conditions.
+6. Release compatible backend dependencies before the dependent frontend. Verify installed schema/RPC fingerprint and actual deployed app version at the release gate, with rollback/forward-fix. Do not rerun installed repair SQL, silently repair migration history or deploy Telegram handlers to make an unrelated contract check pass.
+
+F0-R2/GOV-C1 apply this to existing reconciliation where relevant; each F1/F2/CAL/ATT/GRD/COM/PUB/REC/OPS feature task applies it to its own new schema/contract. Exact future school-policy values and signatures still wait for their named decision gates; this is not permission to manufacture them now.
+
+### Existing commands and limits
+
+```bash
+npm run lint
+npm run build
+node --import tsx --test tests/*.test.mjs tests/functions/*.test.mjs
+npm run test:auth
+npm run test:telegram-auth
+npm run db:start
+npm run db:reset
+npm run db:test
+git diff --check
+```
+
+`lint` is TypeScript checking, not ESLint. Node's full-suite command requires the declared/installed tsx environment. DB commands use pinned Supabase CLI 3.1.0 and a proven LOCAL synthetic stack; never run destructive reset against linked/hosted production. No existing configured E2E command is asserted; OPS-01 establishes it. New task-specific test paths below are candidates until packet preflight. Green means the actual relevant tests run with matching expected assertions and exit 0, not a predetermined invented count.
+
+For document tasks, validation is source/decision comparison, coverage, links/IDs/dependency checks and diff review. Application tests are not required merely to edit prose, and their old results must not be relabelled as a fresh pass.
+
+## 7. Task register
+
+Status labels: NOT STARTED; INSPECTION ONLY; PREPARED — NOT VERIFIED; IMPLEMENTED IN SOURCE — NOT LIVE; DEPLOYED — NOT VERIFIED LIVE; TESTED LOCALLY — NOT DEPLOYED; PARTIALLY IMPLEMENTED; COMPLETE — VERIFIED; BLOCKED. Track source, installed DB, release and acceptance separately in each real progress entry. A task's initial label below summarizes the known gap, not a new completion claim.
+
+All task entries inherit the protected contract and common loop. Each produces one reviewable deliverable. If an entry would span independently reviewable implementations, freeze smaller subpackets under the same parent ID before code. Design/policy tasks intentionally precede code where the Owner has not supplied exact school values.
+### Dependency and status index
+
+| Task | Depends on | Initial known state |
+| --- | --- | --- |
+| DOC-M0 | None | PREPARED — NOT VERIFIED |
+| DOC-D1 | DOC-M0 | NOT STARTED |
+| DOC-D2 | DOC-D1 | NOT STARTED |
+| DOC-D3 | DOC-D2 | NOT STARTED |
+| DOC-D4 | DOC-D3 | NOT STARTED |
+| DOC-D5 | DOC-D4 | NOT STARTED |
+| DOC-D6 | DOC-D5 | NOT STARTED |
+| DOC-D7 | DOC-D6 | NOT STARTED |
+| DOC-D8 | DOC-D7 | NOT STARTED |
+| DOC-D9 | DOC-D8 | NOT STARTED |
+| DOC-D10 | DOC-D9 | NOT STARTED |
+| DOC-D11 | DOC-D10 | NOT STARTED |
+| DOC-D12 | DOC-D11 | NOT STARTED |
+| F0-R0 | DOC-D12 | INSPECTION ONLY |
+| F0-R1 | F0-R0 | BLOCKED |
+| F0-R2 | F0-R1 | PARTIALLY IMPLEMENTED |
+| F0-R3 | F0-R0 | INSPECTION ONLY |
+| F0-R4 | DOC-D12 | PARTIALLY IMPLEMENTED |
+| GOV-C1 | F0-R2, F0-R3 | PARTIALLY IMPLEMENTED |
+| F1-G1 | GOV-C1 | PARTIALLY IMPLEMENTED |
+| F1-G2 | F1-G1 | PARTIALLY IMPLEMENTED |
+| F1-G3 | GOV-C1 | NOT STARTED |
+| F1-G4 | F1-G2 | PARTIALLY IMPLEMENTED |
+| F1-G5 | GOV-C1 | PARTIALLY IMPLEMENTED |
+| F1-G6 | F1-G4, F1-G5 | PARTIALLY IMPLEMENTED |
+| REC-01 | F0-R4 | NOT STARTED |
+| OPS-01 | F0-R4 | NOT STARTED |
+| REC-02 | REC-01, F1-G6, OPS-01 | NOT STARTED |
+| MED-01 | F1-G6, OPS-01 | NOT STARTED |
+| F2-A1 | F1-G6, OPS-01 | NOT STARTED |
+| F2-A2 | F2-A1 | NOT STARTED |
+| F2-A3 | F2-A2 | NOT STARTED |
+| F2-A4 | F2-A2 | NOT STARTED |
+| F2-A5 | F2-A1, F2-A4 | NOT STARTED |
+| F2-A6 | F2-A3, F2-A4, F2-A5 | NOT STARTED |
+| F2-A7 | F2-A6 | NOT STARTED |
+| F2-A8 | F2-A7 | NOT STARTED |
+| F2-A9 | F2-A8 | NOT STARTED |
+| F2-A10 | F2-A9 | NOT STARTED |
+| PRO-01 | F2-A10 | NOT STARTED |
+| PRO-02 | PRO-01, MED-01 | NOT STARTED |
+| CAL-01 | F2-A10 | NOT STARTED |
+| CAL-02 | CAL-01 | NOT STARTED |
+| COM-01 | F1-G6, MED-01 | NOT STARTED |
+| COM-02 | COM-01, F1-G3, F2-A10 | NOT STARTED |
+| CAL-03 | CAL-02, COM-02 | NOT STARTED |
+| CAL-04 | CAL-02, F1-G3 | NOT STARTED |
+| ATT-01 | CAL-01, PRO-01 | NOT STARTED |
+| ATT-02 | ATT-01, CAL-02, CAL-04 | NOT STARTED |
+| ATT-03 | ATT-02 | NOT STARTED |
+| ATT-04 | ATT-03, F2-A5, MED-01, COM-01 | NOT STARTED |
+| ATT-05 | ATT-04, PRO-02 | NOT STARTED |
+| GRD-01 | CAL-01, PRO-01 | NOT STARTED |
+| GRD-02 | GRD-01, CAL-04 | NOT STARTED |
+| GRD-03 | GRD-02, PRO-02, COM-01 | NOT STARTED |
+| GRD-04 | GRD-02, PRO-02 | NOT STARTED |
+| COM-03 | F2-A10, MED-01, COM-01 | NOT STARTED |
+| COM-04 | F2-A10, COM-01 | NOT STARTED |
+| F3-C1 | F2-A10, MED-01, COM-01 | NOT STARTED |
+| F3-C2 | F2-A10, COM-01 | NOT STARTED |
+| F3-C3 | COM-03 | NOT STARTED |
+| PUB-01 | F1-G6, MED-01 | NOT STARTED |
+| PUB-02 | F1-G3, MED-01, COM-01 | NOT STARTED |
+| PUB-03 | MED-01, COM-01 | NOT STARTED |
+| PUB-04 | COM-01, PUB-01, PUB-02, PUB-03 | NOT STARTED |
+| F3-C4 | PUB-04, COM-02, COM-03, COM-04, F3-C3 | NOT STARTED |
+| YEAR-01 | F2-A4, CAL-01, GRD-01 | NOT STARTED |
+| YEAR-02 | YEAR-01, ATT-05, GRD-03 | NOT STARTED |
+| REP-01 | ATT-05, GRD-03, F3-C1, F3-C2, YEAR-02 | NOT STARTED |
+| F4-P0 | F2-A10, PRO-02, CAL-02, COM-01 | NOT STARTED |
+| F4-P1 | F4-P0 | NOT STARTED |
+| F4-P2 | F4-P1 | NOT STARTED |
+| OPS-02 | OPS-01, MED-01 | NOT STARTED |
+| F4-P3 | F4-P2, COM-01, OPS-02 | NOT STARTED |
+| OPS-03 | REP-01, COM-04, PUB-04 | NOT STARTED |
+| UI-01 | DOC-M0 | INSPECTION ONLY |
+| ACC-01 | REC-02, F2-A1 | NOT STARTED |
+| CFG-01 | CAL-02, F1-G3 | NOT STARTED |
+| CTR-01 | REP-01, F4-P3, COM-02, F1-G3 | NOT STARTED |
+| STF-01 | F1-G3, MED-01, COM-01 | NOT STARTED |
+| UI-02 | UI-01, ACC-01, CFG-01, CTR-01, STF-01, CAL-03, COM-04, PUB-04 | NOT STARTED |
+| F5-V1 | F0-R4, REC-02, F1-G3, CAL-03, ATT-05, GRD-04, F3-C4, REP-01, F4-P3, OPS-03, UI-02 | NOT STARTED |
+| F5-V2 | F5-V1, OPS-02 | NOT STARTED |
+| F5-V3 | F5-V2 | NOT STARTED |
+| AI-01 | F5-V3 | NOT STARTED |
+
+### Detailed packets
+
+### DOC-M0: Consolidate the existing master plan
+
+**Owner:** Planning. **Depends on:** None. **Initial state:** PREPARED — NOT VERIFIED.
+
+**Source / target map:** Existing attached KRISTOU_MASTER_EXECUTION_PLAN(1).txt only.
+
+**Deliverable / interface:** Replace this same master-file identity; retain historical task IDs and current GOV-01 resume point; integrate every accepted feature and explicit unknown.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Old master still describes phone sign-in, defers attendance, marks all work unstarted and mandates withdrawn Telegram changes.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Document coverage, unique task/dependency DAG and supersession review pass; other docs/repo/backend unchanged; same master saved.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D1: Reconcile requirements.md
+
+**Owner:** Documentation. **Depends on:** DOC-M0. **Initial state:** NOT STARTED.
+
+**Source / target map:** requirements.md only.
+
+**Deliverable / interface:** Accepted product behavior, eight additions, school-global audience, teacher-separated attendance, current auth policy, protected UI and exact exclusions.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D2: Reconcile structure.md
+
+**Owner:** Documentation. **Depends on:** DOC-D1. **Initial state:** NOT STARTED.
+
+**Source / target map:** structure.md only.
+
+**Deliverable / interface:** Current topology/owners, school and class calendar integration, Attendance/Assessment boundaries; remove present-tense stale runtime claims.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D3: Reconcile docs/CANONICAL_MODEL.md
+
+**Owner:** Documentation. **Depends on:** DOC-D2. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/CANONICAL_MODEL.md only.
+
+**Deliverable / interface:** Canonical subject/session/substitute, attendance/justification, assessment/report/remark, contacts/safety and historical records; no duplicate ownership.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D4: Reconcile docs/DECISIONS.md
+
+**Owner:** Documentation. **Depends on:** DOC-D3. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/DECISIONS.md only.
+
+**Deliverable / interface:** Supersede obsolete auth/Telegram directives and record accepted scope plus reviewed architecture decisions; preserve actual decision history.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D5: Reconcile AGENTS.md
+
+**Owner:** Documentation. **Depends on:** DOC-D4. **Initial state:** NOT STARTED.
+
+**Source / target map:** AGENTS.md only.
+
+**Deliverable / interface:** Onboarding/authority order/current master pointer, current auth wording and protected one-document/one-packet discipline.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D6: Reconcile docs/LIVING_BUILD_PLAN.md
+
+**Owner:** Documentation. **Depends on:** DOC-D5. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/LIVING_BUILD_PLAN.md only.
+
+**Deliverable / interface:** Execution method only; one active queue pointer, evidence provenance and paused/resume state; no rival backlog.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D7: Reconcile docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md
+
+**Owner:** Documentation. **Depends on:** DOC-D6. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md only.
+
+**Deliverable / interface:** Retire its independent phase queue in favor of master IDs; keep applicable provider/migration guidance with current inventory pointers.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D8: Reconcile docs/SUPABASE_CONTINUATION_PLAN.md
+
+**Owner:** Documentation. **Depends on:** DOC-D7. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/SUPABASE_CONTINUATION_PLAN.md only.
+
+**Deliverable / interface:** Historical reference only; supersede old immediate actions and provide current master pointer.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D9: Reconcile docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md
+
+**Owner:** Documentation. **Depends on:** DOC-D8. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md only.
+
+**Deliverable / interface:** Preserve dated history and add a clear current checkpoint pointer; user manual acceptance separate from DB/security evidence.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D10: Reconcile docs/REMOTE_SCHEMA_INVENTORY.md
+
+**Owner:** Documentation. **Depends on:** DOC-D9. **Initial state:** NOT STARTED.
+
+**Source / target map:** docs/REMOTE_SCHEMA_INVENTORY.md only.
+
+**Deliverable / interface:** Consolidated dated six-table/seven-migration inventory and source mapping; preserve old observations as history; no hosted writes.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D11: Reconcile progress.md
+
+**Owner:** Documentation. **Depends on:** DOC-D10. **Initial state:** NOT STARTED.
+
+**Source / target map:** progress.md only.
+
+**Deliverable / interface:** Append actual documentation work and the Owner-reported live acceptance; retain prior failed/unrun DB checks with their environments.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### DOC-D12: Reconcile README.md
+
+**Owner:** Documentation. **Depends on:** DOC-D11. **Initial state:** NOT STARTED.
+
+**Source / target map:** README.md only.
+
+**Deliverable / interface:** Short entry path to master/authorities/current evidence; label old handoffs/static planning copies historical and preserve their contents.
+
+**Decision / release gate:** Master review accepted and an explicit instruction for this document; do not automatically process this list.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify exact contradictory active passages against Owner decisions and master; do not edit code to make docs match.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Read the resulting file, check links/supersession/diff, preserve unrelated history; no other document or app changes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F0-R0: Fresh source and target inventory
+
+**Owner:** Execution safety. **Depends on:** DOC-D12. **Initial state:** INSPECTION ONLY.
+
+**Source / target map:** Read current GitHub refs/PRs; relevant repo files; read-only project inventory when needed.
+
+**Deliverable / interface:** Produce exact-state preflight for the next packet, including PR15 overlap and installed migration mapping. Do not restart finished auth work.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Detect a changed base/head/project or unresolved overlapping writer before any mutation.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Next packet has fresh exact target and evidence; protected accounts/links remain; unknowns confined to unrelated future tasks.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F0-R1: Real isolated Supabase replay and RLS acceptance
+
+**Owner:** Database verification. **Depends on:** F0-R0. **Initial state:** BLOCKED.
+
+**Source / target map:** supabase/config.toml; existing migrations/seed; supabase/tests/auth_foundation_security.test.sql; supabase/tests/account_governance_security.test.sql; package.json scripts inspected, not changed by default.
+
+**Deliverable / interface:** Clean local replay and normal authenticated/anon RLS sessions. Resolve runner limitations with an authorized isolated runtime, never production.
+
+**Decision / release gate:** DG-05. If local Docker is unavailable, inspect an authorized CI/isolated alternative; do not mark production inspection as integration proof.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Reproduce prior reset/RLS failures in the named environment; assert own-row visibility and cross-row denial with row_security_active true.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: db:start/reset/test succeed with synthetic fixtures; real grants/RLS permit and deny cases pass; omitted extensions/provider emulation disclosed.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F0-R2: Complete non-destructive source and installed-schema parity
+
+**Owner:** Schema provenance. **Depends on:** F0-R1. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** Existing seven PR migrations; docs/REMOTE_SCHEMA_INVENTORY.md as read source; proposed supabase/tests/migration_parity.test.sql only if necessary.
+
+**Deliverable / interface:** Verify recovered SQL, object effects and legacy version mapping. Reuse PR15; do not replay installed repair or blindly db push/repair history.
+
+**Decision / release gate:** Fresh PR candidate and separately authorized source changes only.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Compare actual normalized bodies/constraints/grants, not version names alone; identify any mismatch at final candidate.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Clean replay reaches intended schema, differences are mapped, original data preserved; no fabricated applied-history markers.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F0-R3: Preserve Telegram baseline and classify parity
+
+**Owner:** Identity regression. **Depends on:** F0-R0. **Initial state:** INSPECTION ONLY.
+
+**Source / target map:** Read src/lib/auth.ts, src/context/AppContext.tsx, src/lib/telegram.ts, existing Telegram handlers and tests.
+
+**Deliverable / interface:** WITHDRAWN mutation packet: regression/inspection only under standing protection. Preserve 09ffacf behavior and deployed v9/v6; classify source/runtime difference.
+
+**Decision / release gate:** Any actual Telegram repair needs a new exact Owner command. This row is not a prerequisite to rewriting Telegram.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Compare protected sections/cache/challenge/link paths; flag any new change from reviewed candidate.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: No task-induced Telegram behavior changes; known parity/security limits accurately recorded. No handler deploy or auth redesign.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F0-R4: Document reconciliation umbrella
+
+**Owner:** Planning. **Depends on:** DOC-D12. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** No additional write target; references DOC-M0 and DOC-D1…DOC-D12.
+
+**Deliverable / interface:** Close only when the one-document tasks establish one queue and consistent authorities; retain old task ID for continuity.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Find any old active policy or immediate-next-task competing with master.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: All document tasks accepted and pointers agree. No duplicate documentation campaign.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### GOV-C1: Resume and close the existing GOV-01 / AUTH-LOGIN-02 candidate
+
+**Owner:** Current release closeout. **Depends on:** F0-R2, F0-R3. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** Exact PR15 head/diff and its existing DB/Node tests, installed schema/read-only mapping and matching username-handler source; source changes only if a reproduced in-scope defect requires them.
+
+**Deliverable / interface:** Finish the already-started closeout: real Supabase/RLS and genuine two-session safeguards, focused candidate review, explicit merge decision, scoped username-handler release and candidate-specific approved live governance checks. Each external mutation remains a separate authorized action.
+
+**Decision / release gate:** Documentation pause must be explicitly lifted. If a new issue is outside GOV-01 scope, record it for its owning task rather than silently enlarging PR15.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Reproduce the prior runner limitations in an authorized proper environment; test last-Owner/post-wait caller revocation and existing RPC allow/deny. Preserve Owner-reported deployed login/oversight as valid evidence.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Existing candidate release accepted to its actual scope, failures disclosed and exact source/runtime versions known. Do not add bootstrap retirement, new role-policy work, school features or Telegram rewrite merely to merge PR15.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G1: Accept implemented approval status and actor boundary
+
+**Owner:** Access Control. **Depends on:** GOV-C1. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** src/types.ts; src/lib/auth.ts; src/components/homepages/homepageAccess.ts; ApplicationStatusScreen.tsx; existing governance migration and tests.
+
+**Deliverable / interface:** Reuse installed account_status enum and Web loader. Verify/remove unsafe missing-status approval only through scoped source packet, preserving Telegram reference.
+
+**Decision / release gate:** DG-01/DG-06; no shared Telegram lifecycle rewrite.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Missing/unknown/pending/rejected/suspended/revoked actors cannot access private resources, including old sessions; Owner remains approved.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB deny cases and focused actor/UI tests pass; no second account-status table or duplicate migration.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G2: Accept ordinary account decisions and real concurrency
+
+**Owner:** Access Control. **Depends on:** F1-G1. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** src/lib/accountGovernance.ts; existing governance_review_account RPC source; existing Node/pgTAP suites; proposed two-session harness.
+
+**Deliverable / interface:** Reuse reviewAccount adapter/RPC and installed lock order. Verify five ordinary roles, self/privileged denial, versions/retries/audit and caller revocation while waiting.
+
+**Decision / release gate:** F0-R1 true RLS/concurrency runtime. In-memory schedules and source guards alone do not close this.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Two real sessions race same target and last Owner actions; revoke a waiting caller; stale expectedVersion and invalid privileged approval fail predictably.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Allowed mutations persist exactly once; unauthorized/self/privileged paths denied; no deadlock from reversed lock order; last Owner retained; audit correct.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G3: Automatic office authority and Owner-only Manager delegation
+
+**Owner:** Access Control. **Depends on:** GOV-C1. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing manager_capability_grants; src/lib/accountGovernance.ts; homepageAccess.ts; ManagerHomePage.tsx; AdministrativePersonnelHomePage.tsx; OwnerHomePage.tsx; focused grant/revoke migration/tests as needed.
+
+**Deliverable / interface:** GOV-02: narrow audited Owner grant/revoke commands plus existing delegation UI together. Reuse store; derive actual capabilities and default office operations.
+
+**Decision / release gate:** Only after GOV-01 acceptance and separate GOV-02 authorization. Physical release/sensitive fields retain their own policy.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: No-grant Manager denied, bounded grant allowed, revoked grant immediately denied; Admin gets ordinary bundle without extra grants; no Owner escalation via oversight labels.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Server/DB allow-deny and UI consumers agree; grant changes audited; no second grant store; no backend-only accumulation.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G4: Privileged appointments and safe bootstrap retirement
+
+**Owner:** Access Control / Identity. **Depends on:** F1-G2. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** Existing governance_appoint_privileged_role RPC/adapter/tests; current handle_new_user trigger; focused forward migration only if authorized.
+
+**Deliverable / interface:** Reuse Owner-only explicit appointment and last-Owner safeguards; remove email-conditioned automatic Owner insertion through tested forward change preserving valid Owner.
+
+**Decision / release gate:** Existing active Owner continuity and recovery proof before any hosted trigger/account action.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Requested privileged role or spoofed signup cannot appoint; Manager/Admin cannot govern privileged targets; concurrent Owner removal/demotion preserves one recoverable Owner.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real transaction tests, preserved Owner access and audit; bootstrap retirement separately released, no role reset/rebootstrap.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G5: Username handler release and protected shared-app regression
+
+**Owner:** Identity. **Depends on:** GOV-C1. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** src/lib/auth.ts; src/components/AuthModal.tsx; src/i18n/authMessages.ts; supabase/functions/auth-username-signin/index.ts; existing username/role/Telegram tests.
+
+**Deliverable / interface:** AUTH-LOGIN-02 source already exists. Reuse GOV-C1 matching-handler release evidence; this retained original ID tracks any remaining approved identity/error cases, not a duplicate deploy or automatic second release. Preserve internal phone credentials and protected Telegram behavior.
+
+**Decision / release gate:** Deploy instruction is separate; no Telegram handler release. Preserve successful Owner live login as existing manual evidence.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Arabic/Latin/123_456 login, genuine invalid credentials, contact verification and service outage classified correctly; phone public input makes no auth call; phone signup requires username.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Focused tests and staged real email/username/phone-backed username flow pass; current form and Telegram behavior retained; no SQL repair rerun.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F1-G6: GOV-01 candidate review and live governance acceptance
+
+**Owner:** Access Control UI. **Depends on:** F1-G4, F1-G5. **Initial state:** PARTIALLY IMPLEMENTED.
+
+**Source / target map:** Existing OwnerGovernanceWorkspace.tsx and Owner/Admin/Manager homepages; src/lib/accountGovernance.ts; PR15 exact candidate; scoped UI tests.
+
+**Deliverable / interface:** Review/explicit merge decision only after DB gates; confirm deployed candidate identity and ordinary/privileged governance workflows with approved synthetic or bounded actors.
+
+**Decision / release gate:** PR15 stays draft during docs pause. Merge/release/real account changes require exact authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: RPC error/denied/stale version never shows success; revoked actor cannot act; Owner oversight preserves APP_ADMIN actor. Inspect candidate-specific differences rather than restarting all UI.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Exact candidate DB/API/UI acceptance, protected regression and release postchecks recorded. Owner-reported deployed navigation remains valid in its scope.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### REC-01: Recovery and verified contact policy
+
+**Owner:** Identity. **Depends on:** F0-R4. **Initial state:** NOT STARTED.
+
+**Source / target map:** Read current AuthModal/auth/username adapter and provider behavior; update exact policy only in an authorized authority task.
+
+**Deliverable / interface:** Resolve DG-10 for email users and phone-backed username users, lost identifiers and school-assisted verification. Freeze requestRecovery/changeContact interfaces and state/errors.
+
+**Decision / release gate:** DG-10; existing provider docs/runtime verified before implementation.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Enumerate no-contact-access, wrong claimant, unverified secondary contact, duplicate existing identifier and linked Telegram conflict without account merging.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Approved recovery decision table and exact command/test contract preserve canonical identity, roles and existing login UX.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### OPS-01: Continuous verification and isolated staging foundation
+
+**Owner:** Engineering operations. **Depends on:** F0-R4. **Initial state:** NOT STARTED.
+
+**Source / target map:** package.json scripts, existing tests/config, .github workflows if present; proposed browser harness and synthetic test fixture setup.
+
+**Deliverable / interface:** Establish reproducible per-SHA unit/type/build/RLS/function/browser verification and isolated preview configuration before new private slices.
+
+**Decision / release gate:** DG-05; new dependencies, paid resources or CI config only under the actual packet authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Show cross-role/cross-row denies and a deliberately broken representative local policy failing the suite; prevent production URL/reset target contamination.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Exact commands/CI IDs collect relevant tests; staging/source/backend refs recorded; no real school data or secrets in artifacts.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### REC-02: Implement account recovery and contact changes
+
+**Owner:** Identity. **Depends on:** REC-01, F1-G6, OPS-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing auth.ts/AuthModal/Navbar/i18n owners; proposed src/lib/accountRecovery.ts; domain-scoped Edge/RPC only where needed; tests/account-recovery.test.mjs.
+
+**Deliverable / interface:** Use approved provider-backed verification and narrow school-assisted operations; retain same user/roles/links; no browser-side private contact lookup.
+
+**Decision / release gate:** DG-10 and separately approved delivery/settings; do not send real recovery messages during unapproved tests.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong/expired/replayed proof, unverified alias, contact collision, unauthorized operator and stale sessions denied; generic recovery response avoids exposing accounts.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real isolated provider/API and DB checks show verified recovery/change, session policy and audit; email/phone-backed username/Telegram regression pass.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### MED-01: Private media and audit/outbox primitives for first consumers
+
+**Owner:** Media / Audit / Async. **Depends on:** F1-G6, OPS-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Supabase storage/function patterns; proposed src/lib/schoolMedia.ts and focused media/audit/outbox migrations/tests.
+
+**Deliverable / interface:** Implement only minimum private upload/attachment, safe audit and durable delivery handoff required by the first approved feature. Do not build unused generic infrastructure.
+
+**Decision / release gate:** DG-07/DG-13 where content requires them; a necessary primitive may be delivered with its first consumer as one reviewed subpacket.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-user/class upload/download/overwrite/delete, expired signed access, invalid file/size, unbound attachment and transaction rollback leak no bytes/references.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Private policies and feature checks pass; audit excludes secrets; outbox commits atomically and retries idempotently; no direct public sensitive URLs.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A1: People-owned student identity independent of credentials
+
+**Owner:** People. **Depends on:** F1-G6, OPS-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** src/types.ts; existing child/roster consumers; proposed src/lib/schoolPeople.ts; focused People migration; supabase/tests/student_identity.test.sql.
+
+**Deliverable / interface:** School-approved stable student ID/code, required identity fields and active/archive lifecycle; optional verified account association separate from student existence.
+
+**Decision / release gate:** DG-02 minimum school identifiers; no broad medical/contact import.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Duplicate official code, similar names, anonymous/unrelated access and accidental Auth creation or role assignment denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB constraints/RLS and adapter tests prove canonical student records without credential/guardian/collector side effects.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A2: Academic years, levels and canonical classes
+
+**Owner:** Academics. **Depends on:** F2-A1. **Initial state:** NOT STARTED.
+
+**Source / target map:** src/types.ts SchoolClassSummary; ClassesManagementView.tsx; proposed src/lib/schoolAcademics.ts; focused academics migration/tests.
+
+**Deliverable / interface:** One canonical year/level/class with authorized create/edit/archive; roster totals computed from active membership, not manually duplicated.
+
+**Decision / release gate:** School-approved year/level codes and term/calendar relationships.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Duplicate class/year identity, invalid year/level, unauthorized write and public roster leakage denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: DB constraints and scoped projections pass; current filters/25-row pagination and class-detail flow retained.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A3: TeacherClassAssignment and own-class reads
+
+**Owner:** Academics. **Depends on:** F2-A2. **Initial state:** NOT STARTED.
+
+**Source / target map:** TeacherHomePage.tsx; homepageAccess.ts; schoolAcademics adapter; proposed teacher-assignment migration and supabase/tests/teacher_class_scope.test.sql.
+
+**Deliverable / interface:** School-verified staff/account link and effective class assignments. Teacher role alone is not assignment; later subject/substitute scope extends this owner.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unassigned/expired/revoked Teacher and class A requesting class B denied; free-text staff ID does not establish authority.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Assigned-class reader returns exactly current scope; removal closes current access; existing selector/empty state retained.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A4: Enrollment eligibility and student class membership
+
+**Owner:** Enrollment / Academics. **Depends on:** F2-A2. **Initial state:** NOT STARTED.
+
+**Source / target map:** CANONICAL_MODEL Enrollment; proposed schoolEnrollment and schoolAcademics adapters; separate focused enrollment/membership migrations and tests.
+
+**Deliverable / interface:** Enrollment owns eligibility; Academics establishes/ends class membership through a narrow command. Acceptance alone is not membership.
+
+**Decision / release gate:** DG-03 eligibility; preserve history on transfer.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Application accepted without enrollment/placement, conflicting active membership, unauthorized transfer and withdrawn current-class access denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Atomic/recoverable placement, valid year/class eligibility, audit and scope tests pass; no second class_enrollments owner.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A5: Verified Family guardian links
+
+**Owner:** Family. **Depends on:** F2-A1, F2-A4. **Initial state:** NOT STARTED.
+
+**Source / target map:** ParentHomePage.tsx; AppContext child projection; proposed src/lib/schoolFamily.ts; guardian-link migration and supabase/tests/family_scope.test.sql.
+
+**Deliverable / interface:** School-verified ParentChildLink drives linked-child reads. Parent accounts and contact names do not establish guardianship.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-parent child, matching surname/contact, inactive link and unapproved parent denied; no linked children yields honest empty state.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB cross-family deny and selector tests pass; current guardian revocation removes current access without deleting history.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A6: Individual school-record forms
+
+**Owner:** People / Academics. **Depends on:** F2-A3, F2-A4, F2-A5. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing ClassesManagementView and authorized homepages; narrowly colocated student/class/assignment forms; tests/academics-ui.test.mjs proposed.
+
+**Deliverable / interface:** Authorized Owner/approved office/delegated Manager manual entry through the same domain writers later used by import; explicit distinct placement/assignment operations.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Invalid/duplicate input, no-grant actor, backend denial/offline and conflicting updates never display saved.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Persisted postchecks and mobile trilingual/theme QA preserve existing layout/navigation; no mock private-data fallback.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A7: CSV/XLSX preview and template validation
+
+**Owner:** Import orchestration. **Depends on:** F2-A6. **Initial state:** NOT STARTED.
+
+**Source / target map:** Proposed src/lib/schoolImport.ts; existing view patterns; tests/school-import.test.mjs with synthetic CSV/XLSX.
+
+**Deliverable / interface:** Approved template, bounded safe parsing, create/update/skip/conflict preview and exact preview fingerprint; no durable write in preview.
+
+**Decision / release gate:** DG-02 school template and parser/dependency choice.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Quoted CSV/newlines/BOM, wrong headers, huge files, formula/macro payload, duplicate/ambiguous ID and invalid year/class handled visibly.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Preview deterministic and accurate; zero accounts/roles/relationships created; no formula or remote enrichment execution.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A8: Confirmed audited import commit
+
+**Owner:** Import / domain writers. **Depends on:** F2-A7. **Initial state:** NOT STARTED.
+
+**Source / target map:** schoolImport adapter; optional narrow school-import Edge Function; domain batch operations; supabase/tests/school_import.test.sql proposed.
+
+**Deliverable / interface:** Server revalidates confirmed fingerprint, actor, rows and stale versions; same canonical writers as manual entry; bounded idempotent batch results.
+
+**Decision / release gate:** DG-02 atomic-vs-partial decision; synthetic data until explicit real import authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Double import, changed preview, code collision, mid-operation revocation, forbidden account/guardian/collector writes and partial failure follow DG-02.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Exact inserted/updated/skipped/failed totals, transaction semantics/audit and retry proof match preview; no silent partial success.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A9: Wire school-wide Classes and student roster
+
+**Owner:** Academics projection. **Depends on:** F2-A8. **Initial state:** NOT STARTED.
+
+**Source / target map:** src/App.tsx; ClassesManagementView.tsx; homepageAccess.ts; schoolAcademics adapter; scoped DB query tests.
+
+**Deliverable / interface:** Owner/office/delegated Manager school-wide list and roster; Teachers use separate own-class path. Project only authorized columns.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Public/Parent/Student/ordinary Staff/unrelated Teacher direct query denied; loading/empty/denied/error distinct.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB data displays with stable search/filter/25-row pagination; zero fabricated roster; mobile/trilingual/theme checks pass.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F2-A10: Connect Teacher, Parent and Student real relationships
+
+**Owner:** Scoped projections. **Depends on:** F2-A9. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing TeacherHomePage/ParentHomePage/StudentHomePage/AppContext; schoolAcademics/schoolFamily adapters; tests/parent-relations.test.mjs proposed.
+
+**Deliverable / interface:** Server-derived assigned classes, linked children and own-student scope; reset selected resource safely after scope removal.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: No assignment/link, wrong class/child, removed membership and same-session account revocation cannot load unrelated data.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Selectors and permitted actions reflect current canonical relationships across Browser/Telegram feature transports without auth redesign.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PRO-01: Student profile section and field policy
+
+**Owner:** People with consuming domains. **Depends on:** F2-A10. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing roster/child types and views inspected first; profile section contracts and exact component paths frozen after inspection.
+
+**Deliverable / interface:** Inventory existing UI/fields; approve additive identity/enrollment/contact/attendance/assessment/remark sections and audience matrix. Keep one owner per fact.
+
+**Decision / release gate:** DG-07/DG-08/DG-11/DG-12/DG-13 for their respective sections.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Identify every proposed field with no authorized purpose/audience; reject automatic full medical/family dossier exposure.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Reviewed field matrix and additive UI contract map sections to canonical readers; no invented completed Student Profile.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PRO-02: Additive Student Profile and emergency/safety projections
+
+**Owner:** People / Family. **Depends on:** PRO-01, MED-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Proposed small StudentProfile sections alongside existing views; schoolPeople/schoolFamily readers; private field-policy tests.
+
+**Deliverable / interface:** Persist school-approved emergency contacts and minimal safety fields; expose only authorized projections. Academic sections consume later domain records.
+
+**Decision / release gate:** DG-13; no general medical case-management subsystem.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unrelated teacher/parent/student/public cannot read restricted fields; contacts do not auto-grant pickup or app identities; stale/revoked scope denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Existing fields/layout preserved; reload proves persistence; contact verification/review/audit and field-level deny cases pass.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CAL-01: School calendar, subjects and teaching-session contract
+
+**Owner:** Academics / Class Community. **Depends on:** F2-A10. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing ClassCommunityView calendar; TeacherHomePage attendance placeholder; proposed schoolCalendar adapter and narrow shared calendar view model.
+
+**Deliverable / interface:** Freeze subject/teaching assignment and minimal register/session IDs, school date-only/timed/range event types, cancellation/reschedule semantics and owner boundaries.
+
+**Decision / release gate:** DG-08 register granularity and DG-14. No mandatory full timetable engine or Hooma infrastructure import.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Repeated same-teacher lessons, two teachers same class/date, multi-day holiday, timezone/date boundary and cancelled session get explicit distinct outcomes.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Approved data/authorization/interface contract resolves required DG-08/DG-14 decisions; reference interactions mapped to existing KRISTOU components.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CAL-02: Canonical school dates, subjects and session persistence
+
+**Owner:** Academics. **Depends on:** CAL-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Proposed src/lib/schoolCalendar.ts; focused subjects/assignments/sessions/closures migrations; supabase/tests/school_calendar.test.sql.
+
+**Deliverable / interface:** Authorize class/subject/session relations, date-only holidays/ranges and versioned cancellation/reschedule; preserve responsible teacher and history.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong class/subject/date/actor, duplicate register identity, stale edit, invalid range and cancellation race denied or deterministic.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real constraints/RLS and calendar boundary tests pass; operational cancellation is authoritative, never a free-text absence marker.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### COM-01: Notification inbox and durable delivery foundation
+
+**Owner:** Notifications / Async. **Depends on:** F1-G6, MED-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing bell/notification UI; proposed src/lib/schoolNotifications.ts; narrow outbox/delivery/inbox migration and tests.
+
+**Deliverable / interface:** Source event + outbox atomic; idempotent audience-safe inbox/delivery; read/unread/deep link; minimal delivery channel needed by first consumer.
+
+**Decision / release gate:** Delivery channel/cost permissions as needed; no speculative worker service.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Retry/duplicate/out-of-order delivery, expired recipient scope, worker interruption and private body leakage tested; delivery failure does not rewrite event.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Durable event and one intended inbox projection survive retry; authorized source open rechecks scope; platform sound limits accurately represented.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### COM-02: Global Announcements and targeted broadcasts
+
+**Owner:** Broadcasts. **Depends on:** COM-01, F1-G3, F2-A10. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Announcements surfaces/home cards; proposed src/lib/schoolBroadcasts.ts; publication/audience tests.
+
+**Deliverable / interface:** Canonical draft/scheduled/published/revoked notice; all-approved-school, selected levels/classes; link calendar/source IDs and optional acknowledgement.
+
+**Decision / release gate:** DG-14 publication/acknowledgement policy. CAL-03 may depend on this integration where publishing is coupled.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: School Staff without class sees school-wide notice; selected-class leakage, unapproved account, unauthorized publisher, duplicate schedule and revoked notice handled.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Audience server-derived, publication/audit and idempotent fanout pass; feeds reference same notice; private and public publications distinct.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CAL-03: Global Announcements school calendar and class-calendar UI
+
+**Owner:** Academics / Broadcasts / Class Community. **Depends on:** CAL-02, COM-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing ClassCommunityView and Announcements entry; proposed shared SchoolCalendar component; i18n dictionaries; scoped adapters.
+
+**Deliverable / interface:** Hooma-inspired month/Today/date agenda/markers/upcoming and inline authorized editor, within KRISTOU styling. School-wide entries accessible to all approved roles, projected into class views by reference.
+
+**Decision / release gate:** DG-14; public calendar publication is separate explicit choice.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Office/Staff with no class membership still see school-wide events; class A never sees private class B; pending/public denied internal calendar; multi-day spans render every day.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real save/reload/cancel notifications, all-day/timezone correctness and phone-first trilingual/theme/accessibility evidence; no copied event authority.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CAL-04: Temporary substitutes and co-teaching scope
+
+**Owner:** Academics / Access Control. **Depends on:** CAL-02, F1-G3. **Initial state:** NOT STARTED.
+
+**Source / target map:** TeacherClassAssignment owner; proposed substitute-assignment adapter/migration/tests; existing teacher selectors.
+
+**Deliverable / interface:** Effective-time bounded assignment by authorized administrator; preserve original teacher and actual actor; define attendance/grade/remark rights precisely.
+
+**Decision / release gate:** DG-09; temporary authority must not silently include all historical records.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Before start/after expiry/revocation, wrong subject/class, overlapping assignment conflict and attempted original-register overwrite denied per policy.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Server-clock scope, audit and removal tests pass; no shared credentials or new substitute account role.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ATT-01: Attendance policy and profile integration contract
+
+**Owner:** Attendance. **Depends on:** CAL-01, PRO-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Teacher/Admin attendance cards; Student Profile section policy; proposed attendance view and adapter contract.
+
+**Deliverable / interface:** Freeze independent teacher-register rule, responsible vs recording actor, statuses, save/finalization/correction and authorized history/statistics. Keep same-teacher frequency explicit.
+
+**Decision / release gate:** DG-08; unresolved percentage policy allows counts-only design, never an invented percentage.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Two teachers disagree for same pupil/day without overwrite; untouched pupil remains Not recorded; draft/cancelled records excluded according to stated metric.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Approved action/resource matrix, exact register identity and denominator formula before schema/writes/percentage UI.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ATT-02: Authoritative attendance records and audited save/edit
+
+**Owner:** Attendance. **Depends on:** ATT-01, CAL-02, CAL-04. **Initial state:** NOT STARTED.
+
+**Source / target map:** Proposed src/lib/schoolAttendance.ts; focused attendance migration/RPC; supabase/tests/attendance_access.test.sql and tests/attendance.test.mjs.
+
+**Deliverable / interface:** One entry per eligible pupil/register; server verifies assignment/status/membership and actor. Atomic roster save/version/idempotency follows approved batch policy.
+
+**Decision / release gate:** DG-08/DG-09; no UI-only authorization or duplicate profile sync table.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-teacher overwrite, forged actor, unrelated pupil/class, expired substitute, duplicate retry, two concurrent edits and cancelled-session save exercised in real DB.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Exactly intended entries/audit persist; unauthorized edits denied; no duplicate counts; historical roster changes do not rewrite previous registers.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ATT-03: Teacher Attendance roster and durable feedback
+
+**Owner:** Attendance UI. **Depends on:** ATT-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** TeacherHomePage existing Attendance card; proposed AttendanceRosterView; schoolAttendance adapter; existing styles/i18n.
+
+**Deliverable / interface:** Assigned class/subject/date/register → eligible roster → Present/Absent/Late/Excused plus optional note → confirmed save. Keep untouched state visible.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Empty/not assigned/offline/denied/stale save, partial failure and navigating away from unsaved edits show truthful state; never default entire class present.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Reload/cross-device reads match durable data; mobile rapid entry works in AR/FR/EN/themes; no extra school-wide teacher roster query.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ATT-04: Parent absence justification and staff decision
+
+**Owner:** Attendance. **Depends on:** ATT-03, F2-A5, MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Parent linked-child surface; proposed AbsenceJustification sections; schoolAttendance adapter; private attachment and decision RPC/tests.
+
+**Deliverable / interface:** Parent submits explanation for own child/record; authorized staff reviews; accepted decision updates/links attendance through Attendance owner with audit.
+
+**Decision / release gate:** DG-08 justification states/review role and DG-07 attachment retention.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong parent/child, replay, expired staff scope, private attachment leak and direct parent Excused update denied; duplicate submissions visible.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Submitted/reviewed/accepted/rejected/clarification outcomes per approved policy persist; staff decision alone controls Excused; notifications safe.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ATT-05: Student history, summaries and administrative corrections
+
+**Owner:** Attendance projections. **Depends on:** ATT-04, PRO-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Student Profile Attendance section; existing Admin attendance card; schoolAttendance readers; focused summary/query tests.
+
+**Deliverable / interface:** Filter by date/class/subject/teacher; expose permitted notes; calculate counts/percentage from authoritative eligible registers; bounded audited correction/report.
+
+**Decision / release gate:** DG-08 approved formula/history visibility; attendance never releases a child.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unrecorded/cancelled/excused/late/transfer cases, two-teacher entries and hidden notes produce exact policy totals; unrelated-family/teacher denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Profile/roster/report agree after edit/reload; totals not independently editable; corrections preserve author, reason and prior values.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### GRD-01: Assessment, report-card and teacher-remark policy
+
+**Owner:** Assessment. **Depends on:** CAL-01, PRO-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Homework/Classwork and student data inspected; school-approved assessment/remark contract; proposed typed interfaces.
+
+**Deliverable / interface:** Resolve terms, scale, categories, weights, rounding, missing/exempt work, moderation/publication, cross-teacher edit and remark audiences.
+
+**Decision / release gate:** DG-11/DG-12; feature inclusion is already accepted, no need to re-ask whether grades are in scope.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Define numeric boundary/weight totals, absent assessment vs zero, draft visibility and confidential note access without ambiguous defaults.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: DG-11/DG-12 decisions and exact testable interfaces approved; grades/remarks separate from homework and Parent Notes.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### GRD-02: Teacher assessment and grade entry
+
+**Owner:** Assessment. **Depends on:** GRD-01, CAL-04. **Initial state:** NOT STARTED.
+
+**Source / target map:** Proposed src/lib/schoolAssessment.ts; focused assessment/marks migration/RPC; scoped teacher entry components/tests.
+
+**Deliverable / interface:** Assignment/exam records and pupil marks reference canonical year/term/class/subject/teacher, with versioned corrections and approved admin review.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-subject/teacher/child writes, expired substitute, out-of-range score, duplicate assessment/mark and concurrent edits denied or conflict-safe.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB constraints/access and policy calculation cases pass; draft marks remain private; no frontend-average authority.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### GRD-03: Report-card calculation, approval and publication
+
+**Owner:** Assessment. **Depends on:** GRD-02, PRO-02, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Assessment readers/calculation operation; proposed ReportCard sections/export; private published artifact refs and tests.
+
+**Deliverable / interface:** Policy-versioned term/subject summaries and deliberate publication; parent/student sees own permitted published result. Define reopening/amendment audit.
+
+**Decision / release gate:** DG-11 publication/term policy; DG-07 export retention.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Weights/rounding/missing/exempt boundary cases, premature/draft publication, wrong guardian and stale concurrent publish tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Published report matches canonical marks/policy snapshot; history/amendments auditable; notifications contain safe links; no classmate result leakage.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### GRD-04: Teacher educational remarks and restricted audiences
+
+**Owner:** Assessment. **Depends on:** GRD-02, PRO-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Student Profile remarks section; schoolAssessment adapter; scoped remark/audit persistence/tests.
+
+**Deliverable / interface:** Chronological assigned-teacher academic/participation remarks with explicit audience, edit/history and separate restricted behavioral note policy.
+
+**Decision / release gate:** DG-12; a sensitive note is not automatically visible because a teacher can mark attendance.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Parent sees only permitted published remarks, unrelated teachers denied; restricted staff note cannot appear in general notification or Parent Notes feed.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Approved field/audience/retention rules and correction history verified; no medical or safeguarding-case expansion.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### COM-03: Class announcements, homework and learning content
+
+**Owner:** Class Community. **Depends on:** F2-A10, MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing ClassCommunityView/subtabs; proposed classContent adapter; focused announcement/homework/calendar/docs/gallery migration/tests.
+
+**Deliverable / interface:** Small independently reviewed subpackets for announcements, homework/classwork, class content dates, private docs and gallery; single canonical class membership.
+
+**Decision / release gate:** Freeze exact allowed file/content/publication rules; homework does not silently create grades.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong class/member/teacher, overbroad attachment access, withdrawn enrollment and false publish on backend error denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Each subpacket persists/readbacks content, enforces teacher/guardian/student scope and preserves existing tab distinctions; media/audit/delivery verified.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### COM-04: Operational short Messages
+
+**Owner:** Messaging. **Depends on:** F2-A10, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Messages entry/UI inspected; proposed src/lib/schoolMessages.ts; participant/thread/message migration and tests.
+
+**Deliverable / interface:** Only approved participant/context combinations, 200 characters, read/reply and reporting/audit; no Parent Notes loophole or student private DM.
+
+**Decision / release gate:** DG-17 participant/moderation policy.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: 201 characters, guessed thread, removed participant, cross-class/private student route and quota-bypass patterns denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real participant authorization/readback and safe inbox deep links; delivery/read statuses truthful.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F3-C1: Durable school Registration and admission review
+
+**Owner:** Enrollment. **Depends on:** F2-A10, MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** RegistrationView.tsx; schoolEnrollment adapter; private application/document persistence/tests.
+
+**Deliverable / interface:** Separate admission from app signup. DRAFT/SUBMITTED/UNDER_REVIEW/NEED_DOCUMENTS/ACCEPTED/WAITLIST/REJECTED/ENROLLED lifecycle through verified school operations.
+
+**Decision / release gate:** DG-03 official school rules, DG-07 documents; public intake needs abuse protection and privacy policy.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Backend failure never sets submitted success; missing required document, duplicate/retry, unauthorized review, private-file leak and acceptance-as-class-access denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Application/review survives reload; authorized office/Owner/delegated Manager works; acceptance requires separate enrollment/placement for class access.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F3-C2: Parent Notes persistence, quota and school-time window
+
+**Owner:** Parent Notes. **Depends on:** F2-A10, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** ParentNotesView.tsx; AppContext local actions; proposed src/lib/parentNotes.ts; supabase/tests/parent_notes.test.sql.
+
+**Deliverable / interface:** Durable private note/reply with canonical child/teacher scope, 11 parent sends per school-defined day, 08:00 inclusive–18:00 exclusive Tunis, reset 08:00.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: 11th allowed/12th denied, simultaneous Browser/Telegram sends, exact time boundaries, unrelated child/teacher, revoked parent and fake success tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real transaction quota and authorized reader/reply tests pass; replies do not consume quota; no private contents in general feed or notification.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F3-C3: Class Questions and moderation
+
+**Owner:** Class Community. **Depends on:** COM-03. **Initial state:** NOT STARTED.
+
+**Source / target map:** ClassCommunityView.tsx; AppContext question/reply actions; proposed classQuestions adapter; DB and UI tests.
+
+**Deliverable / interface:** Class-wide active-member questions/replies at most 200 chars; assigned-teacher moderation/reporting/rate limits; no student DMs.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-class/withdrawn member, 201-character input, unassigned moderator and unauthorized parent/student dossiers denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Durable post/reply/moderation and truthful UI, safe notifications and scope removal verified.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PUB-01: Approved public Teachers and Administration directory
+
+**Owner:** Directory. **Depends on:** F1-G6, MED-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** DirectoryView.tsx; Teachers/Administration home/menu entries; proposed schoolDirectory adapter and public projection tests.
+
+**Deliverable / interface:** Published school-approved cards/photos/bios/responsibilities/order only; private People profile remains separate; Owner/delegated editor writes.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Anonymous cannot read internal contacts/student data/drafts; unauthorized photo/update and hidden entry exposure denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Public read and authorized edit/publish persist; trilingual themes and current card expansion UX retained.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PUB-02: La Toque Gourmande weekly Food Menu
+
+**Owner:** Food Menu. **Depends on:** F1-G3, MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** FoodMenuView.tsx; Home menu cards; proposed foodMenu adapter; week/day/publication/media tests.
+
+**Deliverable / interface:** Week boundaries, provider attribution, structured daily meals/notes, menu image/photos and draft/published/archived; public visibility deliberate.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong editor, private draft leak, overlapping/current-week selection, invalid dates, failed upload and duplicate publication tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: One canonical menu feeds home/menu views and safe notifications; real data replaces demo for live slice.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PUB-03: School public content, gallery and inquiries
+
+**Owner:** Public Content. **Depends on:** MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** HomeView/KristouHome and approved public components; proposed schoolPublicContent adapter; scoped publish/inquiry tests.
+
+**Deliverable / interface:** School-approved Home/About/Contact/activities/clubs/pedagogy/public gallery/calendar and general inquiry; localized fields and minimal editor fitting current UX.
+
+**Decision / release gate:** Official contact/content approval; never publish placeholder phone/address as verified school details.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Private class/student media, unapproved contact details/drafts, abuse submissions and unauthorized content mutation denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Published-only projections, private inquiry handling/durable response, media policies and truthful public identity verified.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### PUB-04: Preference persistence and notice accessibility
+
+**Owner:** Preferences. **Depends on:** COM-01, PUB-01, PUB-02, PUB-03. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Navbar/settings/theme/language/sound controls; proposed preferences adapter and own-row persistence/tests.
+
+**Deliverable / interface:** User-scoped language/theme/sound/category/vibration settings without changing business authority; preserve default Light and platform restrictions.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-user updates, inaccessible mute state, missing unsupported background sound and loss of setting after reload tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Preferences persist across supported sessions/hosts; required in-app notices remain accessible even with sound off; AR/FR/EN layout stays stable.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F3-C4: Full content backlog umbrella, replacing old deferral
+
+**Owner:** Planning. **Depends on:** PUB-04, COM-02, COM-03, COM-04, F3-C3. **Initial state:** NOT STARTED.
+
+**Source / target map:** No extra feature owner; references explicit COM/PUB/PREF/AI tasks.
+
+**Deliverable / interface:** Old vague later-content bucket is superseded. Track directories, menu, public content, learning content, messaging and notifications separately; AI explicitly later.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Accepted requirement with no named task is a coverage failure.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Feature coverage register complete; no feature silently disappears because original 31 packets omitted it.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### YEAR-01: Academic rollover and transfer policy
+
+**Owner:** Academics / Enrollment. **Depends on:** F2-A4, CAL-01, GRD-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Year/class/membership/enrollment owners; proposed rollover preview contract and historical access matrix.
+
+**Deliverable / interface:** Freeze promotion/retention/renewal/transfer/withdrawal, per-year teachers and student membership, grade/attendance history and old-access rules.
+
+**Decision / release gate:** DG-15; historical reads separate from current active-class authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Define pupil midyear transfer, unresolved marks, missing target class, retained student, duplicate batch and historical guardian/teacher access outcomes.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: DG-15 decisions with exact preview/commit effects and idempotency contract; no destructive year reset.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### YEAR-02: Rollover preview and audited commit
+
+**Owner:** Academics / Enrollment. **Depends on:** YEAR-01, ATT-05, GRD-03. **Initial state:** NOT STARTED.
+
+**Source / target map:** Canonical academic/enrollment writers; proposed academicYearTransition adapter/UI; DB concurrency/preview tests.
+
+**Deliverable / interface:** Preview exact changes, confirm fingerprint, commit/retry with audit and bounded conflicts; retain original-year records and correct new relationships.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Double commit, changed preview, midyear transfer collision, stale teacher, partial failure and unauthorized operator denied/deterministic.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Old report/attendance retains provenance; new memberships and access are correct; no credentials/roles/guardian/collector auto-creation.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### REP-01: Operational reports and controlled exports
+
+**Owner:** Authorized projections. **Depends on:** ATT-05, GRD-03, F3-C1, F3-C2, YEAR-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Domain readers; proposed schoolReports adapter and bounded export UI/API; query/audience/CSV safety tests.
+
+**Deliverable / interface:** Role-scoped roster/enrollment/attendance/academic/operational reports with filters, as-of time, metric definitions and audited exports; no editable copied totals.
+
+**Decision / release gate:** DG-07/DG-16 report audience, fields, limits and retention.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong role/child/class/year, hidden remarks/health fields, spreadsheet formula injection and unbounded export rejected.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Report reconciles with authoritative records; export includes only approved fields, current permission and safe formatting; job/result storage private.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F4-P0: Dismissal policy and authorized pickup people
+
+**Owner:** Pickup. **Depends on:** F2-A10, PRO-02, CAL-02, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing PickupBoardView/types; proposed schoolPickup adapter and policy/collector migration/tests.
+
+**Deliverable / interface:** School-time/class dismissal policy, collectors independent of parent role, scoped staff release assignments and early-leave policy. Calendar closure effects explicit.
+
+**Decision / release gate:** Approved dismissal windows, collector verification, late/early leave/outage procedure; no guessed 15:30 example.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unknown/expired collector, wrong class/child, closed window, unapproved actor, missing active enrollment or release assignment denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: School-reviewed policy/access tests pass with audit; current Pickup lock remains until activation gates.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F4-P1: Durable parent arrival command
+
+**Owner:** Pickup. **Depends on:** F4-P0. **Initial state:** NOT STARTED.
+
+**Source / target map:** AppContext markPickupArrived and existing parent UI; schoolPickup adapter; arrival cycle RPC/DB tests.
+
+**Deliverable / interface:** One reviewed dismissal-cycle key; WAITING→PARENT_ARRIVED only after current family/collector/enrollment/class/window checks; retry idempotent.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Wrong child/collector/window, forged actor/client time, duplicate simultaneous Browser/Telegram requests and already released child tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: One durable arrival/audit/outbox; UI acknowledges arrival only; no reopened released state or local-only success.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F4-P2: Staff-only verified physical release
+
+**Owner:** Pickup. **Depends on:** F4-P1. **Initial state:** NOT STARTED.
+
+**Source / target map:** AppContext confirmPickupRelease; PickupBoardView; atomic release RPC/tests; schoolPickup adapter.
+
+**Deliverable / interface:** Deliberate physical collector check by scoped staff; PARENT_ARRIVED→RELEASED only through server-authorized version/state transition and audit.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Parent release, unrelated/expired staff, collector revoked after arrival, duplicate/concurrent release and stale state denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Real DB double-release/authorization/concurrency proof; released-to/staff/time retained; notification is projection; no frontend update shortcut.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### OPS-02: Backup, restoration, incident and data-lifecycle procedures
+
+**Owner:** Engineering operations. **Depends on:** OPS-01, MED-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing provider capabilities/config inspected read-only; approved operations/runbook owner; isolated restore fixtures and policy tests.
+
+**Deliverable / interface:** Resolve recovery objectives; test actual database and private-object restore consistency, secrets separation, audit preservation and controlled retention/export/deletion procedure.
+
+**Decision / release gate:** DG-07/DG-16; no production restore/delete/config mutation without exact authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Lost DB/object, partial restore, broken media link, unsafe production restore target, leaked backup/expired export and untested claimed backup detected.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Isolated restore rehearsal meets approved objectives and preserves relationships; rollback/incident owner/alerts documented; no claim DB backup automatically includes storage.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F4-P3: Cross-device live board, reconnect and safety activation acceptance
+
+**Owner:** Pickup / Notifications. **Depends on:** F4-P2, COM-01, OPS-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing teacher board/Manager oversight/parent status; feature realtime transport; staged synthetic safety flows.
+
+**Deliverable / interface:** Recover current authoritative state after reconnect; test event/delivery outage and staff fallback; normal dismissal and early leave remain distinct.
+
+**Decision / release gate:** No live-child experiment; production Pickup remains locked until authorized release gates.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Disconnect/missed/out-of-order event, duplicate actions, stale role/link and notification failure cannot create false release or unsafe acknowledgement.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Browser/Telegram staging, negative/concurrency/physical-handoff acceptance and audit evidence recorded; unlock only under a separate explicit activation packet.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### OPS-03: Measured performance, monitoring and security acceptance
+
+**Owner:** Engineering operations. **Depends on:** REP-01, COM-04, PUB-04. **Initial state:** NOT STARTED.
+
+**Source / target map:** Actual domain query/RLS/index plans; approved synthetic load harness; deployment logs/alerts/CI scanning.
+
+**Deliverable / interface:** Define expected school sizes/concurrency/budgets; measure roster/calendar/attendance/import/report latency, grant checks and delivery backlog; add only evidenced indexes/bounds.
+
+**Decision / release gate:** DG-16 measured thresholds; performance tests must not load production without explicit authorization.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Large roster/import, parallel marks, slow network, N+1 queries, missing index, event burst, rate abuse and private-data logging measured against agreed targets.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Recorded school-approved latency/load/error budgets, alert ownership, bounded APIs and secret/dependency scans; no speculative infrastructure rewrite.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### UI-01: Page, card, menu and action coverage register
+
+**Owner:** Frontend integration. **Depends on:** DOC-M0. **Initial state:** INSPECTION ONLY.
+
+**Source / target map:** Read all eight homepages, HomePageResolver, Navbar/Footer, App routing, view subtabs/forms and actual client adapters; master register only during DOC-M0.
+
+**Deliverable / interface:** Inventory every visible action and intended resource scope. Classify source-wired real contract, navigation-only, local state/demo, unavailable and design-gated placeholders separately.
+
+**Decision / release gate:** Inventory does not authorize code edits or large new business modules from a placeholder.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: An Open label, a link to the wrong feature, an EmptyFeatureState dialog or a reachable page cannot be counted as a durable implemented workflow.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Every card/action maps to one owning task and exact acceptance path, including Governance & Access, School Operations, settings, staff services and menus; no orphan controls.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### ACC-01: Own account profile and school-person details
+
+**Owner:** People / Identity. **Depends on:** REC-02, F2-A1. **Initial state:** NOT STARTED.
+
+**Source / target map:** Navbar My Profile currently returns home; existing User/profile fields; proposed own-profile view and narrow profile adapter.
+
+**Deliverable / interface:** Provide permitted profile read/edit and verified-contact/recovery links with current identity; school-verified identifiers/roles/status remain protected. Student Profile is a different scoped record.
+
+**Decision / release gate:** Freeze editable field list; changing a contact uses REC-02 verification rather than arbitrary profile UPDATE.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Editing another account, self-changing role/status/staff or admission IDs, unverified contact promotion and leaked personal fields denied.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Own allowed profile changes persist/reload; Navbar action reaches correct view; avatar/media policies and all locales/themes pass.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CFG-01: School Settings through canonical domain configuration
+
+**Owner:** Academics / owning domains. **Depends on:** CAL-02, F1-G3. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing owner-school-settings placeholder and future minimal settings panel; academic/calendar/enrollment/Pickup/notification configuration owners.
+
+**Deliverable / interface:** Replace placeholder with authorized real settings for approved school/year/calendar and feature policies as each owner is ready. Keep settings as an orchestration UI, not a second source of school rules.
+
+**Decision / release gate:** Each domain policy gate applies; do not guess hours, grading weights, legal fields or add a catch-all mutable configuration blob.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unapproved/no-grant editor, invalid year/window, conflicting concurrent policy changes and client role override denied; changes must not retroactively rewrite history.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Server-validated save/reload/audit and downstream consumers use same canonical config; show unavailable subsettings honestly until their domain exists.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### CTR-01: Role-scoped Control Center and operational summaries
+
+**Owner:** Authorized projections. **Depends on:** REP-01, F4-P3, COM-02, F1-G3. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Owner control-center section and Manager control-center placeholder; approved report/domain readers.
+
+**Deliverable / interface:** Keep existing account-governance dashboard; add reviewed School Operations summaries and links from real domain readers for Owner/delegated Manager. Distinguish aggregate oversight from mutation authority.
+
+**Decision / release gate:** Define required summaries/actions from actual role UI; no unrestricted cross-domain query merely for a dashboard.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: No-grant Manager, stale grants, hidden child/safety details, loading/partial failure and mismatched aggregate totals tested; zero cannot disguise unavailable backend.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Summary counts reconcile with canonical source at stated as-of time; links open correct scoped feature; no invented total or duplicate dashboard authority.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### STF-01: Office and assigned staff work queues and service requests
+
+**Owner:** School Operations application workflows. **Depends on:** F1-G3, MED-01, COM-01. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing Office Desk/My Work Queue, Staff My Tasks/Requests, Facilities and Library/Transport/Security Desk placeholders; exact proposed queue UI/API after policy review.
+
+**Deliverable / interface:** Review each existing placeholder intended behavior; define bounded assignment/request/status workflow with explicit staff capabilities and approved domains. Reuse admissions/inquiries/other owners when the card is only an entry point.
+
+**Decision / release gate:** DG-19: exact office/service workflow, task/request types, assignees and permitted data need Owner review. Track all placeholders without inventing broad library/bus/HR subsystems.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Unassigned staff, wrong service scope, hidden child/family details, expired capability, duplicate request and fake completion denied; a transport label must not imply a bus-management system.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Every visible placeholder has an approved implemented workflow or explicit honest deferred disposition; accepted queue writes/status/audit/notification persist and role scope is tested.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### UI-02: Finish all authorized page links and action integrations
+
+**Owner:** Frontend integration. **Depends on:** UI-01, ACC-01, CFG-01, CTR-01, STF-01, CAL-03, COM-04, PUB-04. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing homepages, App routing, Navbar/Footer, all view subtabs/buttons/forms; feature-owned adapters and tests.
+
+**Deliverable / interface:** Wire each card/menu/form to its correct role-scoped workflow and real data boundary. Messages must reach Messages, school-wide Announcements must not depend on having a class, and own Profile must not merely return Home.
+
+**Decision / release gate:** Do not wait for a final sweep to wire new work: each owning task completes its consumers; this packet verifies any remaining integration gaps.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Dead/wrong target, local fake save, permanent placeholder presented as Open/complete, missing selection context, denied/deep-link bypass and stale status exercised.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: UI-01 register closes per feature with click→correct scope→real read/write→reload/error/denial proof. Preserve existing card design; unavailable out-of-scope modules remain explicitly labelled.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F5-V1: Whole-product staging acceptance
+
+**Owner:** Quality engineering. **Depends on:** F0-R4, REC-02, F1-G3, CAL-03, ATT-05, GRD-04, F3-C4, REP-01, F4-P3, OPS-03, UI-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Exact reviewed candidate; configured isolated staging/ref; existing+new DB/API/UI/browser suites and visual baselines.
+
+**Deliverable / interface:** All launch-scope features tested across seven roles + public + inactive actors, Browser/Telegram, phone/tablet/desktop, AR/FR/EN and both themes.
+
+**Decision / release gate:** Optional AI excluded from core launch unless separately approved; staged slices should already have individual evidence.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Direct API/RLS/storage bypass, missing/denied/empty/error states, role removal, private media, failed delivery and wrong-session/child/class tested.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Every launch acceptance has exact candidate/environment evidence; no mocked success credited as real integration; unresolved failures block only corresponding release.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F5-V2: Explicit production release and bounded activation
+
+**Owner:** Release engineering. **Depends on:** F5-V1, OPS-02. **Initial state:** NOT STARTED.
+
+**Source / target map:** Exact reviewed PR/head, migration mapping, function versions, frontend artifact and existing production target.
+
+**Deliverable / interface:** Fresh explicit authorization for precise compatible sequence: needed migrations→RPC/functions→frontend→feature activation, with postcheck/forward fix at each step.
+
+**Decision / release gate:** Explicit merge/deploy/config/account/activation authorization as applicable. No blank db push or replay of old repair.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Stale candidate, wrong project, unapplied dependency, absent Owner/recovery proof, failed CI or concurrent writer stops before mutation.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Exact deployed revision/functions/schema and bounded approved live behavior verified; protected accounts/links retained; no generic all-green claim from deployment status.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### F5-V3: Operational handoff and production evidence
+
+**Owner:** Continuity. **Depends on:** F5-V2. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing master/progress/authorities and current evidence index; each document updated only in authorized scope.
+
+**Deliverable / interface:** Record exact live version, accepted features, outstanding later work, operations ownership, source links and next current command. Maintain this at each handoff, not only final launch.
+
+**Decision / release gate:** None beyond the common packet preflight.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Any stale active queue, falsely completed task, lost failure evidence or undisclosed source/runtime drift fails handoff.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Another engineer can find owners/interfaces/tests/runbooks and reproduce the next action without guessing; launch acceptance and later backlog distinguished.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### AI-01: Optional authorized school assistant
+
+**Owner:** AI client. **Depends on:** F5-V3. **Initial state:** NOT STARTED.
+
+**Source / target map:** Existing assistant entry if present; approved provider/API tool adapter; no new product database authority.
+
+**Deliverable / interface:** Public FAQ/navigation and authorized summaries/drafts only; explicit cost/quotas/data/tool approval; human confirmation before send/publish.
+
+**Decision / release gate:** DG-18 and separate activation; accepted optional product direction, not a prerequisite for core launch.
+
+- [ ] Inspect and freeze the exact packet against fresh source and approved policy.
+- [ ] RED / initial discrepancy: Cross-child private request, prompt-injected role/release action, unauthorized tool, provider outage and quota breach fail safely.
+- [ ] Produce the single scoped deliverable through its canonical owner; preserve protected state.
+- [ ] GREEN / acceptance: Approved scope and deny cases verified; app works with AI disabled; no autonomous admission/roles/pickup/destruction.
+- [ ] Review exact diff and evidence; update only authorized authorities; stop at the packet boundary.
+
+### Page and action implementation register
+
+Inspected source checkpoint: current KRISTOU PR-equivalent tree described in section 1. Source routing/handler classification below is not a new live click-through test. Keep this register current as each feature is wired. Every card has an owning task; UI-01/02 also check contextual controls not represented by HomeShortcutCard.
+
+| Existing card ID and visible label | Current source behavior / gap | Owning tasks |
+| --- | --- | --- |
+| `admin-personnel-office-desk` — Office Desk | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | STF-01, F1-G2, F2-A6 |
+| `admin-personnel-admission-files` — Admission Files | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C1 |
+| `admin-personnel-family-inquiries` — Family Inquiries | 'notes'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03, COM-04, UI-02 |
+| `admin-personnel-attendance` — Attendance | Local panel/selector; inspect exact role/context; Explicit placeholder/backend gate; inspect conditional visibility | ATT-05 |
+| `admin-personnel-forms-documents` — Forms & Documents | 'documents'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03, F3-C1, MED-01 |
+| `admin-personnel-school-calendar` — School Calendar | 'calendar'; Source entry/navigation exists; school-domain persistence not accepted live | CAL-03 |
+| `admin-personnel-notices` — Notices | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | COM-02 |
+| `admin-personnel-work-queue` — My Work Queue | Local panel/selector; inspect exact role/context; Explicit placeholder/backend gate; inspect conditional visibility | STF-01 |
+| `admin-personnel-pickup-assist` — Pickup Assistance | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F4-P0, F4-P3 |
+| `manager-control-center` — Control Center | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, CTR-01 |
+| `manager-pickup` — Pickup | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, F4-P3 |
+| `manager-registration` — Registration | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, F3-C1 |
+| `manager-broadcasts` — Broadcasts | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, COM-02 |
+| `manager-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, PUB-02 |
+| `manager-public-content` — Public content | 'publicSite'; Source entry/navigation exists; school-domain persistence not accepted live | F1-G3, PUB-03 |
+| `manager-teacher-directory` — Teacher Directory | 'teachers'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `manager-admin-directory` — Admin Directory | 'admin'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `manager-calendar` — Calendar | 'calendar'; Source entry/navigation exists; school-domain persistence not accepted live | CAL-03 |
+| `manager-moderation` — Moderation | 'questions'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C3 |
+| `owner-control-center` — Control Center | 'control-center'; Governance RPC adapter wired; installed contracts; write/security acceptance partial | F1-G6, CTR-01 |
+| `owner-pickup` — Pickup | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F4-P0, F4-P1, F4-P2, F4-P3 |
+| `owner-classes` — Classes & Students | 'classes'; Source entry/navigation exists; school-domain persistence not accepted live | F2-A6, F2-A9, PRO-02 |
+| `owner-registration` — Registration | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C1 |
+| `owner-broadcasts` — Broadcasts | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | COM-02, CAL-03 |
+| `owner-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `owner-public-content` — Public content | 'publicSite'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03, UI-02 |
+| `owner-pending-approvals` — Pending Account Approvals | 'pending-approvals'; Governance RPC adapter wired; installed contracts; write/security acceptance partial | F1-G2, F1-G6 |
+| `owner-user-directory` — User Directory & Account Status | 'user-directory'; Governance RPC adapter wired; installed contracts; write/security acceptance partial | F1-G6 |
+| `owner-manager-delegation` — Manager Delegation | Local panel/selector; inspect exact role/context; Explicit BLOCKED_BACKEND placeholder; grant/revoke UI missing | F1-G3 |
+| `owner-role-governance` — Role & Permission Governance | 'role-governance'; Governance RPC adapter wired; installed contracts; write/security acceptance partial | F1-G4, F1-G6 |
+| `owner-directory-oversight` — Directory & Public Site Oversight | 'teachers'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01, PUB-03, UI-02 |
+| `owner-school-settings` — School Settings | Local panel/selector; inspect exact role/context; Explicit COMING_SOON configuration placeholder | CFG-01 |
+| `parent-my-children` — My Children | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | F2-A10, PRO-02 |
+| `parent-my-classes` — My Classes | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | F2-A10, COM-03 |
+| `parent-homework` — Homework & Classwork | 'homework'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `parent-calendar` — Calendar | 'calendar'; Source entry/navigation exists; school-domain persistence not accepted live | CAL-03 |
+| `parent-messages` — Messages | 'notes'; Routes to notes today; distinct Messages integration needed | COM-04, UI-02 |
+| `parent-notes` — Parent Notes | 'notes'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C2 |
+| `parent-pickup` — Pickup | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F4-P1, F4-P3 |
+| `parent-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `parent-teachers` — Teachers | 'teachers'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `parent-administration` — Administration | 'admin'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `parent-registration` — Registration | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C1 |
+| `parent-gallery` — Gallery | 'gallery'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `public-teachers` — Teachers | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `public-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `public-administration` — Administration | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `public-admissions` — Admissions | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C1 |
+| `public-levels-classes` — Levels & Classes | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03 |
+| `public-activities-clubs` — Activities & Clubs | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03 |
+| `public-gallery` — Public Gallery | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03, MED-01 |
+| `public-apply-register` — Apply / Register | 'registration'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C1 |
+| `public-announcements` — Announcements | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03, COM-02 |
+| `public-contact` — Contact | Local panel/selector; inspect exact role/context; Source entry/navigation exists; school-domain persistence not accepted live | PUB-03 |
+| `staff-internal-announcements` — Internal Announcements | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | COM-02, UI-02 |
+| `staff-school-calendar` — School Calendar | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | CAL-03, UI-02 |
+| `staff-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `staff-teachers-directory` — Teachers | 'teachers'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `staff-administration-directory` — Administration | 'admin'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-01 |
+| `staff-my-tasks` — My Tasks / Requests | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | STF-01 |
+| `staff-pickup-desk` — Pickup Desk | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F4-P0, F4-P3 |
+| `staff-cafeteria` — Cafeteria | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `staff-facilities` — Facilities | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | STF-01 |
+| `staff-library-transport` — Library / Transport / Security | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | STF-01 |
+| `student-announcements` — Announcements | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | COM-02, COM-03 |
+| `student-homework` — Homework & Classwork | 'homework'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `student-questions` — Class Questions | 'questions'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C3 |
+| `student-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `student-calendar` — Calendar | 'calendar'; Source entry/navigation exists; school-domain persistence not accepted live | CAL-03 |
+| `student-documents` — Documents | 'documents'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `teacher-my-classes` — My Classes | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | F2-A10, COM-03 |
+| `teacher-pickup` — Pickup | 'pickup'; Source entry/navigation exists; school-domain persistence not accepted live | F4-P2, F4-P3 |
+| `teacher-homework` — Homework & Classwork | 'homework'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `teacher-messages` — Messages | 'notes'; Routes to notes today; distinct Messages integration needed | COM-04, UI-02 |
+| `teacher-parent-notes` — Parent Notes | 'notes'; Source entry/navigation exists; school-domain persistence not accepted live | F3-C2 |
+| `teacher-food-menu` — Food Menu | 'foodMenu'; Source entry/navigation exists; school-domain persistence not accepted live | PUB-02 |
+| `teacher-class-announcements` — Class Announcements | 'announcements'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `teacher-class-calendar` — Class Calendar | 'calendar'; Source entry/navigation exists; school-domain persistence not accepted live | CAL-03 |
+| `teacher-class-documents` — Class Documents | 'documents'; Source entry/navigation exists; school-domain persistence not accepted live | COM-03 |
+| `teacher-attendance` — Attendance / Absence | Local panel/selector; inspect exact role/context; Informational/placeholder local panel; not durable workflow | ATT-03 |
+
+Further existing entry points and actions:
+
+| Surface / action | Current source observation and required wiring | Owning tasks |
+| --- | --- | --- |
+| App home/publicSite/community/notes/pickup/classes/foodMenu/directory/registration tabs | Nine source tab destinations; route access is UI only. Private API/resource scope still enforced server-side. New feature destinations require explicit integration, not arbitrary strings | UI-01, UI-02; each owning feature |
+| Community announcements/homework/calendar/questions/documents/gallery | Six existing subtabs; content from context and local question/reply mutations remain incomplete persistence. Global notice entry must work without a class assignment | COM-02, COM-03, F3-C3, CAL-03 |
+| Navbar My Profile | Currently returns Home; requires an actual own-account profile destination and permitted edit contract | ACC-01, UI-02 |
+| Navbar bell/read notification | Existing notification projection and mark-read action; real inbox/read/delivery/deep-link connection must be proved | COM-01, PUB-04 |
+| Navbar role-relevant menus, language/theme, logout and Telegram connect | Existing navigation/presentation/auth/link actions; preserve working identity/linking, verify data persistence and scope per operation | F0-R3, F1-G5, PUB-04, UI-02 |
+| AuthModal signup/sign-in, role selection, identifier guidance and recovery | Current auth source exists; school approval and recovery/contact verification remain distinct | F1-G1/G5, REC-01/02 |
+| Owner governance workspace Control Center / approvals / account directory / role governance | Existing server adapters and panels, counts/detail/review/appointment/version/audit flows; capability delegation is separate | F1-G2/G4/G6, F1-G3, CTR-01 |
+| Owner role inspection / Return to My Home | Working deployed manual acceptance reported by Owner; actor remains APP_ADMIN on visible banner; candidate regression is still checked where touched | F1-G6, UI-02 |
+| Parent child selector / My Children summary; Teacher class selector | Current scopes/selectors need durable verified Family/Academics data and profile/history links | F2-A10, PRO-02, ATT-05, GRD-03/04 |
+| Classes search/filter/pagination/roster; Add/Edit/Assign/Import | Existing read presentation needs canonical DB data; missing write/import controls require real owners and preview/confirmation | F2-A6/A7/A8/A9, PRO-02 |
+| Registration submit/review/document upload | Local submitted flag is not persisted admission; implement and verify entire intake/review/document lifecycle | F3-C1, MED-01 |
+| Parent Notes send/reply/quota and Class Questions post/reply/moderate | Local success must be replaced with actual server confirmation and policy; keep Messages separate | F3-C2/C3, COM-04 |
+| Pickup announce/confirm release, live teacher board/Manager summary | View can open while commands remain backend-unavailable. Preserve lock; server-authorized arrival and release implemented separately | F4-P0/P1/P2/P3, CTR-01 |
+| Food Menu week/day/image/publication; Directory teacher/admin expansion/editor | Existing read UI/demo content does not establish persistent publish/edit workflows | PUB-01/02, MED-01 |
+| Public Home news/menu/gallery/levels/about/contact/admission links and Footer | Trace every actual button/link, approved content and real inquiry/admission action; remove false placeholder operational claims in the owning future packet | PUB-03, F3-C1, UI-02 |
+| Office Desk/My Work Queue, facilities/service desks | Define exact intended assignments/requests and scope before persistence; no broad ERP expansion from a card label | STF-01, DG-19 |
+| New Attendance/Grades/Reports/Recovery/Settings entry points | Wire into existing role patterns under owning tasks, with real data/error handling; their absence must not be hidden by a generic Home link | ATT, GRD, REP-01, REC-02, CFG-01, UI-02 |
+
+For each row track per-operation maturity at execution: destination correctness → typed contract → server identity/authorization → canonical read/write → loading/empty/denied/error/retry → durable readback → tests → staged/live acceptance. Do not change every Open card to Coming Soon merely for consistency; labels must follow measured operation availability and the accepted UX.
+
+
+## 8. Hooma calendar reference and adoption limits
+
+Reference repository: `funmarket/HoomaUltimate`, active `phase-0-foundation@fde5c11389f7607ceaf8de8976235f4782437a4a`, inspected 2026-11-14. Its default main holds mostly planning material; the active feature was inspected on the actual integration branch, not guessed from default-branch search.
+
+Reference files: `packages/frontend/src/athletes/AthletesCalendar.tsx`, `useAthletesCalendar.ts`, `athletes-calendar-time.ts`, `athletes-calendar.css`, `AthletesPages.tsx`, `api.ts`; backend `apps/api/src/modules/athletes/application/athletes-calendar.service.ts`, content authorizer and routes; `packages/database/prisma/athletes-calendar.prisma`.
+
+Verified in source and Owner screenshots: member-only month/date calendar + agenda, Today/arrows, date counts, inline authorized add/edit, save then reload, loading/empty/retry errors, optional image/location/notes, cancellation confirmation with retained cancelled entry, Going/Maybe/Not going responses. Backend authorizes member reads and Founder mutation with transaction locks. Test files exist; this reference inspection did not execute them or create a live Hooma event.
+
+KRISTOU adaptations are specified in CAL/ATT/COM tasks: school-global audience, class/resource scopes, Africa/Tunis/date-only holidays, multi-day display, localized copy, existing styles, optional acknowledgement separate from RSVP/attendance. Reference currently groups entries by start date and uses device timezone; do not copy those behaviors blindly for school holidays. Inspect narrow-phone geometry; source touch-target CSS is not mobile acceptance proof. Keep security/business operations on KRISTOU's existing Supabase architecture.
+
+Source: https://github.com/funmarket/HoomaUltimate/blob/fde5c11389f7607ceaf8de8976235f4782437a4a/packages/frontend/src/athletes/AthletesCalendar.tsx
+
+## 9. Feature coverage and old-plan continuity
+
+| Accepted product area | Owning tasks | Launch/continuity rule |
+| --- | --- | --- |
+| One-school/one-product/canonical identity, approved UI, AR/FR/EN, Light/Pitch Black, logo | DOC-D1…DOC-D6; all implementation packets; F5-V1 | Permanent protected contract |
+| Public browsing / seven requested roles / eight homepages / oversight | F1-G1, F1-G6, PUB-03 | Preserve working live Owner login and oversight evidence |
+| Current username/email sign-in, phone-backed username, approval/status | F1-G1, F1-G5, REC-01/02 | No public phone login or username-only provisioning |
+| Owner/ordinary governance and Manager delegation | F1-G2/G3/G4/G6 | GOV-01 closeout before GOV-02; no duplicate installed schema |
+| Telegram explicit link and shared host behavior | F0-R3, F1-G5; per-feature transport tests | Existing auth lifecycle protected; no implied handler deploy |
+| Student identity and additive profile | F2-A1, PRO-01/02 | Independent of app credentials; least-privilege fields |
+| School years/levels/classes/teacher/student membership | F2-A2/A3/A4/A9/A10 | Canonical owners and immediate current-scope removal |
+| Family/guardians, emergency contacts/minimal safety | F2-A5, PRO-01/02 | Contacts ≠ guardians ≠ collectors |
+| Manual entry and CSV/XLSX preview/commit | F2-A6/A7/A8 | Shared writers, no identity/role/link side effects |
+| Global school calendar/holidays/cancelled sessions and class calendar | CAL-01/02/03, COM-02/03 | All approved school users see global notices; private class scopes retained |
+| Temporary substitute assignments | CAL-04 | Bounded time/resource authority, no credential sharing |
+| Independent teacher Attendance and profile history | ATT-01/02/03/05 | No cross-teacher overwrite or duplicate profile copies |
+| Parent absence justification | ATT-04 | Staff decision separate from parent explanation |
+| Grades/report cards/teacher remarks | GRD-01/02/03/04 | School grading and visibility policy before formulas/publication |
+| Academic-year rollover / transfers / history | YEAR-01/02 | Preview, audit, no overwrite of prior years |
+| Admission applications and documents | F3-C1, F2-A4, MED-01 | App signup/acceptance/class placement distinct |
+| Parent Notes quota/window/privacy | F3-C2 | 11 notes, 08:00–18:00 Tunis, reset 08:00 |
+| Class Questions and student safeguarding | F3-C3 | 200 chars, class-wide, no student private DMs |
+| Class announcements/homework/calendar/gallery/documents | COM-03 | Independently reviewed small subpackets; class owner reused |
+| Short Messages / Global Announcements / Broadcasts | COM-02/04 | Source publication and recipients are separate authorities |
+| Notifications/read/delivery/realtime/sounds | COM-01, PUB-04, F4-P3 | Safe links; outbox; truthful device support |
+| Teachers/Administration public directory | PUB-01 | Approved public projections, not private People table |
+| La Toque Gourmande Food Menu | PUB-02 | Canonical weekly/day publication and governed media |
+| Home/About/Contact/activities/clubs/gallery/calendar/inquiry | PUB-03 | Approved public material only; preserve accepted design |
+| Profile/preferences/language/theme/sound | PUB-04, REC-02, PRO-02 | Own-row persistence and stable shell |
+| Pickup/collectors/early leave/live board/release | F4-P0/P1/P2/P3 | Separate safety lock and activation |
+| Media/audit/outbox | MED-01; source-domain consumers | Minimum required primitives before consumers |
+| Reports/exports/recovery/operations/scalability | REP-01, OPS-01/02/03, F5 | Measured targets, restore rehearsal, least privilege |
+| Optional AI assistance | AI-01 | Later explicit activation; core app independent |
+| All existing cards/menus/forms and correct destinations | UI-01/02 | No Open-label or navigation-only completion claim |
+| School Settings and operational Control Center | CFG-01, CTR-01 | Domain-owned config and authorized real aggregates |
+| Own account Profile and staff office/service queues | ACC-01, STF-01 | Correct destinations and reviewed scope for existing placeholders |
+
+Original F0-R0…R4, F1-G1…G6, F2-A1…A10, F3-C1…C4, F4-P0…P3, F5-V1…V3 IDs are retained. F0-R3 now means protected regression/inspection, not the withdrawn Telegram rewrite. F0-R4 is the document umbrella. F3-C4 is explicit backlog coverage, not deferral of Attendance/grades or permission for unrelated features. New task IDs identify accepted additions and missing dependencies.
+
+Still outside approved scope: multi-school tenancy, student private DMs, tuition/payments, transport/bus operations, lunch ordering/payment, QR/face/geofence automatic pickup, broad medical case management and autonomous AI administration. New feature inclusion requires an Owner decision; these are not hidden tasks.
+
+## 10. Security and behavioral acceptance matrix
+
+| Actor / scenario | Required outcome | Owning evidence |
+| --- | --- | --- |
+| Anonymous requests private school/global calendar/class/student records | DENY; approved public information only | F1, CAL, PUB DB/API tests |
+| Pending/rejected/suspended/revoked account with old session | DENY protected operations, regardless of UI cache | F1 + every private slice |
+| Requested APP_ADMIN/MANAGER at signup | No active grant from request | F1-G2/G4 real DB |
+| Office reviews self/privileged target | DENY; ordinary peer review allowed under verified policy | F1-G2 |
+| Manager without/with/revoked capability | DENY / bounded ALLOW / DENY | F1-G3 |
+| Teacher A requests teacher B register or unrelated class | DENY; own assigned register allowed | CAL-04, ATT-02, GRD-02 |
+| Substitute before start or after expiry | DENY; no historical override unless explicitly granted | CAL-04 |
+| Parent guesses another child/profile/justification/marks | DENY through actual DB/API/storage | F2-A5, PRO, ATT, GRD |
+| Parent explains absence | Submission allowed for linked child; direct attendance edit denied | ATT-04 |
+| Student reads unpublished marks/restricted remarks | DENY; own permitted published report allowed | GRD-03/04 |
+| Calendar closure or cancelled lesson | No auto pupil absence or Pickup RELEASED; authorized session effect only | CAL/ATT/F4 |
+| Notification failure after business commit | Source remains committed; delivery pending/failed truthfully | COM-01 and consumer |
+| Import file contains roles/credentials/guessed links | DENY unsupported effects | F2-A7/A8 |
+| Two concurrent Owner removals / waiting caller revoked | Last-Owner invariant retained; caller reauthorized after wait | F1-G2/G4 real two-session test |
+| Parent requests release or staff double-release | DENY; one authorized physical handoff only | F4-P2 real transaction tests |
+| Recovery replay/contact collision | DENY; no identity merge or privilege change | REC-02 |
+| Export/restore tries wrong audience/target | DENY; no real minor data in test fixtures | REP/OPS |
+
+UI visibility and source inspection do not close security rows. Test principals with ordinary caller roles, not only a service-role or RLS-bypassing runner. Count passed/failed/skipped from actual output; retain failures and test limitations.
+
+## 11. Visual and workflow acceptance
+
+Every new/wired screen must preserve current KRISTOU style, logo, navigation and role identity. Use accepted current UI/screenshots as reference, not old HTML or Hooma colors. Verify representative narrow phones (including 320/360/390 where applicable), tablet and desktop, AR/FR/EN, Light/Pitch Black, keyboard/touch, focus, readable labels, native scrolling and safe areas. Do not certify all dimensions from one desktop screenshot.
+
+Required workflows: account signup/login/status/recovery; seven role homes and non-impersonating oversight; Owner account operations/Manager delegation; Classes→roster→Student Profile; manual entry/import preview/commit; Teacher assigned class→session→attendance; Parent child→justification/history/published report; Global Announcements→school calendar→selected date; class calendar private events; grading/publication/remarks; admission review/docs; Parent Notes; class content/questions/messages; directory/menu/public content/preferences; school-year rollover; Pickup arrival/staff release/reconnect; reports and permitted exports. Include loading, empty, denied, validation failure, version conflict, timeout/offline and safe retry in each applicable slice.
+
+Existing manual Owner acceptance is a valid evidence class. Record actor/flow/date/environment and reported result; screenshots support only what is visible. Do not erase user-reported success because the agent did not perform it, and do not promote it to exhaustive DB-security acceptance. Candidate-specific verification may be required after changes; explain the new coverage rather than repeating a settled test without reason.
+
+## 12. Release and production-readiness definition
+
+Production-ready means the approved launch scope, not every optional future idea, has matching evidence for:
+
+1. One canonical owner for identity/roles/records with compatible migrations, generated contracts where needed, constraints and meaningful indexes.
+2. Proven current-role/resource authorization for database, API, private objects and realtime paths; old-session/relationship-removal and escalation denies.
+3. Durable state across reload/retry and genuine concurrent operations; truthful UI on failure, no mock fallbacks.
+4. Functional and accessible accepted mobile/trilingual/theme workflows in Browser and Telegram as applicable.
+5. Configured deployment origins/secrets/session/contact flows verified at exact candidate, without exposing server credentials.
+6. Tested recovery/restore and rollback/forward fix; logs/alerts, retention/audit controls and operational ownership.
+7. School-approved load/performance/error objectives with actual measurements and bounded queries/imports/reports.
+8. Reviewed private-data handling and official school content/policies; no invented legal/document/grade rules.
+9. Clear published vs draft/inactive state, safe notification delivery and calendar/attendance/grade/Pickup semantics.
+10. One consistent document set, exact production/source/evidence index, open issues and named next command.
+
+A green build, table/RPC presence, a Vercel status, an attractive calendar or a plan checkbox alone does not meet this definition. Per-slice deployment can be accepted before whole-product readiness if its bounded scope and limitations are explicit and authorized.
+
+## 13. Packet template and evidence update rule
+
+```text
+PLAN_TASK: <one task or specifically authorized bounded sequence>
+CURRENT_COMMAND: <literal user instruction>
+REPO/BASE/HEAD: <fresh exact values or NOT USED>
+TARGET_ENVIRONMENT: <local/staging/production/ref or NOT USED>
+OWNER/WRITER: <one responsible writer; overlap checked>
+SOURCE_DECISIONS: <authoritative requirement/decision and relevant gates>
+INTERFACES: <exact frozen input/output/error shapes, source owner and consumers>
+ALLOWED_TARGETS/ACTIONS: <exact allowlist>
+FORBIDDEN: <protected code/data/adjacent documents/environment>
+RED: <test/assertion and command, expected behavior failure>
+GREEN: <exact focused checks, expected behavior; never fabricated counts>
+DENY/CONCURRENCY: <actors/resources/races, actual enforcement environment>
+REGRESSION: <protected flows/dimensions relevant to this change>
+POSTCHECK: <durable state/diff/protected records/source freshness>
+STOP: <wrong/stale target, overlap, unresolved dependency, failed security gate>
+DONE_WHEN: <reviewable output and matching evidence>
+NEXT: NONE until authorized
+```
+
+For each real execution append: source revision, actual files, DB environment/version, migration names, exact commands/exits/counts/log locations, manual acceptance provenance, release action/postcheck and unrun checks. Recheck mutable state before consequential writes. Preserve older evidence as dated history. Where the Owner authorizes a sequence, execute its exact scope/order; do not infer wider authority or impose repeated confirmations for already-authorized reversible work.
+
+## 14. Document reconciliation and publication boundary
+
+DOC-M0 replaces the same attached working master, rather than generating another competing plan/spec/handoff. Other Library copies and in-repository static planning copies are historical snapshots; no deletion/rename was authorized. A future publication task must choose the one in-repository master location, link it from onboarding documents and mark legacy queues historical. Do not silently treat this file as already committed to GitHub.
+
+After master review, proposed next action is DOC-D1 (`requirements.md`) only. Then reconcile the remaining authority files individually in the registered order, with explicit per-file completion/diff. Old `CONTINUATION_HANDOFF_2026-11-10.md` and `TELEGRAM_VISITOR_LINKING_PLAN.md` are already historical references; if their labels/pointers need editing, authorize each separately rather than bundling those changes into another document's packet.
+
+Publication/retirement of static `public/assets/aistudio/` copies requires an explicit exact target/action after inspecting actual app consumers. Never delete a public asset merely because it contains old planning text. The master and authorities must point to one active roadmap even while historical artifacts remain.
+
+## 15. Sources and evidence references
+
+- Canonical repo: https://github.com/funmarket/KRISTOUSCHOOL
+- Current main checkpoint: https://github.com/funmarket/KRISTOUSCHOOL/commit/32067aa961620facffe4ff906c5598f68d27d6ff
+- Pending candidate: https://github.com/funmarket/KRISTOUSCHOOL/pull/15 (head 473d889c1b8e86bf71f88f66b67779f4c3502f8e at DOC-M0 inspection).
+- Runtime: https://kristouschool.vercel.app/ ; exact live SHA not established by this document task.
+- Primary sources: repo AGENTS/README/requirements/structure, CANONICAL_MODEL/DECISIONS/LIVING_BUILD_PLAN/progress and dated schema/handoff docs, with explicit historical/current classification.
+- Prior attached master: 987 lines, 116414 bytes, SHA-256 `c4fb8203bc61bcfa55f150f07ec9b5b842f29d7f08ffbbe09891f3d8a90783a4` before DOC-M0. Original task IDs preserved and changed instructions superseded here.
+- Product Owner decisions: latest conversation accepts eight feature additions, teacher-separated attendance and school-global calendar placement; Owner reports successful deployed APP_ADMIN login and cross-role oversight, with screenshot. This is manual evidence and accepted scope, not an invented automated test run.
+- Hooma source and screenshots: section 8, interaction reference only.
+- Hosted aggregate/schema/function facts: read-only Supabase inspection earlier on 2026-11-14 in this conversation; use fresh connector evidence before execution. No real school-person identities/tokens reproduced.
+
+## 16. Current handoff
+
+**Current scope:** DOC-M0 master-plan revision only. **Backend:** PAUSED. **PR #15:** draft/unmerged. **Production changes:** NONE from this task. **Other documents:** unchanged, explicitly queued. **New feature implementation:** NOT STARTED by this task.
+
+**Next proposed command:** DOC-D1 — reconcile `requirements.md` to the accepted master/Owner decisions, preserving history and all source/backend state. Do not auto-start it.
+
+**Resume backend only after:** document reconciliation is accepted and Owner explicitly resumes it. Continue the existing GOV-01/AUTH-LOGIN-02 candidate, genuine RLS/concurrency verification and exact release gates. Keep installed SQL, current accounts/Owner/link and Telegram behavior intact. GOV-02 follows accepted GOV-01; later school features follow the dependency register.
+
+**Completion wording:** Document validation and PR Node tests are separate recorded evidence classes; neither completes a planned connection or future feature. This document can be validated as a roadmap artifact. Its existence never proves that the application is complete, secure, deployed or production-ready. Report implementation only to the extent actual source, database, runtime and acceptance evidence establish it.

@@ -1,8 +1,11 @@
 # KRISTOU SCHOOL — LIVING BUILD PLAN
 
 Status: **ACTIVE BUILD DISCIPLINE**
+Revision: **2026-11-14 — DOC-D6**
 
-This document defines how work is performed; it is not a feature backlog or product-requirements file. Read `AGENTS.md` and this document for every task.
+This packet reconciles `docs/LIVING_BUILD_PLAN.md` only. Backend implementation remains **PAUSED**. The master and five accepted local document edits are protected; no code, Supabase, account, PR, commit, push, merge, configuration or deployment action is included. A document check establishes text consistency, never a working connection or production readiness.
+
+This document defines how work is performed; it is not a feature backlog, product-requirements file or independent execution queue. Read [AGENTS.md](../AGENTS.md), this document, the approved master and latest explicit Owner instruction before each task. A roadmap entry or successful prerequisite does not authorize the next action.
 
 ## 1. Permanent authorities
 
@@ -10,21 +13,27 @@ This document defines how work is performed; it is not a feature backlog or prod
 - `structure.md` — architecture, runtime boundaries, and domain ownership.
 - `docs/CANONICAL_MODEL.md` — canonical data, write ownership, and invariants.
 - `docs/DECISIONS.md` — accepted and proposed architecture decisions.
-- `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md` — ordered Supabase implementation steps.
+- `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md` — subordinate historical backend proposal awaiting DOC-D7; its independent phases are not an active queue.
 - `progress.md` — verified implementation evidence only.
 - `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md` — dated evidence checkpoint and document-status index (not a competing product or architecture authority).
 
-**Execution freshness note (2026-11-13):** F0-R1 is isolated local Docker/Supabase reset + pgTAP, NOT source fixes or hosted migration. The newest AUTH-ID-01 work is occurring in Google AI Studio and must not be reported as GitHub implementation until actual changed files are published. No next packet is self-authorizing. Refer to the dated current-state checkpoint before using older continuation plans.
+**Single roadmap:** [KRISTOU SCHOOL Master Execution Plan, revision 3](https://chatgpt.com/library?file_id=libfile_0bc078a5456c81918d4ccb8bae5e37ce&account_id=4376f273-aee7-4c95-abef-35eea9d93180), saved as `KRISTOU_MASTER_EXECUTION_PLAN(1).txt`, SHA-256 `d0213cd47d3cbf94d749a7234a9ab29cc965448c0c39850f9d234978b053e3cd`. It owns task order, dependencies and decision-gate references. It is an external approved artifact, not a published in-repository master path. The complete handoff copy can be verified against that fingerprint; do not substitute an older static asset or create another roadmap.
+
+The master retains its older DOC-M0/current-command and DOC-D1-next paragraphs verbatim. Later Owner instructions and the continuity checkpoint establish completed DOC-D1…DOC-D5; do not rewind finished work or silently update the master. Section 8 below records this document's dated continuation boundary. Earlier execution notes/checklist are preserved as explicitly superseded history in section 9.
 
 The product owner's newest explicit instruction overrides older project documents. This plan controls execution quality, not product scope. The old `funmarket/Kristou` repository is historical reference and is not current implementation or deployment evidence. The current product scope is KRISTOU SCHOOL only; agents must not introduce other schools, shared-school registries, or data spanning schools unless the owner explicitly changes the decision.
 
-When present, agents must also read `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` before implementation. Those documents provide current collaboration context and the ordered Supabase work plan, but neither overrides the product-owner/source-of-truth order above.
+When present, read `docs/CONTINUATION_HANDOFF_2026-11-10.md` and `docs/SUPABASE_CONTINUATION_PLAN.md` as historical context, together with current dated evidence and the latest continuity handoff. Their old next actions, inventories, identifier policies and implementation phases do not supply current commands. `public/assets/aistudio/` planning copies are historical; no deletion, rename or publication is authorized here. Authority follows AGENTS.md: latest Owner instruction, requirements behavior, structure architecture, decisions, canonical data/write authority, execution discipline, current implementation facts and dated progress evidence.
 
 ## 2. Build loop for every task
 
 ### A. Understand and inspect
 
-Before editing, state the exact outcome; confirm repo, branch, and HEAD; inspect uncommitted and overlapping work; read relevant authorities; identify product/UI/backend/data/infrastructure scope; and separate facts from assumptions. Trace the actual source through every affected consumer:
+Before editing, state the exact outcome; confirm repo, branch, HEAD and fresh main/open-PR state; inspect uncommitted and overlapping work; read relevant authorities; identify product/UI/backend/data/infrastructure scope; and separate facts from assumptions. Emit the master's preflight fields: literal current command, exact target, main/work HEADs, worktree/PR overlap, environment and Owner-continuity evidence when relevant (otherwise NOT USED), allowed/forbidden actions, assumptions, material unknowns, unresolved contradictions and proceed/blocked decision. Keep the scoped task contract, before fingerprints, commands/results and final diff outside the repository during document packets.
+
+Verify the accepted local documents and master against their recorded fingerprints. GitHub's older versions do not replace unpublished accepted candidates. If the workspace is missing, verify embedded snapshots in a separate non-repository review location and inspect fresh incoming source; never blindly restore over another writer.
+
+Use evidence-first-execution, understand, superpowers and build-web-apps practices as relevant, with current Supabase/GitHub tools when needed. Discover actual capabilities; do not invent tool output or run unrelated design/browser work to claim tool use. Trace the actual source through every affected consumer:
 
 ```text
 UI/state -> contract/transport -> verified identity -> server authorization
@@ -36,11 +45,17 @@ Search for existing models, policies, functions, routes, components, environment
 
 ### B. Scope and implement
 
-Solve one requested issue end-to-end. Do not add speculative tables/features, unrelated cleanup, broad refactors, duplicate owners, or another contributor's work. Use narrow domain ownership and explicit application orchestration for cross-domain behavior. Test-first development is preferred when practical. Never weaken tests to force a pass.
+Solve one requested issue end-to-end within its explicit allowed targets/actions. Do not add speculative tables/features, unrelated cleanup, broad refactors, duplicate owners, or another contributor's work. Use narrow domain ownership and explicit application orchestration for cross-domain behavior. Test-first development is preferred when practical. Never weaken tests to force a pass.
+
+Before a behavior change, freeze the owning operation and consumers, exact input/output/error shapes, decision gates, RED/GREEN and deny/concurrency assertions, protected regression, postconditions and stop rules. Observe a meaningful failing behavioral check where testable; then implement, run focused and neighboring checks, and prove relevant persistence/authorization/retry behavior. For prose, identify the initial conflicting passages and verify source/decision alignment, references, history and diff instead of inventing application tests.
+
+Use the master's dependency register, not a second checklist here. All eight additions remain accepted; unknown school policy values stay in DG-01…DG-19 and block only dependent work. Preserve one write owner per fact and the providers needed by its consumers: People/Family/Enrollment/Academics before scoped school operations; approved session/assignment/substitute context before Attendance/Assessment writes; private Media/Audit/durable delivery primitives before their consumers. Teacher registers remain independent; same-teacher repeated-lesson granularity, grading formulas and historical audiences require their named gates. Calendar/RSVP/acknowledgement never becomes pupil Attendance or physical release.
+
+Each feature packet must wire its real existing cards, menus, forms and affected consumers, with honest loading/empty/denied/error/conflict/offline/retry and durable readback. Preserve the master's 80-card coverage and nested-action checks (UI-01/UI-02, ADR-025); navigation, an Open label or local saved state is not completion. No production mock fallback, duplicate roster or backend-only dependency accumulation.
 
 ### C. Update documentation
 
-Reconcile every affected authority in the same task:
+Identify each affected authority; edit only those actually authorized by the packet:
 
 - product behavior -> `requirements.md`;
 - architecture/ownership -> `structure.md`;
@@ -49,11 +64,15 @@ Reconcile every affected authority in the same task:
 - execution discipline -> `AGENTS.md` / this file;
 - verified implementation evidence -> `progress.md`.
 
+During this documentation pause, reconcile **one explicitly authorized document at a time**. Preserve the master and all completed local edits byte-for-byte. Do not automatically update `progress.md`, AGENTS.md or another authority; keep task evidence outside git and report discrepancies for their assigned document packets. A later implementation packet must include its necessary authority updates in the actual approved scope. If a safe complete change requires an out-of-scope authority edit, stop that dependent operation and explain the required scope rather than expanding it silently.
+
 Do not create a second document competing with an existing authority.
 
 ### D. Verify and report
 
-Run relevant checks and report the exact branch/HEAD, files changed, docs updated, tests/checks actually run, results, unverified gaps, risks, and next decision/task. A successful build is not evidence of secure authorization or deployed behavior. Do not automatically start the next task.
+Run relevant checks and report the exact branch/HEAD or uncommitted fingerprint, files changed, docs updated, environment, commands, exit codes, actual passed/failed/skipped counts, evidence paths and limitations. Review the final diff and references; compare all protected fingerprints and HEAD with the starting state. Distinguish local, committed, pushed, merged, deployed and live-verified states. Preserve actual failures/unrun checks; an older run on another candidate is not a fresh pass.
+
+A successful build is not evidence of secure authorization or deployed behavior. Source strings, mocked API success, RLS-present flags and in-memory schedules do not prove actual DB/API/storage access, ordinary row isolation or genuine two-session concurrency. Record the Owner's successful live login/non-impersonating oversight as valid manual evidence of that observed flow; neither erase it nor promote it to all-mutation or exact-candidate release acceptance. Do not automatically start the next task.
 
 ## 3. Non-drift rules
 
@@ -63,14 +82,17 @@ PostgreSQL is durable business truth. Redis or another cache is transient only u
 
 ## 4. Supabase safety gates
 
-1. Supabase is the accepted provider and a hosted KRISTOUSCHOOL project exists. Its migration identifiers and deployed Telegram handler currently drift from repository source. Re-check the exact project and reconcile that drift before any remote operation.
+1. Continue existing `KRISTOUSCHOOL / ofppapwofhovhroyjtkc`. Before relevant operations inspect exact installed/source migration mapping, schema, grants/RLS and handler versions; inventory is not acceptance. No replacement database, second Owner bootstrap, account cleanup, blind db push/history repair or replay of installed repair SQL. Handle parity in its authorized scope; never redeploy protected Telegram handlers merely to make source/runtime match.
 2. Use Supabase CLI local development and committed migrations as the schema source of truth. Avoid dashboard-only schema changes.
-3. Use the approved Supabase Auth/profile foundation for email, phone, and custom username Web credentials. Keep username resolution server-side and preserve explicit Telegram identity linking.
+3. Follow AUTH-LOGIN-02: public login is username or email plus password; reject direct phone input before provider/resolver calls. Signup needs email or phone, with a valid chosen username required for phone without email. Keep provider phone credentials internally for server-side username resolution; username-only provisioning remains unsupported. Preserve Unicode/NFC handles, form/password handling, verification/approval separation and explicit Telegram linking; no custom password/session store or unverified alias promotion.
 4. Before exposing any table/view/function/storage path, document access rules and explicitly inspect grants and RLS. Test allowed and denied operations with pgTAP and function/API tests.
 5. Do not put service-role keys or database credentials in browser code. For any server-side RLS bypass, show why it is necessary and implement independent server-side identity/resource authorization and deny-case tests.
 6. Prefer local synthetic data; never import child/family data into development fixtures.
 7. Safety-critical pickup release must be staff-authorized, atomic, auditable, and distinct from parent arrival.
 8. Keep local, staging, and production credentials/data isolated. Do not link, repair migration history, migrate, or deploy production without explicit owner authorization and a verified recovery plan.
+9. Apply ADR-024 and the architecture/model contract-refresh gate to every authorized schema/RPC/function-contract change: inspect actual contracts and all callers; clean isolated replay; ordinary allowed/denied DB/API principals; one generated Supabase TypeScript type owner from the exact tested schema with generation command/fingerprint; update adapters, validators and every affected UI consumer. Detect absent columns/tables, renamed parameters, stale types and missing grants/exposure. Handwritten types/casts cannot justify fabricating schema or prove policy.
+10. Verify constraints, transaction/retry/idempotency, current actor/resource scope and genuine concurrency where required. Caller revocation after waiting and last-Owner safety need real two-session acceptance; service-role/bypass-RLS runners cannot prove ordinary isolation. Private storage and realtime paths need their own audience, revocation/reconnect and failure checks.
+11. Compatible backend dependencies precede dependent frontend release. Verify exact installed schema/functions and deployed frontend candidate, protected postconditions and rollback/forward-fix; no blanket deployment or activation permission follows from these gates. Restore rehearsals run in isolation with required database/object/configuration/identity dependencies and approved measurable objectives; database backup presence alone is not Storage-byte recovery. Optional queued Table Editor review (ADR-027) is not migrations, an outbox, business authorization or permission for row writes during this pause.
 
 ## 5. One-product topology gate
 
@@ -78,12 +100,45 @@ For changes to frontend entry, routing, auth transport, Telegram runtime, API tr
 
 ## 6. Parallel work and repository safety
 
-Snapshot HEAD before work. Re-check before consequential writes or commits. If HEAD changes, stop and inspect the new diff; stop when overlap or ownership is unclear. Never force-push, hard-reset shared branches, overwrite another writer, commit directly to `main`, or merge without explicit approval. No long-lived integration branch is asserted yet; use the latest reviewed default branch for focused work until the owner approves a different workflow.
+Keep this collaboration single-writer unless delegation is explicitly authorized or required by applicable instructions. Snapshot HEAD before work. Re-check before consequential writes or commits. If HEAD changes, stop and inspect the new diff; stop when overlap or ownership is unclear. Never force-push, hard-reset shared branches, overwrite another writer, commit directly to `main`, or merge without explicit approval. No long-lived integration branch is asserted yet; use the latest reviewed default branch for focused work until the owner approves a different workflow.
 
 ## 7. Completion standard
 
-A task is complete only to the extent that source, tests, docs, and runtime evidence prove. For database work, verify local migrations from a clean state, integrity constraints, RLS grants/policies, allow/deny tests, function authorization, and secret boundaries. For UI work, verify responsive/RTL/theme behavior and denied/error/empty states as applicable. Record checks and gaps honestly in `progress.md`.
+A task is complete only to the extent that source, tests, docs and runtime evidence prove for its exact scope. For database work, verify local migrations from a clean state, integrity constraints, RLS grants/policies, allow/deny tests, function authorization and secret boundaries. For UI work, preserve the approved logo/design/eight homes, Owner Teachers → Classes → Registration order, mobile-first AR/FR/EN and Light/Pitch Black; Arabic text must work within the stable LTR shell/navigation, without global mirroring. Verify applicable Browser/Telegram interactions, keyboard/touch/accessibility and loading/empty/denied/error/conflict/retry states at the actual candidate.
 
+Feature maturity is separate: planned → UI/contract source → compatible installed backend → real isolated acceptance → staging → explicitly approved live acceptance. All existing/new feature consumers, release compatibility and meaningful domain deny cases remain gates. Production readiness additionally requires approved operational, recovery and measured performance evidence; no document check or provider status certifies it.
+
+Keep existing accounts, approved Owner access, Telegram link and non-impersonating oversight (actual actor, banner and Return to My Home). Preserve the `09ffacf80daa4f546140053db441abb96c68ef8b` Telegram auth/link/challenge/re-entry/cache/session baseline. Later re-entry resolves the linked account without provisioning another account or issuing a Supabase Auth session; restored profile data is not direct RLS authority. Future private operations must verify current server identity/resource scope. The withdrawn Telegram lifecycle rewrite remains withdrawn; no protected-handler deployment during docs or GOV-01/AUTH-LOGIN-02.
+
+Keep Pickup backend-blocked until its own isolated/staging safety acceptance and explicit activation. Only authorized staff physically verifies and releases; a parent arrival, attendance mark, calendar event, timer, AI or notification cannot release. A durable committed transition with delayed delivery stays committed; show delivery uncertainty and safe readback rather than fake rollback or duplicate release.
+
+Record actual evidence in `progress.md` only when that file is authorized; during document packets preserve it and keep scoped evidence outside the repository. Stop on unexpected protected changes, wrong/stale target, unresolved overlap, missing prerequisite or failed relevant security acceptance. Do not guess school policy, weaken a test or change another domain to manufacture completion.
+
+## 8. Current documentation checkpoint and continuation boundary — 2026-11-14
+
+**CURRENT_COMMAND at this dated checkpoint: DOC-D6 — reconcile docs/LIVING_BUILD_PLAN.md only. Backend implementation is PAUSED.** This section records the authorized scope; it is not a new feature queue or standing authorization for later actions.
+
+- Completed before this packet: DOC-M0 master revision 3 and DOC-D1 requirements, DOC-D2 structure, DOC-D3 canonical model, DOC-D4 decisions, DOC-D5 AGENTS.md. Five repository edits are local/uncommitted/unpublished; preserve them and the master byte-for-byte. Their earlier next-task paragraphs are dated checkpoints, not conflicting current commands.
+- Fresh source checkpoint for DOC-D6: main `32067aa961620facffe4ff906c5598f68d27d6ff`; local `fix/gov01-source-database-parity@2dc828a66968246c76f325edfd603a4771c83555`; PR #15 open/draft/unmerged at `473d889c1b8e86bf71f88f66b67779f4c3502f8e`. Local HEAD and PR HEAD source trees match, but commit IDs differ and local document edits are additional. Recheck mutable state before later consequential actions.
+- PR #15 overlaps this file and DOC-D1…D4. Later authorized publication/rebase/merge must inspect incoming hunks and preserve newest accepted contracts, not restore obsolete login/Attendance policies or the old queue. No PR modification or publication occurs in DOC-D6.
+- Supabase/account/function/runtime state was not reverified by this document packet. Dated inventories and earlier test results retain their original environment and limits. Genuine ordinary RLS/concurrency acceptance, matching username-handler release and candidate-specific live governance verification remain unfinished; the Owner's manual login/oversight acceptance remains valid in its observed scope.
+- Backend resumption requires an explicit Owner instruction after document reconciliation. Use the master's GOV-C1 closeout and prerequisite gates; GOV-02/F1-G3 delegation follows GOV-01 acceptance. Do not reopen Telegram, restart completed auth work or expand the corrective PR into all accepted school features. Subsequent feature dependencies and decision gates remain in the master, not another checklist here.
+
+**Next proposed document: DOC-D7 — docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md only, upon explicit instruction. Do not start DOC-D7 automatically.** The master and other authorities are unchanged by DOC-D6; no code, SQL, accounts, configuration, commit, push, PR change/merge or deployment is included. Document review/checks do not implement or certify any planned connection.
+
+## 9. Superseded execution history
+
+The following exact earlier note and checklist are retained for provenance. **Every current/active-command label and unchecked action inside this history is superseded by the latest Owner scope and section 8 above.** Historical checkmarks describe earlier reported work, not fresh tests or implementation permission. Their original evidence limits remain; do not execute these as a second queue.
+
+<details>
+<summary>Historical November 13 freshness note — not current source status</summary>
+
+**Execution freshness note (2026-11-13):** F0-R1 is isolated local Docker/Supabase reset + pgTAP, NOT source fixes or hosted migration. The newest AUTH-ID-01 work is occurring in Google AI Studio and must not be reported as GitHub implementation until actual changed files are published. No next packet is self-authorizing. Refer to the dated current-state checkpoint before using older continuation plans.
+
+</details>
+
+<details>
+<summary>Historical November 14 closeout checklist — no longer an active queue</summary>
 
 ## 8. Active Owner-approved closeout checklist — 2026-11-14
 
@@ -108,3 +163,5 @@ This is the current repository execution queue. Earlier F0 ordering/status state
 **Standing Telegram instruction:** Do not reopen Telegram lifecycle enforcement or alter linking, challenge, handler, cache or session behavior during this cycle. Regression checks and restoring the agreed baseline are in scope; a new Telegram implementation or deployment requires a separate Owner instruction.
 
 **Preservation:** Existing project, accounts, approved Owner and Telegram link remain. No second bootstrap, replacement database, account cleanup or unrelated UI work.
+
+</details>

@@ -1,0 +1,88 @@
+# KRISTOU SCHOOL — AGENT AND CONTRIBUTOR RULES
+
+Status: **MANDATORY REPOSITORY INSTRUCTIONS**
+
+Revision: **2026-11-14 — DOC-D5**. This reconciliation changes `AGENTS.md` only. Backend implementation remains paused; document consistency is not implementation or production-readiness evidence.
+
+These rules apply to every developer, coding agent, automation, and delegated worker in `funmarket/KRISTOUSCHOOL`. The product is KRISTOU SCHOOL. The old `funmarket/Kristou` repository is read-only migration history; do not assume its branches, deployment, code, tests, or infrastructure are current here. This repository is only for one school: KRISTOU SCHOOL. Keep every feature, identity, and data relationship inside this school unless the product owner explicitly changes this decision.
+
+## 1. Mandatory onboarding gate
+
+Before selecting an implementation task, editing files, creating a branch, delegating, committing, opening a pull request, or deploying:
+
+1. Read this entire `AGENTS.md`.
+2. Read the latest explicit Owner instruction and available continuity handoff, then the approved master revision 3 referenced below in full. Read `README.md`, `requirements.md`, `structure.md`, `docs/CANONICAL_MODEL.md`, `docs/DECISIONS.md`, `docs/LIVING_BUILD_PLAN.md`, `docs/SUPABASE_BACKEND_IMPLEMENTATION_PLAN.md`, and `progress.md` in full. Read the dated evidence checkpoint `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`, `docs/REMOTE_SCHEMA_INVENTORY.md` and relevant `docs/EDGE_FUNCTION_DEPLOYMENT.md`. Read the older `docs/CONTINUATION_HANDOFF_2026-11-10.md`, `docs/SUPABASE_CONTINUATION_PLAN.md` and `docs/TELEGRAM_VISITOR_LINKING_PLAN.md` as historical/subordinate context, and inspect the actual repository tree. Their old immediate-next-task, inventory and auth wording cannot override newer accepted decisions.
+3. Confirm the repository, branch, HEAD and fresh main/open-PR state. Inspect uncommitted and overlapping work. Verify local document candidates against the handoff fingerprints; GitHub's older documents are not substitutes for accepted unpublished edits. If a previous workspace is unavailable, verify embedded snapshots in a separate non-repository review location; never blindly overwrite current source.
+4. Distinguish accepted product requirements, architecture/data-authority contracts, proposed/ordered plans, and currently verified implementation facts.
+5. Trace the owning source and affected consumers. Search for existing tables, policies, functions, components, environment variables, tests, and docs before creating a parallel owner.
+6. Resolve any contradictions using the source-of-truth order below. If a material decision is unresolved, stop before implementing behavior that depends on it.
+
+A previous agent's summary, an old commit, a green build on another repository, or a plan checklist does not satisfy this gate.
+
+### Approved master and documentation-transition checkpoint
+
+The single consolidated roadmap is **KRISTOU SCHOOL Master Execution Plan, revision 3**, saved as `KRISTOU_MASTER_EXECUTION_PLAN(1).txt`: [approved master](https://chatgpt.com/library?file_id=libfile_0bc078a5456c81918d4ccb8bae5e37ce&account_id=4376f273-aee7-4c95-abef-35eea9d93180), SHA-256 `d0213cd47d3cbf94d749a7234a9ab29cc965448c0c39850f9d234978b053e3cd`. It is an external approved artifact, not yet a published repository master path. Use its complete embedded copy in the continuity handoff if needed and verify the fingerprint. Do not invent a repository location, create a rival roadmap or silently replace it with an older public planning asset.
+
+At this dated DOC-D5 checkpoint, master reconciliation DOC-M0 and the four document reconciliations DOC-D1 (`requirements.md`), DOC-D2 (`structure.md`), DOC-D3 (`docs/CANONICAL_MODEL.md`) and DOC-D4 (`docs/DECISIONS.md`) are completed locally. The four repository edits remain uncommitted/unpublished and must be preserved byte-for-byte during DOC-D5. The master retains its older DOC-M0/current-command and DOC-D1-next paragraphs verbatim; the later handoff and Owner instructions establish subsequent progress. Do not rewind completed work or silently edit the master to refresh its status.
+
+Other authorities remain pending their individual reconciliation. The old active queue in `docs/LIVING_BUILD_PLAN.md`, historical backend/continuation phases and `public/assets/aistudio/` copies supply neither a competing current queue nor permission to resume implementation. Preserve historical contents until their exact update/publication scope is authorized. DOC-D6 (`docs/LIVING_BUILD_PLAN.md`) is only the next proposed document, not automatically authorized by DOC-D5.
+
+PR #15 is the separate corrective GOV-01/AUTH-LOGIN-02 candidate, draft and unmerged at this checkpoint; recheck mutable state before later action. Its documentation overlaps the four accepted local edits. Any future authorized publication/rebase/merge must preserve their newer contracts and inspect incoming hunks. Backend resumption requires an explicit Owner instruction after document reconciliation; then use the master's GOV-C1 closeout scope, not a Telegram rewrite or all-features expansion of PR #15.
+
+## 2. Source-of-truth order
+
+When documents disagree, use this order:
+
+1. the product owner's latest explicit instruction;
+2. `requirements.md` for accepted product behavior;
+3. `structure.md` for architecture and ownership;
+4. `docs/DECISIONS.md` for accepted/proposed architectural decisions;
+5. `docs/CANONICAL_MODEL.md` for data and write authority;
+6. `docs/LIVING_BUILD_PLAN.md` for execution discipline;
+7. current repository code, database, and runtime as evidence of what is implemented—not permission to override a newer target rule;
+8. `progress.md` for verified implementation evidence only.
+
+The approved master consolidates task order/dependencies; it does not replace product, architecture or data authorities. `AGENTS.md` governs contributor behavior. The Supabase backend plan is a subordinate historical proposal during this transition, not another active queue, implementation proof or authorization to change product policy. Newer explicit Owner decisions override stale clauses until each authority is reconciled in its authorized packet; record the discrepancy without expanding scope.
+
+## 3. Non-negotiable safety and quality rules
+
+- One canonical KRISTOU product, one canonical identity per person, one authoritative owner per durable concept, and one school only.
+- Do not introduce a shared school registry, additional-school switching, inter-school memberships, or a database shared by multiple schools in this repository.
+- Never treat frontend visibility, a client-supplied role, a publishable key, or a client-side check as authorization.
+- Every exposed Supabase table/view/function/storage path must have least-privilege grants and appropriate, tested RLS/access controls. A Supabase service-role/secret key bypasses RLS and must remain server-side; never expose it to the browser.
+- Do not put student, child, family, health, enrollment, or pickup data into public projections or production mock fixtures.
+- Pickup arrival and child release are distinct. Parents/authorized pickup actors may announce arrival; only authorized staff may confirm physical release through server-verified policy and an atomic state transition.
+- No heuristic identity merging. Never merge people by name, email, phone, username, or photo.
+- Preserve AUTH-LOGIN-02: public sign-in accepts chosen username or email plus password; reject direct phone input before provider/resolver calls. Signup requires full name, password, requested role and email or phone; phone without email also requires a valid chosen username, while username is optional with email. Keep internal provider phone credentials for server-side phone-backed username resolution; username-only provisioning remains unsupported. Preserve Unicode/NFC normalization, valid Arabic/Latin/accented French and numeric-underscore handles, current form/password handling and approval separation. A typed secondary contact is not a verified Auth/recovery alias. No synthetic email aliases, browser-side contact lookup, or client-supplied role authorization.
+- Preserve Telegram auth/link/challenge/re-entry/cache/session behavior against `09ffacf80daa4f546140053db441abb96c68ef8b`. Linking is explicit, fresh signed initData is server-validated and the one-time challenge is claimed atomically. Established re-entry resolves the same linked account without creating an account or issuing a Supabase Auth session. A restored profile is not direct RLS authority; future private operations require verified current server identity and resource scope. The withdrawn lifecycle rewrite stays withdrawn; no protected-handler redeployment during documentation reconciliation or GOV-01/AUTH-LOGIN-02.
+- Preserve existing accounts, approved Owner access and Telegram link; no replacement database, second bootstrap or account cleanup. Role-workspace oversight changes presentation, not the actual actor or authority; retain its banner and Return to My Home. Preserve accepted UI/logo, eight homes, Owner Teachers → Classes → Registration ordering, mobile-first AR/FR/EN and stable LTR shell/navigation. All eight accepted additions remain in scope under the reconciled authorities; unresolved school policies are named decision gates, not permission to guess or reinstate old exclusions.
+- No secrets in source, browser bundles, examples, tests, logs, or screenshots. Use placeholders in `.env.example` and managed secrets for deployed functions.
+- All schema changes must be reversible/reviewable migrations committed to `supabase/migrations/`; do not make dashboard-only production schema changes.
+- Do not describe partial/demo behavior as secure, complete, tested, or deployed.
+- Avoid monolithic services, handlers, SQL migrations, stores, or generic modules that own unrelated domains.
+
+## 4. Change and verification discipline
+
+For each task, make the smallest complete change within the Owner's actual authorized scope. For implementation, trace authoritative source through affected consumers and tests. Use test-first development where useful. Do not weaken tests to make a change pass. Identify affected authorities: product behavior in `requirements.md`, architecture in `structure.md`, data authority in `docs/CANONICAL_MODEL.md`, decisions in `docs/DECISIONS.md`, method in `docs/LIVING_BUILD_PLAN.md`, and evidence in `progress.md`. Identification is not permission to edit them all.
+
+During the current documentation pause, reconcile **one explicitly authorized document at a time**. Preserve all other authorities and completed local edits byte-for-byte, including the master; do not automatically update `progress.md` or the master. Record task evidence outside the repository and report unresolved cross-document discrepancies for their assigned packets. In a later implementation packet, update only the authorities included in its actual authorization. If the behavior cannot be delivered safely without an out-of-scope authority change, stop that dependent change and explain the required scope; do not silently expand it.
+
+Before mutation, emit the master's exact-state preflight: literal current command, exact target, fresh main and work-branch HEAD, working-tree changes, open PR overlap, target environment/Owner-continuity evidence when relevant (otherwise NOT USED), allowed actions, forbidden targets, assumptions, material unknowns, unresolved contradictions and proceed/blocked decision. Keep a scoped task contract and baseline fingerprints outside the repository. Recheck final diff, references, protected-file fingerprints and HEAD before reporting; stop on unexpected changes, unresolved overlap, stale targets or a failed relevant security gate. Do not start the next packet automatically.
+
+Run relevant verification for the changed layer. Database work must include local migration/reset validation, pgTAP RLS policy tests for allow and deny cases, and function/API integration tests. Report exact commands and results; state explicitly what was not run. Never claim a remote migration, release, or deployment without fresh evidence.
+
+For prose, verify source/decision alignment, coverage, supersession, references and exact diff; application tests are not required merely to edit documentation. Separate planned behavior, source presence, installed objects, isolated tests, staging and live acceptance. Table/RPC presence, generated types, source guards, in-memory schedules and RLS-bypassing runners do not prove ordinary authorization or genuine concurrency. Preserve failures and unrun checks. Accept the Owner-reported working live login/oversight as manual evidence of that observed flow; it is not proof of every mutation or the unmerged candidate's exact live revision.
+
+Use current evidence-first-execution, understand, superpowers and build-web-apps instructions for relevant work, with Supabase/GitHub capabilities when needed. Discover actual tools; do not invent results or use unavailable tooling as an uninvestigated excuse. For UI work, preserve accepted design and verify the applicable responsive/language/theme/host and interaction states; do not generate mockups or change components merely to demonstrate tool use during document work. Keep this collaboration single-writer unless delegation is explicitly authorized or required by applicable instructions.
+
+Before consequential writes, re-check HEAD and inspect incoming changes. Never force-push, reset a shared branch, overwrite another contributor, commit directly to `main`, or merge a pull request without explicit owner approval. Use a focused branch and repository contribution conventions. The current repository has no verified long-lived integration branch; create work from the latest reviewed default branch unless the owner establishes another workflow.
+
+## 5. Backend and Supabase boundaries
+
+Continue the existing Supabase project `KRISTOUSCHOOL / ofppapwofhovhroyjtkc`; provider selection and object presence are not acceptance evidence. The source-controlled surface includes `supabase/config.toml`, ordered migrations, synthetic-only seed data, RLS tests and scoped Edge Functions. Verify exact target, installed/source migration mapping, grants/RLS and deployed handler versions before relevant operations. Use clean isolated replay and ordinary allowed/denied principals before protected changes; never reset hosted data, blindly push/repair history or replay already-installed repair SQL. Keep schema/security behavior reproducible in migrations. Vercel is the observed frontend host, not deployment authorization; old Kristou Railway/Cloudflare configuration is historical.
+
+Edge Functions are server-side transport/orchestration boundaries, not cross-domain business authorities. Keep domain policy in small domain-owned application modules and database constraints/RLS. Use the caller's verified identity for ordinary user operations where the selected auth design permits it. Any use of a secret/service-role credential must be narrowly scoped, justified, and followed by explicit server-side authorization; RLS bypass is never a substitute for policy.
+
+Supabase Auth owns provider credentials/sessions; public login and internal phone-backed resolution follow AUTH-LOGIN-02 above. Do not introduce custom password/session stores or another auth system. Private school-domain access still requires its own RLS and deny-case gate in each actual Browser/Telegram transport.
+
+Each authorized schema/RPC/function-contract change must follow ADR-024 and the reconciled architecture/model: inspect actual contracts and all callers, replay/test in isolation, generate one authoritative Supabase TypeScript type owner from the exact tested schema with command/fingerprint, and update affected adapters/validators/UI. Verify real API errors, denies and durable readback. Release compatible backend dependencies before dependent frontend and verify exact deployed versions/recovery path. Handwritten types or casts cannot justify creating absent tables. No such implementation, release or account action is authorized during this document pause.

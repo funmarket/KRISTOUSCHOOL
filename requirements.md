@@ -1,6 +1,9 @@
 # KRISTOU SCHOOL — REQUIREMENTS
 
 Status: **PRIMARY PRODUCT ACCEPTANCE CONTRACT**
+Revision: **2026-11-14 — DOC-D1**, reconciled with the Owner-approved **KRISTOU SCHOOL Master Execution Plan, revision 3**, saved as `KRISTOU_MASTER_EXECUTION_PLAN(1).txt`, SHA-256 `d0213cd47d3cbf94d749a7234a9ab29cc965448c0c39850f9d234978b053e3cd`.
+
+This is a documentation deliverable, not implementation, activation, certification or a claim of GitHub publication. Backend work remains paused. Other authorities are reconciled **one at a time**; older exclusions/auth proposals do not override these newer Owner decisions. The master owns order/dependencies; this file owns behavior. Neither authorizes implementation. Sections 1–49 retain their subject identities; sections 50–61 add accepted scope and traceability. Historical reports remain dated evidence, not active policy.
 
 This file defines what KRISTOU SCHOOL must do. It is a behavior/acceptance contract, not a progress ledger, implementation queue, migration plan, or architecture document.
 
@@ -29,7 +32,7 @@ It serves:
 - delegated managers/associates;
 - the School Owner / App Admin.
 
-It combines public school information, enrollment, class communities, parent-school communication, student class questions, safety-critical pickup, school food menus, teachers/administration presentation, notifications, Web + Telegram access, and optional AI assistance.
+It combines public school information, enrollment, records/imports, class communities, school/class calendars, independent teacher Attendance, absence justification, grades/report cards/teacher remarks, academic-year continuity, communication, Class Questions, safety-critical pickup, menus/directories, recovery, emergency contacts/minimal safety information, reports, notifications, Web + Telegram and optional AI. School context is CP through 6ème; exact year/level configuration is school-controlled.
 
 The product is not a generic social network and must not become a catch-all school ERP by default.
 
@@ -47,7 +50,7 @@ The following are locked:
 6. **Fail closed.** Identity, authorization, child/class membership, pickup authority, and security-sensitive state must be verified before action.
 7. **Children’s privacy first.** Private student/family/class information is never public by default.
 8. **One authoritative owner per concept.** Product behavior must not be duplicated across domains.
-9. **PostgreSQL is durable truth.** Redis is transient only where explicitly designed.
+9. **PostgreSQL is durable truth.** Optional caches are transient where explicitly designed; scalability does not mandate Redis, microservices or a second API.
 10. **Arabic, French, English from foundation.** Arabic text is supported from the foundation, while the application shell and top navigation remain stable LTR when the language changes.
 11. **Light is default.** Optional dark mode is pitch black with light/white text.
 12. **Official KRISTOU brand identity.** Use the owner-approved enhanced KRISTOU SCHOOL logo without substituting a fake mascot/mark.
@@ -82,7 +85,7 @@ Student access is limited to the student’s own enrolled class and student-safe
 
 Teacher assigned to one or more classes.
 
-Teacher class authority is scoped to assigned classes unless separately granted broader capability.
+Teacher authority is scoped to assigned classes/subjects/teaching contexts unless explicitly extended. Different teachers have independent Attendance registers; one cannot overwrite another. Cover follows section 53.
 
 ## 3.6 SCHOOL_STAFF
 
@@ -101,7 +104,7 @@ The School Staff category includes:
 
 ## 3.7 ADMINISTRATIVE_PERSONNEL
 
-Approved `ADMINISTRATIVE_PERSONNEL` receive the standard ordinary school-administration bundle automatically: academic/curriculum coordination, class and student records, teacher support, school guidance, registration/admission, parent relations, individual data entry and validated CSV/XLSX import. They may approve, reject, suspend, revoke or reactivate **other** ordinary-role accounts, including other Administrative Personnel, but may never govern their own account or any `APP_ADMIN`/`MANAGER` target. Signup requesting this role grants nothing until separately approved. Actual backend enforcement remains to be implemented and tested; this is the Product Owner's accepted target.
+Approved `ADMINISTRATIVE_PERSONNEL` receive the standard ordinary school-administration bundle automatically: academic/curriculum coordination, class and student records, teacher support, school guidance, registration/admission, parent relations, individual data entry and validated CSV/XLSX import. They may approve, reject, suspend, revoke or reactivate **other** ordinary-role accounts, including other Administrative Personnel, but may never govern their own account or any `APP_ADMIN`/`MANAGER` target. Signup requesting this role grants nothing until separately approved. This is accepted authority; implementation evidence is recorded separately.
 
 ## 3.8 MANAGER / ASSOCIATE
 
@@ -115,13 +118,34 @@ Initial owner preference: no more than approximately three managers/associates, 
 
 Global school application authority. Only an existing authorized `APP_ADMIN` may appoint or govern `APP_ADMIN` and `MANAGER` privileges. A public signup selection of either role is not authorization.
 
+## 3.10 Governance and lifecycle acceptance
+
+| Actor | Accepted authority | Boundaries |
+| --- | --- | --- |
+| APP_ADMIN | School-wide application governance; ordinary account review; Owner/Manager appointments; school operations | Preserve at least one recoverable approved Owner; audited explicit actions |
+| MANAGER | Operational and ordinary-review actions explicitly delegated by Owner | No implicit full access, Owner/Manager governance or physical release authority |
+| ADMINISTRATIVE_PERSONNEL | Automatic standard school-office bundle after approval: classes/students, teacher coordination, admissions, family relations, manual entry/import and other ordinary-account lifecycle | No self-account lifecycle, no APP_ADMIN/MANAGER governance, no automatic full medical access or Pickup release |
+| TEACHER | Assigned class/subject/session work; attendance, grades and remarks within policy | No other teacher's register overwrite; no school-wide private roster by role label |
+| PARENT | Verified linked children, permitted class resources, explanations/communications and eligible pickup arrival | No attendance/grade authority, other-family records, private staff notes or physical release |
+| STUDENT | Own approved student-safe resources and active class scope | No classmate dossiers, private student DMs, or attendance/grade writes |
+| SCHOOL_STAFF | Explicit job/resource capability; reads school-wide notices/calendar as an approved school user | No implicit school-wide roster, health dossier, governance or release |
+| Anonymous | Approved public school information | No private school/global member calendar, rosters, family, class or release data |
+
+Administrative Personnel may approve/reject/suspend/revoke/reactivate other ordinary accounts, including peers. Deny actions against any target holding/requesting privileged authority beyond their scope. A Manager requires explicit grants. New academic/medical/assessment functions must refine field/action rules rather than treating the office bundle as unrestricted access to everything.
+
+Private actions require current approved status, effective role/capability and resource scope. Pending/rejected/suspended/revoked accounts cannot regain private access through old sessions, cached roles or open screens. Requested role/contact confirmation is not approval.
+
+Lifecycle/role/delegation actions require deliberate server authorization, safe audit and stale/concurrent-update handling. Grants/revocations affect subsequent protected requests. Caller authority revoked while waiting cannot be reused. Preserve at least one recoverable approved Owner; no public-signup privileged bootstrap. Multi-active-role precedence remains DG-04, not array-order policy.
+
+Acceptance: allowed ordinary peer review; denied Office self/privileged review; Manager grant/revoke; unauthorized appointment denial; genuine two-session last-Owner and post-wait caller-revocation checks. In-memory schedules are not database concurrency proof.
+
 ---
 
 # 4. Authentication and identity
 
 ## 4.1 Canonical identity
 
-The canonical model is:
+The conceptual relationship is (not a request for custom credential/session tables alongside Supabase Auth):
 
 ```text
 User
@@ -149,32 +173,30 @@ Never merge identities because of matching:
 
 Account linking must be explicit and verified.
 
-## 4.2.1 Web account and login policy (Product Owner update — 2026-11-13)
+## 4.2.1 Web account and login policy — AUTH-LOGIN-02
 
-**Current accepted policy — AUTH-LOGIN-02, Owner update 2026-11-14 (supersedes older identifier-combination wording below):**
+This is the single current identifier policy; older all-seven-combinations proposals and direct public phone-login wording are superseded.
 
-- Public sign-in uses a chosen username/handle **or email address**, plus password. Direct phone-number sign-in is rejected with localized guidance.
-- Signup uses full name, password, requested role and an email address or phone number (or both). A username is required when registering with phone but no email; with email, username is optional.
-- Phone-backed accounts sign in with their chosen username. The server-side resolver may use the associated phone credential internally; do not disable Supabase phone credentials.
-- Username-only signup without email/phone remains unsupported. Full name is presentation data, not a login identifier.
-- Additional phone verification never promises public phone-number sign-in. Prefill login with email or chosen username, never phone.
-- School approval remains required. Preserve existing design and Arabic/French/English guidance.
+- Public sign-in: chosen username/handle OR email, plus password. Direct phone-number input is rejected before provider/resolver calls with localized guidance.
+- Signup: full name, password, requested role, and email or phone (or both). Phone without email requires a chosen valid username. With email, username is optional. Full name is display information, not a login identifier. Username-only credential provisioning remains unsupported.
+- Preserve Unicode username normalization/uniqueness, supported Arabic/Latin names and valid numeric-underscore handles such as `123_456`. Reject phone-like usernames. Keep phone entry separate and retain existing Tunisian/international normalization.
+- Phone-backed accounts authenticate through the username resolver's internal phone credential path. Do not disable Supabase phone credentials. A secondary contact is not automatically a verified login/recovery alias. Prefill login with email or username, never phone.
+- Keep existing password policy and confirmation handling; re-inspect source before freezing exact policy changes. No custom public password table, synthetic contact alias, browser-side contact lookup or heuristic identity merge.
+- Seven account roles only: APP_ADMIN, MANAGER, ADMINISTRATIVE_PERSONNEL, TEACHER, SCHOOL_STAFF, PARENT, STUDENT. GENERAL_USER denotes anonymous public browsing only, never an account/enum/fallback role. Requested signup role never grants permission.
+- Approval is required before private access. Contact verification, app-account approval, student admission, enrollment, guardian linking and class placement are distinct transitions.
+- Preserve optional explicit Telegram linking, challenge/HMAC validation, established re-entry/cache/session behavior against the agreed `09ffacf80daa4f546140053db441abb96c68ef8b` reference. Telegram lifecycle modifications and handler redeployment remain outside GOV-01/AUTH-LOGIN-02. This contract does not revive the withdrawn Telegram rewrite.
+- Future private operations in Telegram require server-verified identity and the same resource policy. A restored profile is not by itself a Supabase Auth session. Define/verify each feature's transport without silently redesigning established authentication.
 
-The 2026-11-13 candidate combinations/status descriptions below are historical; phone-only signup without a chosen username is superseded by this policy.
+| Signup contacts | Username | Required behavior |
+| --- | --- | --- |
+| Email, with or without phone | Optional | Supported credentials; public sign-in by email or chosen username after applicable verification/approval |
+| Phone without email | Required | Phone-backed credentials; public login by chosen username |
+| Phone without email or username | Missing | Reject with localized guidance; do not leave an unusable account |
+| No email or phone | Any | Reject unsupported credential provisioning |
 
-A human-readable username should accept ordinary Unicode names, including Arabic, accented French and multiword names, subject to stable normalization, uniqueness, anti-spoofing and length controls. A full name is presentation data, never proof of account ownership. Existing ASCII usernames must remain usable. Ambiguous identifiers may not resolve to an arbitrary user.
+Preserve accepted 3–50 Unicode code-point username validation, NFC normalization, permitted Arabic/Latin letters/marks, accented French, internal spaces/separators and consistent normalized uniqueness across client/server/database. Reject control/invisible/bidi characters/invalid boundaries. Existing valid ASCII handles remain usable. No separate transliteration/French identity model. Keep validated Tunisian `+216` and explicit international phone normalization; never guess ambiguous foreign numbers.
 
-**Security/feasibility gate:** Supabase Auth password provisioning natively uses email/phone; its support for a genuinely username-only account must be designed and server-verified without fabricated email/phone aliases or insecure public password tables. A second contact typed into a form is not automatically a verified Auth sign-in alias. Phone/email ownership verification, identifier uniqueness, account recovery, no heuristic merging and fail-closed approval remain mandatory. If a combination is not supported by the currently approved backend, report it BLOCKED rather than falsely registering an unusable account.
-
-**Verified source gap (2026-11-13):** committed GitHub source still requires a username **and** email/phone, uses ASCII-only username validation (also enforced by the live database constraint), and routes username login through `auth-username-signin`. Gemini is implementing `AUTH-ID-01` separately inside AI Studio; do NOT claim those changes are in GitHub or live until actual published source and end-to-end tests prove it.
-
-**Review-branch candidate (`feature/auth-id-01-review-20261113`):**
-- **Supported combinations in application code (`B`–`G`):** Email only (`B`), Phone only (`C`), Username + Email (`D`), Username + Phone (`E`), Email + Phone (`F`), and Username + Email + Phone (`G`). When `username` is omitted (`B`, `C`, `F`), `public.handle_new_user()` assigns the deterministic fallback `user_<uuid_hex>`. When both `email` and `phone` are supplied (`F`, `G`), `email` is the primary Supabase Auth credential and the normalized phone is stored in `pending_phone` metadata with an explicit localized notice that phone password sign-in is **not enabled** until separate phone verification is completed (secondary email/phone alias verification is not proven end-to-end).
-- **Blocked combination (`A` — Username only without email or phone):** Explicitly rejected (`username_only_requires_contact_or_backend_auth` / `username_only_unsupported`) because standard Supabase Auth password provisioning requires an email or phone credential and synthetic email/phone aliases are forbidden.
-- **Human-friendly usernames & Tunisian (`+216`) phone normalization:** Optional usernames accept 3–50 Unicode characters (Arabic script, French accented Latin, ASCII letters/digits, single internal spaces, `.`, `_`, `-`) normalized via Unicode NFC + whitespace collapse (`normalizeUsernameDisplay` / `normalizeUsernameKey`), rejecting control/invisible/bidi characters and email/phone-looking strings. Valid 8-digit local Tunisian numbers (`[2-9]\d{7}`) normalize to `+216XXXXXXXX` and explicit `+` / `00` international numbers normalize to E.164, while ambiguous unprefixed foreign-length digit strings are rejected. Database support for non-ASCII/spaced usernames in `supabase/migrations/20261113120000_human_friendly_usernames.sql` is **`PREPARED — NOT VERIFIED`** until validated in an isolated PostgreSQL instance.
-- **Username sign-in transport (`src/lib/auth.ts`):** `signInAccount()` unwraps `@supabase/supabase-js` `FunctionsHttpError` responses from `auth-username-signin` so HTTP `401` (`invalid_credentials`) maps to `'invalid_credentials'`, HTTP `403` (`email_not_confirmed` / `phone_not_confirmed`) maps to `'contact_not_confirmed'`, and HTTP `503` (`auth_unavailable`), network/relay errors, or malformed 200 responses map to `'sign_in_failed'`.
-
-A signup role selection is a **request**, not an active role assignment; approval by authorized school personnel is mandatory before private workspace access. Only an authorized School Owner (`APP_ADMIN`) may appoint or govern `APP_ADMIN` and `MANAGER`. App signup and student admission are distinct.
+---
 
 ## 4.2.2 App signup is separate from school admission
 
@@ -185,7 +207,7 @@ App signup creates an authenticated application account. It does not enroll a ch
 Creating application credentials does not immediately authorize access to private school workspaces. The authentication modal provides localized feedback in Arabic (`ar`), French (`fr`), and English (`en`) that distinguishes between:
 
 1. **Registration received without outstanding contact confirmation:** Explains that the registration request was received, access to private school spaces requires approval from KRISTOU SCHOOL administration, and the applicant will be able to access their school workspace after approval.
-2. **Registration received with contact verification required:** Explains both that the applicant must verify their email address or phone number through the authentication provider and that private school access still requires approval by authorized KRISTOU SCHOOL personnel (confirming contact alone does not activate a school role). When a secondary phone is supplied alongside email (`F`, `G`), also explains that phone verification is separate and public sign-in uses username or email.
+2. **Registration received with contact verification required:** Explains both that the applicant must verify their email address or phone number through the authentication provider and that private school access still requires approval by authorized KRISTOU SCHOOL personnel (confirming contact alone does not activate a school role). When a secondary phone is supplied alongside email, also explains that phone verification is separate and public sign-in uses username or email.
 3. **Valid credentials without an active approved school role (`account_not_approved`):** Explains with neutral, accurate wording that credentials were accepted, the account does not currently have access to private school workspaces and may still be awaiting administrative approval, and the user should contact school administration if assistance is needed—while keeping private school workspaces inaccessible and signing out the unapproved session.
 4. **Contact confirmation required on sign-in (`contact_not_confirmed`):** When the authentication provider returns an explicit `email_not_confirmed` or `phone_not_confirmed` error code, explains in the active language that the user must verify their email or phone number with the provider and that private school access also requires administrative approval.
 5. **Invalid credentials (`invalid_credentials`):** Preserves generic invalid-credentials feedback exclusively for genuine authentication rejections (`invalid_credentials` / `invalid_grant` provider codes or explicit `Invalid credentials` / `Invalid login credentials` sentinels), never presenting wrong credentials as pending approval.
@@ -208,7 +230,7 @@ Expected behavior:
 
 ## 4.4 Telegram Mini App account use
 
-The shared app signup form is available in Telegram WebView and uses the same app credentials as Browser. Telegram `initData` is used only to confirm the explicit link to an already-created and signed-in app account; it does not create an account or issue a Supabase Auth session. A visitor remains unauthenticated until they explicitly create an app account or sign in.
+The shared app signup form is available in Telegram WebView and uses the same app credentials as Browser. Telegram `initData` validates explicit linking and established later re-entry to the already-linked account; it does not create an account or issue a Supabase Auth session. An unlinked visitor remains public until explicit shared-app signup/sign-in. Preserve the baseline specified in section 4.2.1; no withdrawn Telegram rewrite or handler redeployment is commissioned.
 
 Do not treat a Telegram username, name, phone, or email claim as app credentials or as authority to merge accounts.
 
@@ -315,7 +337,7 @@ Typical parent menu may include:
 - Settings
 - Log out
 
-Student, Teacher, Manager, and App Admin menus vary by role/capability.
+All seven account-role menus vary by capability. Every approved role reaches Global Announcements/school calendar even without a class. Own Profile, histories, published reports, recovery and settings reach actual permitted features when delivered, not generic Home or unrelated pages.
 
 Manager/App Admin controls appear only where the actor has the required capability.
 
@@ -377,7 +399,7 @@ Expected parent surfaces include:
 - Administration
 - Notifications
 
-Cross-child or cross-class private access is forbidden.
+Cross-child/class access is forbidden. Parents also receive school-global notices/calendar, permitted child Attendance/history, absence justification and published reports/remarks; DG-08 freezes Attendance visibility. No draft grades/restricted staff notes.
 
 ---
 
@@ -420,7 +442,7 @@ Locked rules:
 - class access ends immediately when active membership ends;
 - no phone/email/address exposure.
 
-Teacher Announcements, Homework/Classwork, and Student Class Questions must remain visually and semantically distinct.
+Teacher Announcements, Homework/Classwork and Questions remain distinct. Students also read school-global notices/calendar and own permitted Attendance/history/published results, never classmate dossiers/draft marks/restricted remarks. Historical access follows approved year policy.
 
 ---
 
@@ -447,7 +469,7 @@ Expected teacher functions include:
 - Administration
 - Notifications
 
-School-wide broadcast/control functions require explicit extra capability.
+School-wide broadcast/control **mutations** require explicit capability; every approved role may read global notices/calendar. Teachers also record own assigned Attendance/permitted grades/remarks; substitutes are time/resource bounded with responsible teacher and actual actor distinct.
 
 ---
 
@@ -490,6 +512,8 @@ The App Admin may control, subject to final implemented capabilities:
 - audit access;
 - system configuration.
 
+Owner oversight retains `APP_ADMIN` as actor, shows viewed-workspace/actor banner and **Return to My Home** without impersonation/role mutation. Manager oversight requires explicit delegation, never Owner authority. School Settings/Control Center consume domain-owned configuration/authorized aggregates rather than duplicate truth.
+
 ---
 
 # 15. Class Community
@@ -529,22 +553,25 @@ A homework/classwork item may include:
 - approved attachments;
 - status/timestamps.
 
-Grades/report cards are not implied by this feature.
+Grades/report cards are separately accepted in section 54; homework completion is not an automatic grade or Attendance mark.
 
 ---
 
-# 17. Class Calendar
+# 17. School and Class Calendars
 
-May include:
+Accepted: School calendar, holidays and cancelled sessions are accessible to all APPROVED registered school users across all seven roles **inside Global Announcements**. Class calendar remains inside Class Community for authorized members/linked guardians/staff. Pending/suspended/revoked accounts do not gain private access merely by being registered.
 
-- tests;
-- activities;
-- meetings;
-- trips;
-- reminders;
-- school/class deadlines.
+Adopt Hooma Athletes → Communities calendar interactions: month arrows, Today, selected date, date markers/counts, agenda below, inline authorized creation/editing and visible cancellation. Use KRISTOU's existing styles and localized copy. The accepted reference is source + Owner screenshots, not a requirement to import Hooma's sports permissions, neon colors, Prisma/API/worker topology, Photo Board or Whistle Board.
 
-Class-specific calendar items are visible only to authorized class members/staff.
+Required adaptation: Africa/Tunis school-time authority; date-only all-day holidays; multi-day spans shown on every affected date; school/global and class scope; loading/empty/error/denied states; upcoming agenda; cancellation reason and replacement date; audience-safe notifications. A school-wide event is referenced into relevant class views, not separately cloned and edited per class/homepage.
+
+Proposed architecture to ratify in DOC-D2/D3: Academics owns school operational calendar/closures and teaching-session changes; Class Community retains class-content calendar items; Broadcasts owns global notice publication linking to canonical event references. One shared calendar component consumes authorized view models from those owners. School-wide operational notice audience must include approved staff even without class membership; do not equate it with only ALL_CLASSES recipients.
+
+Optional event response follows type: RSVP may suit optional meetings/events; acknowledgement may suit important notices. RSVP, notice acknowledgement and teacher-recorded attendance are distinct. No automatic RSVP attendance. Notification preference must not become permission to hide a required in-app school notice.
+
+Class events include tests/activities/meetings/trips/reminders/deadlines. DG-14 freezes editor authority, week start, types and cancellation/reopen/reminder/acknowledgement policy before publishing.
+
+Acceptance: all approved roles without class membership reach the school calendar; anonymous/unapproved and cross-class access fail; all-day/multi-day dates survive device timezone changes; concurrent edits/cancellations/replacements and notifications retain one source. Calendar effects never automatically mark absence/change grades/release a child.
 
 ---
 
@@ -759,39 +786,20 @@ Publishing a weekly menu may generate a normal notification.
 
 ---
 
-# 26. School Broadcasts
+# 26. Global Announcements and School Broadcasts
 
-There is one canonical SchoolBroadcast per publication.
+One canonical publication projects into authorized feeds using the same source identity.
 
-Audience choices:
+| Audience | Required behavior |
+| --- | --- |
+| All approved school accounts | Global notices/calendar reach all seven roles, including staff without a class |
+| ALL_CLASSES | Class-targeted; not a substitute for all-school recipients |
+| SELECTED_LEVELS / SELECTED_CLASSES | Selected authorized level/class recipients |
+| Explicitly public | Approved public projection without private student/class data |
 
-```text
-ALL_CLASSES
-SELECTED_LEVELS
-SELECTED_CLASSES
-```
+Audience labels describe policy, not permission to invent enums/RPCs. Owner/explicitly delegated editors draft/schedule/publish/revoke; Teacher status grants no school-wide publishing. Retain `DRAFT | SCHEDULED | PUBLISHED | REVOKED`, title/body, governed attachments, `NORMAL | URGENT`, publication time and configured acknowledgement. Calendar notices link to canonical events, not duplicate schedules.
 
-Lifecycle:
-
-```text
-DRAFT
-SCHEDULED
-PUBLISHED
-REVOKED
-```
-
-Supported fields may include:
-
-- title;
-- body;
-- priority (`NORMAL | URGENT`);
-- attachments;
-- publishAt;
-- requiresAck.
-
-Class feeds may project the broadcast using the same canonical broadcast ID; do not create independent duplicate truth per class.
-
-Teachers do not receive school-wide broadcast authority merely by being Teachers.
+Acceptance: all-role access, wrong-audience denial, private/public isolation, server-time/idempotent publication, revoked-content behavior and safe notification retry/access recheck.
 
 ---
 
@@ -1011,7 +1019,7 @@ Parent action
 -> API validation/authorization
 -> durable PostgreSQL mutation
 -> durable outbox/event
--> worker/realtime fanout
+-> authorized delivery/realtime fanout
 -> class teacher board
 -> manager control board
 -> notification/sound
@@ -1020,7 +1028,7 @@ Parent action
 
 The browser must not become the source of teacher/manager state.
 
-If required live coordination is unavailable, do not display false arrival success. Fail closed and direct the parent to contact school staff.
+Keep the backend-unavailable lock until isolated/staging acceptance and explicit activation. Reject unsafe actions when required coordination prerequisites fail, with school-contact guidance. If a durable transition already committed but delivery is delayed, show confirmed state and delivery uncertainty; never claim rollback or invite duplicate release. Retry/readback uses operation identity/current authoritative state; reconnect refreshes boards/counts, never release authority from stale cache.
 
 ---
 
@@ -1077,7 +1085,7 @@ Do not expose publicly:
 - health/medical records;
 - family relationships.
 
-Any teacher-visible health/allergy/safety indicator requires a later explicit field/access decision and must be narrower than a general medical record.
+Emergency contacts/minimal safety information are accepted in section 57. Every teacher-visible field still requires DG-13 field/action/audience policy; no blanket medical access.
 
 ---
 
@@ -1117,17 +1125,15 @@ The app must remain functional without AI.
 
 ---
 
-# 43. Infrastructure direction
+# 43. Platform and integration requirements
 
-Supabase is the selected platform direction for managed PostgreSQL, versioned database migrations, server-side Edge Functions, and private object storage. This is a target direction, not evidence that any Supabase project is provisioned, linked, deployed, or serving this repository. Do not carry over historical provider service names, deployment branches, environment variables, endpoints, or deployment claims from `funmarket/Kristou`.
+Continue the existing Vite/React/TypeScript product in `funmarket/KRISTOUSCHOOL` and existing Supabase backend. Auth verifies Web credentials; PostgreSQL is durable truth; narrow RPCs/Edge Functions enforce operations; governed Storage supplies private bytes when implemented. Vercel is the current frontend host, not deployment authorization. Old `funmarket/Kristou` infrastructure is historical.
 
-Frontend hosting is not decided by selecting Supabase for the backend. Keep one canonical KRISTOU frontend and make a separate hosting decision only when deployment is in scope.
+Isolate local/staging/production configuration/data/secrets. Source-controlled schema/grants/RLS/views/RPCs/functions/storage/realtime must match feature contracts. Installed objects/RLS flags are not integration proof. Mutable inventories belong in dated evidence/master state, not permanent product claims.
 
-Local, staging, and production must use isolated configuration, secrets, and data. Schema and security changes must be tracked as migrations and tested locally before a hosted project is changed.
+Each schema/RPC change requires clean isolated replay and ordinary allowed/denied callers, one authoritative generated TypeScript database-type owner from the **exact tested schema**, fingerprint/reproducible generation command, and all adapters/validators/UI consumers updated. Detect missing columns, renamed parameters, stale types and missing grants/exposure; compilation cannot replace actual API success/error/denial and durable readback.
 
-The existing username-plus-password requirement must be reconciled with the selected authentication provider before protected account implementation. Do not silently change login identifiers or weaken the identity model.
-
-Provider/runtime state is mutable; fresh evidence in this repository overrides stale documentation or progress from another repository.
+Compatible backend dependencies precede frontend release; verify installed contracts/deployed version/recovery path. No blind replay of installed SQL/history repair, replacement database, second Owner bootstrap or protected Telegram redeployment. This is acceptance policy, not mutation authorization.
 
 ---
 
@@ -1136,9 +1142,9 @@ Provider/runtime state is mutable; fresh evidence in this repository overrides s
 At minimum:
 
 - strong password hashing;
-- opaque/secure Web sessions;
-- secure production cookies;
-- CSRF/origin protection for cookie-authenticated writes;
+- provider-managed secure sessions/expiry/refresh/revocation without parallel password/session stores;
+- secure cookies/CSRF **where cookie-authenticated writes are used**, without imposing new architecture over accepted provider sessions;
+- origin protection appropriate to actual Browser/Telegram transport;
 - strict CORS/origin allowlists;
 - Telegram `initData` validation;
 - one-time expiring account-link codes;
@@ -1158,7 +1164,7 @@ At minimum:
 
 # 45. Navigation / information architecture
 
-Exact URL paths are **TBD until the routing foundation is designed**.
+Preserve existing canonical tab/subtab and role-home navigation; inspect destinations before changing them. No new router/invented permanent paths are required by this document.
 
 Known product surfaces are the authority; do not invent permanent routes merely to satisfy this document.
 
@@ -1235,7 +1241,7 @@ Mandatory coverage includes:
 - unauthorized pickup-person denial;
 - unauthorized staff release;
 - double release;
-- Redis/live-coordination outage behavior;
+- actual configured coordination outage/delayed-delivery behavior;
 - reconnect/current-state recovery;
 - audit creation.
 
@@ -1249,7 +1255,7 @@ Critical screens must be verified in:
 - mobile Pitch Black;
 - desktop Light;
 - desktop Pitch Black;
-- Arabic RTL;
+- Arabic text direction within stable LTR shell/navigation (no global mirroring);
 - French LTR;
 - English LTR;
 - Web;
@@ -1264,8 +1270,7 @@ Touch targets, focus, contrast, sheet/dialog behavior, and safe-area handling mu
 Do not infer or build these without a new approved design:
 
 - student private DMs;
-- grades/report cards;
-- general attendance system;
+- broad medical/clinical case management;
 - school transport/bus;
 - payments;
 - lunch ordering/payment;
@@ -1291,4 +1296,192 @@ A feature is not complete merely because:
 
 Completion requires the applicable source, authorization, persistence, UI, integration, tests, and runtime evidence for the exact assigned scope.
 
-Current implementation evidence belongs only in `progress.md`.
+Evidence belongs in dated records such as `progress.md`; the master links inventory/manual acceptance/gates. Preserve the Owner-reported successful live login/non-impersonating walkthrough as manual evidence; neither erase it because an agent did not repeat it nor promote it to RLS/concurrency/all-feature proof.
+
+Document checks prove text/coverage only; unit/source checks prove exercised behavior. Actual database/API/private-object/UI/recovery/performance evidence is required at the exact revision. Maturity: planned → UI/contract → backend installed → real integration → staging → explicitly approved live acceptance. No checkbox skips a stage.
+
+
+---
+
+# 50. School records, import and Student Profile
+
+People owns student identity, independent of login credentials. Enrollment owns eligibility/application decisions; Academics owns year/level/class/subject/teaching assignment/membership. Family owns verified guardian links. A student record/import does not create credentials, approve roles, merge people or establish pickup authority.
+
+Support individual forms AND CSV/XLSX preview/confirmed import using the same domain writers. Review templates, identifiers, duplicate/conflict policy, size/row limits and atomic-vs-partial behavior before commit implementation. Never infer identity from matching names/contacts, execute spreadsheet formulas/macros, or report partial success ambiguously.
+
+Student Profile additions preserve existing information and layout where present. Inspect the existing roster, child summaries and profile consumers before adding missing sections: identity/enrollment, permitted guardians/emergency contacts, attendance history, assessments/report cards, teacher remarks and minimal permitted safety information. A roster summary alone does not satisfy the full persistent profile contract. Do not put these domains into one denormalized `students` record. Scope every field and audience; history must survive transfer and year rollover.
+
+Approved Office personnel have the ordinary records bundle; Owner/authorized Manager act within policy. Parent reads linked child, Student self, Teacher assigned context, Staff permitted job fields. Classes & Students supports search/filter/pagination, roster, Add/Edit/Assign/Import and actual Profile/history links. Individual forms/imports use the same writers.
+
+Acceptance: row/field errors and exact committed/rejected counts under DG-02; retain inputs on recoverable failure; audited retry-safe commit; durable reload/readback; cross-family/class DB/API/storage denial; profile/roster/history agreement after corrections/transfers. Dependencies: Identity/Access, People, Academics, Enrollment, Family, Media as needed; F2-A1…A10, PRO-01/02.
+
+# 51. Teacher-specific Attendance
+
+Accepted: Different teachers record their own independent attendance in their assigned teaching context. Teacher A's entry must not overwrite Teacher B's. Include class, subject, teacher and date/session identity; class/day alone is insufficient. Preserve the Owner's clarification that teachers' registers are separate. Whether the SAME teacher takes a second register for repeated lessons on one day remains DG-08; do not silently decide it from a proposed schema.
+
+Statuses: Present, Absent, Late, Excused; untouched roster entries display Not recorded. No silent present/absent default. Teaching-session states (scheduled/cancelled/completed, with final vocabulary frozen in CAL-01) are separate from pupil attendance states.
+
+One authoritative attendance entry per pupil and approved register/session identity. Attendance history and totals read these same records. Updates amend an entry with actor/reason/version history; they do not append duplicate attendance counted twice. Preserve responsible teacher and actual recording/correcting actor separately, particularly for substitutes.
+
+Parent justification is a separate submitted explanation/document for a linked child's absence. Authorized staff accepts/rejects/requests clarification under an approved policy; a parent's submission does not change attendance to Excused by itself. Attachments remain private; reasons must not leak to class/public feeds.
+
+Statistics require defined eligibility, register unit, date range, Late/Excused treatment and denominator. Show honest counts before a percentage if policy is unresolved. Cancelled sessions and unrecorded registers are not pupil absences. Never derive a school-day absence simply from one teacher's lesson absence. Attendance does not change Pickup RELEASED or collector authority.
+
+Assigned Teachers write own context; substitutes follow section 53; academic corrections need explicit policy; Parents/Students cannot write marks. DG-08 freezes same-teacher repeated lessons, visibility/corrections/statistics.
+
+Acceptance: two Teachers save different marks for the same pupil/date and both survive readback; cross-teacher/unrelated-class writes denied; retry/concurrent corrections safe without duplicate totals/lost changes; actual actor/responsible teacher/history retained; cancelled/unrecorded sessions and undecided denominators cannot create false absence rates. Save/edit exposes pending/confirmed/validation/error/version conflict. ATT-01…05 depend on records/assignments and CAL session policy.
+
+# 52. Absence justification
+
+Parent submits a private explanation/allowed attachment for a verified linked child. Authorized staff accepts/rejects/requests clarification under policy. Explanation/decision is distinct from the mark; no automatic Excused on submission. Authorized correction references decision/prior history.
+
+An ABSENCE Parent Note may link this workflow, not create duplicate justification or bypass note rules. Do not assume dedicated justification inherits Notes quota/window. DG-08/DG-07 freeze correction/visibility/retention.
+
+Acceptance: guessed-child/file/direct mark edits denied; permitted staff decisions/corrections traceable; retry safe; notifications/exports private. ATT-04 depends on Attendance, Family and private Media.
+
+# 53. Substitute-teacher assignments
+
+Real substitute, covered class/subject/session, original responsible Teacher, start/end and permitted actions are explicit. No shared passwords/new role/unbounded access. DG-09 freezes co-teaching/reassignment/history corrections.
+
+Before the assignment starts, after expiry or after revocation, covered reads and writes are denied server-side, including from an already-open screen. While effective, only the approved covered actions and resources are allowed. Attendance and grades retain the responsible teaching context and actual recording actor; replacement cannot move or erase history. Historical access requires its separately approved policy.
+
+Acceptance: time-boundaries, early/expired/revoked/cross-class denial, permitted cover/actor attribution under concurrent reassignment. CAL-04 supplies downstream ATT/GRD prerequisites.
+
+# 54. Grades, report cards and Teacher remarks
+
+Accepted feature scope: teacher assignment/exam assessment entries, grades/subject summaries, term/semester/report-card publication and teacher remarks. Exact scale, weights, rounding, missing/exempt treatment, terms and publication/edit windows require school policy DG-11. Never invent a national or school grading scheme.
+
+Assigned teachers enter permitted assessments/remarks for their teaching scope. Authorized academic administration reviews/corrects with reason/audit under approved rules. Parents/students see only their permitted child's/own published results; draft marks and restricted behavioral/safeguarding notes require separate audiences. Cross-teacher editing, administrative override and historical access must be defined. Teacher remarks are distinct from parent-originated Parent Notes, attendance notes and confidential staff case notes. Do not create unrestricted clinical or disciplinary dossiers.
+
+Missing is not implicitly zero. Published/finalized results cannot change silently through drafts; preserve versions/approved correction/republication. Totals derive from canonical marks/policy, not editable Profile totals.
+
+Acceptance: cross-teacher/child denial, hidden drafts, approved missing/exempt/rounding examples, conflict-safe edits, review/publication/correction audit and identical Profile/report output. GRD-01…04 depend on canonical assignments/records and DG-11/DG-12. This scope is accepted, no longer excluded.
+
+# 55. Academic-year rollover and history
+
+Rollover supports academic years, enrollment renewal, promotion/retention/transfer/withdrawal and new class/teacher memberships. Preview and confirm changes with audit/idempotency. Never overwrite previous-year records, copy grades into a new year as new marks, or auto-approve accounts/guardians/collectors. Decide access to historical records explicitly; immediate current-class access removal does not justify deleting history.
+
+DG-15 freezes eligibility/effective dates/history policy. Preview errors/changes before explicit confirmation and audited commit.
+
+Acceptance: preview changes no memberships; permitted promotion/retention/transfer changes scope; duplicate confirmation safe; partial/conflicting outcomes follow policy; prior Attendance/reports stay accurate. YEAR-01/02 depend on academic/enrollment and history/Profile/report consumers.
+
+# 56. Account recovery and verified contact changes
+
+Forgotten handle/password and lost contact access are supported for username/email and phone-backed username users via actual credential paths. DG-10 freezes proof/channels/expiry/replay/rate limits, sessions/operator procedure/re-verification.
+
+Contact edit is not ownership verification. No new Auth/recovery alias without verified ownership/provider association/safe collision handling. No merging/private-contact handle lookup/password reading/unrestricted admin reset bypass. School-assisted recovery retains canonical identity/roles/links with operator authorization/audit.
+
+Acceptance: wrong/expired/replayed proof/collision/unauthorized operator/enumeration denied; lost-contact process followed; successful recovery preserves identity/relationships and approved session policy. REC-01/02, ACC-01. No public phone login.
+
+# 57. Emergency contacts and minimal safety information
+
+School-verified contacts/minimal operational fields are accepted, not a medical/family dossier. DG-13 freezes fields/verifiers/editors/readers/review/expiry/escalation/custody restrictions; DG-07 retention/export/deletion. No invented legal/consent policy.
+
+Contact is not automatically guardian/account/AuthorizedPickupPerson. Specifically permitted staff see only necessary safety/action indicators. Office/Teacher/Manager/Pickup access grants no full medical/enrollment documents. No restricted details in public/class feeds/routine notifications.
+
+Acceptance: field-level audiences, guessed-child/file denial, correction/review audit and expired/revoked contacts. PRO-01/02 depend on People/Family/private Media; Pickup consumes only approved fields.
+
+# 58. Reports, exports, recovery and production readiness
+
+Scoped Attendance/academic/enrollment/roster/communication-delivery reports follow verified role/resource needs; Parent/Student get only permitted child/self outputs. Reports are canonical read projections, not duplicate editable ledgers.
+
+DG-07/DG-16 freeze audience/fields/formats/retention/bounded jobs/download expiry/audit. Prevent spreadsheet formula injection; UI/Profile/export totals agree for the same definition/range; no cross-family/draft/safety leaks.
+
+DG-16 sets measured service/load/recovery/backup objectives, owners/alerts/incidents. Verify database **and required object/configuration/identity dependencies**; a database backup alone does not prove Storage-byte recovery. Rehearse isolated restore/application readback, never production overwrite as drill. Record rollback/forward-fix/deployed revisions/delivery retries/escalation.
+
+Scalability requires pagination/bounded imports/exports/indexes and measured policy/query/load behavior, not invented SLA/speculative fleet. CI/staging verifies security/contracts/migrations and accessible mobile/trilingual/theme Browser/Telegram flows at exact candidate. Explicit approval follows scope-specific evidence before protected activation.
+
+Acceptance: scoped export denial/formula-safe outputs/authoritative totals/failed-job retry/isolated restore/performance/alerts meet approved examples/targets. REP-01, OPS-01…03, F5-V1…V3. A build/table count/hosted status/document check alone is not production readiness.
+
+# 59. Complete wiring of every existing page and action
+
+Preserve eight homes (public plus seven roles), existing style, Owner Teachers → Classes → Registration, profile-menu pattern and non-impersonating oversight. Inspect current controls/destinations; reuse views.
+
+| Surface | Required end behavior |
+| --- | --- |
+| Pending Account Approvals; User Directory & Account Status | Authorized list/detail/review/status/conflict/error and durable readback |
+| Manager Delegation; Role & Permission Governance | Owner privilege/bounded grants; no Office self/privileged changes/last-Owner lockout |
+| Directory & Public Site Oversight | Approved Teachers/Administration/public edits/publication; exclude private People |
+| School Settings | Domain-owned school/year/calendar/admission/dismissal/preferences config |
+| Control Center | Authorized current aggregates/source links/stale/loading/error |
+| Classes & Students | Add/Edit/Assign/Import/search/filter/pagination/roster → permitted Profile/history |
+| Registration | Durable intake/review/private documents; no local-only submitted flag |
+| Global Announcements / Broadcasts | All-school/targeted scope/scheduling/publication/revocation/calendar |
+| Pickup / Pickup Desk / Teacher board / Manager summary | Safety lock until accepted; distinct arrival/release/collectors/live/reconnect/audit |
+| Food Menu / Cafeteria | Canonical week/day/images/draft/publish/archive; no ordering/payments |
+| Public content / Home / Footer | Approved news/about/contact/activities/clubs/levels/gallery/calendar and actual inquiry/admission |
+| My Children / My Classes / My Class | Verified relationships/selection, global notices without a class |
+| Class Announcements / Homework & Classwork / Calendar / Documents / Gallery | Durable scoped content/Media/canonical Class |
+| Messages / Parent Notes / Questions | Distinct correct destination/policy; Messages routing to Notes is incomplete |
+| Attendance / Absence; Grades / Reports / Remarks | Real workflows/history, not placeholder panels |
+| My Profile / account / school-person details | Actual own-profile/permitted edits/recovery; Home redirect is not profile |
+| Bell / notices / sound / language / theme | User-scoped read/delivery/preferences/authorized deep links/truthful platform support |
+| Office Desk / My Work Queue / My Tasks / Requests / facilities/service desks | DG-19 approves workflow or explicit placeholder deferral; labels do not authorize ERP/transport/medical expansion |
+| Logout / Telegram connect / role inspection | Preserve identity/link/actor; no simulated login/impersonation |
+| New Reports / Recovery / Settings entry points | Real permitted destinations/results, not generic Home |
+
+Each operation traces destination → typed contract → server identity/access → canonical DB/API/storage/realtime effect → honest feedback → durable readback → deny/error/retry/concurrency → staging/live evidence. Include loading/empty/denied/validation/conflict/offline-timeout/recovery states. No production mock substitution or false saved/sent/released states.
+
+Master 80-card register is entry coverage, not proof of every nested control; UI-01/UI-02 trace all menus/forms/links/consumers. Open/Pending backend/Coming soon are presentation, not integration evidence; no bulk relabel to hide gaps. ACC-01/CFG-01/CTR-01/STF-01 keep bounded owners.
+
+# 60. Decision gates and cross-feature acceptance
+
+Accepted feature inclusion does not freeze unknown school policies. Each gate identifies the blocked behavior and owner decision needed; unrelated work continues when authorized.
+
+| Gate | Current state and decision needed | Blocks |
+| --- | --- | --- |
+| DG-01 | SUSPENDED already exists in source/live enum. Confirm remaining suspension/revocation/reactivation messages and lifecycle acceptance against implemented policy; do not add it again | Remaining status UX/behavior changes |
+| DG-02 | Import templates/official IDs, matching/conflict rules, maximum sizes, atomic/partial behavior | Import commit design and real uploads |
+| DG-03 | School admission documents, eligibility/age/year windows | Admission validation/public claims |
+| DG-04 | Multi-active-role policy, precedence/promotion and privileged-target handling | Changes depending on exactly one effective role |
+| DG-05 | Isolated integration environment with ordinary RLS sessions and genuine concurrency; costs/config if hosted | Real DB acceptance and new security-sensitive migrations |
+| DG-06 | Pending/rejected/revoked/suspended experience and stale-session resource denial, within protected Telegram scope | Dependent status changes/private feature activation |
+| DG-07 | Retention/archive/export/deletion policy for minors, attachments, audit and backups | Broad export/delete and retention automation |
+| DG-08 | Attendance register unit, repeated SAME-teacher lessons/day, correction/finalization window, Late/Excused denominator and parent/student visibility | ATT-02 onward and percentages |
+| DG-09 | Substitute/co-teacher delegation, effective times, reassignment and historical edit access | Substitute activation and dependent attendance/grade writes |
+| DG-10 | Recovery proof/channels, lost phone/email, contact re-verification, session handling and school-assisted operator process | Recovery/contact-change implementation |
+| DG-11 | Terms/assessment scales/weights/rounding/missing/exempt rules/report approval and publication | Grades/calculations/report cards |
+| DG-12 | Teacher remarks vs restricted behavioral notes, allowed field types/audiences/correction/retention | Remarks/sensitive note exposure |
+| DG-13 | Emergency contacts/safety field schema, school verification, audiences and escalation | Safety projections/uploads |
+| DG-14 | School calendar editors, week start, event types, cancellation/reschedule/reopen and acknowledgement/reminder policy | Calendar publishing and automated effects |
+| DG-15 | Promotion/retention/transfer/withdrawal rules and historical access | Rollover execution |
+| DG-16 | Backup/restore objectives, scope, export controls, monitoring owners and incident response | Operations acceptance/production launch |
+| DG-17 | Allowed operational-message participants and abuse/moderation rules | Messaging writes |
+| DG-18 | Optional AI provider, allowed tools/data, costs/quotas and activation | AI implementation |
+| DG-19 | Existing Office Desk/staff service-card task/request types, assignment, status and data scopes; decide bounded workflow vs explicit deferral for each placeholder | STF-01 service writes |
+
+Close each gate by recording the actual decision in the relevant authority and task, with date/evidence. Never label a decision unresolved after it has been explicitly settled; never treat a code default as approval.
+
+Acceptance includes old-session denial, Office self/privileged denial, expired substitutes, independent registers, cross-family file/grade/justification denial, hidden drafts, cancellation without pupil absence/release, delayed notification after commit, import without credential/role/link effects, recovery replay/collision and scoped exports/isolated restore. Exercise ordinary DB/API/storage principals, not only service-role/RLS-bypassing runners. Freeze assertions/commands after owning policy decisions.
+
+# 61. Requirements-to-master traceability
+
+References are not another queue or execution permission. Proposed Attendance, Assessment and school-calendar ownership must be ratified during the scheduled architecture and canonical-model reconciliation before schema design. This product update does not approve physical tables or RPC signatures.
+
+| Requirements / area | Master tasks |
+| --- | --- |
+| 1–8, 43–47: one school/product/identity/languages/shell | DOC-D1…D6; all slices; F5-V1 |
+| 3–4: governance/approval/delegation/Telegram | GOV-C1; F0-R1/R2/R3; F1-G1…G6 |
+| 9, 23–26: public/directories/menu/global notices | PUB-01/02/03; COM-02; MED-01 |
+| 10–18, 50: records/import/profile/relationships | F2-A1…A10; PRO-01/02; COM-03 |
+| 17, 26: school calendar/holidays/cancellations/class | CAL-01/02/03; COM-02/03 |
+| 51: independent Teacher Attendance/history | ATT-01/02/03/05; CAL-01/02 |
+| 52: absence justification/staff decision | ATT-04; Family/Media |
+| 53: temporary substitutes | CAL-04; dependent ATT/GRD |
+| 54: grades/report cards/remarks | GRD-01/02/03/04 |
+| 55: rollover/history | YEAR-01/02; history consumers |
+| 56: recovery/verified contacts | REC-01/02; ACC-01 |
+| 57: emergency contacts/minimal safety | PRO-01/02; DG-13 |
+| 58: reports/exports/restore/performance | REP-01; OPS-01/02/03; F5-V1/V2/V3 |
+| 19–22: Messages/Notes/notices/preferences | COM-01/04; F3-C2; PUB-04 |
+| 11, 15–18: Questions/class content/Media | F3-C3; COM-03; MED-01 |
+| 27: admission/enrollment | F3-C1; F2-A4 |
+| 28–39: Pickup | F4-P0/P1/P2/P3; CTR-01 |
+| 40–41, 43–44: media/access/contracts/audit/outbox | MED-01; COM-01; each slice |
+| 42: optional AI | AI-01; DG-18 |
+| 45, 59: actions/profile/settings/Control Center/staff queues | UI-01/02; ACC-01; CFG-01; CTR-01; STF-01 |
+| 46–49, 60: evidence/decisions/acceptance | Each slice; OPS-01…03; F5-V1…V3 |
+
+All eight additions are covered. Student private DMs/multi-school tenancy/tuition-payments/transport-bus operations/lunch ordering-payment/automatic QR-face-geofence pickup/broad medical cases/autonomous AI remain excluded.
+
+Next proposed document: `structure.md` (DOC-D2), **only upon explicit instruction**. No automatic other-document update, PR #15 merge or backend resumption.
