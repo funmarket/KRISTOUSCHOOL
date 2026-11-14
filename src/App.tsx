@@ -3,9 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { AppTab, CommunitySubTab, DirectorySubTab, HomePageKey } from './types';
+import {
+  AppTab,
+  ClassStudentRosterItem,
+  CommunitySubTab,
+  DirectorySubTab,
+  HomePageKey,
+} from './types';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
@@ -13,6 +19,8 @@ import { HomePageResolver } from './components/homepages/HomePageResolver';
 import { PublicHomePage } from './components/homepages/PublicHomePage';
 import { canAccessAppTab } from './components/homepages/homepageAccess';
 import { ClassCommunityView } from './components/views/ClassCommunityView';
+import { GlobalAnnouncementsCalendarView } from './components/views/GlobalAnnouncementsCalendarView';
+import { MessagesView } from './components/views/MessagesView';
 import { ParentNotesView } from './components/views/ParentNotesView';
 import { PickupBoardView } from './components/views/PickupBoardView';
 import { FoodMenuView } from './components/views/FoodMenuView';
@@ -21,7 +29,7 @@ import { ClassesManagementView } from './components/views/ClassesManagementView'
 import { RegistrationView } from './components/views/RegistrationView';
 
 function MainLayout() {
-  const { currentUser } = useApp();
+  const { currentUser, classRosters, classesBackendStatus, refreshSchoolData } = useApp();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [communitySubTab, setCommunitySubTab] = useState<CommunitySubTab>('announcements');
   const [directorySubTab, setDirectorySubTab] = useState<DirectorySubTab>('teachers');
@@ -58,6 +66,21 @@ function MainLayout() {
     }
   };
 
+  const rostersRecord = useMemo(() => {
+    const map: Record<string, ClassStudentRosterItem[]> = {};
+    for (const cls of classRosters) {
+      map[cls.id] = cls.roster;
+    }
+    return map;
+  }, [classRosters]);
+
+  const mappedClassesStatus =
+    classesBackendStatus === 'READY'
+      ? 'READY'
+      : classesBackendStatus === 'ERROR'
+      ? 'ERROR'
+      : 'BACKEND_NOT_IMPLEMENTED';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] text-gray-900 dark:text-gray-100 flex flex-col transition-colors selection:bg-blue-600 selection:text-white">
       <Navbar activeTab={activeTab} setActiveTab={handleSetTab} />
@@ -81,6 +104,17 @@ function MainLayout() {
           />
         )}
 
+        {activeTab === 'announcements' &&
+          (canAccessAppTab(currentUser, 'announcements') ? (
+            <GlobalAnnouncementsCalendarView />
+          ) : (
+            <HomePageResolver
+              setActiveTab={handleSetTab}
+              onOpenAuth={() => setShowAuthModal(true)}
+              onNavigateToSubTab={handleNavigateToSubTab}
+            />
+          ))}
+
         {activeTab === 'community' &&
           (canAccessAppTab(currentUser, 'community') ? (
             <ClassCommunityView initialSubTab={communitySubTab} />
@@ -103,6 +137,17 @@ function MainLayout() {
             />
           ))}
 
+        {activeTab === 'messages' &&
+          (canAccessAppTab(currentUser, 'messages') ? (
+            <MessagesView />
+          ) : (
+            <HomePageResolver
+              setActiveTab={handleSetTab}
+              onOpenAuth={() => setShowAuthModal(true)}
+              onNavigateToSubTab={handleNavigateToSubTab}
+            />
+          ))}
+
         {activeTab === 'pickup' &&
           (canAccessAppTab(currentUser, 'pickup') ? (
             <PickupBoardView />
@@ -116,7 +161,12 @@ function MainLayout() {
 
         {activeTab === 'classes' &&
           (canAccessAppTab(currentUser, 'classes') ? (
-            <ClassesManagementView />
+            <ClassesManagementView
+              initialClasses={classRosters}
+              initialRosters={rostersRecord}
+              backendStatus={mappedClassesStatus}
+              onRefresh={refreshSchoolData}
+            />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}

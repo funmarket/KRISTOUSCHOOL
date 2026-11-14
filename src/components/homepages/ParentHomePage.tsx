@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
@@ -25,15 +25,18 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
   setActiveTab,
   onNavigateToSubTab,
 }) => {
-  const { language, currentUser, childrenList } = useApp();
+  const { language, currentUser, childrenList, selectedChildId, setSelectedChildId } = useApp();
 
   // Strictly scope linked children to the authenticated parent's server-verified linkedChildrenIds.
   // Never fall back to MOCK_CHILDREN or unlinked child records.
   const linkedChildren = resolveParentLinkedChildren(currentUser, childrenList);
 
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(
-    linkedChildren[0]?.id ?? null,
-  );
+  useEffect(() => {
+    if (linkedChildren.length > 0 && !linkedChildren.some((c) => c.id === selectedChildId)) {
+      setSelectedChildId(linkedChildren[0].id);
+    }
+  }, [linkedChildren, selectedChildId, setSelectedChildId]);
+
   const [showChildrenSummary, setShowChildrenSummary] = useState(false);
 
   const activeChild =
@@ -131,16 +134,18 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
               <h2 className="kh-info-panel-title mt-1.5">
                 {activeChild.fullName} — {activeChild.className}
               </h2>
-              <p className="kh-info-panel-body mt-1">
-                {pickText(
-                  {
-                    ar: `المخولون بالاستلام: ${activeChild.pickupAuthorizedNames.join('، ')}`,
-                    fr: `Personnes autorisées à la sortie : ${activeChild.pickupAuthorizedNames.join(', ')}`,
-                    en: `Authorized pickup persons: ${activeChild.pickupAuthorizedNames.join(', ')}`,
-                  },
-                  language,
-                )}
-              </p>
+              {activeChild.pickupAuthorizedNames.length > 0 && (
+                <p className="kh-info-panel-body mt-1">
+                  {pickText(
+                    {
+                      ar: `المخولون بالاستلام: ${activeChild.pickupAuthorizedNames.join('، ')}`,
+                      fr: `Personnes autorisées à la sortie : ${activeChild.pickupAuthorizedNames.join(', ')}`,
+                      en: `Authorized pickup persons: ${activeChild.pickupAuthorizedNames.join(', ')}`,
+                    },
+                    language,
+                  )}
+                </p>
+              )}
             </div>
             <button
               type="button"
@@ -200,7 +205,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
           actionLabel={openActionLabel}
           icon="💬"
           tone="purple"
-          onClick={() => setActiveTab('notes')}
+          onClick={() => setActiveTab('messages')}
         />
 
         <HomeShortcutCard

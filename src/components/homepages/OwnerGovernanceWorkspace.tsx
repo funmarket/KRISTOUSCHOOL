@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AccountApprovalStatus, AccountRole } from '../../types';
 import {
+  ALLOWED_MANAGER_CAPABILITIES,
   appointPrivilegedRole,
   CANONICAL_ROLES,
   fetchGovernanceActorScope,
@@ -13,11 +14,15 @@ import {
   GovernanceErrorCode,
   GovernanceLifecycleDecision,
   listAccountDirectory,
+  listManagerGrants,
   listPendingAccounts,
+  ManagerGrantRecord,
+  ManagerSummary,
   ORDINARY_ROLES,
   PRIVILEGED_ROLES,
   PrivilegedRole,
   reviewAccountLifecycle,
+  setManagerCapability,
 } from '../../lib/accountGovernance';
 import { LocalizedText, pickText } from '../../i18n/homepages';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
@@ -26,6 +31,7 @@ export type OwnerGovernanceSection =
   | 'control-center'
   | 'pending-approvals'
   | 'user-directory'
+  | 'manager-delegation'
   | 'role-governance';
 
 export interface OwnerGovernanceWorkspaceProps {
@@ -33,6 +39,7 @@ export interface OwnerGovernanceWorkspaceProps {
   onSelectSection: (section: OwnerGovernanceSection) => void;
   onClose: () => void;
   onScopeVerified?: (available: boolean, scope: GovernanceActorScope | null) => void;
+  ordinaryReviewOnly?: boolean;
 }
 
 const ROLE_LABELS: Record<AccountRole, LocalizedText> = {
@@ -155,6 +162,11 @@ const ERROR_MESSAGES: Record<GovernanceErrorCode, LocalizedText> = {
     fr: 'Le rôle sélectionné est invalide.',
     en: 'The selected role is invalid.',
   },
+  invalid_capability: {
+    ar: 'الصلاحية المحددة غير مدرجة ضمن قائمة التفويض المعتمدة.',
+    fr: 'La capacité demandée n’est pas autorisée dans la liste de délégation.',
+    en: 'Requested capability is not in the approved Manager delegation allowlist.',
+  },
   explicit_confirmation_required: {
     ar: 'يرجى تأكيد عملية التعيين أو السحب للدور القيادي.',
     fr: 'Veuillez cocher la confirmation explicite pour cette opération privilégiée.',
@@ -182,8 +194,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
   onSelectSection,
   onClose,
   onScopeVerified,
+  ordinaryReviewOnly = false,
 }) => {
-  const { language, theme } = useApp();
+  const { language, theme, operationalCounts } = useApp();
 
   const [loadingScope, setLoadingScope] = useState<boolean>(true);
   const [scope, setScope] = useState<GovernanceActorScope | null>(null);
@@ -205,6 +218,13 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
   const [directoryRoleFilter, setDirectoryRoleFilter] = useState<AccountRole | 'ALL'>('ALL');
   const [directoryPage, setDirectoryPage] = useState<number>(1);
   const [loadingDirectory, setLoadingDirectory] = useState<boolean>(false);
+
+  // Manager Delegation state (GOV-02)
+  const [managersList, setManagersList] = useState<ManagerSummary[]>([]);
+  const [managerGrants, setManagerGrants] = useState<ManagerGrantRecord[]>([]);
+  const [loadingDelegation, setLoadingDelegation] = useState<boolean>(false);
+  const [delegationReason, setDelegationReason] = useState<string>('');
+  const [submittingCapKey, setSubmittingCapKey] = useState<string | null>(null);
 
   // Per-row review inputs
   const [selectedRolesByTarget, setSelectedRolesByTarget] = useState<Record<string, AccountRole>>({});
@@ -263,9 +283,15 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
       setPendingTotal(result.data.totalCount);
     } else if (result.errorCode === 'backend_unavailable') {
       setScopeError('backend_unavailable');
+    } else {
+      const code: GovernanceErrorCode = result.errorCode ?? 'governance_operation_failed';
+      setFeedback({
+        type: 'error',
+        message: pickText(ERROR_MESSAGES[code] || ERROR_MESSAGES.governance_operation_failed, language),
+      });
     }
     setLoadingPending(false);
-  }, [pendingSearch, pendingRoleFilter, pendingPage]);
+  }, [pendingSearch, pendingRoleFilter, pendingPage, language]);
 
   const loadDirectory = useCallback(async () => {
     setLoadingDirectory(true);
@@ -283,9 +309,34 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
       setDirectoryTotal(result.data.totalCount);
     } else if (result.errorCode === 'backend_unavailable') {
       setScopeError('backend_unavailable');
+    } else {
+      const code: GovernanceErrorCode = result.errorCode ?? 'governance_operation_failed';
+      setFeedback({
+        type: 'error',
+        message: pickText(ERROR_MESSAGES[code] || ERROR_MESSAGES.governance_operation_failed, language),
+      });
     }
     setLoadingDirectory(false);
-  }, [directorySearch, directoryStatusFilter, directoryRoleFilter, directoryPage]);
+  }, [directorySearch, directoryStatusFilter, directoryRoleFilter, directoryPage, language]);
+
+  const loadManagerDelegation = useCallback(async () => {
+    if (ordinaryReviewOnly) return;
+    setLoadingDelegation(true);
+    const result = await listManagerGrants();
+    if (result.ok && result.data) {
+      setManagersList(result.data.managers);
+      setManagerGrants(result.data.grants);
+    } else if (result.errorCode === 'backend_unavailable') {
+      setScopeError('backend_unavailable');
+    } else {
+      const code: GovernanceErrorCode = result.errorCode ?? 'governance_operation_failed';
+      setFeedback({
+        type: 'error',
+        message: pickText(ERROR_MESSAGES[code] || ERROR_MESSAGES.governance_operation_failed, language),
+      });
+    }
+    setLoadingDelegation(false);
+  }, [ordinaryReviewOnly, language]);
 
   useEffect(() => {
     void loadScope();
@@ -299,7 +350,18 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
     if (activeSection === 'user-directory' || activeSection === 'role-governance') {
       void loadDirectory();
     }
-  }, [activeSection, scope, scopeError, loadPending, loadDirectory]);
+    if (activeSection === 'manager-delegation' && !ordinaryReviewOnly) {
+      void loadManagerDelegation();
+    }
+  }, [
+    activeSection,
+    scope,
+    scopeError,
+    ordinaryReviewOnly,
+    loadPending,
+    loadDirectory,
+    loadManagerDelegation,
+  ]);
 
   const handleReviewDecision = async (
     account: GovernanceAccountRecord,
@@ -409,7 +471,55 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
     await Promise.all([loadScope(), loadDirectory()]);
   };
 
-  const sectionTabs: Array<{
+  const handleToggleManagerCapability = async (
+    managerUserId: string,
+    capability: string,
+    nextActive: boolean,
+  ) => {
+    setFeedback(null);
+    const reason = delegationReason.trim();
+    if (reason.length < 3 || reason.length > 500) {
+      setFeedback({
+        type: 'error',
+        message: pickText(ERROR_MESSAGES.reason_required, language),
+      });
+      return;
+    }
+
+    const capKey = `${managerUserId}:${capability}`;
+    setSubmittingCapKey(capKey);
+    const result = await setManagerCapability({
+      managerUserId,
+      capability,
+      active: nextActive,
+      reason,
+    });
+    setSubmittingCapKey(null);
+
+    if (!result.ok) {
+      const code: GovernanceErrorCode = result.errorCode ?? 'governance_operation_failed';
+      setFeedback({
+        type: 'error',
+        message: pickText(ERROR_MESSAGES[code] || ERROR_MESSAGES.governance_operation_failed, language),
+      });
+      return;
+    }
+
+    setFeedback({
+      type: 'success',
+      message: pickText(
+        {
+          ar: `تم ${nextActive ? 'تفعيل' : 'سحب'} صلاحية ${capability} وتوثيق القرار في سجل التدقيق.`,
+          fr: `Capacité ${capability} ${nextActive ? 'activée' : 'révoquée'} avec trace d’audit.`,
+          en: `${nextActive ? 'Granted' : 'Revoked'} capability ${capability} and recorded immutable audit log.`,
+        },
+        language,
+      ),
+    });
+    await Promise.all([loadManagerDelegation(), loadScope()]);
+  };
+
+  const allSectionTabs: Array<{
     key: OwnerGovernanceSection;
     label: LocalizedText;
   }> = [
@@ -426,10 +536,18 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
       label: { ar: 'دليل الحسابات وحالتها', fr: 'Répertoire & Statuts', en: 'User Directory & Status' },
     },
     {
+      key: 'manager-delegation',
+      label: { ar: 'تفويض المدير المساعد', fr: 'Délégation Manager', en: 'Manager Delegation' },
+    },
+    {
       key: 'role-governance',
       label: { ar: 'تعيين الأدوار القيادية', fr: 'Gouvernance des rôles', en: 'Role & Permission Governance' },
     },
   ];
+
+  const sectionTabs = ordinaryReviewOnly
+    ? allSectionTabs.filter((tab) => tab.key !== 'manager-delegation' && tab.key !== 'role-governance')
+    : allSectionTabs;
 
   // Section 7 Honest Non-Availability when backend RPC contract is not yet deployed or reachable
   if (!loadingScope && scopeError === 'backend_unavailable') {
@@ -532,6 +650,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
               void loadScope();
               void loadPending();
               void loadDirectory();
+              if (!ordinaryReviewOnly) {
+                void loadManagerDelegation();
+              }
             }}
             className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold hover:bg-slate-100 dark:hover:bg-zinc-900"
           >
@@ -631,6 +752,33 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
                     {pickText({ ar: 'مُلّاك نشطون (APP_ADMIN)', fr: 'Propriétaires actifs', en: 'Active School Owners' }, language)}
                   </div>
                   <div className="mt-1 text-2xl font-black">{scope.activeOwnerCount}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                  <div className="text-[11px] font-bold text-slate-500">
+                    {pickText({ ar: 'الأقسام النشطة', fr: 'Classes actives', en: 'Active Classes' }, language)}
+                  </div>
+                  <div className="mt-1 text-lg font-black">{operationalCounts.activeClasses ?? 0}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                  <div className="text-[11px] font-bold text-slate-500">
+                    {pickText({ ar: 'التلاميذ المسجلون', fr: 'Élèves actifs', en: 'Active Students' }, language)}
+                  </div>
+                  <div className="mt-1 text-lg font-black">{operationalCounts.activeStudents ?? 0}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                  <div className="text-[11px] font-bold text-slate-500">
+                    {pickText({ ar: 'طلبات التسجيل المعلقة', fr: 'Admissions en attente', en: 'Pending Admissions' }, language)}
+                  </div>
+                  <div className="mt-1 text-lg font-black">{operationalCounts.pendingAdmissions ?? 0}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                  <div className="text-[11px] font-bold text-slate-500">
+                    {pickText({ ar: 'استفسارات مفتوحة', fr: 'Demandes ouvertes', en: 'Open Inquiries' }, language)}
+                  </div>
+                  <div className="mt-1 text-lg font-black">{operationalCounts.openInquiries ?? 0}</div>
                 </div>
               </div>
 
@@ -1144,10 +1292,137 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
             </div>
           )}
 
-          {/* 4. OWNER-ONLY PRIVILEGED ROLE APPOINTMENT (MANAGER / APP_ADMIN) */}
+          {/* 4. OWNER-ONLY MANAGER CAPABILITY DELEGATION (GOV-02) */}
+          {activeSection === 'manager-delegation' && (
+            <div className="mt-5 space-y-4" data-testid="gov-section-manager-delegation">
+              {ordinaryReviewOnly || !scope?.canAppointPrivilegedRoles ? (
+                <EmptyFeatureState
+                  state="UNAUTHORIZED"
+                  title={pickText(
+                    {
+                      ar: 'تفويض صلاحيات المدير المساعد مقتصر على مالك المدرسة (APP_ADMIN)',
+                      fr: 'Délégation Manager réservée à APP_ADMIN',
+                      en: 'Manager Capability Delegation is Restricted to School Owner (APP_ADMIN)',
+                    },
+                    language,
+                  )}
+                  description={pickText(ERROR_MESSAGES.owner_only_operation, language)}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 space-y-2">
+                    <h3 className="text-sm sm:text-base font-extrabold">
+                      🛡️{' '}
+                      {pickText(
+                        {
+                          ar: 'منح وسحب صلاحيات المدير المساعد (MANAGER) عبر الخادم',
+                          fr: 'Accorder et révoquer les capacités Manager côté serveur',
+                          en: 'Owner-Only Server-Verified Manager Capability Delegation',
+                        },
+                        language,
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-zinc-400">
+                      {pickText(
+                        {
+                          ar: 'كل تغيير يُسجّل في سجل التدقيق الدائم. أدخل سبباً واضحاً (3–500 حرف) ثم فعّل أو اسحب أي صلاحية.',
+                          fr: 'Chaque modification est enregistrée dans le journal d’audit. Saisissez un motif (3–500 car.) puis activez/révoquez une capacité.',
+                          en: 'Every capability toggle writes an immutable audit trail entry. Enter an audit reason (3–500 chars), then toggle capabilities below.',
+                        },
+                        language,
+                      )}
+                    </p>
+                    <input
+                      type="text"
+                      value={delegationReason}
+                      onChange={(e) => setDelegationReason(e.target.value)}
+                      maxLength={500}
+                      placeholder={pickText(
+                        {
+                          ar: 'سبب تفويض أو سحب الصلاحية (إلزامي 3–500 حرف)...',
+                          fr: 'Motif d’audit obligatoire (3–500 caractères)...',
+                          en: 'Mandatory audit reason for delegation change (3–500 chars)...',
+                        },
+                        language,
+                      )}
+                      className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-xs"
+                    />
+                  </div>
+
+                  {loadingDelegation ? (
+                    <div className="py-6 text-center text-xs font-bold text-slate-500">
+                      {pickText({ ar: 'جاري تحميل قائمة المدراء المفوضين...', fr: 'Chargement des Managers...', en: 'Loading approved managers...' }, language)}
+                    </div>
+                  ) : managersList.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-300 dark:border-zinc-800 p-6 text-center text-xs sm:text-sm text-slate-500">
+                      {pickText(
+                        {
+                          ar: 'لا يوجد حسابات بدور MANAGER معتمد حالياً. يمكنك تعيين مدير مساعد من تبويب تعيين الأدوار القيادية.',
+                          fr: 'Aucun compte MANAGER approuvé pour le moment. Nommez un Manager depuis l’onglet Gouvernance des rôles.',
+                          en: 'No approved MANAGER accounts found yet. Appoint a Manager in Role Governance first.',
+                        },
+                        language,
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {managersList.map((mgr) => (
+                        <div
+                          key={mgr.id}
+                          data-testid={`manager-delegation-row-${mgr.id}`}
+                          className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <span className="font-extrabold text-sm">{mgr.fullName}</span>{' '}
+                              <span className="text-xs font-mono text-slate-500">@{mgr.username}</span>
+                              {mgr.email && (
+                                <span className="ms-2 text-xs text-slate-500">• {mgr.email}</span>
+                              )}
+                            </div>
+                            <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                              {mgr.accountStatus} • v{mgr.governanceVersion}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {ALLOWED_MANAGER_CAPABILITIES.map((cap) => {
+                              const isActive = managerGrants.some(
+                                (g) => g.managerUserId === mgr.id && g.capability === cap && g.active,
+                              );
+                              const capKey = `${mgr.id}:${cap}`;
+                              const busy = submittingCapKey === capKey;
+                              return (
+                                <button
+                                  key={cap}
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void handleToggleManagerCapability(mgr.id, cap, !isActive)}
+                                  className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition-colors disabled:opacity-50 ${
+                                    isActive
+                                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
+                                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                                  }`}
+                                >
+                                  <span className="truncate font-mono text-[11px]">{cap}</span>
+                                  <span>{isActive ? '✓ ON' : 'OFF'}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5. OWNER-ONLY PRIVILEGED ROLE APPOINTMENT (MANAGER / APP_ADMIN) */}
           {activeSection === 'role-governance' && (
             <div className="mt-5 space-y-4" data-testid="gov-section-role-governance">
-              {!scope?.canAppointPrivilegedRoles ? (
+              {ordinaryReviewOnly || !scope?.canAppointPrivilegedRoles ? (
                 <EmptyFeatureState
                   state="UNAUTHORIZED"
                   title={pickText(
@@ -1389,7 +1664,8 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 font-bold">
                         <span>
-                          {log.action}: {log.previousStatus} → {log.resultingStatus} (
+                          {log.action}
+                          {log.capability ? ` (${log.capability})` : ''}: {log.previousStatus} → {log.resultingStatus} (
                           {log.resultingRoles.join(', ') || 'none'})
                         </span>
                         <span className="text-[11px] text-slate-500">{log.createdAt}</span>

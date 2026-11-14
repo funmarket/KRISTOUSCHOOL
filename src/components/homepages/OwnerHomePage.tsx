@@ -66,14 +66,6 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
     setActiveGovernanceSection(section);
   };
 
-  const openCommunitySubTab = (subTab: string) => {
-    if (onNavigateToSubTab) {
-      onNavigateToSubTab('community', subTab);
-    } else {
-      setActiveTab('community');
-    }
-  };
-
   const openDirectorySubTab = (subTab: string) => {
     if (onNavigateToSubTab) {
       onNavigateToSubTab('directory', subTab);
@@ -223,7 +215,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             actionLabel={openActionLabel}
             icon="📢"
             tone="red"
-            onClick={() => openCommunitySubTab('announcements')}
+            onClick={() => setActiveTab('announcements')}
           />
 
           <HomeShortcutCard
@@ -315,29 +307,12 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
               },
               language,
             )}
-            actionLabel={blockedBackendLabel}
-            statusBadge={blockedBackendLabel}
-            state="BLOCKED_BACKEND"
+            actionLabel={governanceCardActionLabel}
+            statusBadge={governanceCardBadge}
+            state={governanceCardState}
             icon="🛡️"
             tone="blue"
-            onClick={() => {
-              setActiveGovernanceSection(null);
-              setGovernancePanel({
-                state: 'BLOCKED_BACKEND',
-                title: pickText(
-                  { ar: 'تفويض صلاحيات المدير المساعد', fr: 'Délégation des permissions Manager', en: 'Manager Delegation & Capabilities' },
-                  language,
-                ),
-                description: pickText(
-                  {
-                    ar: 'منح أو سحب صلاحيات المسير (MANAGER) يتم حصرياً عبر الخادم من طرف مالك المدرسة (APP_ADMIN).',
-                    fr: 'L’attribution ou la révocation des capacités Manager est strictement contrôlée côté serveur par APP_ADMIN.',
-                    en: 'Granting or revoking MANAGER capabilities is strictly enforced server-side by APP_ADMIN.',
-                  },
-                  language,
-                ),
-              });
-            }}
+            onClick={() => openGovernanceSection('manager-delegation')}
           />
 
           <HomeShortcutCard
@@ -390,14 +365,14 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
               setGovernancePanel({
                 state: 'COMING_SOON',
                 title: pickText(
-                  { ar: 'إعدادات مدرسة كريستو', fr: 'Paramètres généraux KRISTOU', en: 'KRISTOU School Settings' },
+                  { ar: 'سياسات وإعدادات مدرسة كريستو', fr: 'Politiques & Paramètres KRISTOU', en: 'KRISTOU School Policy & Settings' },
                   language,
                 ),
                 description: pickText(
                   {
-                    ar: 'إعدادات السنة الدراسية والسياسات العامة للمدرسة ستُتاح فور تفعيل جدول الإعدادات في الخادم.',
-                    fr: 'Les paramètres d’année scolaire seront activés avec la table de configuration serveur.',
-                    en: 'Academic year and school-wide configuration settings are marked Coming Soon pending backend persistence.',
+                    ar: 'السنة الدراسية المعتمدة: 2026–2027 • توقيت ملاحظات الأولياء: 08:00–18:00 (توقيت تونس) • الحد الأقصى: 11 ملاحظة يومياً. تعديل الإعدادات عبر الخادم قيد التفعيل (CFG-01).',
+                    fr: 'Année scolaire : 2026–2027 • Horaires Notes Parents : 08h00–18h00 (Africa/Tunis) • Quota : 11/jour. L’édition persistante CFG-01 reste à venir.',
+                    en: 'Active Academic Year: 2026–2027 • Parent Notes Window: 08:00–18:00 (Africa/Tunis) • Daily Quota: 11/day. Persistent CFG-01 settings editor is Coming Soon.',
                   },
                   language,
                 ),

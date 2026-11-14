@@ -1,11 +1,11 @@
-import {
+import type {
   AccountRole,
   AppTab,
   ClassStudentRosterItem,
   HomePageKey,
   SchoolClassSummary,
   User,
-} from '../../types';
+} from '../../types.ts';
 
 export const ROLE_TO_HOMEPAGE: Record<AccountRole, HomePageKey> = {
   APP_ADMIN: 'OWNER_HOME',
@@ -76,9 +76,7 @@ function makeDecision(
  * - No other role has cross-role homepage oversight.
  */
 export function getDelegatedOversightTargets(user: User | null | undefined): HomePageKey[] {
-  if (!user) return [];
-  const status = user.accountStatus ?? 'APPROVED';
-  if (status !== 'APPROVED') return [];
+  if (!user || user.accountStatus !== 'APPROVED') return [];
 
   if (user.role === 'APP_ADMIN') {
     return [...ALL_ROLE_HOMEPAGE_KEYS];
@@ -124,25 +122,21 @@ export function resolveHomePage(
     return makeDecision('PUBLIC_HOME', true, false, null);
   }
 
-  const status = user.accountStatus ?? 'APPROVED';
-  if (
-    status === 'PENDING' ||
-    status === 'REJECTED' ||
-    status === 'SUSPENDED' ||
-    status === 'REVOKED'
-  ) {
+  const status = user.accountStatus;
+  if (status !== 'APPROVED') {
     const actor = isCanonicalAccountRole(user.role) ? user.role : null;
     if (requestedHomePage === 'PUBLIC_HOME') {
       return makeDecision('PUBLIC_HOME', true, false, actor);
     }
     const explicitlyRequestedPrivate =
       Boolean(requestedHomePage) && requestedHomePage !== 'APPLICATION_STATUS';
+    const normalizedStatus = typeof status === 'string' ? status.toLowerCase() : 'unverified';
     return makeDecision(
       'APPLICATION_STATUS',
       !explicitlyRequestedPrivate,
       false,
       actor,
-      explicitlyRequestedPrivate ? `account_status_${status.toLowerCase()}` : undefined,
+      explicitlyRequestedPrivate ? `account_status_${normalizedStatus}` : undefined,
     );
   }
 
@@ -226,12 +220,7 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
     return true;
   }
 
-  if (!user) {
-    return false;
-  }
-
-  const status = user.accountStatus ?? 'APPROVED';
-  if (status !== 'APPROVED') {
+  if (!user || user.accountStatus !== 'APPROVED') {
     return false;
   }
 
@@ -247,12 +236,21 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
         return true;
       }
       if (user.role === 'MANAGER') {
-        return caps.includes('CLASSES_ROSTER_VIEW') || caps.includes('FULL_ACCESS');
+        return (
+          caps.includes('CLASSES_ROSTER_VIEW') ||
+          caps.includes('CLASSES_MANAGE') ||
+          caps.includes('FULL_ACCESS')
+        );
       }
       if (user.role === 'ADMINISTRATIVE_PERSONNEL' || user.role === 'SCHOOL_STAFF') {
         return caps.includes('CLASSES_ROSTER_VIEW');
       }
       return false;
+    }
+
+    case 'announcements': {
+      // School-wide broadcasts and campus calendar are visible to all 7 approved roles
+      return true;
     }
 
     case 'community': {
@@ -286,6 +284,18 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
       );
     }
 
+    case 'messages': {
+      // Operational short messaging (COM-04): strictly excludes STUDENT private DMs
+      return (
+        user.role === 'APP_ADMIN' ||
+        user.role === 'MANAGER' ||
+        user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+        user.role === 'TEACHER' ||
+        user.role === 'PARENT' ||
+        user.role === 'SCHOOL_STAFF'
+      );
+    }
+
     case 'pickup': {
       if (
         user.role === 'APP_ADMIN' ||
@@ -311,6 +321,96 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
     default:
       return false;
   }
+}
+
+export function canReviewOrdinaryAccountsUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('ACCOUNT_APPROVAL_REVIEW') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canManageClassesUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('CLASSES_MANAGE') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canReviewEnrollmentsUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('ENROLLMENT_REVIEW') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canManageBroadcastsUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('BROADCAST_MANAGE') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canManageCalendarUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('CALENDAR_MANAGE') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canManageFoodMenuUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('CAN_MANAGE_FOOD_MENU') ||
+        caps.includes('PUBLIC_CONTENT_MANAGE') ||
+        caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canManagePublicContentUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('PUBLIC_CONTENT_MANAGE') || caps.includes('FULL_ACCESS')))
+  );
+}
+
+export function canModerateCommunityUi(user: User | null | undefined): boolean {
+  if (!user || user.accountStatus !== 'APPROVED') return false;
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  return (
+    user.role === 'APP_ADMIN' ||
+    user.role === 'TEACHER' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('COMMUNITY_MODERATE') || caps.includes('FULL_ACCESS')))
+  );
 }
 
 export function resolveParentLinkedChildren<T extends { id: string }>(
@@ -394,4 +494,3 @@ export function filterClassRoster(
       (s.primaryGuardianName?.toLowerCase().includes(q) ?? false),
   );
 }
-

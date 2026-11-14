@@ -65,7 +65,14 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
               )
         }
       >
-        {!assignedClass && (
+        {assignedClass ? (
+          <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/30 px-3.5 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+            <span>🎓</span>
+            <span>
+              {assignedClass.name} • {assignedClass.level} • {assignedClass.academicYear}
+            </span>
+          </div>
+        ) : (
           <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/80 px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-300">
             <span>🎓</span>
             <span>

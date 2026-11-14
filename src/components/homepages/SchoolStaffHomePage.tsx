@@ -72,22 +72,7 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
           actionLabel={openActionLabel}
           icon="📢"
           tone="blue"
-          onClick={() =>
-            setSelectedNotice({
-              title: pickText(
-                { ar: 'البلاغات الداخلية للأعوان', fr: 'Annonces internes du personnel', en: 'Internal Staff Announcements' },
-                language,
-              ),
-              description: pickText(
-                {
-                  ar: 'لا توجد بلاغات تشغيلية عاجلة اليوم. مواعيد العمل الاعتيادية من 07:30 إلى 17:30.',
-                  fr: 'Aucune alerte opérationnelle urgente aujourd’hui. Horaires de service habituels : 07h30 – 17h30.',
-                  en: 'No urgent operational alerts today. Standard campus service hours: 07:30 – 17:30.',
-                },
-                language,
-              ),
-            })
-          }
+          onClick={() => setActiveTab('announcements')}
         />
 
         <HomeShortcutCard
@@ -99,22 +84,7 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
           actionLabel={openActionLabel}
           icon="📅"
           tone="yellow"
-          onClick={() =>
-            setSelectedNotice({
-              title: pickText(
-                { ar: 'الروزنامة التشغيلية للمدرسة', fr: 'Calendrier opérationnel', en: 'Operational School Calendar' },
-                language,
-              ),
-              description: pickText(
-                {
-                  ar: 'تُعرض هنا مواعيد الأنشطة المدرسية والعطل الرسمية المعتمدة لأعوان المدرسة.',
-                  fr: 'Consultez ici les dates des événements scolaires et jours fériés pour l’organisation des services.',
-                  en: 'Operational school event dates and campus schedules for support teams.',
-                },
-                language,
-              ),
-            })
-          }
+          onClick={() => setActiveTab('announcements')}
         />
 
         <HomeShortcutCard
@@ -142,6 +112,15 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
           icon="🏛️"
           tone="slate"
           onClick={() => openDirectorySubTab('admin')}
+        />
+
+        <HomeShortcutCard
+          id="staff-messages"
+          title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
+          actionLabel={openActionLabel}
+          icon="💬"
+          tone="teal"
+          onClick={() => setActiveTab('messages')}
         />
 
         <HomeShortcutCard

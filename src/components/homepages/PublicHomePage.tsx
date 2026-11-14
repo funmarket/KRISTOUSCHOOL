@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Bell,
   BookOpen,
@@ -10,6 +10,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { submitPublicInquiry } from '../../lib/schoolOperations';
 import { canAccessAppTab } from './homepageAccess';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
@@ -40,7 +41,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   onOpenAuth,
   onNavigateToSubTab,
 }) => {
-  const { language, t, announcements, foodMenu, currentUser } = useApp();
+  const { language, t, announcements, broadcastsStatus, foodMenu, currentUser } = useApp();
   const exploreSectionRef = useRef<HTMLDivElement | null>(null);
   const levelsSectionRef = useRef<HTMLDivElement | null>(null);
   const activitiesSectionRef = useRef<HTMLDivElement | null>(null);
@@ -48,8 +49,58 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const announcementsSectionRef = useRef<HTMLDivElement | null>(null);
   const contactSectionRef = useRef<HTMLDivElement | null>(null);
 
+  const [inquiryForm, setInquiryForm] = useState({
+    senderName: '',
+    phone: '',
+    email: '',
+    subject: '',
+    message: '',
+  });
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquiryFeedback, setInquiryFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
   // Strict privacy filter: only school-wide public announcements (no classId)
   const publicAnnouncements = announcements.filter((a) => !a.classId);
+
+  const handleInquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInquiryFeedback(null);
+    setInquirySubmitting(true);
+    const res = await submitPublicInquiry(inquiryForm);
+    setInquirySubmitting(false);
+    if (!res.ok) {
+      setInquiryFeedback({
+        type: 'error',
+        message:
+          res.status === 'BLOCKED_BACKEND'
+            ? pickText(
+                {
+                  ar: 'بوابة استفسارات الموقع العام بانتظار نشر جدول الخادم (Supabase). لا يتم حفظ استفسارات وهمية.',
+                  fr: 'Le formulaire de contact public attend le déploiement de la table Supabase.',
+                  en: 'Public inquiry persistence is awaiting Supabase backend deployment. No fake local submission saved.',
+                },
+                language,
+              )
+            : res.errorMessage || t('error'),
+      });
+      return;
+    }
+    setInquiryFeedback({
+      type: 'success',
+      message: pickText(
+        {
+          ar: 'تم استلام استفساركم بنجاح وحفظه لدى إدارة المدرسة.',
+          fr: 'Votre demande a été enregistrée auprès du secrétariat de l’école.',
+          en: 'Your public school inquiry was saved with school administration.',
+        },
+        language,
+      ),
+    });
+    setInquiryForm({ senderName: '', phone: '', email: '', subject: '', message: '' });
+  };
 
   const scrollToRef = (ref: React.RefObject<HTMLDivElement | null>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -436,24 +487,28 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           <article className="kh-info-panel">
             <div className="space-y-2">
               <h2 className="kh-info-panel-title">
-                {pickText(
-                  {
-                    ar: 'أحدث إعلان عام',
-                    fr: 'Dernière annonce publique',
-                    en: 'Latest announcement',
-                  },
-                  language,
-                )}
+                {broadcastsStatus === 'READY' && publicAnnouncements[0]
+                  ? publicAnnouncements[0].title
+                  : pickText(
+                      {
+                        ar: 'أحدث إعلان عام',
+                        fr: 'Dernière annonce publique',
+                        en: 'Latest announcement',
+                      },
+                      language,
+                    )}
               </h2>
               <p className="kh-info-panel-body">
-                {pickText(
-                  {
-                    ar: 'معلومات التسجيل للسنة الدراسية والأنشطة المدرسية العامة القادمة تُعرض هنا للعموم.',
-                    fr: 'Les informations d’inscription et la prochaine activité publique de l’école sont mises en avant ici.',
-                    en: 'Registration information and the next public school activity can be highlighted here.',
-                  },
-                  language,
-                )}
+                {broadcastsStatus === 'READY' && publicAnnouncements[0]
+                  ? publicAnnouncements[0].body
+                  : pickText(
+                      {
+                        ar: 'معلومات التسجيل للسنة الدراسية والأنشطة المدرسية العامة القادمة تُعرض هنا للعموم.',
+                        fr: 'Les informations d’inscription et la prochaine activité publique de l’école sont mises en avant ici.',
+                        en: 'Registration information and the next public school activity can be highlighted here.',
+                      },
+                      language,
+                    )}
               </p>
             </div>
             <span className="kh-info-chip">
@@ -802,6 +857,82 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                 </span>
               </div>
             </div>
+
+            <form onSubmit={handleInquirySubmit} className="mt-5 pt-5 border-t border-slate-200 dark:border-zinc-800 space-y-3">
+              <h3 className="text-sm font-extrabold text-[#1E3A6D] dark:text-white">
+                {pickText(
+                  {
+                    ar: 'إرسال استفسار لإدارة المدرسة',
+                    fr: 'Envoyer une demande d’information au secrétariat',
+                    en: 'Send a Public School Inquiry',
+                  },
+                  language,
+                )}
+              </h3>
+
+              {inquiryFeedback && (
+                <div
+                  role="alert"
+                  className={`rounded-xl border px-3 py-2 text-xs font-bold ${
+                    inquiryFeedback.type === 'success'
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
+                      : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
+                  }`}
+                >
+                  {inquiryFeedback.message}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <input
+                  type="text"
+                  required
+                  value={inquiryForm.senderName}
+                  onChange={(e) => setInquiryForm((p) => ({ ...p, senderName: e.target.value }))}
+                  placeholder={pickText({ ar: 'الاسم الكامل', fr: 'Nom complet', en: 'Your full name' }, language)}
+                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
+                />
+                <input
+                  type="tel"
+                  value={inquiryForm.phone}
+                  onChange={(e) => setInquiryForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder={pickText({ ar: 'رقم الهاتف (اختياري)', fr: 'Téléphone (optionnel)', en: 'Phone (optional)' }, language)}
+                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
+                />
+                <input
+                  type="email"
+                  value={inquiryForm.email}
+                  onChange={(e) => setInquiryForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder={pickText({ ar: 'البريد الإلكتروني (اختياري)', fr: 'E-mail (optionnel)', en: 'Email (optional)' }, language)}
+                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
+                />
+              </div>
+              <input
+                type="text"
+                required
+                value={inquiryForm.subject}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, subject: e.target.value }))}
+                placeholder={pickText({ ar: 'الموضوع', fr: 'Objet de la demande', en: 'Subject' }, language)}
+                className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
+              />
+              <textarea
+                rows={3}
+                required
+                value={inquiryForm.message}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, message: e.target.value }))}
+                placeholder={pickText({ ar: 'نص الاستفسار...', fr: 'Votre message...', en: 'Your question or message...' }, language)}
+                className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
+              />
+              <button
+                type="submit"
+                disabled={inquirySubmitting}
+                className="rounded-xl bg-[#0D8AE8] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#0B76C7] disabled:opacity-50"
+              >
+                {inquirySubmitting
+                  ? t('loading')
+                  : pickText({ ar: 'إرسال الاستفسار', fr: 'Envoyer la demande', en: 'Submit Inquiry' }, language)}
+              </button>
+            </form>
           </div>
         </HomeSection>
       </div>

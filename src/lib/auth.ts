@@ -297,6 +297,28 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
   const role = resolveCanonicalAccountRole(roles);
   if (!role) throw new Error('account_not_approved');
 
+  const roleCaps = roles.filter((candidate: string): candidate is AccountRole => Boolean(roleMap[candidate]));
+  const mergedCaps = new Set<string>(roleCaps);
+
+  if (role === 'MANAGER') {
+    try {
+      const { data: grantRows, error: grantError } = await typedClient
+        .from('manager_capability_grants')
+        .select('capability')
+        .eq('manager_user_id', authUser.id)
+        .eq('active', true);
+      if (!grantError && Array.isArray(grantRows)) {
+        for (const row of grantRows) {
+          if (typeof row?.capability === 'string' && row.capability.trim()) {
+            mergedCaps.add(row.capability.trim());
+          }
+        }
+      }
+    } catch {
+      // Gracefully tolerate absent manager_capability_grants table or partial test stubs
+    }
+  }
+
   const rawRequestedRole =
     (profile as { requested_role?: unknown }).requested_role ??
     (profile as { requestedRole?: unknown }).requestedRole;
@@ -310,7 +332,7 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
     role: role as UserRole,
     accountStatus: 'APPROVED',
     requestedRole: isRegistrationRole(rawRequestedRole) ? rawRequestedRole : undefined,
-    capabilities: roles.filter((candidate: string): candidate is AccountRole => Boolean(roleMap[candidate])),
+    capabilities: [...mergedCaps],
     telegramLinked: Boolean(telegramIdentity),
   };
 }

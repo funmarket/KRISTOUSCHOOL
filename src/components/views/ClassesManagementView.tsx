@@ -1,11 +1,27 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ClassStudentRosterItem, SchoolClassSummary } from '../../types';
-import { canAccessAppTab } from '../homepages/homepageAccess';
+import { canAccessAppTab, canManageClassesUi } from '../homepages/homepageAccess';
 import { HomePageHeader } from '../homepages/shared/HomePageHeader';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
-import { ArrowLeft, Search, Users, GraduationCap, Calendar, Lock } from 'lucide-react';
+import {
+  CANONICAL_SCHOOL_LEVELS,
+  assignTeacherToClass,
+  createAndEnrollStudent,
+  createSchoolClass,
+} from '../../lib/schoolOperations';
+import {
+  ArrowLeft,
+  Search,
+  Users,
+  GraduationCap,
+  Calendar,
+  Plus,
+  UserPlus,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react';
 import '../homepages/shared/HomePageLayout.css';
 
 export type ClassesBackendStatus =
@@ -18,6 +34,7 @@ export interface ClassesManagementViewProps {
   initialClasses?: SchoolClassSummary[];
   initialRosters?: Record<string, ClassStudentRosterItem[]>;
   backendStatus?: ClassesBackendStatus;
+  onRefresh?: () => Promise<void> | void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -30,7 +47,7 @@ export function filterSchoolClasses(
 ): SchoolClassSummary[] {
   const q = query.trim().toLowerCase();
   return classes.filter((cls) => {
-    if (levelFilter !== 'ALL' && cls.level !== levelFilter) return false;
+    if (levelFilter !== 'ALL' && cls.level !== levelFilter && cls.levelCode !== levelFilter) return false;
     if (yearFilter !== 'ALL' && cls.academicYear !== yearFilter) return false;
     if (!q) return true;
     return (
@@ -59,6 +76,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   initialClasses = [],
   initialRosters = {},
   backendStatus = 'BACKEND_NOT_IMPLEMENTED',
+  onRefresh,
 }) => {
   const { currentUser, language, t } = useApp();
 
@@ -69,7 +87,66 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [rosterPage, setRosterPage] = useState(1);
 
+  const [activeForm, setActiveForm] = useState<'none' | 'create-class' | 'enroll-student' | 'assign-teacher'>('none');
+  const [opFeedback, setOpFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Create class state
+  const [academicYearCode, setAcademicYearCode] = useState('2026-2027');
+  const [levelCode, setLevelCode] = useState('CP');
+  const [className, setClassName] = useState('');
+  const [capacity, setCapacity] = useState(28);
+  const [roomLabel, setRoomLabel] = useState('');
+
+  // Enroll student state
+  const [studentCode, setStudentCode] = useState('');
+  const [studentFullName, setStudentFullName] = useState('');
+  const [studentBirthDate, setStudentBirthDate] = useState('');
+  const [enrollClassId, setEnrollClassId] = useState('');
+  const [relationshipLabel, setRelationshipLabel] = useState('Parent');
+
+  // Assign teacher state
+  const [teacherUserId, setTeacherUserId] = useState('');
+  const [assignClassId, setAssignClassId] = useState('');
+  const [isHomeroom, setIsHomeroom] = useState(true);
+
   const isAuthorized = canAccessAppTab(currentUser, 'classes');
+  const canManage = canManageClassesUi(currentUser);
+
+  const levelOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const list: { value: string; label: string }[] = [];
+    for (const lbl of [t('level1'), t('level2'), t('level3'), t('level4'), t('level5'), t('level6')]) {
+      if (lbl && !seen.has(lbl)) {
+        seen.add(lbl);
+        list.push({ value: lbl, label: lbl });
+      }
+    }
+    for (const lvl of CANONICAL_SCHOOL_LEVELS) {
+      if (!seen.has(lvl.code)) {
+        seen.add(lvl.code);
+        list.push({
+          value: lvl.code,
+          label: language === 'ar' ? lvl.labelAr : language === 'fr' ? lvl.labelFr : lvl.labelEn,
+        });
+      }
+    }
+    for (const cls of initialClasses) {
+      if (cls.level && !seen.has(cls.level)) {
+        seen.add(cls.level);
+        list.push({ value: cls.level, label: cls.level });
+      }
+    }
+    return list;
+  }, [initialClasses, language, t]);
+
+  const yearOptions = useMemo(() => {
+    const seen = new Set<string>(['2025-2026', '2026-2027']);
+    for (const cls of initialClasses) {
+      if (cls.academicYear) seen.add(cls.academicYear);
+    }
+    return Array.from(seen);
+  }, [initialClasses]);
 
   const filteredClasses = useMemo(
     () => filterSchoolClasses(initialClasses, searchQuery, selectedLevel, selectedYear),
@@ -96,6 +173,94 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
     const start = (rosterPage - 1) * ROSTER_PAGE_SIZE;
     return filteredRoster.slice(start, start + ROSTER_PAGE_SIZE);
   }, [filteredRoster, rosterPage]);
+
+  const handleCreateClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOpFeedback(null);
+    setSubmitting(true);
+    const res = await createSchoolClass({
+      academicYearCode,
+      levelCode,
+      name: className,
+      capacity,
+      roomLabel,
+    });
+    setSubmitting(false);
+    if (!res.ok) {
+      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+      return;
+    }
+    setClassName('');
+    setRoomLabel('');
+    setActiveForm('none');
+    setOpFeedback({
+      type: 'success',
+      text: pickText(
+        { ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created on server.' },
+        language,
+      ),
+    });
+    await onRefresh?.();
+  };
+
+  const handleEnrollStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOpFeedback(null);
+    setSubmitting(true);
+    const targetClassId = enrollClassId || initialClasses[0]?.id || '';
+    const res = await createAndEnrollStudent({
+      studentCode,
+      fullName: studentFullName,
+      birthDate: studentBirthDate,
+      classId: targetClassId,
+      relationshipLabel,
+    });
+    setSubmitting(false);
+    if (!res.ok) {
+      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+      return;
+    }
+    setStudentCode('');
+    setStudentFullName('');
+    setStudentBirthDate('');
+    setActiveForm('none');
+    setOpFeedback({
+      type: 'success',
+      text: pickText(
+        { ar: 'تم تسجيل التلميذ في القسم بنجاح.', fr: 'Élève inscrit dans la classe.', en: 'Student created and enrolled.' },
+        language,
+      ),
+    });
+    await onRefresh?.();
+  };
+
+  const handleAssignTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOpFeedback(null);
+    setSubmitting(true);
+    const targetClassId = assignClassId || initialClasses[0]?.id || '';
+    const res = await assignTeacherToClass({
+      teacherUserId: teacherUserId.trim(),
+      classId: targetClassId,
+      isHomeroom,
+      active: true,
+    });
+    setSubmitting(false);
+    if (!res.ok) {
+      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+      return;
+    }
+    setTeacherUserId('');
+    setActiveForm('none');
+    setOpFeedback({
+      type: 'success',
+      text: pickText(
+        { ar: 'تم تعيين المربي للقسم بنجاح.', fr: 'Enseignant affecté à la classe.', en: 'Teacher assigned to class.' },
+        language,
+      ),
+    });
+    await onRefresh?.();
+  };
 
   if (!isAuthorized) {
     return (
@@ -329,7 +494,271 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           },
           language,
         )}
-      />
+      >
+        {canManage && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              data-testid="toggle-create-class-btn"
+              onClick={() => setActiveForm((prev) => (prev === 'create-class' ? 'none' : 'create-class'))}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{pickText({ ar: 'إنشاء قسم', fr: 'Créer une classe', en: 'Create Class' }, language)}</span>
+            </button>
+            <button
+              type="button"
+              data-testid="toggle-enroll-student-btn"
+              onClick={() => {
+                if (!enrollClassId && initialClasses[0]) setEnrollClassId(initialClasses[0].id);
+                setActiveForm((prev) => (prev === 'enroll-student' ? 'none' : 'enroll-student'));
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>{pickText({ ar: 'تسجيل تلميذ', fr: 'Inscrire un élève', en: 'Enroll Student' }, language)}</span>
+            </button>
+            <button
+              type="button"
+              data-testid="toggle-assign-teacher-btn"
+              onClick={() => {
+                if (!assignClassId && initialClasses[0]) setAssignClassId(initialClasses[0].id);
+                setActiveForm((prev) => (prev === 'assign-teacher' ? 'none' : 'assign-teacher'));
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-xs font-bold shadow-xs"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>{pickText({ ar: 'تعيين مربي', fr: 'Affecter enseignant', en: 'Assign Teacher' }, language)}</span>
+            </button>
+          </div>
+        )}
+      </HomePageHeader>
+
+      {opFeedback && (
+        <div
+          className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+            opFeedback.type === 'error'
+              ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900'
+              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+          }`}
+        >
+          {opFeedback.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          )}
+          <span>{opFeedback.text}</span>
+        </div>
+      )}
+
+      {/* Admin Create / Enroll / Assign Forms */}
+      {canManage && activeForm === 'create-class' && (
+        <form
+          onSubmit={handleCreateClass}
+          className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
+        >
+          <h3 className="font-bold text-sm text-gray-900 dark:text-white">
+            {pickText({ ar: 'قسم دراسي جديد', fr: 'Nouvelle classe scolaire', en: 'New School Class' }, language)}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <input
+              type="text"
+              required
+              value={academicYearCode}
+              onChange={(e) => setAcademicYearCode(e.target.value)}
+              placeholder="2026-2027"
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <select
+              value={levelCode}
+              onChange={(e) => setLevelCode(e.target.value)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            >
+              {CANONICAL_SCHOOL_LEVELS.map((lvl) => (
+                <option key={lvl.code} value={lvl.code}>
+                  {language === 'ar' ? lvl.labelAr : language === 'fr' ? lvl.labelFr : lvl.labelEn}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              required
+              value={className}
+              onChange={(e) => setClassName(e.target.value)}
+              placeholder={pickText({ ar: 'اسم القسم (مثال: 1 أ)', fr: 'Nom (ex: 1ère A)', en: 'Class name (e.g. 1A)' }, language)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={capacity}
+              onChange={(e) => setCapacity(Number(e.target.value) || 28)}
+              placeholder="28"
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <input
+              type="text"
+              value={roomLabel}
+              onChange={(e) => setRoomLabel(e.target.value)}
+              placeholder={pickText({ ar: 'القاعة', fr: 'Salle', en: 'Room' }, language)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveForm('none')}
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 text-xs font-semibold"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
+            >
+              {submitting ? t('loading') : t('save')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {canManage && activeForm === 'enroll-student' && (
+        <form
+          onSubmit={handleEnrollStudent}
+          className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-emerald-200 dark:border-emerald-900 shadow-sm space-y-4"
+        >
+          <h3 className="font-bold text-sm text-gray-900 dark:text-white">
+            {pickText({ ar: 'إضافة وتسجيل تلميذ في قسم', fr: 'Créer et inscrire un élève', en: 'Create & Enroll Student' }, language)}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <input
+              type="text"
+              required
+              value={studentCode}
+              onChange={(e) => setStudentCode(e.target.value)}
+              placeholder="KS-2026-001"
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <input
+              type="text"
+              required
+              value={studentFullName}
+              onChange={(e) => setStudentFullName(e.target.value)}
+              placeholder={pickText({ ar: 'الاسم الكامل للتلميذ', fr: 'Nom complet', en: 'Full name' }, language)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <input
+              type="date"
+              required
+              value={studentBirthDate}
+              onChange={(e) => setStudentBirthDate(e.target.value)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+            <select
+              required
+              value={enrollClassId}
+              onChange={(e) => setEnrollClassId(e.target.value)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            >
+              {initialClasses.length === 0 ? (
+                <option value="">—</option>
+              ) : (
+                initialClasses.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name} ({cls.academicYear})
+                  </option>
+                ))
+              )}
+            </select>
+            <input
+              type="text"
+              value={relationshipLabel}
+              onChange={(e) => setRelationshipLabel(e.target.value)}
+              placeholder="Parent"
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveForm('none')}
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 text-xs font-semibold"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || initialClasses.length === 0}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-50"
+            >
+              {submitting ? t('loading') : t('save')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {canManage && activeForm === 'assign-teacher' && (
+        <form
+          onSubmit={handleAssignTeacher}
+          className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4"
+        >
+          <h3 className="font-bold text-sm text-gray-900 dark:text-white">
+            {pickText({ ar: 'تعيين مربي للقسم', fr: 'Affecter un enseignant à la classe', en: 'Assign Teacher to Class' }, language)}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+            <input
+              type="text"
+              required
+              value={teacherUserId}
+              onChange={(e) => setTeacherUserId(e.target.value)}
+              placeholder="Teacher User UUID"
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
+            />
+            <select
+              required
+              value={assignClassId}
+              onChange={(e) => setAssignClassId(e.target.value)}
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+            >
+              {initialClasses.length === 0 ? (
+                <option value="">—</option>
+              ) : (
+                initialClasses.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name} ({cls.academicYear})
+                  </option>
+                ))
+              )}
+            </select>
+            <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={isHomeroom}
+                onChange={(e) => setIsHomeroom(e.target.checked)}
+              />
+              <span>{pickText({ ar: 'مربي رئيسي', fr: 'Enseignant principal', en: 'Homeroom teacher' }, language)}</span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveForm('none')}
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 text-xs font-semibold"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || initialClasses.length === 0}
+              className="px-4 py-2 rounded-xl bg-[#1E3A6D] hover:bg-[#162C54] text-white text-xs font-bold disabled:opacity-50"
+            >
+              {submitting ? t('loading') : t('save')}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Search and Filter Bar */}
       <div className="bg-white dark:bg-[#111111] p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -363,12 +792,11 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             <option value="ALL">
               {pickText({ ar: 'جميع المستويات', fr: 'Tous les niveaux', en: 'All Levels' }, language)}
             </option>
-            <option value={t('level1')}>{t('level1')}</option>
-            <option value={t('level2')}>{t('level2')}</option>
-            <option value={t('level3')}>{t('level3')}</option>
-            <option value={t('level4')}>{t('level4')}</option>
-            <option value={t('level5')}>{t('level5')}</option>
-            <option value={t('level6')}>{t('level6')}</option>
+            {levelOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -386,7 +814,11 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                 language,
               )}
             </option>
-            <option value="2025-2026">2025-2026</option>
+            {yearOptions.map((yr) => (
+              <option key={yr} value={yr}>
+                {yr}
+              </option>
+            ))}
           </select>
         </div>
       </div>

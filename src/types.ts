@@ -11,6 +11,12 @@ export type UserRole = AccountRole;
 
 export type Language = 'ar' | 'fr' | 'en';
 export type ThemeMode = 'light' | 'pitch-black';
+export type NotificationSoundOption =
+  | 'Kristou Bell'
+  | 'Soft Chime'
+  | 'Classroom Bell'
+  | 'Gentle Pop'
+  | 'Silent';
 
 export type AccountApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'REVOKED';
 
@@ -32,11 +38,27 @@ export type CardAvailabilityState =
   | 'UNAUTHORIZED'
   | 'BLOCKED_BACKEND';
 
+export type BackendOpStatus =
+  | 'READY'
+  | 'BLOCKED_BACKEND'
+  | 'UNAUTHORIZED'
+  | 'ERROR';
+
+export interface BackendOpResult<T> {
+  ok: boolean;
+  status: BackendOpStatus;
+  data?: T;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
 export type AppTab =
   | 'home'
   | 'publicSite'
   | 'community'
+  | 'announcements'
   | 'notes'
+  | 'messages'
   | 'pickup'
   | 'foodMenu'
   | 'directory'
@@ -94,6 +116,7 @@ export interface SchoolClassSummary {
   id: string;
   name: string;
   level: string;
+  levelCode?: string;
   academicYear: string;
   homeroomTeacherName: string | null;
   activeStudentCount: number;
@@ -104,9 +127,31 @@ export interface ClassStudentRosterItem {
   studentId: string;
   studentCode: string;
   fullName: string;
-  enrollmentStatus: 'ACTIVE' | 'TRANSFERRED' | 'WITHDRAWN';
+  enrollmentStatus: 'ACTIVE' | 'TRANSFERRED' | 'WITHDRAWN' | 'COMPLETED';
   enrolledAt: string;
   primaryGuardianName?: string | null;
+}
+
+export interface SchoolLevelOption {
+  code: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  sortOrder: number;
+}
+
+export interface ApprovedProfileSummary {
+  id: string;
+  username: string;
+  fullName: string;
+  role: AccountRole;
+}
+
+export interface OperationalCounts {
+  activeClasses?: number;
+  activeStudents?: number;
+  pendingAdmissions?: number;
+  openInquiries?: number;
 }
 
 export interface Announcement {
@@ -118,6 +163,17 @@ export interface Announcement {
   authorRole: string;
   createdAt: string;
   priority: 'NORMAL' | 'URGENT';
+  audienceScope?: 'ALL_SCHOOL' | 'ALL_CLASSES' | 'SELECTED_LEVELS' | 'SELECTED_CLASSES' | 'PUBLIC_SITE';
+  isPublic?: boolean;
+  isDemoPreview?: boolean;
+}
+
+export interface SchoolBroadcastItem extends Announcement {
+  status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'REVOKED';
+  audienceScope: 'ALL_SCHOOL' | 'ALL_CLASSES' | 'SELECTED_LEVELS' | 'SELECTED_CLASSES' | 'PUBLIC_SITE';
+  targetLevelCodes: string[];
+  targetClassIds: string[];
+  isPublic: boolean;
 }
 
 export interface Homework {
@@ -130,13 +186,53 @@ export interface Homework {
   createdAt: string;
 }
 
+export type CalendarEventCategory =
+  | 'EXAM'
+  | 'TEST'
+  | 'EVENT'
+  | 'HOLIDAY'
+  | 'MEETING'
+  | 'CLOSURE'
+  | 'ACTIVITY'
+  | 'TRIP'
+  | 'OTHER';
+
 export interface CalendarEvent {
   id: string;
   classId?: string;
   title: string;
   date: string;
-  category: 'TEST' | 'ACTIVITY' | 'MEETING' | 'TRIP' | 'OTHER';
+  endDate?: string;
+  isAllDay?: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+  timezone?: string;
+  status?: 'SCHEDULED' | 'CANCELLED' | 'RESCHEDULED';
+  cancellationReason?: string | null;
+  isPublic?: boolean;
+  myResponse?: 'ATTENDING' | 'ACKNOWLEDGED' | 'DECLINED' | null;
+  category: CalendarEventCategory;
   description: string;
+}
+
+export interface ClassDocumentItem {
+  id: string;
+  classId: string;
+  title: string;
+  description: string;
+  documentUrl: string;
+  fileType: string;
+  createdAt: string;
+}
+
+export interface ClassGalleryItem {
+  id: string;
+  classId?: string | null;
+  title: string;
+  caption: string;
+  imageUrl: string;
+  isPublic: boolean;
+  createdAt: string;
 }
 
 export interface ClassQuestion {
@@ -145,6 +241,7 @@ export interface ClassQuestion {
   studentId: string;
   studentName: string;
   content: string; // max 200 chars
+  isHidden?: boolean;
   createdAt: string;
   repliesCount: number;
   replies?: ClassQuestionReply[];
@@ -165,16 +262,21 @@ export interface ParentNote {
   parentName: string;
   childId: string;
   childName: string;
-  teacherId?: string;
+  classId?: string | null;
+  teacherId?: string | null;
   topic: 'ABSENCE' | 'HOMEWORK' | 'BEHAVIOR' | 'HEALTH' | 'PICKUP' | 'OTHER';
   content: string;
+  schoolDay?: string;
   createdAt: string;
   status: 'SENT' | 'READ' | 'REPLIED';
   replyContent?: string;
+  repliedByName?: string;
+  repliedAt?: string;
 }
 
 export interface MessageThread {
   id: string;
+  subject?: string;
   recipientId: string;
   recipientName: string;
   recipientRole: string;
@@ -184,9 +286,16 @@ export interface MessageThread {
   messages: {
     id: string;
     senderId: string;
+    senderName?: string;
     content: string; // max 200 chars
     createdAt: string;
   }[];
+}
+
+export interface MessageRecipientOption {
+  id: string;
+  fullName: string;
+  role: AccountRole;
 }
 
 export type PickupState = 'WAITING' | 'PARENT_ARRIVED' | 'RELEASED';
@@ -217,6 +326,9 @@ export interface FoodMenuWeek {
   id: string;
   weekRange: string;
   published: boolean;
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  providerName?: string;
+  isDemoPreview?: boolean;
   items: FoodMenuItem[];
 }
 
@@ -228,6 +340,7 @@ export interface TeacherDirectoryMember {
   bio: string;
   classes: string[];
   languages: string[];
+  isPublished?: boolean;
 }
 
 export interface AdminDirectoryMember {
@@ -237,4 +350,65 @@ export interface AdminDirectoryMember {
   photoUrl: string;
   bio: string;
   responsibilities: string[];
+  isPublished?: boolean;
+}
+
+export type EnrollmentApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'NEED_DOCUMENTS'
+  | 'ACCEPTED'
+  | 'WAITLIST'
+  | 'REJECTED'
+  | 'ENROLLED';
+
+export interface EnrollmentApplication {
+  id: string;
+  referenceCode: string;
+  studentFullName: string;
+  birthDate: string;
+  desiredLevelCode: string;
+  parentFullName: string;
+  phone: string;
+  email?: string | null;
+  notes?: string | null;
+  submittedByUserId?: string | null;
+  status: EnrollmentApplicationStatus;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  version: number;
+  createdAt: string;
+}
+
+export interface PublicInquiryItem {
+  id: string;
+  senderName: string;
+  phone?: string | null;
+  email?: string | null;
+  subject: string;
+  message: string;
+  status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED';
+  staffResponse?: string | null;
+  respondedAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: 'pickup' | 'note' | 'announcement' | 'message' | 'calendar' | 'system';
+  targetTab?: string | null;
+  targetRefId?: string | null;
+}
+
+export interface UserPreferencesState {
+  language: Language;
+  theme: ThemeMode;
+  notificationSound: NotificationSoundOption;
+  soundMuted: boolean;
+  vibrationEnabled: boolean;
 }

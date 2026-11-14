@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { ShieldCheck, MapPin, Phone, Mail } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { t } = useApp();
+  const { language, t } = useApp();
 
   return (
     <footer className="bg-white dark:bg-[#090909] border-t border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
@@ -51,7 +51,13 @@ export const Footer: React.FC = () => {
             </li>
             <li className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-k-brand shrink-0" />
-              <span>+216 71 000 000</span>
+              <span>
+                {language === 'ar'
+                  ? 'هاتف الإدارة عند تأكيد الطلب'
+                  : language === 'fr'
+                  ? 'Ligne secrétariat communiquée sur dossier'
+                  : 'Office phone shared via admissions & parent portal'}
+              </span>
             </li>
             <li className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-k-brand shrink-0" />

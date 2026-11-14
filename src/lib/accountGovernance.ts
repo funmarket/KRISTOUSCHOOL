@@ -49,10 +49,65 @@ export type GovernanceErrorCode =
   | 'contact_not_confirmed'
   | 'target_not_found'
   | 'invalid_role'
+  | 'invalid_capability'
   | 'invalid_transition'
   | 'reason_required'
   | 'version_conflict'
   | 'governance_operation_failed';
+
+export const ALLOWED_MANAGER_CAPABILITIES = [
+  'ACCOUNT_APPROVAL_REVIEW',
+  'CLASSES_ROSTER_VIEW',
+  'CLASSES_MANAGE',
+  'ENROLLMENT_REVIEW',
+  'BROADCAST_MANAGE',
+  'CALENDAR_MANAGE',
+  'CAN_MANAGE_FOOD_MENU',
+  'PUBLIC_CONTENT_MANAGE',
+  'COMMUNITY_MODERATE',
+  'OVERSIGHT:PARENT_HOME',
+  'OVERSIGHT:STUDENT_HOME',
+  'OVERSIGHT:TEACHER_HOME',
+  'OVERSIGHT:SCHOOL_STAFF_HOME',
+  'OVERSIGHT:ADMINISTRATIVE_PERSONNEL_HOME',
+  'OVERSIGHT:MANAGER_HOME',
+] as const;
+
+export type AllowedManagerCapability = (typeof ALLOWED_MANAGER_CAPABILITIES)[number];
+
+export interface ManagerSummary {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string | null;
+  accountStatus: AccountApprovalStatus;
+  governanceVersion: number;
+}
+
+export interface ManagerGrantRecord {
+  id: string;
+  managerUserId: string;
+  managerUsername: string;
+  managerFullName: string;
+  capability: string;
+  active: boolean;
+  grantedBy: string | null;
+  grantedAt: string;
+  updatedAt: string;
+}
+
+export interface ManagerDelegationPayload {
+  managers: ManagerSummary[];
+  grants: ManagerGrantRecord[];
+}
+
+export interface SetManagerCapabilityResult {
+  grantId: string;
+  managerUserId: string;
+  capability: string;
+  active: boolean;
+  auditLogId: string;
+}
 
 export interface GovernanceResult<T> {
   ok: boolean;
@@ -105,7 +160,10 @@ export interface GovernanceAuditLogEntry {
   action:
     | GovernanceLifecycleDecision
     | 'APPOINT_PRIVILEGED_ROLE'
-    | 'REVOKE_PRIVILEGED_ROLE';
+    | 'REVOKE_PRIVILEGED_ROLE'
+    | 'GRANT_MANAGER_CAPABILITY'
+    | 'REVOKE_MANAGER_CAPABILITY';
+  capability?: string | null;
   previousStatus: AccountApprovalStatus;
   resultingStatus: AccountApprovalStatus;
   previousRoles: AccountRole[];
@@ -175,6 +233,7 @@ const KNOWN_ERROR_CODES = new Set<GovernanceErrorCode>([
   'contact_not_confirmed',
   'target_not_found',
   'invalid_role',
+  'invalid_capability',
   'invalid_transition',
   'reason_required',
   'version_conflict',
@@ -510,7 +569,100 @@ export async function appointPrivilegedRole(
         errorMessage: 'Invalid privileged appointment response.',
       };
     }
-    return { ok: true, data: data as GovernanceMutationResult };
+  return { ok: true, data: data as GovernanceMutationResult };
+  } catch (err) {
+    const classified = classifyGovernanceRpcError(err);
+    return { ok: false, ...classified };
+  }
+}
+
+export async function listManagerGrants(
+  clientOverride?: GovernanceRpcClient | null,
+): Promise<GovernanceResult<ManagerDelegationPayload>> {
+  const client = resolveRpcClient(clientOverride);
+  if (!client) {
+    return {
+      ok: false,
+      errorCode: 'backend_unavailable',
+      errorMessage: 'Supabase client is not configured in this build.',
+    };
+  }
+
+  try {
+    const { data, error } = await client.rpc('governance_list_manager_grants', {});
+    if (error) {
+      const classified = classifyGovernanceRpcError(error);
+      return { ok: false, ...classified };
+    }
+    if (!data || !Array.isArray(data.managers) || !Array.isArray(data.grants)) {
+      return {
+        ok: false,
+        errorCode: 'backend_unavailable',
+        errorMessage: 'Invalid manager delegation payload.',
+      };
+    }
+    return { ok: true, data: data as ManagerDelegationPayload };
+  } catch (err) {
+    const classified = classifyGovernanceRpcError(err);
+    return { ok: false, ...classified };
+  }
+}
+
+export async function setManagerCapability(
+  command: {
+    managerUserId: string;
+    capability: string;
+    active: boolean;
+    reason: string;
+  },
+  clientOverride?: GovernanceRpcClient | null,
+): Promise<GovernanceResult<SetManagerCapabilityResult>> {
+  const client = resolveRpcClient(clientOverride);
+  if (!client) {
+    return {
+      ok: false,
+      errorCode: 'backend_unavailable',
+      errorMessage: 'Supabase client is not configured in this build.',
+    };
+  }
+
+  const trimmedReason = command.reason?.trim() ?? '';
+  if (trimmedReason.length < 3 || trimmedReason.length > 500) {
+    return {
+      ok: false,
+      errorCode: 'reason_required',
+      errorMessage: 'A clear audit reason (3–500 characters) is required.',
+    };
+  }
+
+  const cleanCap = command.capability.trim().toUpperCase();
+  if (!(ALLOWED_MANAGER_CAPABILITIES as readonly string[]).includes(cleanCap)) {
+    return {
+      ok: false,
+      errorCode: 'invalid_capability',
+      errorMessage: 'Requested capability is not in the GOV-02 delegation allowlist.',
+    };
+  }
+
+  try {
+    const { data, error } = await client.rpc('governance_set_manager_capability', {
+      p_manager_user_id: command.managerUserId,
+      p_capability: cleanCap,
+      p_active: command.active,
+      p_reason: trimmedReason,
+    });
+    if (error) {
+      const classified = classifyGovernanceRpcError(error);
+      return { ok: false, ...classified };
+    }
+    if (!data || typeof data !== 'object') {
+      return {
+        ok: false,
+        errorCode: 'backend_unavailable',
+        errorMessage: 'Invalid manager capability response.',
+      };
+    }
+    return { ok: true, data: data as SetManagerCapabilityResult };
   } catch (err) {
     const classified = classifyGovernanceRpcError(err);
     return { ok: false, ...classified };
@@ -1101,6 +1253,117 @@ export function createInMemoryGovernanceTestHarness(
               auditLogId: auditId,
               reviewedAt: nowIso,
             } satisfies GovernanceMutationResult,
+            error: null,
+          };
+        });
+      }
+
+      if (fnName === 'governance_list_manager_grants') {
+        const auth = verifyGovernanceCaller(actorUserId, true);
+        if (!auth.ok) {
+          return { data: null, error: { code: auth.code, message: auth.code } };
+        }
+        const managers = [...accounts.values()]
+          .filter((a) => a.accountStatus === 'APPROVED' && a.activeRoles.includes('MANAGER'))
+          .map((a) => ({
+            id: a.id,
+            username: a.username,
+            fullName: a.fullName,
+            email: a.email,
+            accountStatus: a.accountStatus,
+            governanceVersion: a.governanceVersion,
+          }));
+        const grants: ManagerGrantRecord[] = [];
+        for (const m of accounts.values()) {
+          if (m.activeRoles.includes('MANAGER')) {
+            for (const cap of m.capabilities) {
+              grants.push({
+                id: `grant-${m.id}-${cap}`,
+                managerUserId: m.id,
+                managerUsername: m.username,
+                managerFullName: m.fullName,
+                capability: cap,
+                active: true,
+                grantedBy: auth.actor.id,
+                grantedAt: m.createdAt,
+                updatedAt: m.createdAt,
+              });
+            }
+          }
+        }
+        return { data: { managers, grants }, error: null };
+      }
+
+      if (fnName === 'governance_set_manager_capability') {
+        const auth = verifyGovernanceCaller(actorUserId, true);
+        if (!auth.ok) {
+          return { data: null, error: { code: auth.code, message: auth.code } };
+        }
+        return withGovernanceLock(() => {
+          const managerId = String(args.p_manager_user_id ?? '');
+          const cap = String(args.p_capability ?? '').trim().toUpperCase();
+          if (typeof args.p_active !== 'boolean') {
+            return { data: null, error: { code: 'invalid_transition', message: 'invalid_transition' } };
+          }
+          const active = args.p_active;
+          const reason = String(args.p_reason ?? '').trim();
+
+          if (reason.length < 3 || reason.length > 500) {
+            return { data: null, error: { code: 'reason_required', message: 'reason_required' } };
+          }
+          if (!(ALLOWED_MANAGER_CAPABILITIES as readonly string[]).includes(cap)) {
+            return { data: null, error: { code: 'invalid_capability', message: 'invalid_capability' } };
+          }
+
+          const target = accounts.get(managerId);
+          if (!target) {
+            return { data: null, error: { code: 'target_not_found', message: 'target_not_found' } };
+          }
+          if (target.accountStatus !== 'APPROVED') {
+            return { data: null, error: { code: 'invalid_transition', message: 'invalid_transition' } };
+          }
+          if (!target.activeRoles.includes('MANAGER')) {
+            return { data: null, error: { code: 'invalid_role', message: 'invalid_role' } };
+          }
+
+          const nextCaps = new Set(target.capabilities);
+          if (active) {
+            nextCaps.add(cap);
+          } else {
+            nextCaps.delete(cap);
+          }
+
+          const nowIso = new Date().toISOString();
+          accounts.set(managerId, {
+            ...target,
+            capabilities: [...nextCaps],
+            governanceVersion: target.governanceVersion + 1,
+          });
+
+          const auditId = `audit-${auditLogs.length + 1}`;
+          auditLogs.push({
+            id: auditId,
+            actorUserId: auth.actor.id,
+            actorRole: auth.actorRole,
+            targetUserId: managerId,
+            action: active ? 'GRANT_MANAGER_CAPABILITY' : 'REVOKE_MANAGER_CAPABILITY',
+            capability: cap,
+            previousStatus: target.accountStatus,
+            resultingStatus: target.accountStatus,
+            previousRoles: [...target.activeRoles],
+            resultingRoles: [...target.activeRoles],
+            reason,
+            createdAt: nowIso,
+          });
+
+          return {
+            data: {
+              grantId: `grant-${managerId}-${cap}`,
+              managerUserId: managerId,
+              capability: cap,
+              active,
+              auditLogId: auditId,
+            },
             error: null,
           };
         });

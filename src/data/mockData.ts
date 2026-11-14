@@ -1,4 +1,4 @@
-import {
+import type {
   User,
   Child,
   ClassItem,
@@ -12,7 +12,7 @@ import {
   FoodMenuWeek,
   TeacherDirectoryMember,
   AdminDirectoryMember,
-} from '../types';
+} from '../types.ts';
 
 export const MOCK_USERS: User[] = [
   {

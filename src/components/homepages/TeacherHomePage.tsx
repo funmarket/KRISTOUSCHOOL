@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
@@ -30,15 +30,20 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
     language,
     currentUser,
     classesList,
+    selectedClassId,
+    setSelectedClassId,
   } = useApp();
 
   // Strictly scope teacher classes to the authenticated teacher's server-verified assignedClassIds.
   // Never fall back to MOCK_CLASSES or unassigned class records.
   const teacherClasses = resolveTeacherAssignedClasses(currentUser, classesList);
 
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(
-    teacherClasses[0]?.id ?? null,
-  );
+  useEffect(() => {
+    if (teacherClasses.length > 0 && !teacherClasses.some((c) => c.id === selectedClassId)) {
+      setSelectedClassId(teacherClasses[0].id);
+    }
+  }, [teacherClasses, selectedClassId, setSelectedClassId]);
+
   const [selectedUpcomingFeature, setSelectedUpcomingFeature] = useState<string | null>(null);
 
   const openCommunitySubTab = (subTab: string) => {
@@ -158,7 +163,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
             actionLabel={openActionLabel}
             icon="💬"
             tone="purple"
-            onClick={() => setActiveTab('notes')}
+            onClick={() => setActiveTab('messages')}
           />
 
           <HomeShortcutCard
