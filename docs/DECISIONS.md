@@ -122,6 +122,12 @@ The implementation must use strong provider password handling, confirmation sett
 - Implements human-friendly Unicode username validation/normalization (`src/lib/username.ts`), Tunisian (`+216`) and explicit E.164 phone normalization, and optional-username registration combinations `B`–`G` while explicitly blocking combination `A` (username-only without email or phone) and keeping secondary phone in `F`/`G` marked as unverified (`pending_phone`) and disabled for login until provider verification is completed.
 - Prepares `supabase/migrations/20261113120000_human_friendly_usernames.sql` (`PREPARED — NOT VERIFIED`) preserving the seven-role `app_role` enum, `handle_new_user()`, `username_normalized`, and `profiles_username_normalized_key` in place.
 
+## 2026-11-14 Owner addendum — AUTH-LOGIN-02 and Telegram preservation
+
+**Accepted; supersedes older identifier-combination and public phone-login wording in ADR-012/015:** Public sign-in accepts username or email plus password. Registration requires email or phone; phone without email also requires a chosen username. Keep phone credentials enabled internally for the server-side username resolver. Username-only provisioning remains unsupported; no synthetic contact aliases or identity merging.
+
+**Protected scope:** Preserve Telegram authentication, linking, challenges and cached/session behavior against `09ffacf80daa4f546140053db441abb96c68ef8b`. The Owner withdrew Telegram lifecycle changes from GOV-01/AUTH-LOGIN-02. Do not introduce another Telegram auth system or redeploy Telegram handlers during this closeout. Shared Web loader and governance changes must not alter those sections. This is a scope decision, not a new Telegram security certification.
+
 ## ADR template
 
 ```markdown

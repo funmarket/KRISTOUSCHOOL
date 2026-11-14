@@ -83,3 +83,28 @@ Snapshot HEAD before work. Re-check before consequential writes or commits. If H
 ## 7. Completion standard
 
 A task is complete only to the extent that source, tests, docs, and runtime evidence prove. For database work, verify local migrations from a clean state, integrity constraints, RLS grants/policies, allow/deny tests, function authorization, and secret boundaries. For UI work, verify responsive/RTL/theme behavior and denied/error/empty states as applicable. Record checks and gaps honestly in `progress.md`.
+
+
+## 8. Active Owner-approved closeout checklist — 2026-11-14
+
+This is the current repository execution queue. Earlier F0 ordering/status statements are historical. Complete source, database, consumers and verification together; do not accumulate unapplied backend dependencies. Maintain this checklist instead of creating competing queues.
+
+**CURRENT_COMMAND:** GOV-01 / AUTH-LOGIN-02 post-push source reconciliation. Baseline main@32067aa961620facffe4ff906c5598f68d27d6ff. Work is on a focused review branch; no main commit or merge is included.
+
+- [x] Owner published accumulated AI Studio changes; independently inspect exact commit.
+- [x] Preserve username/email sign-in and username requirement for phone-without-email signup.
+- [x] Verify Web loader queries account_status and fails closed.
+- [x] Restore shared AppContext to the protected 09ffacf baseline; preserve Telegram sections/handlers.
+- [x] Retrieve installed migration SQL read-only; recover missing canonical roles file and reconcile GOV-01 source to installed safeguards.
+- [x] Independently run Node suite, typecheck and build; record precise evidence in progress.md.
+- [x] Replay source migrations in isolated standalone PostgreSQL with a minimal Auth schema (limited substitute, not the Supabase reset gate).
+- [ ] Complete Docker-backed Supabase reset and RLS pgTAP acceptance. Standalone mode bypasses RLS and cannot satisfy this gate.
+- [ ] Run genuine two-session last-Owner and post-wait caller-revocation tests. Do not substitute in-memory scheduling.
+- [ ] Review focused PR and merge only with explicit Owner approval.
+- [ ] Verify production Web login and Owner governance workflow against deployed frontend revision.
+- [ ] Close matching username-handler release: compare deployed v6 with tested source, deploy only that handler under its explicit release instruction, then verify username sign-in. Unicode schema is already installed; do not rerun it.
+- [ ] Start GOV-02 only after GOV-01 acceptance: Owner-only audited narrow capability grant/revoke RPCs and existing delegation UI together.
+
+**Standing Telegram instruction:** Do not reopen Telegram lifecycle enforcement or alter linking, challenge, handler, cache or session behavior during this cycle. Regression checks and restoring the agreed baseline are in scope; a new Telegram implementation or deployment requires a separate Owner instruction.
+
+**Preservation:** Existing project, accounts, approved Owner and Telegram link remain. No second bootstrap, replacement database, account cleanup or unrelated UI work.

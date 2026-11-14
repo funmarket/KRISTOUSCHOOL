@@ -4,9 +4,11 @@ KRISTOU SCHOOL is the mobile-first school application for École Primaire Privé
 
 ## Current state
 
-**Source snapshot (2026-11-13):** `main@5d9f95c4cd96a8c1b83662f4605ef0bf668acabd` contains the one React/Vite Web/Telegram product, seven-role registration UI and source-controlled Supabase auth foundation. School-domain views remain largely prototype/local-state only; they are not verified private data services. The connected hosted KRISTOUSCHOOL project has four public auth tables, five live migrations and three active Edge Functions. Deployed `telegram-auth` v9 differs from committed source. See the [current evidence and agent handoff](docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md); refresh mutable facts before changes.
+**Source checkpoint (2026-11-14):** Owner published GOV-01 corrections and AUTH-LOGIN-02 at `main@32067aa961620facffe4ff906c5598f68d27d6ff`. Public sign-in uses username or email; registration with phone but no email requires a username. Private school-domain features beyond account governance remain largely prototypes.
 
-**Historical deployment finding (2026-11-11):** a then-inspected Vercel bundle appeared to omit public Supabase build configuration. This was not reverified for the current deployment and must NOT be presented as a confirmed current outage or fixed status. Actual Browser sign-in needs a current build/browser check. Only public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (or an intentionally supported public alias) may enter a browser build; never a service-role key or Telegram bot token.
+**Hosted backend, read-only verified 2026-11-14:** existing Supabase project `ofppapwofhovhroyjtkc` has seven recorded migrations, including Unicode usernames and account governance; 3 Auth users/profiles, 1 approved active Owner and 1 Telegram link. Their presence does not prove end-to-end login or governance UI acceptance. See the latest `progress.md` entry and migration mapping in `docs/REMOTE_SCHEMA_INVENTORY.md`.
+
+**Release limits:** Username sign-in remains deployed at v6; its newer source is not deployed by this reconciliation. Preserve deployed Telegram auth v9 and challenge v6. Do not replay historical SQL, run `db push` across unmapped migration IDs, or redeploy old Telegram source. Browser sign-in and current Vercel configuration need runtime verification; the old November 11 configuration diagnosis is historical.
 
 ## Canonical project documents
 
@@ -28,7 +30,7 @@ The old `funmarket/Kristou` repository is a read-only source of migrated product
 
 ## Platform direction
 
-Supabase is the selected backend. The hosted `KRISTOUSCHOOL` project currently has five live migration versions (versus four source SQL files), an existing atomic link RPC and revoked `authenticated` SELECT on link challenges; `telegram-auth` is deployed at v9. The repository/source parity is still unresolved, so do NOT apply old SQL or redeploy committed handlers blindly. Frontend hosting uses Vercel; the current browser environment's login behavior has not been verified by this documentation task.
+Supabase is the selected backend; Vercel hosts the frontend. Database migrations must precede dependent frontend changes. Source presence, a passing build and an applied migration are separate release facts. See current evidence before deployment.
 
 ## Development
 
