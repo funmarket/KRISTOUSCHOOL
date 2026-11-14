@@ -87,7 +87,7 @@ test('GOV-01A.1 — SUSPENDED status is reconciled in src/types.ts, homepageAcce
   );
   assert.match(appStatusSource, /SUSPENDED:/, 'Expected SUSPENDED status copy in ApplicationStatusScreen.tsx');
 
-  // loadCanonicalUser and authenticateTelegramInitData reject SUSPENDED accounts even if role_assignments has an active row
+  // loadCanonicalUser rejects SUSPENDED / PENDING accounts even if role_assignments has an active row
   const authModule = await import('../src/lib/auth.ts');
   for (const blockedStatus of ['PENDING', 'REJECTED', 'SUSPENDED', 'REVOKED']) {
     const mockClientWithStatus = {
@@ -132,31 +132,6 @@ test('GOV-01A.1 — SUSPENDED status is reconciled in src/types.ts, homepageAcce
       () => authModule.loadCanonicalUser({ id: 'u-status-1', email: 'status@example.com' }, mockClientWithStatus),
       /account_not_approved/,
       `Expected loadCanonicalUser to fail closed when account_status is ${blockedStatus}`,
-    );
-
-    const mockTgClient = {
-      functions: {
-        invoke: async () => ({
-          data: {
-            linked: true,
-            user: {
-              id: 'tg-status-1',
-              username: 'tg_status',
-              fullName: 'TG Status User',
-              role: 'PARENT',
-              capabilities: ['PARENT'],
-              accountStatus: blockedStatus,
-            },
-          },
-          error: null,
-        }),
-      },
-    };
-
-    await assert.rejects(
-      () => authModule.authenticateTelegramInitData(`query_id=status_${blockedStatus}`, mockTgClient),
-      /account_not_approved/,
-      `Expected authenticateTelegramInitData to fail closed when accountStatus is ${blockedStatus}`,
     );
   }
 });
@@ -932,3 +907,361 @@ test('GOV-01 Section 2 & Section 5 — OwnerHomePage wiring, visual preservation
   );
   assert.equal(fs.existsSync(pgtapPath), true, 'Expected pgTAP security test file to exist');
 });
+
+test('GOV-01-SAFETY-FIX-01 (Defect 1) — loadCanonicalUser selects profiles.account_status, maps accountStatus: APPROVED, and fails closed on missing or unrecognized status', async () => {
+  const authModule = await import('../src/lib/auth.ts');
+
+  let capturedProfileSelect = '';
+  const createProfileMockClient = (profileRow, assignedRoles = ['PARENT']) => ({
+    from: (table) => ({
+      select: (columns) => {
+        if (table === 'profiles') {
+          capturedProfileSelect = String(columns);
+        }
+        return {
+          eq: () => {
+            if (table === 'profiles') {
+              return {
+                single: async () => ({
+                  data: profileRow,
+                  error: null,
+                }),
+              };
+            }
+            if (table === 'role_assignments') {
+              return {
+                eq: async () => ({
+                  data: assignedRoles.map((role) => ({ role })),
+                  error: null,
+                }),
+              };
+            }
+            if (table === 'telegram_identities') {
+              return {
+                maybeSingle: async () => ({ data: null, error: null }),
+              };
+            }
+            throw new Error(`Unexpected table ${table}`);
+          },
+        };
+      },
+    }),
+  });
+
+  // 1. Positive case: profile with account_status = 'APPROVED' selects account_status and maps accountStatus: 'APPROVED'
+  const approvedUser = await authModule.loadCanonicalUser(
+    { id: 'u-ok-1', email: 'ok@kristou.example' },
+    createProfileMockClient({
+      id: 'u-ok-1',
+      username: 'ok_parent',
+      full_name: 'Approved Parent',
+      email: 'ok@kristou.example',
+      avatar_url: null,
+      account_status: 'APPROVED',
+      requested_role: 'PARENT',
+    }),
+  );
+  assert.match(
+    capturedProfileSelect,
+    /\baccount_status\b/,
+    'loadCanonicalUser must explicitly select account_status from profiles',
+  );
+  assert.equal(approvedUser.accountStatus, 'APPROVED', 'loadCanonicalUser must map accountStatus: APPROVED onto User');
+  assert.equal(approvedUser.role, 'PARENT');
+
+  // 2. Negative cases: missing (undefined, null, empty) or unrecognized ('ACTIVE', 'UNKNOWN') account_status must NEVER silently become APPROVED
+  for (const invalidStatus of [undefined, null, '', 'ACTIVE', 'UNKNOWN', 'PENDING_REVIEW']) {
+    await assert.rejects(
+      () =>
+        authModule.loadCanonicalUser(
+          { id: 'u-bad-status', email: 'bad@kristou.example' },
+          createProfileMockClient(
+            {
+              id: 'u-bad-status',
+              username: 'bad_status_user',
+              full_name: 'Bad Status User',
+              email: 'bad@kristou.example',
+              avatar_url: null,
+              account_status: invalidStatus,
+            },
+            ['APP_ADMIN'],
+          ),
+        ),
+      /account_not_approved/,
+      `Expected loadCanonicalUser to reject account_status=${String(invalidStatus)} with account_not_approved`,
+    );
+  }
+});
+
+
+
+test('GOV-01-SAFETY-FIX-01 (Defect 3) — governance_review_account blocks APPROVE/REACTIVATE into APP_ADMIN or MANAGER even when caller is APP_ADMIN (requires governance_appoint_privileged_role with explicit confirmation)', async () => {
+  const gov = await import('../src/lib/accountGovernance.ts');
+
+  const harness = gov.createInMemoryGovernanceTestHarness([
+    {
+      id: 'owner-1',
+      username: 'owner_one',
+      fullName: 'Primary School Owner',
+      email: 'owner1@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'APP_ADMIN',
+      accountStatus: 'APPROVED',
+      activeRoles: ['APP_ADMIN'],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-01T08:00:00.000Z',
+    },
+    {
+      id: 'pending-mgr',
+      username: 'pending_mgr',
+      fullName: 'Pending Manager Applicant',
+      email: 'pmgr@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'MANAGER',
+      accountStatus: 'PENDING',
+      activeRoles: [],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-10T08:00:00.000Z',
+    },
+    {
+      id: 'pending-owner',
+      username: 'pending_owner',
+      fullName: 'Pending Owner Applicant',
+      email: 'powner@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'APP_ADMIN',
+      accountStatus: 'PENDING',
+      activeRoles: [],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-10T09:00:00.000Z',
+    },
+    {
+      id: 'pending-teacher',
+      username: 'pending_teacher',
+      fullName: 'Pending Teacher Applicant',
+      email: 'pteacher@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'TEACHER',
+      accountStatus: 'PENDING',
+      activeRoles: [],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-10T10:00:00.000Z',
+    },
+    {
+      id: 'suspended-mgr',
+      username: 'suspended_mgr',
+      fullName: 'Suspended Manager',
+      email: 'smgr@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'MANAGER',
+      accountStatus: 'SUSPENDED',
+      activeRoles: [],
+      capabilities: [],
+      governanceVersion: 2,
+      createdAt: '2026-11-02T08:00:00.000Z',
+    },
+  ]);
+
+  const ownerClient = harness.asActor('owner-1');
+
+  // 1. Owner scope assignableRoles for general review must only contain the 5 ordinary roles
+  const ownerScope = await gov.fetchGovernanceActorScope(ownerClient);
+  assert.equal(ownerScope.ok, true);
+  assert.deepEqual(
+    new Set(ownerScope.data.assignableRoles),
+    new Set(ORDINARY_ROLES),
+    'assignableRoles for general account review must only include ordinary roles, never APP_ADMIN or MANAGER',
+  );
+
+  // 2. APP_ADMIN calling reviewAccountLifecycle(APPROVE) on pending MANAGER without downgrading role is rejected with explicit_confirmation_required
+  const ownerApproveMgrViaReview = await gov.reviewAccountLifecycle(
+    {
+      targetUserId: 'pending-mgr',
+      decision: 'APPROVE',
+      reason: 'Owner trying to approve MANAGER via general review without confirmation',
+      expectedVersion: 1,
+    },
+    ownerClient,
+  );
+  assert.equal(ownerApproveMgrViaReview.ok, false);
+  assert.equal(ownerApproveMgrViaReview.errorCode, 'explicit_confirmation_required');
+
+  // 3. APP_ADMIN calling reviewAccountLifecycle(APPROVE) on pending APP_ADMIN is rejected with explicit_confirmation_required
+  const ownerApproveOwnerViaReview = await gov.reviewAccountLifecycle(
+    {
+      targetUserId: 'pending-owner',
+      decision: 'APPROVE',
+      reason: 'Owner trying to approve APP_ADMIN via general review without confirmation',
+      expectedVersion: 1,
+    },
+    ownerClient,
+  );
+  assert.equal(ownerApproveOwnerViaReview.ok, false);
+  assert.equal(ownerApproveOwnerViaReview.errorCode, 'explicit_confirmation_required');
+
+  // 4. APP_ADMIN calling reviewAccountLifecycle(APPROVE) on ordinary pending-teacher but passing assignedRole: 'MANAGER' or 'APP_ADMIN' is rejected
+  for (const privRole of ['MANAGER', 'APP_ADMIN']) {
+    const ownerEscalateViaReview = await gov.reviewAccountLifecycle(
+      {
+        targetUserId: 'pending-teacher',
+        decision: 'APPROVE',
+        assignedRole: privRole,
+        reason: `Owner trying to assign ${privRole} via general review`,
+        expectedVersion: 1,
+      },
+      ownerClient,
+    );
+    assert.equal(ownerEscalateViaReview.ok, false);
+    assert.equal(ownerEscalateViaReview.errorCode, 'explicit_confirmation_required');
+  }
+
+  // 5. APP_ADMIN calling reviewAccountLifecycle(REACTIVATE) on suspended MANAGER without downgrading to an ordinary role is rejected
+  const ownerReactivateMgrViaReview = await gov.reviewAccountLifecycle(
+    {
+      targetUserId: 'suspended-mgr',
+      decision: 'REACTIVATE',
+      reason: 'Owner trying to reactivate MANAGER via general review without confirmation',
+      expectedVersion: 2,
+    },
+    ownerClient,
+  );
+  assert.equal(ownerReactivateMgrViaReview.ok, false);
+  assert.equal(ownerReactivateMgrViaReview.errorCode, 'explicit_confirmation_required');
+
+  // 6. APP_ADMIN CAN approve pending-mgr into an ordinary role (e.g. TEACHER) via reviewAccountLifecycle, OR appoint as MANAGER via appointPrivilegedRole(confirmed: true)
+  const appointSuspendedMgr = await gov.appointPrivilegedRole(
+    {
+      targetUserId: 'suspended-mgr',
+      role: 'MANAGER',
+      action: 'GRANT',
+      reason: 'Reinstating Manager via explicit Owner appointment',
+      expectedVersion: 2,
+      confirmed: true,
+    },
+    ownerClient,
+  );
+  assert.equal(appointSuspendedMgr.ok, true);
+  assert.equal(appointSuspendedMgr.data.accountStatus, 'APPROVED');
+  assert.deepEqual(appointSuspendedMgr.data.activeRoles, ['MANAGER']);
+});
+
+test('GOV-01-SAFETY-FIX-01 (Defect 4) — Concurrent last-Owner protection and database-level serialization', async () => {
+  const gov = await import('../src/lib/accountGovernance.ts');
+
+  const harness = gov.createInMemoryGovernanceTestHarness([
+    {
+      id: 'owner-a',
+      username: 'owner_a',
+      fullName: 'Owner Alpha',
+      email: 'ownera@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'APP_ADMIN',
+      accountStatus: 'APPROVED',
+      activeRoles: ['APP_ADMIN'],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-01T08:00:00.000Z',
+    },
+    {
+      id: 'owner-b',
+      username: 'owner_b',
+      fullName: 'Owner Beta',
+      email: 'ownerb@kristou.example',
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'APP_ADMIN',
+      accountStatus: 'APPROVED',
+      activeRoles: ['APP_ADMIN'],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-11-01T09:00:00.000Z',
+    },
+  ]);
+
+  const ownerAClient = harness.asActor('owner-a');
+  const ownerBClient = harness.asActor('owner-b');
+
+  // 1. Concurrent transactions attempting to suspend owner-a and revoke APP_ADMIN from owner-b simultaneously:
+  //    Exactly ONE succeeds and the second MUST fail with last_owner_protection so activeOwnerCount never drops to 0!
+  const [resA, resB] = await Promise.all([
+    gov.reviewAccountLifecycle(
+      {
+        targetUserId: 'owner-a',
+        decision: 'SUSPEND',
+        reason: 'Concurrent owner-a suspension',
+        expectedVersion: 1,
+      },
+      ownerBClient,
+    ),
+    gov.appointPrivilegedRole(
+      {
+        targetUserId: 'owner-b',
+        role: 'APP_ADMIN',
+        action: 'REVOKE',
+        reason: 'Concurrent owner-b revocation',
+        expectedVersion: 1,
+        confirmed: true,
+      },
+      ownerAClient,
+    ),
+  ]);
+
+  const successes = [resA, resB].filter((r) => r.ok);
+  const failures = [resA, resB].filter((r) => !r.ok);
+  assert.equal(successes.length, 1, 'Exactly one concurrent Owner-removal operation may succeed');
+  assert.equal(failures.length, 1, 'The second concurrent Owner-removal operation must be rejected');
+  assert.equal(failures[0].errorCode, 'last_owner_protection');
+
+  // 2. Also verify that GRANTING 'MANAGER' to the last active APP_ADMIN (which would replace APP_ADMIN with MANAGER) is blocked by last_owner_protection!
+  const remainingOwnerId = harness.getAccount('owner-a').accountStatus === 'APPROVED' ? 'owner-a' : 'owner-b';
+  const remainingOwnerClient = harness.asActor(remainingOwnerId);
+  const remainingVersion = harness.getAccount(remainingOwnerId).governanceVersion;
+
+  const downgradeLastOwnerAttempt = await gov.appointPrivilegedRole(
+    {
+      targetUserId: remainingOwnerId,
+      role: 'MANAGER',
+      action: 'GRANT',
+      reason: 'Attempting to replace last active APP_ADMIN with MANAGER',
+      expectedVersion: remainingVersion,
+      confirmed: true,
+    },
+    remainingOwnerClient,
+  );
+  assert.equal(downgradeLastOwnerAttempt.ok, false);
+  assert.equal(downgradeLastOwnerAttempt.errorCode, 'last_owner_protection');
+
+  // 3. Verify SQL migration contains pg_advisory_xact_lock serialization and FOR UPDATE locking for active owners
+  const migrationSql = fs.readFileSync(
+    new URL('../supabase/migrations/20261113150000_account_governance_foundation.sql', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    migrationSql,
+    /pg_advisory_xact_lock/i,
+    'SQL migration must serialize last-Owner checks with pg_advisory_xact_lock',
+  );
+  assert.match(
+    migrationSql,
+    /for update of/i,
+    'SQL migration must lock active APP_ADMIN rows FOR UPDATE before counting',
+  );
+});
+

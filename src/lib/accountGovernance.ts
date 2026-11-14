@@ -639,6 +639,23 @@ export function createInMemoryGovernanceTestHarness(
     return false;
   };
 
+  let governanceLockPromise: Promise<void> = Promise.resolve();
+  const withGovernanceLock = async <T>(fn: () => T | Promise<T>): Promise<T> => {
+    // Yield a microtask so concurrent callers enter and queue on the advisory lock boundary
+    await Promise.resolve();
+    const prev = governanceLockPromise;
+    let release!: () => void;
+    governanceLockPromise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  };
+
   const asActor = (actorUserId: string | null): GovernanceRpcClient => ({
     rpc: async (fnName: string, args: Record<string, unknown> = {}) => {
       if (fnName === 'governance_get_actor_scope') {
@@ -653,9 +670,7 @@ export function createInMemoryGovernanceTestHarness(
           accountStatus: auth.actor.accountStatus,
           canReviewOrdinaryAccounts: auth.canReviewOrdinary,
           canAppointPrivilegedRoles: auth.canAppointPrivileged,
-          assignableRoles: auth.canAppointPrivileged
-            ? [...CANONICAL_ROLES]
-            : [...ORDINARY_ROLES],
+          assignableRoles: [...ORDINARY_ROLES],
           activeOwnerCount: countActiveApprovedOwners(),
           pendingCount: all.filter((a) => a.accountStatus === 'PENDING').length,
           approvedCount: all.filter((a) => a.accountStatus === 'APPROVED').length,
@@ -776,166 +791,184 @@ export function createInMemoryGovernanceTestHarness(
           return { data: null, error: { code: auth.code, message: auth.code } };
         }
 
-        const targetId = String(args.p_target_user_id ?? '');
-        const decision = String(args.p_decision ?? '') as GovernanceLifecycleDecision;
-        const assignedRole =
-          (args.p_assigned_role as AccountRole | null) ?? undefined;
-        const reason = String(args.p_reason ?? '').trim();
-        const expectedVersion = Number(args.p_expected_version ?? 0);
-        const idempotencyKey =
-          typeof args.p_idempotency_key === 'string' && args.p_idempotency_key.trim()
-            ? args.p_idempotency_key.trim()
-            : null;
+        return withGovernanceLock(() => {
+          const targetId = String(args.p_target_user_id ?? '');
+          const decision = String(args.p_decision ?? '') as GovernanceLifecycleDecision;
+          const assignedRole =
+            (args.p_assigned_role as AccountRole | null) ?? undefined;
+          const reason = String(args.p_reason ?? '').trim();
+          const expectedVersion = Number(args.p_expected_version ?? 0);
+          const idempotencyKey =
+            typeof args.p_idempotency_key === 'string' && args.p_idempotency_key.trim()
+              ? args.p_idempotency_key.trim()
+              : null;
 
-        if (idempotencyKey && idempotencyResults.has(`${auth.actor.id}:${idempotencyKey}`)) {
-          return {
-            data: idempotencyResults.get(`${auth.actor.id}:${idempotencyKey}`),
-            error: null,
-          };
-        }
-
-        if (reason.length < 3) {
-          return {
-            data: null,
-            error: { code: 'reason_required', message: 'reason_required' },
-          };
-        }
-
-        const target = accounts.get(targetId);
-        if (!target) {
-          return {
-            data: null,
-            error: { code: 'target_not_found', message: 'target_not_found' },
-          };
-        }
-
-        // Non-Owner callers cannot govern themselves or any privileged account/role
-        if (auth.actorRole !== 'APP_ADMIN') {
-          if (target.id === auth.actor.id) {
+          if (idempotencyKey && idempotencyResults.has(`${auth.actor.id}:${idempotencyKey}`)) {
             return {
-              data: null,
-              error: { code: 'self_governance_denied', message: 'self_governance_denied' },
+              data: idempotencyResults.get(`${auth.actor.id}:${idempotencyKey}`),
+              error: null,
             };
           }
-          if (targetHasOrRequestsPrivilegedRole(target, assignedRole)) {
+
+          if (reason.length < 3) {
+            return {
+              data: null,
+              error: { code: 'reason_required', message: 'reason_required' },
+            };
+          }
+
+          const target = accounts.get(targetId);
+          if (!target) {
+            return {
+              data: null,
+              error: { code: 'target_not_found', message: 'target_not_found' },
+            };
+          }
+
+          // Non-Owner callers cannot govern themselves or any privileged account/role
+          if (auth.actorRole !== 'APP_ADMIN') {
+            if (target.id === auth.actor.id) {
+              return {
+                data: null,
+                error: { code: 'self_governance_denied', message: 'self_governance_denied' },
+              };
+            }
+            if (targetHasOrRequestsPrivilegedRole(target, assignedRole)) {
+              return {
+                data: null,
+                error: {
+                  code: 'privileged_target_requires_owner',
+                  message: 'privileged_target_requires_owner',
+                },
+              };
+            }
+          }
+
+          const effectiveTargetRole = assignedRole ?? target.requestedRole;
+          if (!isCanonicalRole(effectiveTargetRole)) {
+            return {
+              data: null,
+              error: { code: 'invalid_role', message: 'invalid_role' },
+            };
+          }
+
+          // General APPROVE / REACTIVATE in governance_review_account must NEVER become an alternative
+          // privileged-role appointment path without explicit confirmation (even when caller is APP_ADMIN).
+          if (
+            (decision === 'APPROVE' || decision === 'REACTIVATE') &&
+            (isPrivilegedRole(effectiveTargetRole) ||
+              target.activeRoles.some((r) => isPrivilegedRole(r)))
+          ) {
             return {
               data: null,
               error: {
-                code: 'privileged_target_requires_owner',
-                message: 'privileged_target_requires_owner',
+                code: 'explicit_confirmation_required',
+                message: 'explicit_confirmation_required',
               },
             };
           }
-        }
 
-        if (target.governanceVersion !== expectedVersion) {
-          return {
-            data: null,
-            error: { code: 'version_conflict', message: 'version_conflict' },
+          if (target.governanceVersion !== expectedVersion) {
+            return {
+              data: null,
+              error: { code: 'version_conflict', message: 'version_conflict' },
+            };
+          }
+
+          // Last-owner protection on SUSPEND, REVOKE, or REJECT of an active APP_ADMIN
+          if (
+            (decision === 'SUSPEND' || decision === 'REVOKE' || decision === 'REJECT') &&
+            target.accountStatus === 'APPROVED' &&
+            target.activeRoles.includes('APP_ADMIN') &&
+            countActiveApprovedOwners() <= 1
+          ) {
+            return {
+              data: null,
+              error: { code: 'last_owner_protection', message: 'last_owner_protection' },
+            };
+          }
+
+          // Contact confirmation required before APPROVE or REACTIVATE
+          if (
+            (decision === 'APPROVE' || decision === 'REACTIVATE') &&
+            !target.emailConfirmed &&
+            !target.phoneConfirmed
+          ) {
+            return {
+              data: null,
+              error: { code: 'contact_not_confirmed', message: 'contact_not_confirmed' },
+            };
+          }
+
+          const previousStatus = target.accountStatus;
+          const previousRoles = [...target.activeRoles];
+          let resultingStatus: AccountApprovalStatus = previousStatus;
+          let resultingRoles: AccountRole[] = [];
+
+          if (decision === 'APPROVE' || decision === 'REACTIVATE') {
+            resultingStatus = 'APPROVED';
+            resultingRoles = [effectiveTargetRole];
+          } else if (decision === 'REJECT') {
+            resultingStatus = 'REJECTED';
+            resultingRoles = [];
+          } else if (decision === 'SUSPEND') {
+            resultingStatus = 'SUSPENDED';
+            resultingRoles = [];
+          } else if (decision === 'REVOKE') {
+            resultingStatus = 'REVOKED';
+            resultingRoles = [];
+          } else {
+            return {
+              data: null,
+              error: { code: 'invalid_transition', message: 'invalid_transition' },
+            };
+          }
+
+          const nowIso = new Date().toISOString();
+          const nextVersion = target.governanceVersion + 1;
+          const updatedTarget: GovernanceAccountRecord = {
+            ...target,
+            accountStatus: resultingStatus,
+            activeRoles: resultingRoles,
+            requestedRole: effectiveTargetRole,
+            statusReason: reason,
+            statusReviewedBy: auth.actor.id,
+            statusReviewedAt: nowIso,
+            governanceVersion: nextVersion,
           };
-        }
+          accounts.set(target.id, updatedTarget);
 
-        const effectiveTargetRole = assignedRole ?? target.requestedRole;
-        if (!isCanonicalRole(effectiveTargetRole)) {
-          return {
-            data: null,
-            error: { code: 'invalid_role', message: 'invalid_role' },
+          const auditId = `audit-${auditLogs.length + 1}`;
+          auditLogs.push({
+            id: auditId,
+            actorUserId: auth.actor.id,
+            actorRole: auth.actorRole,
+            targetUserId: target.id,
+            action: decision,
+            previousStatus,
+            resultingStatus,
+            previousRoles,
+            resultingRoles,
+            reason,
+            idempotencyKey,
+            createdAt: nowIso,
+          });
+
+          const mutationResult: GovernanceMutationResult = {
+            targetUserId: target.id,
+            accountStatus: resultingStatus,
+            activeRoles: resultingRoles,
+            governanceVersion: nextVersion,
+            auditLogId: auditId,
+            reviewedAt: nowIso,
           };
-        }
 
-        // Last-owner protection on SUSPEND, REVOKE, or REJECT of an active APP_ADMIN
-        if (
-          (decision === 'SUSPEND' || decision === 'REVOKE' || decision === 'REJECT') &&
-          target.accountStatus === 'APPROVED' &&
-          target.activeRoles.includes('APP_ADMIN') &&
-          countActiveApprovedOwners() <= 1
-        ) {
-          return {
-            data: null,
-            error: { code: 'last_owner_protection', message: 'last_owner_protection' },
-          };
-        }
+          if (idempotencyKey) {
+            idempotencyResults.set(`${auth.actor.id}:${idempotencyKey}`, mutationResult);
+          }
 
-        // Contact confirmation required before APPROVE or REACTIVATE
-        if (
-          (decision === 'APPROVE' || decision === 'REACTIVATE') &&
-          !target.emailConfirmed &&
-          !target.phoneConfirmed
-        ) {
-          return {
-            data: null,
-            error: { code: 'contact_not_confirmed', message: 'contact_not_confirmed' },
-          };
-        }
-
-        const previousStatus = target.accountStatus;
-        const previousRoles = [...target.activeRoles];
-        let resultingStatus: AccountApprovalStatus = previousStatus;
-        let resultingRoles: AccountRole[] = [];
-
-        if (decision === 'APPROVE' || decision === 'REACTIVATE') {
-          resultingStatus = 'APPROVED';
-          resultingRoles = [effectiveTargetRole];
-        } else if (decision === 'REJECT') {
-          resultingStatus = 'REJECTED';
-          resultingRoles = [];
-        } else if (decision === 'SUSPEND') {
-          resultingStatus = 'SUSPENDED';
-          resultingRoles = [];
-        } else if (decision === 'REVOKE') {
-          resultingStatus = 'REVOKED';
-          resultingRoles = [];
-        } else {
-          return {
-            data: null,
-            error: { code: 'invalid_transition', message: 'invalid_transition' },
-          };
-        }
-
-        const nowIso = new Date().toISOString();
-        const nextVersion = target.governanceVersion + 1;
-        const updatedTarget: GovernanceAccountRecord = {
-          ...target,
-          accountStatus: resultingStatus,
-          activeRoles: resultingRoles,
-          requestedRole: effectiveTargetRole,
-          statusReason: reason,
-          statusReviewedBy: auth.actor.id,
-          statusReviewedAt: nowIso,
-          governanceVersion: nextVersion,
-        };
-        accounts.set(target.id, updatedTarget);
-
-        const auditId = `audit-${auditLogs.length + 1}`;
-        auditLogs.push({
-          id: auditId,
-          actorUserId: auth.actor.id,
-          actorRole: auth.actorRole,
-          targetUserId: target.id,
-          action: decision,
-          previousStatus,
-          resultingStatus,
-          previousRoles,
-          resultingRoles,
-          reason,
-          idempotencyKey,
-          createdAt: nowIso,
+          return { data: mutationResult, error: null };
         });
-
-        const mutationResult: GovernanceMutationResult = {
-          targetUserId: target.id,
-          accountStatus: resultingStatus,
-          activeRoles: resultingRoles,
-          governanceVersion: nextVersion,
-          auditLogId: auditId,
-          reviewedAt: nowIso,
-        };
-
-        if (idempotencyKey) {
-          idempotencyResults.set(`${auth.actor.id}:${idempotencyKey}`, mutationResult);
-        }
-
-        return { data: mutationResult, error: null };
       }
 
       if (fnName === 'governance_appoint_privileged_role') {
@@ -955,117 +988,122 @@ export function createInMemoryGovernanceTestHarness(
           };
         }
 
-        const targetId = String(args.p_target_user_id ?? '');
-        const role = String(args.p_role ?? '') as PrivilegedRole;
-        const action = String(args.p_action ?? '') as PrivilegedAppointmentAction;
-        const reason = String(args.p_reason ?? '').trim();
-        const expectedVersion = Number(args.p_expected_version ?? 0);
+        return withGovernanceLock(() => {
+          const targetId = String(args.p_target_user_id ?? '');
+          const role = String(args.p_role ?? '') as PrivilegedRole;
+          const action = String(args.p_action ?? '') as PrivilegedAppointmentAction;
+          const reason = String(args.p_reason ?? '').trim();
+          const expectedVersion = Number(args.p_expected_version ?? 0);
 
-        if (!isPrivilegedRole(role)) {
-          return {
-            data: null,
-            error: { code: 'invalid_role', message: 'invalid_role' },
-          };
-        }
-
-        if (reason.length < 3) {
-          return {
-            data: null,
-            error: { code: 'reason_required', message: 'reason_required' },
-          };
-        }
-
-        const target = accounts.get(targetId);
-        if (!target) {
-          return {
-            data: null,
-            error: { code: 'target_not_found', message: 'target_not_found' },
-          };
-        }
-
-        if (target.governanceVersion !== expectedVersion) {
-          return {
-            data: null,
-            error: { code: 'version_conflict', message: 'version_conflict' },
-          };
-        }
-
-        if (action === 'GRANT' && !target.emailConfirmed && !target.phoneConfirmed) {
-          return {
-            data: null,
-            error: { code: 'contact_not_confirmed', message: 'contact_not_confirmed' },
-          };
-        }
-
-        if (
-          action === 'REVOKE' &&
-          role === 'APP_ADMIN' &&
-          target.accountStatus === 'APPROVED' &&
-          target.activeRoles.includes('APP_ADMIN') &&
-          countActiveApprovedOwners() <= 1
-        ) {
-          return {
-            data: null,
-            error: { code: 'last_owner_protection', message: 'last_owner_protection' },
-          };
-        }
-
-        const previousStatus = target.accountStatus;
-        const previousRoles = [...target.activeRoles];
-        let resultingRoles: AccountRole[];
-        let resultingStatus: AccountApprovalStatus = target.accountStatus;
-
-        if (action === 'GRANT') {
-          resultingStatus = 'APPROVED';
-          resultingRoles = target.activeRoles.includes(role)
-            ? [...target.activeRoles]
-            : [...target.activeRoles.filter((r) => !isPrivilegedRole(r)), role];
-        } else {
-          resultingRoles = target.activeRoles.filter((r) => r !== role);
-          if (resultingRoles.length === 0) {
-            resultingStatus = 'REVOKED';
+          if (!isPrivilegedRole(role)) {
+            return {
+              data: null,
+              error: { code: 'invalid_role', message: 'invalid_role' },
+            };
           }
-        }
 
-        const nowIso = new Date().toISOString();
-        const nextVersion = target.governanceVersion + 1;
-        accounts.set(target.id, {
-          ...target,
-          accountStatus: resultingStatus,
-          activeRoles: resultingRoles,
-          statusReason: reason,
-          statusReviewedBy: auth.actor.id,
-          statusReviewedAt: nowIso,
-          governanceVersion: nextVersion,
-        });
+          if (reason.length < 3) {
+            return {
+              data: null,
+              error: { code: 'reason_required', message: 'reason_required' },
+            };
+          }
 
-        const auditId = `audit-${auditLogs.length + 1}`;
-        auditLogs.push({
-          id: auditId,
-          actorUserId: auth.actor.id,
-          actorRole: auth.actorRole,
-          targetUserId: target.id,
-          action:
-            action === 'GRANT' ? 'APPOINT_PRIVILEGED_ROLE' : 'REVOKE_PRIVILEGED_ROLE',
-          previousStatus,
-          resultingStatus,
-          previousRoles,
-          resultingRoles,
-          reason,
-          createdAt: nowIso,
-        });
+          const target = accounts.get(targetId);
+          if (!target) {
+            return {
+              data: null,
+              error: { code: 'target_not_found', message: 'target_not_found' },
+            };
+          }
 
-        return {
-          data: {
-            targetUserId: target.id,
+          if (target.governanceVersion !== expectedVersion) {
+            return {
+              data: null,
+              error: { code: 'version_conflict', message: 'version_conflict' },
+            };
+          }
+
+          if (action === 'GRANT' && !target.emailConfirmed && !target.phoneConfirmed) {
+            return {
+              data: null,
+              error: { code: 'contact_not_confirmed', message: 'contact_not_confirmed' },
+            };
+          }
+
+          const wouldRemoveOwnerRole =
+            (action === 'REVOKE' && role === 'APP_ADMIN') ||
+            (action === 'GRANT' && role === 'MANAGER');
+
+          if (
+            wouldRemoveOwnerRole &&
+            target.accountStatus === 'APPROVED' &&
+            target.activeRoles.includes('APP_ADMIN') &&
+            countActiveApprovedOwners() <= 1
+          ) {
+            return {
+              data: null,
+              error: { code: 'last_owner_protection', message: 'last_owner_protection' },
+            };
+          }
+
+          const previousStatus = target.accountStatus;
+          const previousRoles = [...target.activeRoles];
+          let resultingRoles: AccountRole[];
+          let resultingStatus: AccountApprovalStatus = target.accountStatus;
+
+          if (action === 'GRANT') {
+            resultingStatus = 'APPROVED';
+            resultingRoles = target.activeRoles.includes(role)
+              ? [...target.activeRoles]
+              : [...target.activeRoles.filter((r) => !isPrivilegedRole(r)), role];
+          } else {
+            resultingRoles = target.activeRoles.filter((r) => r !== role);
+            if (resultingRoles.length === 0) {
+              resultingStatus = 'REVOKED';
+            }
+          }
+
+          const nowIso = new Date().toISOString();
+          const nextVersion = target.governanceVersion + 1;
+          accounts.set(target.id, {
+            ...target,
             accountStatus: resultingStatus,
             activeRoles: resultingRoles,
+            statusReason: reason,
+            statusReviewedBy: auth.actor.id,
+            statusReviewedAt: nowIso,
             governanceVersion: nextVersion,
-            auditLogId: auditId,
-            reviewedAt: nowIso,
-          } satisfies GovernanceMutationResult,
-          error: null,
-        };
+          });
+
+          const auditId = `audit-${auditLogs.length + 1}`;
+          auditLogs.push({
+            id: auditId,
+            actorUserId: auth.actor.id,
+            actorRole: auth.actorRole,
+            targetUserId: target.id,
+            action:
+              action === 'GRANT' ? 'APPOINT_PRIVILEGED_ROLE' : 'REVOKE_PRIVILEGED_ROLE',
+            previousStatus,
+            resultingStatus,
+            previousRoles,
+            resultingRoles,
+            reason,
+            createdAt: nowIso,
+          });
+
+          return {
+            data: {
+              targetUserId: target.id,
+              accountStatus: resultingStatus,
+              activeRoles: resultingRoles,
+              governanceVersion: nextVersion,
+              auditLogId: auditId,
+              reviewedAt: nowIso,
+            } satisfies GovernanceMutationResult,
+            error: null,
+          };
+        });
       }
 
       return {

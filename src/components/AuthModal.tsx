@@ -29,9 +29,9 @@ const optionalBadgeLabel = {
 } as const;
 
 const loginIdentifierHint = {
-  ar: 'سجّل الدخول باستخدام اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف (+216 أو 8 أرقام).',
-  fr: 'Connectez-vous avec votre nom d’utilisateur, votre adresse e-mail ou votre numéro de téléphone (+216 ou 8 chiffres).',
-  en: 'Sign in using your username, email address, or phone number (+216 or 8-digit local number).',
+  ar: 'سجّل الدخول باستخدام اسم المستخدم أو البريد الإلكتروني.',
+  fr: 'Connectez-vous avec votre nom d’utilisateur ou votre adresse e-mail.',
+  en: 'Sign in using your username or email address.',
 } as const;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -57,6 +57,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const isParent = requestedRole === 'PARENT';
   const isEmployee = requestedRole === 'SCHOOL_STAFF' || requestedRole === 'ADMINISTRATIVE_PERSONNEL';
   const isStaffLike = requestedRole === 'TEACHER' || isEmployee;
+  const isUsernameRequired = Boolean(!email.trim() && phone.trim());
 
   const error = errorState
     ? errorState.kind === 'validation_required'
@@ -105,6 +106,11 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         return;
       }
 
+      if (!email.trim() && phone.trim() && !username.trim()) {
+        setErrorState({ kind: 'signup', code: 'username_required_for_phone_registration' });
+        return;
+      }
+
       const result = await signup({
         username: username.trim() || undefined,
         fullName,
@@ -125,7 +131,7 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         secondaryPhoneVerificationRequired: Boolean(result.secondaryPhoneVerificationRequired),
       });
       setMode('login');
-      setIdentifier(email.trim() || phone.trim() || username.trim());
+      setIdentifier(email.trim() || username.trim());
       setPassword('');
     } finally { setBusy(false); }
   };
@@ -220,8 +226,15 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
 
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                <span>{t('username')} <span className="font-normal text-gray-400">({optLabel})</span></span>
-                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input maxLength={50} title={usernameRuleMessage(language)} placeholder="Mohamed Ben Ali · فاطمة الزهراء · Élodie" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className={inputClass} /></div>
+                <span>
+                  {t('username')}{' '}
+                  {isUsernameRequired ? (
+                    <span className="text-red-500">*</span>
+                  ) : (
+                    <span className="font-normal text-gray-400">({optLabel})</span>
+                  )}
+                </span>
+                <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input maxLength={50} required={isUsernameRequired} title={usernameRuleMessage(language)} placeholder="Mohamed Ben Ali · فاطمة الزهراء · Élodie" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className={inputClass} /></div>
                 <p className="mt-1 font-normal text-gray-500">{usernameRuleMessage(language)}</p>
               </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -237,8 +250,8 @@ export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <p className="text-[11px] font-normal text-gray-500">{phoneRuleMessage(language)}</p>
             </>}
 
-            {mode === 'login' && <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('username')} / Email / {t('phone')}
-              <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="Mohamed Ben Ali / email@example.com / 20 123 456" autoComplete="username" className={inputClass} /></div>
+            {mode === 'login' && <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('usernameOrEmail')}
+              <div className="relative mt-1"><UserIcon className="absolute start-3 top-3 h-4 w-4 text-gray-400" /><input required value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="Mohamed Ben Ali / email@example.com" autoComplete="username" className={inputClass} /></div>
               <p className="mt-1 font-normal text-gray-500">{loginIdentifierHint[language] ?? loginIdentifierHint.en}</p>
             </label>}
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">{t('password')}

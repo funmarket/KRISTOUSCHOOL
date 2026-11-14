@@ -3,7 +3,7 @@
 
 begin;
 
-select extensions.plan(24);
+select extensions.plan(26);
 
 -- 1. RLS and least-privilege grant assertions
 select extensions.ok(
@@ -224,6 +224,13 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000101
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000101","role":"authenticated"}', true);
 
 select extensions.throws_ok(
+  $$select public.governance_review_account('00000000-0000-4000-8000-000000000107'::uuid, 'APPROVE', 'MANAGER'::public.app_role, 'Owner attempting general APPROVE of MANAGER without explicit confirmation', 1, null)$$,
+  'P0001',
+  'explicit_confirmation_required',
+  'APP_ADMIN cannot approve a privileged role via governance_review_account without explicit confirmation'
+);
+
+select extensions.throws_ok(
   $$select public.governance_appoint_privileged_role('00000000-0000-4000-8000-000000000107'::uuid, 'MANAGER'::public.app_role, 'GRANT', 'Owner appointing manager without confirmation flag', 1, false)$$,
   'P0001',
   'explicit_confirmation_required',
@@ -246,7 +253,7 @@ select extensions.is(
 );
 
 select extensions.throws_ok(
-  $$select public.governance_Review_account('00000000-0000-4000-8000-000000000106'::uuid, 'REJECT', null, 'Stale version attempt', 1, null)$$,
+  $$select public.governance_review_account('00000000-0000-4000-8000-000000000106'::uuid, 'REJECT', null, 'Stale version attempt', 1, null)$$,
   'P0001',
   'version_conflict',
   'Stale expected_version fails closed with version_conflict'
@@ -267,6 +274,13 @@ select extensions.throws_ok(
   'P0001',
   'last_owner_protection',
   'Cannot revoke APP_ADMIN from the last active School Owner'
+);
+
+select extensions.throws_ok(
+  $$select public.governance_appoint_privileged_role('00000000-0000-4000-8000-000000000101'::uuid, 'MANAGER'::public.app_role, 'GRANT', 'Attempt to replace last owner with MANAGER', 1, true)$$,
+  'P0001',
+  'last_owner_protection',
+  'Cannot replace APP_ADMIN with MANAGER on the last active School Owner'
 );
 
 select extensions.throws_ok(

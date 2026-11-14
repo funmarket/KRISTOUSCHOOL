@@ -5,27 +5,29 @@ export type SignInErrorCode =
   | 'account_not_approved'
   | 'contact_not_confirmed'
   | 'invalid_credentials'
+  | 'phone_sign_in_not_supported'
   | 'sign_in_failed';
 
 export type SignUpErrorCode =
   | 'invalid_username_format'
   | 'username_unavailable_or_invalid'
   | 'username_only_unsupported'
+  | 'username_required_for_phone_registration'
   | 'invalid_email_format'
   | 'invalid_phone_format'
   | 'missing_login_identifier'
   | 'signup_failed';
 
 const usernameRule: Record<Language, string> = {
-  en: 'Optional. Use 3–50 characters: letters (Arabic, French accents, or English), spaces, numbers, periods, underscores, or hyphens; do not enter an email or phone number here.',
-  fr: 'Optionnel. Utilisez 3 à 50 caractères : lettres (arabes, françaises avec accents ou latines), espaces, chiffres, points, tirets bas ou tirets ; ne saisissez pas un e-mail ou un téléphone ici.',
-  ar: 'اختياري. استخدم من 3 إلى 50 حرفاً (بالعربية أو الفرنسية أو الإنجليزية) مع المسافات أو الأرقام أو النقاط أو الشرطات؛ لا تدخل بريداً إلكترونياً أو رقم هاتف في هذا الحقل.',
+  en: 'Required when registering with a phone number without email; otherwise optional. Use 3–50 characters: letters (Arabic, French accents, or English), spaces, numbers, periods, underscores, or hyphens; do not enter an email or phone number here.',
+  fr: 'Requis lors de l’inscription avec un numéro de téléphone sans e-mail ; sinon optionnel. Utilisez 3 à 50 caractères : lettres (arabes, françaises avec accents ou latines), espaces, chiffres, points, tirets bas ou tirets ; ne saisissez pas un e-mail ou un téléphone ici.',
+  ar: 'مطلوب عند التسجيل برقم هاتف دون بريد إلكتروني، واختياري في الحالات الأخرى. استخدم من 3 إلى 50 حرفاً (بالعربية أو الفرنسية أو الإنجليزية) مع المسافات أو الأرقام أو النقاط أو الشرطات؛ لا تدخل بريداً إلكترونياً أو رقم هاتف في هذا الحقل.',
 };
 
 const identifierChoiceGuidance: Record<Language, string> = {
-  en: 'Provide an email address, a phone number, or both to create your account. You may also add an optional username (such as your name in Arabic or French) to sign in with later. Username-only registration without an email or phone number is not currently available.',
-  fr: 'Indiquez une adresse e-mail, un numéro de téléphone, ou les deux pour créer votre compte. Vous pouvez aussi ajouter un nom d’utilisateur optionnel (en arabe ou en français, avec espaces) pour vous connecter. L’inscription uniquement par nom d’utilisateur sans e-mail ni téléphone n’est pas encore disponible.',
-  ar: 'أدخل بريداً إلكترونياً أو رقم هاتف (أو كليهما) لإنشاء حسابك، ويمكنك أيضاً إضافة اسم مستخدم اختياري (بالعربية أو الفرنسية مع المسافات) لتسجيل الدخول به. التسجيل باسم مستخدم فقط دون بريد إلكتروني أو رقم هاتف غير متاح حالياً.',
+  en: 'Provide an email address, a phone number, or both to create your account. If you provide an email address, the username is optional. If you register with a phone number without an email address, a username is required so you can sign in with it later.',
+  fr: 'Indiquez une adresse e-mail, un numéro de téléphone, ou les deux. Si vous fournissez une adresse e-mail, le nom d’utilisateur est optionnel. Si vous vous inscrivez avec un numéro de téléphone sans e-mail, un nom d’utilisateur est requis pour vous connecter.',
+  ar: 'أدخل بريداً إلكترونياً أو رقم هاتف (أو كليهما). إذا أدخلت بريداً إلكترونياً، فإن اسم المستخدم اختياري. أما عند التسجيل برقم الهاتف بدون بريد إلكتروني، فيصبح اسم المستخدم إجبارياً لتسجيل الدخول به لاحقاً.',
 };
 
 const phoneRule: Record<Language, string> = {
@@ -38,6 +40,18 @@ const usernameOnlyUnsupported: Record<Language, string> = {
   en: 'Username-only registration without an email address or phone number is not supported by the current authentication service. Please add an email address or a phone number along with your chosen username.',
   fr: 'La création de compte uniquement avec un nom d’utilisateur, sans adresse e-mail ni numéro de téléphone, n’est pas prise en charge actuellement. Veuillez ajouter une adresse e-mail ou un numéro de téléphone avec votre nom d’utilisateur.',
   ar: 'إنشاء حساب باسم مستخدم فقط دون بريد إلكتروني أو رقم هاتف غير مدعوم حالياً في خدمة المصادقة. يرجى إضافة بريد إلكتروني أو رقم هاتف مع اسم المستخدم المختار.',
+};
+
+const phoneSignInNotSupported: Record<Language, string> = {
+  en: 'Direct phone number sign-in is not supported in the public sign-in field. Please sign in using your username or email address.',
+  fr: 'La connexion directe par numéro de téléphone n’est pas prise en charge dans le champ de connexion public. Veuillez vous connecter avec votre nom d’utilisateur ou votre adresse e-mail.',
+  ar: 'تسجيل الدخول المباشر برقم الهاتف غير مدعوم في حقل تسجيل الدخول العام. يرجى تسجيل الدخول باستخدام اسم المستخدم أو البريد الإلكتروني.',
+};
+
+const usernameRequiredForPhoneRegistration: Record<Language, string> = {
+  en: 'Registration with a phone number (without an email address) requires a valid chosen username so you can sign in subsequently.',
+  fr: "L'inscription avec un numéro de téléphone (sans adresse e-mail) nécessite un nom d'utilisateur valide pour pouvoir vous connecter ultérieurement.",
+  ar: 'التسجيل برقم الهاتف (بدون بريد إلكتروني) يتطلب اسم مستخدم مختاراً وصالحاً لتتمكن من تسجيل الدخول به لاحقاً.',
 };
 
 const invalidEmailFormat: Record<Language, string> = {
@@ -65,9 +79,9 @@ const registrationReceivedConfirmationAndApproval: Record<Language, string> = {
 };
 
 const secondaryPhoneVerificationNote: Record<Language, string> = {
-  en: ' Note: Your account was created with your email address; phone number sign-in requires separate phone verification before the phone number can be used as a login method.',
-  fr: ' Remarque : Votre compte a été créé avec votre adresse e-mail ; la connexion par numéro de téléphone nécessite une vérification séparée du numéro avant de pouvoir l’utiliser pour vous connecter.',
-  ar: ' ملاحظة: تم إنشاء حسابك باستخدام بريدك الإلكتروني؛ ويتطلب تسجيل الدخول برقم الهاتف إتمام التحقق المستقل من رقم الهاتف أولاً قبل استخدامه كوسيلة دخول.',
+  en: ' Note: Your account was created with your email address. You sign in using your username or email address; any additional phone verification remains separate.',
+  fr: ' Remarque : Votre compte a été créé avec votre adresse e-mail. Vous vous connectez avec votre nom d’utilisateur ou votre adresse e-mail ; toute vérification de téléphone additionnelle reste distincte.',
+  ar: ' ملاحظة: تم إنشاء حسابك باستخدام بريدك الإلكتروني. يمكنك تسجيل الدخول باستخدام اسم المستخدم أو البريد الإلكتروني؛ وأي تحقق إضافي من رقم الهاتف يبقى منفصلاً.',
 };
 
 const accountNotApproved: Record<Language, string> = {
@@ -108,6 +122,14 @@ export function phoneRuleMessage(language: Language): string {
 
 export function usernameOnlyUnsupportedMessage(language: Language): string {
   return usernameOnlyUnsupported[language] ?? usernameOnlyUnsupported.en;
+}
+
+export function phoneSignInNotSupportedMessage(language: Language): string {
+  return phoneSignInNotSupported[language] ?? phoneSignInNotSupported.en;
+}
+
+export function usernameRequiredForPhoneRegistrationMessage(language: Language): string {
+  return usernameRequiredForPhoneRegistration[language] ?? usernameRequiredForPhoneRegistration.en;
 }
 
 export function usernameUnavailableMessage(language: Language): string {
@@ -151,6 +173,9 @@ export function classifySignInError(error: unknown): SignInErrorCode {
     if (error === 'account_not_approved') {
       return 'account_not_approved';
     }
+    if (error === 'phone_sign_in_not_supported') {
+      return 'phone_sign_in_not_supported';
+    }
     if (
       error === 'contact_not_confirmed' ||
       error === 'email_not_confirmed' ||
@@ -181,6 +206,10 @@ export function classifySignInError(error: unknown): SignInErrorCode {
 
     if (rawCode === 'account_not_approved' || rawMessage === 'account_not_approved') {
       return 'account_not_approved';
+    }
+
+    if (rawCode === 'phone_sign_in_not_supported' || rawMessage === 'phone_sign_in_not_supported') {
+      return 'phone_sign_in_not_supported';
     }
 
     if (
@@ -227,6 +256,9 @@ export function classifySignUpError(error: unknown): SignUpErrorCode {
   ) {
     return 'username_only_unsupported';
   }
+  if (code === 'username_required_for_phone_registration') {
+    return 'username_required_for_phone_registration';
+  }
   if (code === 'invalid_email_format') {
     return 'invalid_email_format';
   }
@@ -246,6 +278,9 @@ export function resolveSignInErrorMessage(
   const code = classifySignInError(errorOrCode);
   if (code === 'account_not_approved') {
     return accountNotApprovedMessage(language);
+  }
+  if (code === 'phone_sign_in_not_supported') {
+    return phoneSignInNotSupportedMessage(language);
   }
   if (code === 'contact_not_confirmed') {
     return contactNotConfirmedMessage(language);
@@ -270,6 +305,9 @@ export function resolveSignUpErrorMessage(
   }
   if (code === 'username_only_unsupported') {
     return usernameOnlyUnsupportedMessage(language);
+  }
+  if (code === 'username_required_for_phone_registration') {
+    return usernameRequiredForPhoneRegistrationMessage(language);
   }
   if (code === 'invalid_email_format') {
     return invalidEmailFormat[language] ?? invalidEmailFormat.en;

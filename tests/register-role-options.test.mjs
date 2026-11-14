@@ -215,6 +215,7 @@ test('Test G — loadCanonicalUser behavioral verification and AppContext sessio
                   full_name: 'Test User',
                   email: 'test@example.com',
                   avatar_url: null,
+                  account_status: 'APPROVED',
                 },
                 error: null,
               }),
@@ -514,8 +515,8 @@ test('Test K (AUTH-UX-01 Groups C & D) — Failed signup handling, preserved sig
     );
   }
 
-  // 2. AuthModal preserves email, phone, and username sign-in interface and clears signupNotice on failed signup
-  assert.match(authModalSource, /\{t\('username'\)\} \/ Email \/ \{t\('phone'\)\}/);
+  // 2. AuthModal preserves email and username sign-in interface and clears signupNotice on failed signup
+  assert.match(authModalSource, /\{t\('usernameOrEmail'\)\}/);
   assert.match(authModalSource, /if \(!result\.success\) \{\s*const code = result\.errorCode \?\? classifySignUpError\(result\.error\);\s*setErrorState\(\{ kind: 'signup', code \}\);\s*return;\s*\}/);
 
   // 3. ApplicationStatusScreen PENDING copy matches approved KRISTOU SCHOOL administration review text

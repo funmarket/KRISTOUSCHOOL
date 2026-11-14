@@ -441,31 +441,29 @@ test('7. Registration Combination Matrix (Combinations A through G) and Full-Nam
   assert.equal(callsB[0].options.data.full_name, 'Amélie Martin');
   assert.equal(resB.secondaryPhoneVerificationRequired, false);
 
-  // Combination C: Phone only (No / No / Yes) -> Succeeds with Tunisian 8-digit phone, no username required
-  const callsC = [];
+  // Combination C: Phone only without username -> Rejected with username_required_for_phone_registration
   const clientC = {
     auth: {
-      signUp: async (payload) => {
-        callsC.push(payload);
-        return { data: { user: { id: 'user-c' }, session: null }, error: null };
-      },
+      signUp: async () => ({ data: {}, error: null }),
     },
   };
-  const resC = await authModule.signUpAccount(
-    {
-      password: 'StrongPassword123!',
-      phone: '20 123 456',
-      fullName: 'أمينة بن عمر',
-      requestedRole: 'PARENT',
-    },
-    clientC,
+  await assert.rejects(
+    () =>
+      authModule.signUpAccount(
+        {
+          password: 'StrongPassword123!',
+          phone: '20 123 456',
+          fullName: 'أمينة بن عمر',
+          requestedRole: 'PARENT',
+        },
+        clientC,
+      ),
+    /username_required_for_phone_registration/,
   );
-  assert.equal(callsC.length, 1);
-  assert.equal(callsC[0].phone, '+21620123456');
-  assert.equal(callsC[0].email, undefined);
-  assert.equal(callsC[0].options.data.username, undefined);
-  assert.equal(callsC[0].options.data.full_name, 'أمينة بن عمر');
-  assert.equal(resC.secondaryPhoneVerificationRequired, false);
+  assert.equal(
+    authMessages.classifySignUpError(new Error('username_required_for_phone_registration')),
+    'username_required_for_phone_registration',
+  );
 
   // Combination D: Username + Email (Yes / Yes / No) -> Accepts Arabic/French/multiword username + email
   const callsD = [];
@@ -635,6 +633,7 @@ test('8. Secondary phone remains unverified / disabled for login after F/G signu
                   full_name: 'Sarra Ben Amor',
                   email: 'sarra@example.com',
                   avatar_url: null,
+                  account_status: 'APPROVED',
                 },
                 error: null,
               }),
@@ -666,16 +665,15 @@ test('8. Secondary phone remains unverified / disabled for login after F/G signu
   assert.equal(canonicalViaEmail.id, canonicalUserId);
   assert.equal(canonicalViaUsername.role, 'PARENT');
 
-  // Before phone verification, the secondary phone (+21622333444 stored only in pending_phone) MUST NOT authenticate
+  // Public sign-in with phone numbers is not accepted in the public sign-in field -> throws phone_sign_in_not_supported
   await assert.rejects(
     () => authModule.signInAccount('22 333 444', 'CorrectPass!', multiAliasClient),
+    /phone_sign_in_not_supported/,
   );
-
-  // Only if/when the provider has verified and attached the phone to auth.users does phone sign-in resolve to the same canonical User.id
-  phoneVerifiedInAuthUsers = true;
-  const viaPhone = await authModule.signInAccount('22 333 444', 'CorrectPass!', multiAliasClient);
-  const canonicalViaPhone = await authModule.loadCanonicalUser(viaPhone.user, multiAliasClient);
-  assert.equal(canonicalViaPhone.id, canonicalUserId);
+  assert.equal(
+    authMessages.classifySignInError(new Error('phone_sign_in_not_supported')),
+    'phone_sign_in_not_supported',
+  );
 });
 
 test('9. Prepared SQL migration preserves 7-role model, avoids unsupported PostgreSQL regex escapes, and preserves username_normalized column/index', async () => {

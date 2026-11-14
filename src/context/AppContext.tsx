@@ -297,6 +297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentRoleState(canonicalUser.role);
       return { success: true };
     } catch (error) {
+      telegramIdentityUser.current = null;
       await signOutAccount();
       setCurrentUser(null);
       setCurrentRoleState(null);

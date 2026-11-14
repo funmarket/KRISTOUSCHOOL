@@ -98,6 +98,10 @@ export async function signUpAccount(
     throw new Error('missing_login_identifier');
   }
 
+  if (!email && phone && !rawUsername) {
+    throw new Error('username_required_for_phone_registration');
+  }
+
   const client = clientOverride ?? requireSupabaseClient();
   const usernameDisplay = rawUsername ? normalizeUsernameDisplay(rawUsername) : undefined;
   const usernameKey = rawUsername ? normalizeUsernameKey(rawUsername) : undefined;
@@ -231,14 +235,9 @@ export async function signInAccount(
   }
 
   if (isPhoneIdentifier(value)) {
-    const { data, error } = await client.auth.signInWithPassword({
-      phone: normalizePhone(value),
-      password,
+    throw Object.assign(new Error('phone_sign_in_not_supported'), {
+      code: 'phone_sign_in_not_supported',
     });
-    if (error || !data?.session || !data?.user) {
-      throw normalizeProviderSignInError(error);
-    }
-    return data as { session: Session; user: SupabaseUser };
   }
 
   const usernameDisplay = normalizeUsernameDisplay(value);
@@ -272,28 +271,36 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
     { data: assignments, error: roleError },
     { data: telegramIdentity, error: telegramError },
   ] = await Promise.all([
-    typedClient.from('profiles').select('id,username,full_name,email,avatar_url').eq('id', authUser.id).single(),
+    typedClient
+      .from('profiles')
+      .select('id,username,full_name,email,avatar_url,account_status,requested_role')
+      .eq('id', authUser.id)
+      .single(),
     typedClient.from('role_assignments').select('role').eq('user_id', authUser.id).eq('active', true),
     typedClient.from('telegram_identities').select('telegram_user_id').eq('user_id', authUser.id).maybeSingle(),
   ]);
-  if (profileError || roleError || telegramError || !profile) throw profileError ?? roleError ?? telegramError ?? new Error('Profile unavailable');
+  if (profileError || roleError || telegramError || !profile) {
+    throw profileError ?? roleError ?? telegramError ?? new Error('Profile unavailable');
+  }
+
   const rawProfileStatus =
     typeof (profile as { account_status?: unknown }).account_status === 'string'
-      ? (profile as { account_status: string }).account_status
+      ? (profile as { account_status: string }).account_status.trim()
       : typeof (profile as { accountStatus?: unknown }).accountStatus === 'string'
-      ? (profile as { accountStatus: string }).accountStatus
-      : undefined;
-  if (
-    rawProfileStatus === 'PENDING' ||
-    rawProfileStatus === 'REJECTED' ||
-    rawProfileStatus === 'SUSPENDED' ||
-    rawProfileStatus === 'REVOKED'
-  ) {
+      ? (profile as { accountStatus: string }).accountStatus.trim()
+      : '';
+  if (rawProfileStatus !== 'APPROVED') {
     throw new Error('account_not_approved');
   }
+
   const roles = (assignments ?? []).map((row: { role: string }) => row.role);
   const role = resolveCanonicalAccountRole(roles);
   if (!role) throw new Error('account_not_approved');
+
+  const rawRequestedRole =
+    (profile as { requested_role?: unknown }).requested_role ??
+    (profile as { requestedRole?: unknown }).requestedRole;
+
   return {
     id: profile.id,
     username: profile.username,
@@ -301,6 +308,8 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
     email: profile.email ?? authUser.email ?? undefined,
     avatarUrl: profile.avatar_url ?? undefined,
     role: role as UserRole,
+    accountStatus: 'APPROVED',
+    requestedRole: isRegistrationRole(rawRequestedRole) ? rawRequestedRole : undefined,
     capabilities: roles.filter((candidate: string): candidate is AccountRole => Boolean(roleMap[candidate])),
     telegramLinked: Boolean(telegramIdentity),
   };
@@ -394,3 +403,4 @@ export async function completeTelegramLinkFromInitData(initData: string): Promis
 export async function signOutAccount() {
   if (supabase) await supabase.auth.signOut();
 }
+

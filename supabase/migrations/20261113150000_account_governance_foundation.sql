@@ -267,12 +267,7 @@ begin
     'accountStatus', 'APPROVED',
     'canReviewOrdinaryAccounts', true,
     'canAppointPrivilegedRoles', (v_caller_role::text = 'APP_ADMIN'),
-    'assignableRoles', case
-      when v_caller_role::text = 'APP_ADMIN' then
-        jsonb_build_array('APP_ADMIN', 'MANAGER', 'ADMINISTRATIVE_PERSONNEL', 'TEACHER', 'SCHOOL_STAFF', 'PARENT', 'STUDENT')
-      else
-        jsonb_build_array('ADMINISTRATIVE_PERSONNEL', 'TEACHER', 'SCHOOL_STAFF', 'PARENT', 'STUDENT')
-    end,
+    'assignableRoles', jsonb_build_array('ADMINISTRATIVE_PERSONNEL', 'TEACHER', 'SCHOOL_STAFF', 'PARENT', 'STUDENT'),
     'activeOwnerCount', coalesce(v_owner_count, 0),
     'pendingCount', coalesce(v_pending_count, 0),
     'approvedCount', coalesce(v_approved_count, 0),
@@ -739,6 +734,16 @@ begin
     end if;
   end if;
 
+  -- Prevent general APPROVE / REACTIVATE from becoming an alternative privileged-role appointment path
+  -- without the required explicit confirmation (even when caller is APP_ADMIN).
+  if p_decision in ('APPROVE', 'REACTIVATE')
+     and (
+       v_effective_role::text in ('APP_ADMIN', 'MANAGER')
+       or coalesce(v_target_has_priv, false)
+     ) then
+    raise exception 'explicit_confirmation_required' using errcode = 'P0001';
+  end if;
+
   if p_expected_version is null or v_target.governance_version <> p_expected_version then
     raise exception 'version_conflict' using errcode = 'P0001';
   end if;
@@ -757,6 +762,18 @@ begin
   if p_decision in ('SUSPEND', 'REVOKE', 'REJECT')
      and v_target.account_status = 'APPROVED'
      and ('APP_ADMIN' = any(v_prev_roles)) then
+    perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
+
+    perform 1
+      from public.profiles as p2
+      join public.role_assignments as r2
+        on r2.user_id = p2.id
+       and r2.active = true
+     where p2.account_status = 'APPROVED'
+       and r2.role::text = 'APP_ADMIN'
+     order by p2.id
+     for update of p2, r2;
+
     select count(*)::integer
       into v_owner_count
       from public.profiles as p2
@@ -943,10 +960,24 @@ begin
     raise exception 'contact_not_confirmed' using errcode = 'P0001';
   end if;
 
-  if p_action = 'REVOKE'
-     and p_role::text = 'APP_ADMIN'
+  if (
+       (p_action = 'REVOKE' and p_role::text = 'APP_ADMIN')
+       or (p_action = 'GRANT' and p_role::text = 'MANAGER')
+     )
      and v_target.account_status = 'APPROVED'
      and ('APP_ADMIN' = any(v_prev_roles)) then
+    perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
+
+    perform 1
+      from public.profiles as p2
+      join public.role_assignments as r2
+        on r2.user_id = p2.id
+       and r2.active = true
+     where p2.account_status = 'APPROVED'
+       and r2.role::text = 'APP_ADMIN'
+     order by p2.id
+     for update of p2, r2;
+
     select count(*)::integer
       into v_owner_count
       from public.profiles as p2
