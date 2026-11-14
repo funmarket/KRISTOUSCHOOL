@@ -136,3 +136,38 @@ After installing declared npm dependencies locally without saving a lockfile, `n
   - Username-only registration without email or phone (Combination `A`): **`BLOCKED`** (`username_only_requires_contact_or_backend_auth`; requires approved server-backed non-contact credential store).
   - End-to-end secondary phone verification and multi-alias provider linkage (`F`, `G`): **`NOT VERIFIED`** end-to-end (secondary phone is recorded in `pending_phone` metadata and explicitly marked not enabled for login until provider phone verification is completed).
   - Live Supabase database and Edge Function deployment: untouched (no remote mutation performed).
+
+
+## GOV-01 / AUTH-LOGIN-02 post-push reconciliation — 2026-11-14
+
+**Status: PARTIALLY IMPLEMENTED.** Baseline `main@32067aa961620facffe4ff906c5598f68d27d6ff`, clean checkout; zero open PRs at start. Work branch `fix/gov01-source-database-parity`. This change prepares a reviewable source correction, not a main merge or deployment.
+
+**Source changes:** Recovered `20261112190435_canonical_account_roles.sql` directly from the hosted migration record. Replaced the GOV-01 migration's older lock order with the installed statement body (line endings/outer whitespace normalized, provenance comments added). Both mutations acquire the shared advisory transaction lock before caller authorization and target row locking, require READ COMMITTED, and resolve caller authority through a VOLATILE helper. No new hosted SQL was executed. Source username SQL matches its installed statements after comment/blank-line normalization. The first four historical source/live version IDs remain mapped in REMOTE_SCHEMA_INVENTORY.md; no history repair/rename or blanket db push occurred.
+
+Restored AppContext byte-for-byte to `09ffacf` by removing the task-induced Telegram-cache reset in Web login failure. The Telegram auth/link section of auth.ts matches that baseline after outer-whitespace normalization; handler source is unchanged. Kept all AUTH-LOGIN-02 Web changes. Updated product/architecture/decision wording for username/email public sign-in and the phone-registration username rule. Recorded the Owner's standing Telegram scope decision and the ordered closeout queue in LIVING_BUILD_PLAN.md.
+
+**Test correction:** After recovering canonical roles, public signup intentionally produces no active role. The old foundation pgTAP fixture assumed automatic assignments. Added an explicit no-auto-assignment assertion and two synthetic, test-only role rows before testing own-row isolation; plan is now 21 assertions. No signup approval behavior or RLS policy was weakened. Replaced the outdated source assertion demanding all-Owner row locks with an ordering guard for the installed entry-lock design. Its Node test name explicitly distinguishes in-memory scheduling/source checks from genuine database concurrency.
+
+**Independent execution:**
+
+| Check | Result and limit |
+| --- | --- |
+| Baseline complete Node suite | 49 passed, 0 failed |
+| RED lock-order source guard | Governance suite 6 passed, 1 failed with `review_account: acquire shared lock before authorization and target row locks` against pushed SQL |
+| GREEN governance suite | 7 passed, 0 failed after source reconciliation |
+| Final complete Node suite | `node --import tsx --test tests/*.test.mjs tests/functions/*.test.mjs`: 49 passed, 0 failed/skipped, exit 0 |
+| Typecheck | `npm run lint`: exit 0 |
+| Production bundle | `npm run build`: exit 0; existing native-config, large-chunk and ineffective-dynamic-import warnings |
+| Whitespace | `git diff --check`: exit 0 |
+| Source SQL replay | PostgreSQL 16.2 standalone; seven source migrations parsed/executed without SQL errors against a minimal synthetic Auth schema; pgcrypto extension declaration omitted because this PostgreSQL distribution lacks it (gen_random_uuid is built in). NOT a Supabase stack reset or PostgreSQL 17 certification |
+| GOV-01 pgTAP | Actual pgTAP SQL: 26 passed, 0 failed in standalone mode. Explicit RPC allow/deny and grant assertions executed; standalone mode bypasses RLS, so this does not prove RLS isolation |
+| Foundation pgTAP | 18 passed, **3 failed**: own-profile, own-role and own-Telegram row isolation (assertions 19–21). Diagnostic confirmed current_user=authenticated and row_security_active=false in standalone mode. The prior fixture assumption was also corrected as described above. Do not claim this suite passed |
+| Supabase reset | `npm run db:reset`: failed with LocalDbRunningError / failed to inspect service at local 127.0.0.1:54322; no hosted target used |
+| Genuine concurrency | NOT RUN: normal pgserver startup fails creating AF_UNIX socket with PermissionError/EPERM. In-memory concurrency tests do not satisfy this gate |
+| Browser/live sign-in and Owner UI | NOT VERIFIED by this reconciliation |
+
+Dependencies were installed locally with `npm install --ignore-scripts --package-lock=false`; no manifest/lockfile modification. PostgreSQL runner and pgTAP were provisioned only for isolated verification; no production fixtures or credentials were imported. Local detailed logs are kept outside version control under .evidence/logs.
+
+**Hosted read-only postchecks:** Project `ofppapwofhovhroyjtkc` still has seven recorded migrations, 3 Auth users/3 profiles (1 APPROVED, 2 PENDING), 1 approved active Owner and 1 Telegram identity. Authenticated has no table-wide profile UPDATE or account_status UPDATE; full_name/avatar_url UPDATE remain allowed. Edge Functions are still username v6, Telegram v9, challenge v6. No accounts, linking records, migration history, schema, functions or hosted configuration were mutated.
+
+**Remaining gates, in order:** Docker-backed clean reset + RLS suite; genuine two-session last-Owner and post-wait caller-revocation tests; PR review/explicit merge approval; actual deployed Web sign-in/Owner workflow acceptance; separately scoped matching username-handler release and verification. GOV-02 remains deferred. Do not rerun installed repair SQL, bootstrap another Owner, or redeploy Telegram handlers.

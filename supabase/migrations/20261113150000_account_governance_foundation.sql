@@ -1,17 +1,7 @@
--- KRISTOU SCHOOL — GOV-01: Authoritative Account Governance & Access Control Foundation
--- STATUS: PREPARED — NOT VERIFIED
--- MIGRATION-CHAIN & LIVE DEPENDENCY DISCLOSURE (Section 2):
---   1. The live Supabase project (ofppapwofhovhroyjtkc) records five applied migrations, including
---      `20261112190435 canonical_account_roles`, which narrowed `public.app_role` to the seven
---      canonical roles (`APP_ADMIN`, `MANAGER`, `ADMINISTRATIVE_PERSONNEL`, `TEACHER`, `SCHOOL_STAFF`,
---      `PARENT`, `STUDENT`) and removed `GENERAL_USER`, `PRINCIPAL`, and `EMPLOYEE`.
---   2. The SQL source file for `canonical_account_roles` is not yet committed in `supabase/migrations/`.
---      Do NOT apply this migration to production until F0-R2 non-destructive migration-history
---      reconciliation and isolated local Docker/PostgreSQL `supabase db reset` + pgTAP verification pass.
---   3. This migration never references `GENERAL_USER`, `PRINCIPAL`, or `EMPLOYEE`, preserves the existing
---      active `APP_ADMIN` (School Owner) account, enforces least-privilege grants and RLS, and exposes
---      narrow `SECURITY DEFINER` RPCs that derive the actor exclusively from `auth.uid()`.
-
+-- KRISTOU SCHOOL — recovered exact installed SQL, 2026-11-14.
+-- Provenance: ofppapwofhovhroyjtkc, supabase_migrations.schema_migrations.
+-- Historical source reconciliation only; do not rerun against the hosted project.
+-- Depends on 20261112190435_canonical_account_roles.sql.
 do $$ begin
   create type public.account_approval_status as enum (
     'PENDING',
@@ -22,19 +12,16 @@ do $$ begin
   );
 exception when duplicate_object then null;
 end $$;
-
 alter table public.profiles
   add column if not exists account_status public.account_approval_status not null default 'PENDING',
   add column if not exists status_reason text,
   add column if not exists status_reviewed_by uuid references public.profiles(id) on delete set null,
   add column if not exists status_reviewed_at timestamptz,
   add column if not exists governance_version integer not null default 1;
-
 alter table public.profiles
   drop constraint if exists profiles_governance_version_check;
 alter table public.profiles
   add constraint profiles_governance_version_check check (governance_version >= 1);
-
 -- Backfill existing profiles that already hold an active canonical role assignment (such as the active APP_ADMIN)
 update public.profiles as p
    set account_status = 'APPROVED',
@@ -56,10 +43,8 @@ update public.profiles as p
           'STUDENT'
         )
    );
-
 create index if not exists profiles_account_status_created_idx
   on public.profiles (account_status, created_at desc);
-
 create table if not exists public.manager_capability_grants (
   id uuid primary key default gen_random_uuid(),
   manager_user_id uuid not null references public.profiles(id) on delete cascade,
@@ -70,12 +55,10 @@ create table if not exists public.manager_capability_grants (
   updated_at timestamptz not null default clock_timestamp(),
   unique (manager_user_id, capability)
 );
-
 drop trigger if exists manager_capability_grants_set_updated_at on public.manager_capability_grants;
 create trigger manager_capability_grants_set_updated_at
 before update on public.manager_capability_grants
 for each row execute function public.set_updated_at();
-
 create table if not exists public.account_governance_audit_logs (
   id uuid primary key default gen_random_uuid(),
   actor_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -101,19 +84,14 @@ create table if not exists public.account_governance_audit_logs (
   created_at timestamptz not null default clock_timestamp(),
   unique (actor_user_id, idempotency_key)
 );
-
 create index if not exists account_governance_audit_target_created_idx
   on public.account_governance_audit_logs (target_user_id, created_at desc);
-
 alter table public.manager_capability_grants enable row level security;
 alter table public.account_governance_audit_logs enable row level security;
-
 revoke all on public.manager_capability_grants from public, anon, authenticated;
 revoke all on public.account_governance_audit_logs from public, anon, authenticated;
-
 grant select on public.manager_capability_grants to authenticated;
 grant select on public.account_governance_audit_logs to authenticated;
-
 drop policy if exists manager_capability_grants_select_self_or_owner on public.manager_capability_grants;
 create policy manager_capability_grants_select_self_or_owner
 on public.manager_capability_grants
@@ -132,7 +110,6 @@ using (
        and r.role::text = 'APP_ADMIN'
   )
 );
-
 drop policy if exists account_governance_audit_select_owner_or_admin on public.account_governance_audit_logs;
 create policy account_governance_audit_select_owner_or_admin
 on public.account_governance_audit_logs
@@ -150,14 +127,13 @@ using (
        and r.role::text in ('APP_ADMIN', 'ADMINISTRATIVE_PERSONNEL')
   )
 );
-
 -- Helper: resolve the caller's verified governance role or raise a specific exception
 create or replace function public.governance_resolve_caller_role(
   p_require_owner boolean default false
 )
 returns public.app_role
 language plpgsql
-stable
+volatile
 security definer
 set search_path = pg_catalog, public
 as $$
@@ -172,16 +148,13 @@ begin
   if v_caller_id is null then
     raise exception 'actor_unauthenticated' using errcode = 'P0001';
   end if;
-
   select p.account_status
     into v_status
     from public.profiles as p
    where p.id = v_caller_id;
-
   if v_status is distinct from 'APPROVED' then
     raise exception 'actor_not_approved' using errcode = 'P0001';
   end if;
-
   select
     bool_or(r.role::text = 'APP_ADMIN'),
     bool_or(r.role::text = 'ADMINISTRATIVE_PERSONNEL'),
@@ -190,19 +163,15 @@ begin
     from public.role_assignments as r
    where r.user_id = v_caller_id
      and r.active = true;
-
   if coalesce(v_is_owner, false) then
     return 'APP_ADMIN'::public.app_role;
   end if;
-
   if p_require_owner then
     raise exception 'owner_only_operation' using errcode = 'P0001';
   end if;
-
   if coalesce(v_is_admin_personnel, false) then
     return 'ADMINISTRATIVE_PERSONNEL'::public.app_role;
   end if;
-
   if coalesce(v_is_manager, false) then
     select exists (
       select 1
@@ -211,20 +180,15 @@ begin
          and g.capability = 'ACCOUNT_APPROVAL_REVIEW'
          and g.active = true
     ) into v_has_manager_grant;
-
     if not coalesce(v_has_manager_grant, false) then
       raise exception 'manager_delegation_required' using errcode = 'P0001';
     end if;
-
     return 'MANAGER'::public.app_role;
   end if;
-
   raise exception 'insufficient_governance_authority' using errcode = 'P0001';
 end;
 $$;
-
 revoke all on function public.governance_resolve_caller_role(boolean) from public, anon, authenticated;
-
 -- 1. Actor scope lookup
 create or replace function public.governance_get_actor_scope()
 returns jsonb
@@ -243,7 +207,6 @@ declare
   v_revoked_count integer;
 begin
   v_caller_role := public.governance_resolve_caller_role(false);
-
   select count(*)::integer
     into v_owner_count
     from public.profiles as p
@@ -252,7 +215,6 @@ begin
      and r.active = true
    where p.account_status = 'APPROVED'
      and r.role::text = 'APP_ADMIN';
-
   select
     count(*) filter (where account_status = 'PENDING')::integer,
     count(*) filter (where account_status = 'APPROVED')::integer,
@@ -260,7 +222,6 @@ begin
     count(*) filter (where account_status = 'REVOKED')::integer
     into v_pending_count, v_approved_count, v_suspended_count, v_revoked_count
     from public.profiles;
-
   return jsonb_build_object(
     'actorUserId', v_caller_id,
     'actorRole', v_caller_role::text,
@@ -276,10 +237,8 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.governance_get_actor_scope() from public, anon;
 grant execute on function public.governance_get_actor_scope() to authenticated;
-
 -- 2. Paginated pending accounts list
 create or replace function public.governance_list_pending_accounts(
   p_limit integer default 25,
@@ -303,7 +262,6 @@ declare
   v_items jsonb;
 begin
   v_caller_role := public.governance_resolve_caller_role(false);
-
   with matching as (
     select
       p.id,
@@ -383,7 +341,6 @@ begin
     from (
       select * from matching limit v_limit offset v_offset
     ) as m;
-
   select count(*)::integer
     into v_total
     from public.profiles as p
@@ -395,7 +352,6 @@ begin
        or lower(p.username) like '%' || v_search || '%'
        or lower(coalesce(p.email, '')) like '%' || v_search || '%'
      );
-
   return jsonb_build_object(
     'items', coalesce(v_items, '[]'::jsonb),
     'totalCount', coalesce(v_total, 0),
@@ -404,10 +360,8 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.governance_list_pending_accounts(integer, integer, public.app_role, text) from public, anon;
 grant execute on function public.governance_list_pending_accounts(integer, integer, public.app_role, text) to authenticated;
-
 -- 3. Restricted account directory read
 create or replace function public.governance_list_account_directory(
   p_limit integer default 25,
@@ -432,7 +386,6 @@ declare
   v_items jsonb;
 begin
   v_caller_role := public.governance_resolve_caller_role(false);
-
   with matching as (
     select
       p.id,
@@ -521,7 +474,6 @@ begin
     from (
       select * from matching limit v_limit offset v_offset
     ) as m;
-
   select count(*)::integer
     into v_total
     from public.profiles as p
@@ -543,7 +495,6 @@ begin
        or lower(p.username) like '%' || v_search || '%'
        or lower(coalesce(p.email, '')) like '%' || v_search || '%'
      );
-
   return jsonb_build_object(
     'items', coalesce(v_items, '[]'::jsonb),
     'totalCount', coalesce(v_total, 0),
@@ -552,10 +503,8 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.governance_list_account_directory(integer, integer, public.account_approval_status, public.app_role, text) from public, anon;
 grant execute on function public.governance_list_account_directory(integer, integer, public.account_approval_status, public.app_role, text) to authenticated;
-
 -- 4. Single account governance detail + audit trail
 create or replace function public.governance_get_account_detail(
   p_target_user_id uuid
@@ -572,7 +521,6 @@ declare
   v_audit jsonb;
 begin
   v_caller_role := public.governance_resolve_caller_role(false);
-
   select jsonb_build_object(
     'id', p.id,
     'username', p.username,
@@ -605,11 +553,9 @@ begin
   from public.profiles as p
   left join auth.users as u on u.id = p.id
   where p.id = p_target_user_id;
-
   if v_account is null then
     raise exception 'target_not_found' using errcode = 'P0001';
   end if;
-
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
@@ -633,17 +579,14 @@ begin
   into v_audit
   from public.account_governance_audit_logs as l
   where l.target_user_id = p_target_user_id;
-
   return jsonb_build_object(
     'account', v_account,
     'auditTrail', v_audit
   );
 end;
 $$;
-
 revoke all on function public.governance_get_account_detail(uuid) from public, anon;
 grant execute on function public.governance_get_account_detail(uuid) to authenticated;
-
 -- 5. Transactional account lifecycle review (APPROVE, REJECT, SUSPEND, REVOKE, REACTIVATE)
 create or replace function public.governance_review_account(
   p_target_user_id uuid,
@@ -676,19 +619,22 @@ declare
   v_audit_id uuid;
   v_now timestamptz := clock_timestamp();
 begin
+  -- One transaction lock for every governance mutation, BEFORE authorization and row locks.
+  -- After waiting, authorization and state are read afresh under READ COMMITTED.
+  if current_setting('transaction_isolation') <> 'read committed' then
+    raise exception 'governance_requires_read_committed' using errcode = 'P0001';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
   v_caller_role := public.governance_resolve_caller_role(false);
-
   if v_reason is null or char_length(v_reason) < 3 then
     raise exception 'reason_required' using errcode = 'P0001';
   end if;
-
   if v_idem is not null then
     select *
       into v_existing_audit
       from public.account_governance_audit_logs as l
      where l.actor_user_id = v_caller_id
        and l.idempotency_key = v_idem;
-
     if found then
       select * into v_target from public.profiles where id = v_existing_audit.target_user_id;
       return jsonb_build_object(
@@ -701,17 +647,14 @@ begin
       );
     end if;
   end if;
-
   select *
     into v_target
     from public.profiles as p
    where p.id = p_target_user_id
    for update;
-
   if not found then
     raise exception 'target_not_found' using errcode = 'P0001';
   end if;
-
   select
     coalesce(array_agg(r.role::text order by r.role::text), '{}'::text[]),
     bool_or(r.role::text in ('APP_ADMIN', 'MANAGER'))
@@ -719,21 +662,17 @@ begin
     from public.role_assignments as r
    where r.user_id = v_target.id
      and r.active = true;
-
   v_effective_role := coalesce(p_assigned_role, v_target.requested_role);
-
   if v_caller_role::text <> 'APP_ADMIN' then
     if v_target.id = v_caller_id then
       raise exception 'self_governance_denied' using errcode = 'P0001';
     end if;
-
     if coalesce(v_target_has_priv, false)
        or v_target.requested_role::text in ('APP_ADMIN', 'MANAGER')
        or v_effective_role::text in ('APP_ADMIN', 'MANAGER') then
       raise exception 'privileged_target_requires_owner' using errcode = 'P0001';
     end if;
   end if;
-
   -- Prevent general APPROVE / REACTIVATE from becoming an alternative privileged-role appointment path
   -- without the required explicit confirmation (even when caller is APP_ADMIN).
   if p_decision in ('APPROVE', 'REACTIVATE')
@@ -743,37 +682,22 @@ begin
      ) then
     raise exception 'explicit_confirmation_required' using errcode = 'P0001';
   end if;
-
   if p_expected_version is null or v_target.governance_version <> p_expected_version then
     raise exception 'version_conflict' using errcode = 'P0001';
   end if;
-
   select
     (u.email_confirmed_at is not null),
     (u.phone_confirmed_at is not null)
     into v_email_confirmed, v_phone_confirmed
     from auth.users as u
    where u.id = v_target.id;
-
   if p_decision in ('APPROVE', 'REACTIVATE') and not (coalesce(v_email_confirmed, false) or coalesce(v_phone_confirmed, false)) then
     raise exception 'contact_not_confirmed' using errcode = 'P0001';
   end if;
-
   if p_decision in ('SUSPEND', 'REVOKE', 'REJECT')
      and v_target.account_status = 'APPROVED'
      and ('APP_ADMIN' = any(v_prev_roles)) then
-    perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
-
-    perform 1
-      from public.profiles as p2
-      join public.role_assignments as r2
-        on r2.user_id = p2.id
-       and r2.active = true
-     where p2.account_status = 'APPROVED'
-       and r2.role::text = 'APP_ADMIN'
-     order by p2.id
-     for update of p2, r2;
-
+    -- Governance writes are serialized by the entry lock acquired above.
     select count(*)::integer
       into v_owner_count
       from public.profiles as p2
@@ -782,22 +706,18 @@ begin
        and r2.active = true
      where p2.account_status = 'APPROVED'
        and r2.role::text = 'APP_ADMIN';
-
     if coalesce(v_owner_count, 0) <= 1 then
       raise exception 'last_owner_protection' using errcode = 'P0001';
     end if;
   end if;
-
   if p_decision in ('APPROVE', 'REACTIVATE') then
     v_next_status := 'APPROVED';
     v_next_roles := array[v_effective_role::text];
-
     update public.role_assignments
        set active = false,
            updated_at = v_now
      where user_id = v_target.id
        and role <> v_effective_role;
-
     insert into public.role_assignments (user_id, role, active, assigned_by)
     values (v_target.id, v_effective_role, true, v_caller_id)
     on conflict (user_id, role) do update
@@ -831,7 +751,6 @@ begin
   else
     raise exception 'invalid_transition' using errcode = 'P0001';
   end if;
-
   update public.profiles
      set account_status = v_next_status,
          requested_role = v_effective_role,
@@ -841,7 +760,6 @@ begin
          governance_version = v_target.governance_version + 1,
          updated_at = v_now
    where id = v_target.id;
-
   insert into public.account_governance_audit_logs (
     actor_user_id,
     actor_role,
@@ -868,7 +786,6 @@ begin
     v_now
   )
   returning id into v_audit_id;
-
   return jsonb_build_object(
     'targetUserId', v_target.id,
     'accountStatus', v_next_status::text,
@@ -879,10 +796,8 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.governance_review_account(uuid, text, public.app_role, text, integer, text) from public, anon;
 grant execute on function public.governance_review_account(uuid, text, public.app_role, text, integer, text) to authenticated;
-
 -- 6. Owner-only privileged role appointment (MANAGER / APP_ADMIN) with last-Owner protection
 create or replace function public.governance_appoint_privileged_role(
   p_target_user_id uuid,
@@ -911,73 +826,57 @@ declare
   v_audit_id uuid;
   v_now timestamptz := clock_timestamp();
 begin
+  -- One transaction lock for every governance mutation, BEFORE authorization and row locks.
+  -- After waiting, authorization and state are read afresh under READ COMMITTED.
+  if current_setting('transaction_isolation') <> 'read committed' then
+    raise exception 'governance_requires_read_committed' using errcode = 'P0001';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
   v_caller_role := public.governance_resolve_caller_role(true);
-
   if not coalesce(p_confirmed, false) then
     raise exception 'explicit_confirmation_required' using errcode = 'P0001';
   end if;
-
   if p_role is null or p_role::text not in ('APP_ADMIN', 'MANAGER') then
     raise exception 'invalid_role' using errcode = 'P0001';
   end if;
-
   if p_action is null or p_action not in ('GRANT', 'REVOKE') then
     raise exception 'invalid_transition' using errcode = 'P0001';
   end if;
-
   if v_reason is null or char_length(v_reason) < 3 then
     raise exception 'reason_required' using errcode = 'P0001';
   end if;
-
   select *
     into v_target
     from public.profiles as p
    where p.id = p_target_user_id
    for update;
-
   if not found then
     raise exception 'target_not_found' using errcode = 'P0001';
   end if;
-
   if p_expected_version is null or v_target.governance_version <> p_expected_version then
     raise exception 'version_conflict' using errcode = 'P0001';
   end if;
-
   select coalesce(array_agg(r.role::text order by r.role::text), '{}'::text[])
     into v_prev_roles
     from public.role_assignments as r
    where r.user_id = v_target.id
      and r.active = true;
-
   select
     (u.email_confirmed_at is not null),
     (u.phone_confirmed_at is not null)
     into v_email_confirmed, v_phone_confirmed
     from auth.users as u
    where u.id = v_target.id;
-
   if p_action = 'GRANT' and not (coalesce(v_email_confirmed, false) or coalesce(v_phone_confirmed, false)) then
     raise exception 'contact_not_confirmed' using errcode = 'P0001';
   end if;
-
   if (
        (p_action = 'REVOKE' and p_role::text = 'APP_ADMIN')
        or (p_action = 'GRANT' and p_role::text = 'MANAGER')
      )
      and v_target.account_status = 'APPROVED'
      and ('APP_ADMIN' = any(v_prev_roles)) then
-    perform pg_advisory_xact_lock(hashtext('kristou_school_owner_governance_lock'));
-
-    perform 1
-      from public.profiles as p2
-      join public.role_assignments as r2
-        on r2.user_id = p2.id
-       and r2.active = true
-     where p2.account_status = 'APPROVED'
-       and r2.role::text = 'APP_ADMIN'
-     order by p2.id
-     for update of p2, r2;
-
+    -- Governance writes are serialized by the entry lock acquired above.
     select count(*)::integer
       into v_owner_count
       from public.profiles as p2
@@ -986,12 +885,10 @@ begin
        and r2.active = true
      where p2.account_status = 'APPROVED'
        and r2.role::text = 'APP_ADMIN';
-
     if coalesce(v_owner_count, 0) <= 1 then
       raise exception 'last_owner_protection' using errcode = 'P0001';
     end if;
   end if;
-
   if p_action = 'GRANT' then
     v_next_status := 'APPROVED';
     update public.role_assignments
@@ -1000,7 +897,6 @@ begin
      where user_id = v_target.id
        and role::text in ('APP_ADMIN', 'MANAGER')
        and role <> p_role;
-
     insert into public.role_assignments (user_id, role, active, assigned_by)
     values (v_target.id, p_role, true, v_caller_id)
     on conflict (user_id, role) do update
@@ -1014,13 +910,11 @@ begin
      where user_id = v_target.id
        and role = p_role;
   end if;
-
   select coalesce(array_agg(r.role::text order by r.role::text), '{}'::text[])
     into v_next_roles
     from public.role_assignments as r
    where r.user_id = v_target.id
      and r.active = true;
-
   if p_action = 'REVOKE' then
     if coalesce(array_length(v_next_roles, 1), 0) = 0 then
       v_next_status := 'REVOKED';
@@ -1028,7 +922,6 @@ begin
       v_next_status := v_target.account_status;
     end if;
   end if;
-
   update public.profiles
      set account_status = v_next_status,
          status_reason = v_reason,
@@ -1037,7 +930,6 @@ begin
          governance_version = v_target.governance_version + 1,
          updated_at = v_now
    where id = v_target.id;
-
   insert into public.account_governance_audit_logs (
     actor_user_id,
     actor_role,
@@ -1062,7 +954,6 @@ begin
     v_now
   )
   returning id into v_audit_id;
-
   return jsonb_build_object(
     'targetUserId', v_target.id,
     'accountStatus', v_next_status::text,
@@ -1073,6 +964,5 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.governance_appoint_privileged_role(uuid, public.app_role, text, text, integer, boolean) from public, anon;
 grant execute on function public.governance_appoint_privileged_role(uuid, public.app_role, text, text, integer, boolean) to authenticated;

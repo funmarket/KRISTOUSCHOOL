@@ -1,5 +1,5 @@
 # KRISTOU SCHOOL — STRUCTURE AND ARCHITECTURE
-> **2026-11-13 live/source reconciliation:** This is the accepted architecture contract, not a current runtime inventory. The live database has five migrations and deployed `telegram-auth` v9, while source has four migration SQL files and older Telegram handler behavior. The 2026-11-11 Vercel-bundle concern is historical until rechecked. See `docs/CURRENT_STATE_AND_HANDOFF_2026-11-13.md`. The latest optional-identifier/Unicode username request is a desired AUTH-ID-01 contract, **not** current deployed behavior.
+> **2026-11-14 scope:** AUTH-LOGIN-02 public sign-in uses username or email; phone-backed credentials are resolved server-side. Preserve the existing Telegram runtime/link/cache behavior. Current runtime evidence and remaining parity limits belong in `progress.md` and `docs/REMOTE_SCHEMA_INVENTORY.md`, not historical snapshots below.
 
 
 Status: **PRIMARY ARCHITECTURE CONTRACT**
@@ -13,7 +13,7 @@ This document defines architecture, runtime boundaries, data ownership, and depe
 
 The current repository contains one Vite/React frontend and mock-driven school-domain context state, plus a configured Supabase client contract, source-controlled Auth/profile foundation, migrations, and Edge Function boundaries. Private school-domain backend slices remain unimplemented. Login/signup source exists, but the production Vercel bundle is missing the public Supabase build configuration; live migration history and the deployed Telegram handler also differ from current source. UI data, roles, and pickup transitions remain prototype-only.
 
-The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the shared app's normal email/phone/username + password signup/sign-in in either host, then explicitly link a signed-in user's Telegram identity through the one-time challenge flow; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
+The target is one canonical React/TypeScript product for Browser and Telegram WebView, backed by one Supabase project boundary for KRISTOU SCHOOL’s managed PostgreSQL, server-side functions, and private object storage. This repository serves KRISTOU SCHOOL only. Use the shared app's normal signup and username/email-plus-password sign-in in either host, then explicitly link a signed-in user's Telegram identity through the one-time challenge flow; the school admission flow remains separate from app signup. Supabase is the selected provider direction. No live project, schema, secret, deployment, or production behavior is asserted by this document.
 
 Start from the simplest repository topology that supports the product:
 

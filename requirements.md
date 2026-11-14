@@ -151,7 +151,16 @@ Account linking must be explicit and verified.
 
 ## 4.2.1 Web account and login policy (Product Owner update — 2026-11-13)
 
-**Accepted target:** a school-family member enters full name, password, requested role and at least one chosen login identifier: username, email or phone. All seven combinations of the three optional identifiers are desired (each alone; any pair; all three). Users should be able to sign in with any successfully registered **and verified/auth-provider-associated** identifier plus password, always resolving to the same canonical User. The form must be clear for older parents and support appropriate Tunisian/international phone formatting.
+**Current accepted policy — AUTH-LOGIN-02, Owner update 2026-11-14 (supersedes older identifier-combination wording below):**
+
+- Public sign-in uses a chosen username/handle **or email address**, plus password. Direct phone-number sign-in is rejected with localized guidance.
+- Signup uses full name, password, requested role and an email address or phone number (or both). A username is required when registering with phone but no email; with email, username is optional.
+- Phone-backed accounts sign in with their chosen username. The server-side resolver may use the associated phone credential internally; do not disable Supabase phone credentials.
+- Username-only signup without email/phone remains unsupported. Full name is presentation data, not a login identifier.
+- Additional phone verification never promises public phone-number sign-in. Prefill login with email or chosen username, never phone.
+- School approval remains required. Preserve existing design and Arabic/French/English guidance.
+
+The 2026-11-13 candidate combinations/status descriptions below are historical; phone-only signup without a chosen username is superseded by this policy.
 
 A human-readable username should accept ordinary Unicode names, including Arabic, accented French and multiword names, subject to stable normalization, uniqueness, anti-spoofing and length controls. A full name is presentation data, never proof of account ownership. Existing ASCII usernames must remain usable. Ambiguous identifiers may not resolve to an arbitrary user.
 
@@ -176,7 +185,7 @@ App signup creates an authenticated application account. It does not enroll a ch
 Creating application credentials does not immediately authorize access to private school workspaces. The authentication modal provides localized feedback in Arabic (`ar`), French (`fr`), and English (`en`) that distinguishes between:
 
 1. **Registration received without outstanding contact confirmation:** Explains that the registration request was received, access to private school spaces requires approval from KRISTOU SCHOOL administration, and the applicant will be able to access their school workspace after approval.
-2. **Registration received with contact verification required:** Explains both that the applicant must verify their email address or phone number through the authentication provider and that private school access still requires approval by authorized KRISTOU SCHOOL personnel (confirming contact alone does not activate a school role). When a secondary phone is supplied alongside email (`F`, `G`), also explains that the secondary phone is not enabled for login until phone verification is completed.
+2. **Registration received with contact verification required:** Explains both that the applicant must verify their email address or phone number through the authentication provider and that private school access still requires approval by authorized KRISTOU SCHOOL personnel (confirming contact alone does not activate a school role). When a secondary phone is supplied alongside email (`F`, `G`), also explains that phone verification is separate and public sign-in uses username or email.
 3. **Valid credentials without an active approved school role (`account_not_approved`):** Explains with neutral, accurate wording that credentials were accepted, the account does not currently have access to private school workspaces and may still be awaiting administrative approval, and the user should contact school administration if assistance is needed—while keeping private school workspaces inaccessible and signing out the unapproved session.
 4. **Contact confirmation required on sign-in (`contact_not_confirmed`):** When the authentication provider returns an explicit `email_not_confirmed` or `phone_not_confirmed` error code, explains in the active language that the user must verify their email or phone number with the provider and that private school access also requires administrative approval.
 5. **Invalid credentials (`invalid_credentials`):** Preserves generic invalid-credentials feedback exclusively for genuine authentication rejections (`invalid_credentials` / `invalid_grant` provider codes or explicit `Invalid credentials` / `Invalid login credentials` sentinels), never presenting wrong credentials as pending approval.

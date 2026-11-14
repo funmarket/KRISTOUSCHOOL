@@ -75,3 +75,22 @@ This strongly indicates the Production frontend was built without `VITE_SUPABASE
 3. Run a clean local migration reset and pgTAP allow/deny tests using the pinned CLI before proposing a hosted migration-history mapping. Docker is required; it was unavailable in the inspection environment.
 4. Obtain explicit owner authorization before any production migration, secret update, Edge Function deployment, migration-history repair, or Vercel setting change.
 5. After the foundation is reconciled, the next user-facing backend slice remains the read-only public Teachers/Administration Directory, subject to owner approval of the exact fields and public content. Keep internal People records private and exclude contact/identity fields from the public projection.
+
+
+## 2026-11-14 — Post-push source reconciliation (read-only hosted inspection)
+
+Target remains **ofppapwofhovhroyjtkc**, KRISTOUSCHOOL. Seven migration records were retrieved with their stored SQL. Existing aggregate state: 3 Auth users, 3 profiles (1 APPROVED, 2 PENDING), 1 approved active APP_ADMIN and 1 Telegram identity. Functions remain username v6, Telegram auth v9, challenge v6. No hosted write or deployment was performed by this reconciliation.
+
+| Local source version | Installed version | Treatment |
+| --- | --- | --- |
+| 20261110210000 authentication_foundation | 20261110212125 | Historical version/content divergence retained; do not replay remotely |
+| 20261110222200 revoke_auth_trigger_execute | 20261110212204 | Equivalent trigger restriction; historical version mapping only |
+| 20261110222300 revoke_auth_trigger_execute_public | 20261110212239 | Live statement also explicitly names anon/authenticated; historical mapping only |
+| 20261111030000 atomic_telegram_account_link | 20261111150532 | SQL bodies match; protected linking behavior unchanged |
+| 20261112190435 canonical_account_roles | 20261112190435 | Missing file recovered from exact installed statement body |
+| 20261113120000 human_friendly_usernames | 20261113120000 | Statement parity after comment/blank-line normalization |
+| 20261113150000 account_governance_foundation | 20261113150000 | Reconciled source to exact installed statement body, plus provenance comments |
+
+The repaired hosted profile UPDATE grants are restricted to full_name/avatar_url, matching the source foundation. No blanket migration-history repair, renaming of old versions or `db push` is authorized: the first four IDs still differ. An isolated clean replay uses the source order with the recovered roles migration. This is not a reason to rerun an installed migration or replace the database.
+
+The installed GOV-01 body acquires one transaction advisory lock before authorization and target row locks in both mutation RPCs, requires READ COMMITTED and uses a VOLATILE caller-role resolver for fresh reads after waiting. This reconciles source with existing installation; genuine two-session concurrency acceptance remains pending. Do not replace these functions with the older SQL embedded in kristou_gov01_candidate_export.zip; that archive is a historical candidate, not current source.

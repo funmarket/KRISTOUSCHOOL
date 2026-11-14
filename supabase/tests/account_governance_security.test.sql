@@ -1,5 +1,7 @@
 -- KRISTOU SCHOOL — GOV-01C: pgTAP Security & Access-Control Test Suite for Account Governance
--- STATUS: PREPARED — NOT VERIFIED (requires isolated local Docker/PostgreSQL `npm run db:reset` + `npm run db:test` after F0-R2 `canonical_account_roles` reconciliation).
+-- 2026-11-14: 26 assertions passed in isolated PostgreSQL 16 standalone mode.
+-- LIMIT: standalone bypasses RLS; Docker-backed Supabase/RLS and real concurrency acceptance remain unverified.
+-- See progress.md. Fixtures are local only; never run this suite against the hosted project.
 
 begin;
 

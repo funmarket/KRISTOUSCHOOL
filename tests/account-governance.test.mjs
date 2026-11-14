@@ -1159,7 +1159,7 @@ test('GOV-01-SAFETY-FIX-01 (Defect 3) — governance_review_account blocks APPRO
   assert.deepEqual(appointSuspendedMgr.data.activeRoles, ['MANAGER']);
 });
 
-test('GOV-01-SAFETY-FIX-01 (Defect 4) — Concurrent last-Owner protection and database-level serialization', async () => {
+test('GOV-01-SAFETY-FIX-01 (Defect 4) — In-memory last-Owner scheduling and SQL lock-order source guard', async () => {
   const gov = await import('../src/lib/accountGovernance.ts');
 
   const harness = gov.createInMemoryGovernanceTestHarness([
@@ -1248,20 +1248,23 @@ test('GOV-01-SAFETY-FIX-01 (Defect 4) — Concurrent last-Owner protection and d
   assert.equal(downgradeLastOwnerAttempt.ok, false);
   assert.equal(downgradeLastOwnerAttempt.errorCode, 'last_owner_protection');
 
-  // 3. Verify SQL migration contains pg_advisory_xact_lock serialization and FOR UPDATE locking for active owners
+  // 3. Source guard only: shared lock precedes authorization and target row locks.
+  // This does not establish concurrent PostgreSQL behavior.
   const migrationSql = fs.readFileSync(
     new URL('../supabase/migrations/20261113150000_account_governance_foundation.sql', import.meta.url),
     'utf8',
   );
-  assert.match(
-    migrationSql,
-    /pg_advisory_xact_lock/i,
-    'SQL migration must serialize last-Owner checks with pg_advisory_xact_lock',
-  );
-  assert.match(
-    migrationSql,
-    /for update of/i,
-    'SQL migration must lock active APP_ADMIN rows FOR UPDATE before counting',
-  );
+  for (const name of ['review_account', 'appoint_privileged_role']) {
+    const body = migrationSql.split(`create or replace function public.governance_${name}(`)[1]?.split('$$;')[0];
+    assert.ok(body, `${name} must exist`);
+    const lock = body.indexOf("perform pg_advisory_xact_lock(");
+    const authorize = body.indexOf('v_caller_role := public.governance_resolve_caller_role(');
+    const rowLock = body.toLowerCase().indexOf('for update;');
+    assert.ok(lock >= 0 && lock < authorize && lock < rowLock,
+      `${name}: acquire shared lock before authorization and target row locks`);
+    assert.match(body, /governance_requires_read_committed/);
+  }
+  const helper = migrationSql.split('create or replace function public.governance_resolve_caller_role(')[1]?.split('$$;')[0];
+  assert.match(helper, /language plpgsql\s+volatile/i,
+    'Authorization must read a fresh snapshot after a governance lock wait');
 });
-

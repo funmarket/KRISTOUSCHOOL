@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(20);
+select extensions.plan(21);
 
 -- Synthetic Auth users fire the real profile/role trigger from the migration chain.
 insert into auth.users (
@@ -19,6 +19,18 @@ insert into auth.users (
     '{"username":"security_test_two","full_name":"Synthetic User Two"}'::jsonb,
     now(), now()
   );
+
+-- Canonical roles migration intentionally grants no role on public signup.
+select extensions.is(
+  (select count(*)::integer from public.role_assignments where user_id in (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002'
+  )), 0, 'Signup does not automatically approve or assign roles'
+);
+-- Explicit test-only assignments make the own-row / other-row RLS test meaningful.
+insert into public.role_assignments(user_id, role, active) values
+  ('00000000-0000-4000-8000-000000000001', 'PARENT', true),
+  ('00000000-0000-4000-8000-000000000002', 'TEACHER', true);
 
 insert into public.telegram_identities (user_id, telegram_user_id, first_name)
 values
