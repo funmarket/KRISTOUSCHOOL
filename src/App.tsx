@@ -212,7 +212,7 @@ function MainLayout() {
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
-      <Footer />
+      <Footer onNavigate={handleSetTab} />
     </div>
   );
 }

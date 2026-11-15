@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { useCalendarMonth } from '../../../lib/calendar/useCalendarMonth';
 import { BackendOpStatus, CalendarEvent, CalendarEventCategory } from '../../../types';
 import { pickText } from '../../../i18n/homepages';
 import { EmptyFeatureState } from '../../homepages/shared/EmptyFeatureState';
@@ -72,14 +73,14 @@ function getCategoryStyle(category: CalendarEventCategory, cancelled?: boolean):
 }
 
 export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
-  events,
-  backendStatus,
+  events: hydratedEvents,
+  backendStatus: hydratedStatus,
   classId = null,
   canManage,
   canRespond,
-  isLoading = false,
-  errorMessage = null,
-  onRefresh,
+  isLoading: isHydrating = false,
+  errorMessage: hydrationError = null,
+  onRefresh: refreshSchoolData,
 }) => {
   const { currentUser, language, t } = useApp();
   const todayStr = getTunisSchoolDay();
@@ -138,22 +139,37 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     setAgendaLimit(AGENDA_PAGE_SIZE);
   }, [activeScopeKey, todayStr]);
 
+  const monthRange = useMemo(
+    () => getMonthCalendarRange(cursorYear, cursorMonth),
+    [cursorYear, cursorMonth],
+  );
+  const month = useCalendarMonth({
+    userId: currentUser?.accountStatus === 'APPROVED' ? currentUser.id : null,
+    accountKey: JSON.stringify([currentUser?.id, currentUser?.accountStatus, currentUser?.role, currentUser?.capabilities]),
+    classId,
+    ...monthRange,
+    enabled: hydratedStatus === 'READY' || hydratedStatus === 'ERROR',
+    refreshVersion: hydratedEvents,
+  });
+  const backendStatus = month.result?.status ?? hydratedStatus;
+  const errorMessage = month.result?.errorMessage ?? hydrationError;
+  const isLoading = isHydrating || month.loading;
+  const events = !month.currentScope || month.loading ? [] : month.result ? (month.result.ok ? month.result.data ?? [] : []) : hydratedEvents.filter(
+    (event) => event.date <= monthRange.endDate && (event.endDate || event.date) >= monthRange.startDate,
+  );
+  const onRefresh = async () => {
+    const schoolRefreshed = await refreshSchoolData();
+    const monthRefreshed = await month.reload();
+    return schoolRefreshed !== false && monthRefreshed;
+  };
   const canRespondResolved =
     canRespond ?? Boolean(currentUser && currentUser.accountStatus === 'APPROVED');
   const isUnauthorized = backendStatus === 'UNAUTHORIZED';
 
   const visibleEvents = useMemo(() => {
     if (isUnauthorized) return [];
-    return events.filter((ev) => {
-      if (categoryFilter !== 'ALL' && ev.category !== categoryFilter) return false;
-      return true;
-    });
+    return events.filter((ev) => categoryFilter === 'ALL' || ev.category === categoryFilter);
   }, [events, categoryFilter, isUnauthorized]);
-
-  const monthRange = useMemo(
-    () => getMonthCalendarRange(cursorYear, cursorMonth),
-    [cursorYear, cursorMonth],
-  );
 
   const monthCells = useMemo(() => {
     const firstDay = new Date(Date.UTC(cursorYear, cursorMonth, 1));
@@ -217,6 +233,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     const next = new Date(Date.UTC(cursorYear, cursorMonth + delta, 1));
     setCursorYear(next.getUTCFullYear());
     setCursorMonth(next.getUTCMonth());
+    chooseDate(`${next.getUTCFullYear()}-${pad2(next.getUTCMonth() + 1)}-01`);
     setCancellingId(null);
     setCancelReason('');
     setFeedback(null);

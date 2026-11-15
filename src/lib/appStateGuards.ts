@@ -26,6 +26,31 @@ export interface PendingNotificationSnapshot {
   previouslyUnreadIds: string[];
 }
 
+/** Preserve unread provenance hidden by earlier optimistic reads until they settle. */
+export function captureNotificationReadSnapshot(
+  notifications: readonly NotificationItem[],
+  targetIds: readonly string[],
+  pending: Iterable<PendingNotificationSnapshot>,
+  origin: AccountIdentityContext,
+  requestSeq: number,
+): PendingNotificationSnapshot {
+  if (!origin.userId || origin.accountStatus !== 'APPROVED') throw new Error('actor_not_approved');
+  const unread = new Set(notifications.filter(item => !item.read).map(item => item.id));
+  for (const snapshot of pending) {
+    if (snapshot.originUserId === origin.userId && snapshot.originGeneration === origin.generation) {
+      for (const id of snapshot.previouslyUnreadIds) unread.add(id);
+    }
+  }
+  const targets = [...new Set(targetIds)];
+  return {
+    originUserId: origin.userId,
+    originGeneration: origin.generation,
+    requestSeq,
+    targetIds: targets,
+    previouslyUnreadIds: targets.filter(id => unread.has(id)),
+  };
+}
+
 export function isMatchingApprovedAccountContext(
   origin: AccountIdentityContext,
   current: AccountIdentityContext,
@@ -170,16 +195,16 @@ export function reconcileFailedMarkAllNotificationsRead(
 export function mergeRefreshedNotifications(
   serverNotifications: readonly NotificationItem[],
   inFlightReadIds: ReadonlySet<string>,
-  markAllInFlight: boolean,
+  pendingMarkAllReads: ReadonlyMap<number, ReadonlySet<string>>,
+  confirmedReadSeqById: ReadonlyMap<string, number> = new Map(),
 ): NotificationItem[] {
-  if (markAllInFlight) {
-    return serverNotifications.map((item) => ({ ...item, read: true }));
+  const readIds = new Set(inFlightReadIds);
+  for (const targets of pendingMarkAllReads.values()) {
+    for (const id of targets) readIds.add(id);
   }
-  if (inFlightReadIds.size === 0) {
-    return [...serverNotifications];
-  }
+  for (const id of confirmedReadSeqById.keys()) readIds.add(id);
   return serverNotifications.map((item) =>
-    inFlightReadIds.has(item.id) ? { ...item, read: true } : item,
+    readIds.has(item.id) ? { ...item, read: true } : item,
   );
 }
 

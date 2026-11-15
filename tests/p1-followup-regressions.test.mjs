@@ -217,7 +217,7 @@ test('2A: concurrent single mark-read A+B (B succeeds then A fails) never revert
       { id: 'notif-D', title: 'D', message: 'added', time: '09:03', read: false, type: 'info' },
     ],
     new Set(['notif-A', 'notif-B']),
-    false,
+    new Map(),
   );
   assert.equal(state.find((n) => n.id === 'notif-D')?.read, false);
   assert.equal(state.find((n) => n.id === 'notif-B')?.read, true);
@@ -281,7 +281,7 @@ test('2A: mark-all optimistic read preserves concurrent single-read success and 
       { id: 'n3', title: '3', message: 'm3', time: '08:10', read: false, type: 'info' },
     ],
     new Set(),
-    false,
+    new Map(),
   );
   const currentWithN2Read = merged.map((n) => (n.id === 'n1' || n.id === 'n2' ? { ...n, read: true } : n));
   const confirmedById = new Map([['n2', 5]]);
@@ -599,8 +599,8 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
           order: () => q,
           lte: (col, val) => { recorded.lte = [col, val]; return q; },
           gte: (col, val) => { recorded.gte = [col, val]; return q; },
-          limit: async (n) => {
-            recorded.limit = n;
+          range: async (start, end) => {
+            recorded.range = [start, end];
             return {
               data: [
                 { id: 'ev-1', title: 'Bounded Event', category: 'EVENT', start_date: '2026-11-15', end_date: '2026-11-15', status: 'SCHEDULED', timezone: 'Africa/Tunis' },
@@ -630,7 +630,7 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
   assert.equal(calRes.ok, true);
   assert.deepEqual(recorded.lte, ['start_date', '2026-11-30']);
   assert.deepEqual(recorded.gte, ['end_date', '2026-11-01']);
-  assert.equal(recorded.limit, 100);
+  assert.deepEqual(recorded.range, [0, 99]);
   assert.deepEqual(recorded.respIds, ['ev-1']);
   assert.equal(calRes.data[0].myResponse, 'ACKNOWLEDGED');
 
