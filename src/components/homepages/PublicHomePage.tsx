@@ -62,8 +62,17 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     message: string;
   } | null>(null);
 
-  // Strict privacy filter: only school-wide public announcements (no classId)
-  const publicAnnouncements = announcements.filter((a) => !a.classId);
+  // The signed-in feed may contain internal notices and drafts. Public Site
+  // requires explicit publication; retain the existing labelled public demos.
+  const publicAnnouncements = announcements.filter(
+    (a) =>
+      !a.classId &&
+      (a.isDemoPreview === true ||
+        (a.isPublic === true &&
+          a.audienceScope === 'PUBLIC_SITE' &&
+          'status' in a &&
+          a.status === 'PUBLISHED')),
+  );
 
   const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
