@@ -6,6 +6,7 @@ import { HomeShortcutCard } from './shared/HomeShortcutCard';
 import { HomeCardGrid } from './shared/HomeCardGrid';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { countUnreadThreads } from '../../lib/schoolContent';
 
 export interface AdministrativePersonnelHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -23,8 +24,11 @@ export const AdministrativePersonnelHomePage: React.FC<
     schoolContextError,
     publicInquiries,
     inquiriesStatus,
+    messages,
+    messagesStatus,
     refreshSchoolData,
   } = useApp();
+  const unreadMessagesCount = countUnreadThreads(messages, messagesStatus);
 
   const [selectedOfficeFeature, setSelectedOfficeFeature] = useState<{
     title: string;
@@ -309,6 +313,7 @@ export const AdministrativePersonnelHomePage: React.FC<
             language,
           )}
           actionLabel={openActionLabel}
+          statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
           icon="✉️"
           tone="purple"
           onClick={() => setActiveTab('messages')}

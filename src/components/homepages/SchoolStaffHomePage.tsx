@@ -6,6 +6,7 @@ import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { countUnreadThreads } from '../../lib/schoolContent';
 
 export interface SchoolStaffHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -16,7 +17,8 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
   setActiveTab,
   onNavigateToSubTab,
 }) => {
-  const { language, currentUser } = useApp();
+  const { language, currentUser, messages, messagesStatus } = useApp();
+  const unreadMessagesCount = countUnreadThreads(messages, messagesStatus);
   const [selectedNotice, setSelectedNotice] = useState<{
     title: string;
     description: string;
@@ -122,6 +124,7 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
           id="staff-messages"
           title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
           actionLabel={openActionLabel}
+          statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
           icon="💬"
           tone="teal"
           onClick={() => setActiveTab('messages')}

@@ -4,6 +4,7 @@ import { pickText } from '../../i18n/homepages';
 import { canAccessAppTab } from '../homepages/homepageAccess';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import {
+  countUnreadThreads,
   listApprovedMessageRecipients,
   replyOperationalThread,
   sendOperationalMessage,
@@ -155,6 +156,8 @@ export const MessagesView: React.FC = () => {
     );
   }
 
+  const unreadCount = countUnreadThreads(messages, messagesStatus);
+
   const activeThread = !isBackendUnauthorized
     ? messages.find((m) => m.id === selectedThreadId) ?? null
     : null;
@@ -222,7 +225,18 @@ export const MessagesView: React.FC = () => {
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">{t('messages')}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">{t('messages')}</h1>
+            {unreadCount > 0 && (
+              <span
+                data-testid="messages-unread-count-badge"
+                className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-extrabold"
+              >
+                {unreadCount}{' '}
+                {pickText({ ar: 'غير مقروءة', fr: 'non lu(s)', en: 'unread' }, language)}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             {pickText(
               {
@@ -472,6 +486,21 @@ export const MessagesView: React.FC = () => {
               </div>
             ) : (
               <>
+                {activeThread.unread && (
+                  <div
+                    data-testid="messages-unread-sync-notice"
+                    className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+                  >
+                    {pickText(
+                      {
+                        ar: 'تُدار حالة الرسائل غير المقروءة من الخادم، ولا يتوفر حالياً تأكيد تلقائي لتغييرها عند فتح المحادثة.',
+                        fr: 'Le statut « non lu » est géré par le serveur ; le marquage automatique comme lu à l’ouverture n’est pas encore disponible.',
+                        en: 'Unread status is managed by the school server; marking threads as read upon opening is not yet available.',
+                      },
+                      language,
+                    )}
+                  </div>
+                )}
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {activeThread.messages.map((m) => (
                     <div

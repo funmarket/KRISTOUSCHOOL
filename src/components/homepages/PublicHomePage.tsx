@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { submitPublicInquiry } from '../../lib/schoolOperations';
-import { canAccessAppTab } from './homepageAccess';
+import { canAccessAppTab, canManagePublicContentUi } from './homepageAccess';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
 import { HomeCardGrid } from './shared/HomeCardGrid';
@@ -51,6 +51,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     foodMenuStatus,
     foodMenuError,
     publicContent,
+    publicContentStatus,
+    publicContentError,
     currentUser,
     refreshSchoolData,
   } = useApp();
@@ -76,6 +78,12 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
   const broadcastsHasError = broadcastsStatus === 'ERROR' || broadcastsStatus === 'UNAUTHORIZED';
   const foodMenuHasError = foodMenuStatus === 'ERROR' || foodMenuStatus === 'UNAUTHORIZED';
+  const publicContentHasError =
+    publicContentStatus === 'ERROR' || publicContentStatus === 'UNAUTHORIZED';
+  const canManagePublicContent = canManagePublicContentUi(currentUser);
+  const publishedCmsSlugs = Object.keys(publicContent ?? {}).filter(
+    (slug) => publicContent?.[slug]?.isPublished,
+  );
 
   // The signed-in feed may contain internal notices and drafts. Public Site
   // requires explicit publication; retain the existing labelled public demos
@@ -100,6 +108,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     (foodMenu.isDemoPreview === true || foodMenuStatus === 'BLOCKED_BACKEND');
 
   const pickPublicEntry = (slug: string, field: 'title' | 'body'): string | null => {
+    if (publicContentHasError) return null;
     const entry = publicContent?.[slug];
     if (!entry || !entry.isPublished) return null;
     const raw =
@@ -571,6 +580,144 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
             </div>
           )}
         </HomePageHeader>
+
+        {publicContentHasError && (
+          <div
+            role="alert"
+            data-testid="public-content-error-banner"
+            className="mb-4 rounded-2xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30 px-4 py-3 text-xs font-semibold text-red-700 dark:text-red-300 flex flex-wrap items-center justify-between gap-3"
+          >
+            <span>
+              {publicContentError ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل نصوص الموقع العام المعتمدة من الخادم.',
+                    fr: 'Impossible de charger le contenu public officiel depuis le serveur.',
+                    en: 'Unable to load school-approved public content from server.',
+                  },
+                  language,
+                )}
+            </span>
+            {typeof refreshSchoolData === 'function' && (
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="rounded-xl bg-red-700 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            )}
+          </div>
+        )}
+
+        {canManagePublicContent && (
+          <div
+            data-testid="public-cms-management-banner"
+            className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/90 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-3 text-xs text-amber-900 dark:text-amber-200 space-y-1.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <strong className="font-extrabold">
+                {pickText(
+                  {
+                    ar: 'إدارة المحتوى العام (قراءة فقط)',
+                    fr: 'Gestion du contenu public (lecture seule)',
+                    en: 'Public Content Management (Read-Only)',
+                  },
+                  language,
+                )}
+              </strong>
+              <div className="flex items-center gap-2">
+                <span
+                  data-testid="public-cms-status-badge"
+                  className="rounded-lg bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-[10px] font-extrabold uppercase"
+                >
+                  {publicContentStatus === 'READY'
+                    ? pickText(
+                        {
+                          ar: `منشور: ${publishedCmsSlugs.length}`,
+                          fr: `Publiés : ${publishedCmsSlugs.length}`,
+                          en: `Published: ${publishedCmsSlugs.length}`,
+                        },
+                        language,
+                      )
+                    : publicContentStatus === 'ERROR'
+                    ? pickText(
+                        {
+                          ar: 'تعذر التحميل',
+                          fr: 'Échec du chargement',
+                          en: 'Loading Failed',
+                        },
+                        language,
+                      )
+                    : publicContentStatus === 'UNAUTHORIZED'
+                    ? pickText(
+                        {
+                          ar: 'غير مصرح',
+                          fr: 'Accès refusé',
+                          en: 'Access Denied',
+                        },
+                        language,
+                      )
+                    : pickText(
+                        {
+                          ar: 'غير متاح حالياً',
+                          fr: 'Service indisponible',
+                          en: 'Feature Unavailable',
+                        },
+                        language,
+                      )}
+                </span>
+                {publicContentStatus === 'ERROR' && typeof refreshSchoolData === 'function' && (
+                  <button
+                    type="button"
+                    data-testid="public-cms-retry-btn"
+                    onClick={() => void refreshSchoolData()}
+                    className="rounded-lg bg-red-700 px-2.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-800"
+                  >
+                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] font-medium">
+              {publicContentStatus === 'ERROR'
+                ? pickText(
+                    {
+                      ar: 'تعذر تحميل حالة المحتوى العام من الخادم. يمكنك إعادة المحاولة لتحديث العرض.',
+                      fr: 'Impossible de charger le contenu public depuis le serveur. Vous pouvez réessayer.',
+                      en: 'Could not load public content from the server. Please try again.',
+                    },
+                    language,
+                  )
+                : publicContentStatus === 'UNAUTHORIZED'
+                ? pickText(
+                    {
+                      ar: 'تم رفض الوصول إلى إعدادات المحتوى العام لهذا الحساب.',
+                      fr: 'L’accès au contenu public a été refusé pour ce compte.',
+                      en: 'Access to public content management was denied for this account.',
+                    },
+                    language,
+                  )
+                : publicContentStatus === 'READY'
+                ? pickText(
+                    {
+                      ar: 'نصوص الصفحة الرئيسية معروضة حالياً للقراءة فقط؛ التعديل والنشر عبر الويب غير مفعّلين بعد.',
+                      fr: 'Le contenu public est affiché en lecture seule ; la modification et la publication en ligne ne sont pas encore activées.',
+                      en: 'Public homepage content is currently read-only; online editing and publishing are not yet enabled.',
+                    },
+                    language,
+                  )
+                : pickText(
+                    {
+                      ar: 'ميزة تعديل ونشر نصوص الصفحة الرئيسية غير متاحة حالياً لأن خدمة النشر لم تُفعّل بعد.',
+                      fr: 'La modification et la publication du contenu public sont actuellement indisponibles car le service de publication n’est pas encore activé.',
+                      en: 'Public content editing and publishing are currently unavailable because the publishing service is not yet enabled.',
+                    },
+                    language,
+                  )}
+            </p>
+          </div>
+        )}
 
         {/* Two clean public overview panels */}
         <div className="kh-info-panels">

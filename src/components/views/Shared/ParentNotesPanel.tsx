@@ -5,9 +5,11 @@ import { EmptyFeatureState } from '../../homepages/shared/EmptyFeatureState';
 import { canAccessAppTab } from '../../homepages/homepageAccess';
 import { pickText } from '../../../i18n/homepages';
 import {
+  getParentNotesQuotaDay,
   isWithinParentNotesTunisWindow,
   PARENT_NOTES_DAILY_QUOTA,
 } from '../../../lib/schoolContent';
+import { getNextTunisBoundaryDelayMs } from '../../../lib/parentNotesBoundary';
 import { Clock, AlertCircle, CheckCircle2, Send, Lock, ShieldCheck } from 'lucide-react';
 
 export interface ParentNotesPanelProps {
@@ -29,11 +31,15 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
     notesStatus,
     notesError,
     remainingParentNotesToday,
+    isRefreshingParentNotesQuota,
+    parentNotesQuotaStale,
+    parentNotesQuotaVerified,
     selectedChildId,
     setSelectedChildId,
     addParentNote,
     replyParentNote,
     refreshSchoolData,
+    refreshParentNotesQuota,
     isHydratingSchoolData,
     language,
     t,
@@ -75,6 +81,64 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [withinTunisWindow, setWithinTunisWindow] = useState<boolean>(() =>
+    isWithinParentNotesTunisWindow(),
+  );
+  const lastObservedQuotaDayRef = useRef<string>(getParentNotesQuotaDay());
+
+  useEffect(() => {
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+
+    const syncWindowAndBoundary = () => {
+      if (cancelled) return;
+      setWithinTunisWindow(isWithinParentNotesTunisWindow());
+      const nextQuotaDay = getParentNotesQuotaDay();
+      if (nextQuotaDay !== lastObservedQuotaDayRef.current) {
+        lastObservedQuotaDayRef.current = nextQuotaDay;
+        if (typeof refreshParentNotesQuota === 'function') {
+          void refreshParentNotesQuota();
+        }
+      }
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      timerId = setTimeout(() => {
+        syncWindowAndBoundary();
+        scheduleNext();
+      }, getNextTunisBoundaryDelayMs());
+    };
+
+    syncWindowAndBoundary();
+    scheduleNext();
+
+    const handleVisibility = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        syncWindowAndBoundary();
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', syncWindowAndBoundary);
+      window.addEventListener('pageshow', syncWindowAndBoundary);
+    }
+
+    return () => {
+      cancelled = true;
+      if (timerId !== null) clearTimeout(timerId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', syncWindowAndBoundary);
+        window.removeEventListener('pageshow', syncWindowAndBoundary);
+      }
+    };
+  }, [refreshParentNotesQuota]);
 
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
   const [replyingId, setReplyingId] = useState<string | null>(null);
@@ -129,29 +193,83 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
     );
   }
 
-  const withinTunisWindow = isWithinParentNotesTunisWindow();
   const activeChildClass = activeChild
     ? classesList.find((cls) => cls.id === activeChild.classId)
     : undefined;
   const informationalTeacherName = activeChildClass?.teacherName?.trim() || '—';
 
   const trimmedLength = content.trim().length;
-  const isParentQuotaExhausted = remainingParentNotesToday <= 0;
   const isBlockedUnauthorized = notesStatus === 'UNAUTHORIZED';
+  const isBlockedError = notesStatus === 'ERROR';
+  const isRefreshingQuota = Boolean(isRefreshingParentNotesQuota);
+  const isQuotaStale = Boolean(parentNotesQuotaStale);
+  const isQuotaVerified =
+    parentNotesQuotaVerified !== undefined
+      ? Boolean(parentNotesQuotaVerified) && !isQuotaStale && notesStatus === 'READY'
+      : remainingParentNotesToday !== null &&
+        remainingParentNotesToday !== undefined &&
+        !isQuotaStale &&
+        notesStatus === 'READY';
+  const hasNumericEstimate =
+    typeof remainingParentNotesToday === 'number' && Number.isFinite(remainingParentNotesToday);
+  const isParentQuotaExhausted = hasNumericEstimate && remainingParentNotesToday <= 0;
   const hasEligibleChild = Boolean(effectiveChildId);
   const showSendForm = !isStaffReviewer || linkedChildren.length > 0;
   const canSubmitParentNote =
     hasEligibleChild &&
     withinTunisWindow &&
+    isQuotaVerified &&
+    hasNumericEstimate &&
     !isParentQuotaExhausted &&
     !isBlockedUnauthorized &&
+    !isBlockedError &&
+    !isRefreshingQuota &&
+    !isQuotaStale &&
     !submitting;
+
+  const handleQuotaRefresh = () => {
+    if (typeof refreshParentNotesQuota === 'function') {
+      return refreshParentNotesQuota();
+    }
+    return refreshSchoolData();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || isRefreshingQuota) return;
     setErrorMsg('');
     setSuccessMsg('');
+
+    const openNow = isWithinParentNotesTunisWindow();
+    setWithinTunisWindow(openNow);
+    if (!openNow) {
+      setErrorMsg(
+        pickText(
+          {
+            ar: 'الإرسال مغلق خارج 08:00–18:00 بتوقيت تونس.',
+            fr: 'Envoi fermé hors de la plage 08h00–18h00 (Africa/Tunis).',
+            en: 'Parent notes can only be sent between 08:00 and 18:00 Africa/Tunis.',
+          },
+          language,
+        ),
+      );
+      return;
+    }
+
+    if (isBlockedUnauthorized || isBlockedError || isQuotaStale || !isQuotaVerified || !hasNumericEstimate) {
+      setErrorMsg(
+        notesError ||
+          pickText(
+            {
+              ar: 'تعذر التحقق من التقدير اليومي الحالي من الخادم. يرجى إعادة المحاولة.',
+              fr: 'Impossible de vérifier l’estimation du quota du jour auprès du serveur. Veuillez réessayer.',
+              en: 'Unable to verify today’s estimated allowance from the server. Please retry.',
+            },
+            language,
+          ),
+      );
+      return;
+    }
 
     if (!effectiveChildId) {
       setErrorMsg(
@@ -332,13 +450,71 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
                   {t('dailyQuota')} • 08:00 Tunis
                 </div>
                 <div className="text-sm font-bold text-gray-900 dark:text-white">
-                  {remainingParentNotesToday} / {PARENT_NOTES_DAILY_QUOTA} {t('notesRemaining')}
+                  {isRefreshingQuota
+                    ? t('loading')
+                    : isBlockedUnauthorized
+                    ? pickText(
+                        {
+                          ar: 'التقدير غير متاح',
+                          fr: 'Estimation indisponible',
+                          en: 'Estimate unavailable',
+                        },
+                        language,
+                      )
+                    : isQuotaVerified && hasNumericEstimate
+                    ? pickText(
+                        {
+                          ar: `الملاحظات المتبقية تقديريًا: ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA}`,
+                          fr: `Estimation restante : ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA} notes`,
+                          en: `Estimated remaining: ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA} notes`,
+                        },
+                        language,
+                      )
+                    : hasNumericEstimate && isQuotaStale
+                    ? pickText(
+                        {
+                          ar: `تقدير قديم: ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA} (يلزم التحديث)`,
+                          fr: `Estimation expirée : ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA} (actualisation requise)`,
+                          en: `Outdated estimate: ${remainingParentNotesToday} / ${PARENT_NOTES_DAILY_QUOTA} (refresh needed)`,
+                        },
+                        language,
+                      )
+                    : isHydratingSchoolData
+                    ? t('loading')
+                    : pickText(
+                        {
+                          ar: 'التقدير غير متحقق بعد من الخادم',
+                          fr: 'Estimation non encore vérifiée',
+                          en: 'Estimate not yet verified',
+                        },
+                        language,
+                      )}
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {isRefreshingQuota && (
+        <div
+          data-testid="parent-notes-quota-refreshing"
+          role="status"
+          className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 p-4 rounded-2xl text-xs font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2"
+        >
+          <Clock className="w-4 h-4 shrink-0" />
+          <span>
+            {pickText(
+              {
+                ar: 'جارٍ تحديث رصيد اليوم من الخادم...',
+                fr: 'Actualisation du quota quotidien auprès du serveur...',
+                en: 'Refreshing today’s note allowance from the server...',
+              },
+              language,
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Status banners shown even when cached rows exist */}
       {notesStatus === 'UNAUTHORIZED' && (
@@ -363,7 +539,7 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => void refreshSchoolData()}
+            onClick={() => void handleQuotaRefresh()}
             className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
             {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
@@ -371,7 +547,12 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
         </div>
       )}
 
-      {notesStatus === 'ERROR' && (
+      {(notesStatus === 'ERROR' ||
+        (isQuotaStale &&
+          !isRefreshingQuota &&
+          !isHydratingSchoolData &&
+          notesStatus !== 'UNAUTHORIZED' &&
+          notesStatus !== 'BLOCKED_BACKEND')) && (
         <div
           data-testid="parent-notes-error-state"
           role="alert"
@@ -383,9 +564,9 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
               {notesError ||
                 pickText(
                   {
-                    ar: 'تعذر تحديث ملاحظات الأولياء من الخادم.',
-                    fr: 'Impossible de charger les notes des parents.',
-                    en: 'Failed to load parent notes from server.',
+                    ar: 'تعذر تحديث ملاحظات الأولياء أو رصيد اليوم من الخادم.',
+                    fr: 'Impossible d’actualiser les notes des parents ou le quota du jour.',
+                    en: 'Failed to refresh parent notes or today’s allowance from the server.',
                   },
                   language,
                 )}
@@ -393,7 +574,8 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => void refreshSchoolData()}
+            data-testid="parent-notes-retry-btn"
+            onClick={() => void handleQuotaRefresh()}
             className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
             {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
@@ -500,6 +682,30 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
                       ))
                     )}
                   </select>
+                  {scopedChildren.length === 0 && (
+                    <p
+                      data-testid="parent-note-no-child-hint"
+                      className="mt-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
+                    >
+                      {classId
+                        ? pickText(
+                            {
+                              ar: 'لا يوجد تلميذ مرتبط بحسابك في هذا القسم — الإرسال متاح فقط للأولياء المرتبطين بتلميذ مسجل.',
+                              fr: 'Aucun enfant rattaché à votre compte dans cette classe — envoi désactivé sans lien élève.',
+                              en: 'No linked child in this class — sending is disabled until a child enrollment link exists.',
+                            },
+                            language,
+                          )
+                        : pickText(
+                            {
+                              ar: 'لا يوجد تلميذ مرتبط بحسابك حالياً — تواصل مع الإدارة لربط ملف التلميذ.',
+                              fr: 'Aucun enfant rattaché à votre compte — contactez la direction pour lier votre élève.',
+                              en: 'No linked child on this account — contact school administration to link a student.',
+                            },
+                            language,
+                          )}
+                    </p>
+                  )}
                 </div>
 
                 {/* Informational read-only teacher tag (no selectable picker since send_parent_note auto-routes) */}
@@ -569,7 +775,7 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
                 >
                   {submitting
                     ? t('loading')
-                    : isParentQuotaExhausted
+                    : isQuotaVerified && isParentQuotaExhausted
                     ? pickText(
                         { ar: 'تم استنفاد رصيد اليوم (11/11)', fr: 'Quota quotidien atteint (11/11)', en: 'Daily Quota Reached (11/11)' },
                         language,

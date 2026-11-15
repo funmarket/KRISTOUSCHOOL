@@ -1,0 +1,877 @@
+# KRISTOU SCHOOL — FINAL PRE-PUBLICATION CORRECTION
+## Parent Notes Freshness, CMS Loading Test, and Documentation Accuracy
+
+**TASK TYPE:** Targeted correction of the existing Google AI Studio workspace  
+**CURRENT COMMAND:** Correct the remaining independently reproduced defects, verify the final candidate, and export evidence for review.  
+**PUBLICATION STATUS:** ON HOLD  
+**AUTHORIZATION:** Edit only the specifically identified application/test files and the external contract document. **Do not push, deploy, create a PR, modify Supabase or rewrite working features.**
+
+---
+
+# 1. IMPORTANT — READ BEFORE MAKING CHANGES
+
+Continue from your **current corrected KRISTOU SCHOOL workspace**.
+
+This is **not** a fresh implementation assignment. It is **not** a request to rebuild Parent Notes, redesign the application, reopen the previous 16-file review, or implement database contracts.
+
+Your last corrected export was:
+
+`remaining_implementation_corrected_evidence.zip`
+
+Its independently verified SHA-256:
+
+`e9a53a5b7e7d3c6ba3ded4cd117894bf4350eaa3fa76807ef7dd288cc60d38ed`
+
+The established GitHub baseline is:
+
+- Repository: `funmarket/KRISTOUSCHOOL`
+- Integration branch: `main`
+- Baseline commit: `fd57b6eab717b13676d7f522475b27f7d44a7522`
+- Git tree: `16fa4896c829b768b291bf415326aef4187cfb43`
+- PR #18: merged
+
+**Your current corrected 16-file candidate is the starting implementation for this task, not a clean GitHub checkout.**
+
+The previous review independently reproduced:
+
+- 98 passing tests.
+- Successful TypeScript checking.
+- Successful production build.
+- Matching protected-file checksums.
+- The intended CMS ERROR/UNAUTHORIZED corrections.
+- The existing Parent Notes boundary-controller implementation.
+
+Additional independent negative probes identified remaining freshness problems.
+
+**These new findings do not invalidate the previous 98 passing tests. They establish behavior that those tests did not adequately cover.**
+
+Do not discard or replace working code to resolve them.
+
+## Baseline preflight
+
+Before editing:
+
+1. Inspect the current workspace and identify its changed files.
+2. Confirm that your existing corrected Parent Notes controller and the previously validated application changes are present.
+3. Compare against the previous corrected export, not just GitHub `main`.
+4. Preserve any newer legitimate work rather than blindly overwriting it.
+5. If `.git` is unavailable, report Git branch and local HEAD as `UNAVAILABLE`. Do not invent Git metadata.
+6. Confirm the exact baseline and the narrow file list you intend to change.
+
+If the workspace no longer matches the expected candidate, **stop the affected modification and report the difference**. Do not silently reconstruct or replace the workspace.
+
+---
+
+# 2. EXACT ALLOWED TARGETS
+
+Application changes are restricted to the minimum necessary portions of:
+
+```text
+src/lib/parentNotesBoundary.ts
+src/context/AppContext.tsx
+src/components/views/Shared/ParentNotesPanel.tsx
+src/components/homepages/PublicHomePage.tsx
+tests/remaining-implementation.test.mjs
+```
+
+The following external evidence document may also be corrected:
+
+```text
+DATABASE_CONTRACT_REQUESTS.md
+```
+
+Evidence files, logs, manifests and export diffs may be updated **outside the application source tree**.
+
+`PublicHomePage.tsx` is authorized **only** for the specifically identified CMS loading-state issue, if an actual production-source correction is necessary.
+
+No other application source or test files are authorized merely because they are related.
+
+### Protected boundaries — do not modify
+
+```text
+supabase/**
+src/lib/database.types.ts
+src/lib/supabase.ts
+src/lib/schoolContent.ts
+```
+
+Also protect:
+
+- Authentication, signup, login, approval and account-governance mechanics.
+- Existing Owner authority and Manager delegation.
+- Browser/Telegram identity and linking.
+- Pickup safety locks.
+- Calendar implementation from PR #18.
+- Notifications and operational messaging.
+- Other CMS behavior already corrected.
+- Root dependency manifests and `bun.lock`.
+- Governing repository documents.
+- Existing tests unrelated to the requested correction.
+
+Do not introduce another Supabase client, duplicate Parent Notes service, new quota database, parallel identity owner, custom backend, or alternative account state.
+
+**Preserve one canonical Parent Notes data path.**
+
+If an additional protected target appears necessary, stop and report the exact dependency. Do not expand the write scope independently.
+
+---
+
+# 3. CORRECTION A — ACCOUNT-CHANGE QUOTA FRESHNESS
+
+## Verified defect
+
+The corrected `src/lib/parentNotesBoundary.ts` currently initializes or resets its verification state approximately as follows:
+
+```ts
+verifiedAt = null;
+verifiedQuotaDay = null;
+```
+
+But its stale-state predicate relies on a condition equivalent to:
+
+```ts
+Boolean(
+  isEligible &&
+  verifiedQuotaDay !== null &&
+  verifiedQuotaDay !== activeQuotaDay
+)
+```
+
+**This does not treat an eligible account with no verified records as stale.**
+
+Consequently, after switching accounts, the new account can temporarily appear to have all 11 notes available before that account's records have been refreshed.
+
+Its quota calculation can also fall back to the current local time when no verified timestamp exists.
+
+That is not acceptable freshness evidence.
+
+## Required behavior
+
+For an approved, eligible account:
+
+1. After account identity changes, the remaining-note estimate must initially be **unverified**.
+2. Do not display a newly calculated `11/11` balance as if the server records had been checked.
+3. Do not enable submission based on an unverified balance.
+4. Start or await the appropriate canonical Notes hydration for the new account.
+5. Only establish a usable estimate after successful retrieval of records belonging to the current approved account and current quota cycle.
+6. Never carry the previous account's notes, verification timestamp, remaining count or success status into the new account.
+7. Ignore late completions from the previous account.
+8. Respect the established account identity generation, approval state and unmount guards.
+9. Keep unavailable, ERROR and UNAUTHORIZED states distinct.
+
+**Do not solve this by resetting every account to 11 available notes.**
+
+### Preserve valid existing behavior
+
+Preserve:
+
+- `setIdentity`
+- `recordHydratedResult`
+- `refreshNow`
+- `checkBoundaryAndRefresh`
+- `computeRemainingQuota`
+- Existing `AccountIdentityContext` / generation guards.
+- Existing single-flight refresh protection.
+- Existing error/retry functionality.
+
+You may make the smallest necessary changes inside these owners, but do not replace the controller with a second implementation.
+
+## Mandatory regression cases
+
+Create meaningful tests that demonstrate:
+
+**A1. New account with no hydrated records**
+
+- Account A has previously verified notes.
+- Switch to approved Account B.
+- Before Account B's server records arrive, the quota state is unverified.
+- Submission remains disabled.
+- The UI does not claim that Account B has 11 verified notes available.
+
+**A2. Account change during an in-flight refresh**
+
+- Begin Account A's read.
+- Switch to Account B.
+- Complete Account A's read afterward.
+- Account A's response must not update Account B's notes, verification state or remaining estimate.
+- Complete Account B's fresh read and verify that only its applicable records are used.
+
+**A3. Failed initial hydration**
+
+- Account B's initial read fails.
+- The UI remains unverified and shows a useful error/retry state.
+- Retrying successfully establishes the correct estimate.
+- No fake success or local allowance reset occurs.
+
+Tests must exercise actual controller/dataflow behavior, not merely check that `setIdentity` or `quotaStale` appears in source text.
+
+---
+
+# 4. CORRECTION B — REQUEST CROSSING THE 08:00 BOUNDARY
+
+## Verified defect
+
+The corrected controller currently sets verification information at successful response completion.
+
+The critical problem is this sequence:
+
+```text
+07:59:59 — Start fetching Parent Notes.
+08:00:00 — New Tunis quota cycle begins.
+08:00:02 — Old request completes.
+```
+
+If the controller simply evaluates the quota day at `08:00:02`, it can incorrectly treat the earlier request as verification of the new cycle.
+
+A request that started before the boundary is **not automatically a fresh post-boundary read** just because it completed afterward.
+
+The same defect can occur in ordinary Notes hydration, not only explicit boundary refreshes.
+
+## Required correction
+
+Inspect and correct **both** dataflow paths:
+
+### Path 1 — Dedicated quota refresh
+
+`src/lib/parentNotesBoundary.ts`
+
+Trace:
+
+```text
+refreshNow()
+  → fetchNotes()
+  → successful response
+  → apply notes
+  → verification state
+  → remaining estimate
+```
+
+For each request, capture sufficient information at request start to establish:
+
+- The requesting account identity.
+- Its approval/generation context.
+- The quota cycle in effect when the request began.
+- The relevant request generation or ordering.
+- Whether it is still the current valid request when it completes.
+
+When a request crosses 08:00:
+
+- Do not treat its completion as proof that current-cycle data was refreshed.
+- Do not set the current cycle's verification state based solely on that response.
+- Do not prematurely clear the stale flag.
+- Do not enable the send button using a falsely refreshed allowance.
+- Ensure a genuinely post-boundary read can establish current-cycle freshness.
+
+Preserve single-flight behavior. A second boundary check must not launch a storm of duplicate requests.
+
+A new-cycle read may begin after the outdated in-flight request settles, provided the old result cannot overwrite newer state.
+
+### Path 2 — Ordinary authenticated Notes hydration
+
+`src/context/AppContext.tsx`
+
+Inspect the existing `hydrateAuthenticatedData` Parent Notes flow.
+
+It currently uses the canonical notes-list operation and calls `recordHydratedResult` after completion.
+
+**Do not leave this path vulnerable while fixing only `refreshNow()`.**
+
+The ordinary hydration path must also distinguish:
+
+- Request start time/quota cycle.
+- Completion time/quota cycle.
+- Current account identity/generation.
+- Whether another, fresher request has already completed.
+
+If ordinary hydration starts before 08:00 and completes afterward:
+
+- It must not certify the new cycle from its older request.
+- It must not overwrite a newer successful post-boundary read.
+- It must leave the allowance unverified or initiate/permit the proper fresh read.
+- It must preserve unrelated hydration behavior.
+
+Use the existing canonical controller and sequencing mechanisms. Do not introduce a second competing refresh state machine.
+
+### Avoid these invalid shortcuts
+
+**Forbidden:**
+
+- Setting `verifiedQuotaDay` to `getParentNotesQuotaDay(new Date())` without checking request freshness.
+- Treating HTTP success or a resolved promise as authoritative quota proof.
+- Calling `refreshSchoolData()` repeatedly until the UI changes.
+- Resetting the local counter to 11 at 08:00.
+- Using a local timer as database authorization.
+- Refresh loops on repeated visibility/focus events.
+- A new quota table or unsupported RPC.
+- Allowing an older hydration result to replace a newer one.
+- Disabling valid Parent Notes functionality indefinitely when a proper fresh read succeeds.
+
+---
+
+# 5. CORRECTION C — FAILED POST-BOUNDARY REFRESH
+
+The existing correction already includes useful error handling. Preserve it and close the remaining freshness gap.
+
+## Required behavior
+
+Assume:
+
+```text
+07:59 — Parent previously used 11 of 11 notes.
+08:00 — Quota-cycle boundary reached.
+08:01 — Server refresh fails.
+```
+
+The application must:
+
+1. Recognize that the old estimate is stale.
+2. Not automatically display 11 newly available notes.
+3. Not enable sending based on that unsupported count.
+4. Preserve a useful previous estimate if appropriate, clearly identified as outdated.
+5. Display an honest error state.
+6. Provide a working Retry action.
+7. On successful retry, derive a new estimate from the refreshed records.
+8. Continue to rely on database enforcement for the actual sending limit.
+
+An error or stale response from another account must never overwrite the current account's successful state.
+
+## Mandatory cases
+
+**C1. Network failure after 08:00**
+
+The old estimate remains stale/unverified, sending is guarded, and retry is available.
+
+**C2. Successful retry**
+
+A new read begun after the boundary returns current-account records. Only then may the current-cycle estimate become usable.
+
+**C3. Unauthorized refresh**
+
+The component enters the correct unauthorized state; it must not present cached notes as current authorized data or offer an enabled send action.
+
+**C4. Browser resumes after suspension**
+
+Simulate a page suspended at 07:55 and resumed after 09:00. Confirm that the cycle change is detected and the appropriate refresh logic runs without duplicate requests.
+
+**C5. Concurrent triggers**
+
+Timer, focus, visibility and pageshow must not produce overlapping uncontrolled refreshes or stale overwrites.
+
+Do not weaken the original 07:59→08:00 and 17:59→18:00 tests.
+
+---
+
+# 6. CORRECTION D — CLEARLY LABEL THE QUOTA AS ESTIMATED
+
+## Important product distinction
+
+The UI **is permitted to calculate an estimated remaining count from refreshed server records**.
+
+A dedicated authoritative quota-read RPC is **not required merely to display that estimate**.
+
+However:
+
+- The estimate must come from actual relevant server records.
+- The controller must establish appropriate account and cycle freshness.
+- The UI must not describe that estimate as a server-confirmed remaining-quota balance.
+- The database remains the authority for accepting or denying each send.
+
+Current canonical behavior includes:
+
+```text
+listParentNotes()
+  → server-returned parent_notes records
+  → getRemainingParentNotesQuota(...)
+  → UI estimate
+```
+
+The existing `send_parent_note` database RPC separately enforces the actual 11-note limit and the 08:00–18:00 sending window.
+
+Its successful send response includes `remainingToday`, but **that does not mean a matching authoritative read projection exists at boundary refresh time**.
+
+Do not conflate these contracts.
+
+## UI requirements
+
+Update the relevant quota presentation in:
+
+`src/components/views/Shared/ParentNotesPanel.tsx`
+
+Use natural, user-facing language in all three supported languages.
+
+For example, when fresh records support an estimate:
+
+**English:** `Estimated remaining: 8 of 11 notes`
+
+**French:** `Estimation des notes restantes : 8 sur 11`
+
+**Arabic:** `الملاحظات المتبقية تقديريًا: ٨ من ١١`
+
+These are examples of wording, not a requirement to alter the accepted typography or numeric localization system.
+
+When records have not yet been verified:
+
+- Show an appropriate checking/loading or unavailable estimate state.
+- Do not invent a numerical allowance.
+
+When the previously displayed estimate is stale:
+
+- Clearly distinguish it from the current estimate.
+- Keep submission appropriately guarded until the applicable fresh read succeeds.
+
+When a refresh fails:
+
+- Preserve a useful error/retry state.
+- Do not mislabel the failure as a missing backend contract.
+
+When a note submission is rejected by the database:
+
+- Surface the genuine rejection.
+- Never convert it into a locally fabricated successful send.
+
+## Preserve the established product rules
+
+- 11 parent-originated notes per parent per cycle.
+- Shared across children, devices and Browser/Telegram entry points.
+- Sending window: `[08:00, 18:00)` Africa/Tunis.
+- Reset boundary: 08:00 Africa/Tunis.
+- Assigned-teacher requirement.
+- Verified parent/child/class relationships.
+- Private authorized audience.
+- Staff replies do not consume parent-originated allowance.
+- Parent Notes and operational Messages remain distinct.
+- Parent Notes beneath both calendars use the same canonical operation.
+
+Do not change the backend's current teacher-selection behavior or claim that the outstanding teacher-tag contract is implemented.
+
+---
+
+# 7. CORRECTION E — CMS LOADING TEST MUST REPRESENT REAL APPLICATION STATE
+
+The existing CMS ERROR and UNAUTHORIZED corrections have been reviewed. **Do not reopen them.**
+
+One small issue remains in the loading-state test.
+
+The existing `PublicHomePage.tsx` branch uses a condition equivalent to:
+
+```ts
+isHydratingSchoolData && !publicContentStatus
+```
+
+But `AppContext` initializes `publicContentStatus` to:
+
+```ts
+'BLOCKED_BACKEND'
+```
+
+The current test manually supplies:
+
+```ts
+publicContentStatus: undefined
+```
+
+That does not establish a loading state reachable through normal application initialization.
+
+## Required action
+
+1. Inspect actual `AppContext` public-content initialization and hydration state transitions.
+2. Determine which loading states can genuinely occur.
+3. Make the test use a real, reachable combination of application state.
+4. If an existing loading state can genuinely be presented, test its actual behavior.
+5. If the separate branch is unreachable, remove or correct the misleading branch/assertion rather than manufacturing an artificial state.
+6. Preserve the existing reviewed outcomes for `READY`, `ERROR`, `UNAUTHORIZED` and `BLOCKED_BACKEND`.
+7. Preserve the CMS error banner and Retry behavior.
+8. Preserve Owner and authorized Manager capability checks.
+
+**Do not change global backend-status semantics simply to make the loading test pass.**
+
+Do not make `undefined` appear at runtime solely because a mock fixture permits it.
+
+The goal is accurate test coverage, not more UI code.
+
+---
+
+# 8. CORRECTION F — DATABASE CONTRACT DOCUMENT FILENAME
+
+This is a documentation-only correction.
+
+The external `DATABASE_CONTRACT_REQUESTS.md` currently references the account-governance migration using an incorrect filename:
+
+```text
+20261113150000_gov01_account_governance.sql
+```
+
+The actual migration filename in the verified GitHub repository is:
+
+```text
+supabase/migrations/20261113150000_account_governance_foundation.sql
+```
+
+Correct that filename in the external document wherever it is being cited.
+
+Also check the shortened reference:
+
+```text
+20261113150000:366-378
+```
+
+If it is intended as a source reference, make sure it identifies the correct actual file and relevant lines. Do not invent line numbers. Remove an unverified line range if necessary.
+
+**Do not rename, edit, recreate or execute the migration.**
+
+Do not modify any other database proposal as part of this task.
+
+Keep all unimplemented RPCs explicitly marked `PROPOSED — NOT INSTALLED`.
+
+Preserve the distinction between a valid frontend estimate and the still-unavailable authoritative quota-read contract.
+
+---
+
+# 9. REQUIRED TEST DISCIPLINE
+
+The existing independent review already reproduced:
+
+```text
+98 tests passed
+TypeScript check passed
+Production build passed
+```
+
+These are the accepted **previous-candidate results**.
+
+They are not proof that a newly edited candidate passes.
+
+## RED before GREEN
+
+Before implementing the production corrections:
+
+1. Add the smallest behavioral tests exposing the missing cases.
+2. Run them against the previous corrected implementation.
+3. Capture the actual failures.
+4. Confirm the failures correspond to the identified freshness or reachability defects.
+5. Make the minimal implementation changes.
+6. Run the focused tests again.
+7. Confirm the behavior is now exercised successfully.
+
+Do not delete, skip, weaken or replace the existing 98 tests to produce a green count.
+
+A test that searches source text for `quotaStale`, `setTimeout`, `verifiedAt` or a refresh function name is insufficient to establish behavior.
+
+Use controlled clocks, deferred promises, real controller operations and concrete state assertions.
+
+Where component rendering is required, test actual displayed states and disabled/enabled actions—not only the presence of a JSX token.
+
+### Required coverage matrix
+
+| Test | Required observation |
+|---|---|
+| New approved account, no records yet | Estimate unverified, send guarded |
+| Old account completes after account switch | Old completion ignored |
+| Current account's successful read | Correct estimate derived from its records |
+| Initial hydration fails | Error/retry; no fabricated allowance |
+| Dedicated refresh begins before 08:00, completes after | Cannot certify new cycle |
+| Ordinary Notes hydration begins before 08:00, completes after | Cannot certify new cycle |
+| Newer post-boundary read completes before older hydration | Older read cannot overwrite newer result |
+| Post-boundary read fails | Previous estimate stale; send guarded |
+| Post-boundary retry succeeds | Current-cycle estimate refreshed |
+| 17:59 → 18:00 | Sending closes, history remains readable |
+| Browser resumes after 08:00 | Boundary detected; appropriate refresh |
+| Concurrent timer/focus/visibility triggers | No duplicate uncontrolled refreshes |
+| Unauthorized response | No usable estimate or enabled sending |
+| Estimated allowance AR/FR/EN | Wording clearly indicates an estimate |
+| CMS loading | Fixture represents reachable application state |
+| CMS ERROR/UNAUTHORIZED | Previous negative regressions remain passing |
+
+Use the existing tests and add only what is necessary.
+
+If you discover an environmental limitation, report it precisely. Do not substitute fake browser interaction or a mocked database for live acceptance.
+
+---
+
+# 10. PROTECTED BEHAVIOR AND NO-DRIFT RULES
+
+You are not authorized to:
+
+- Implement `send_parent_note` SQL changes.
+- Add an authoritative quota-read RPC.
+- Modify RLS, grants, migrations, triggers or storage.
+- Implement or alter teacher-tag database parameters.
+- Change existing authentication or Telegram behavior.
+- Redesign the Parent Notes interface.
+- Add another state provider or global data store.
+- Refactor AppContext beyond the specific Notes hydration/freshness requirements.
+- Rewrite the existing calendar implementation.
+- Introduce an unrequested `MAYBE` RSVP option.
+- Fix unrelated UI bugs.
+- Upgrade unrelated packages.
+- Regenerate an unrelated lockfile.
+- Modify the protected generated types or shared Supabase client.
+- Replace already-corrected E1, E3 or E4 implementations.
+- Push directly to GitHub, create a PR, merge or deploy.
+
+If an unexpected issue appears, **record it separately and do not expand this correction packet**.
+
+A failing verification does not authorize a broader rewrite.
+
+The exact allowed target list remains authoritative.
+
+---
+
+# 11. FINAL CANDIDATE VERIFICATION
+
+After the **last functional edit**, verify the final candidate.
+
+### Step 1 — Exact diff review
+
+Produce:
+
+- The complete final diff against the verified GitHub baseline.
+- A separate **final-correction-only diff** against `remaining_implementation_corrected_evidence.zip`.
+- The exact changed-file inventory.
+- Evidence that unrelated application files are unchanged.
+- A clear distinction between the original 16-file implementation and the small additional correction.
+
+Do not silently omit earlier valid changes from the complete final diff.
+
+### Step 2 — Focused RED/GREEN evidence
+
+Preserve:
+
+- Original failure logs.
+- New negative-test RED logs.
+- Corrected GREEN logs.
+- Test names and exact assertions.
+
+Do not erase failed runs after obtaining a later pass.
+
+### Step 3 — Final frozen Bun installation
+
+Create a clean isolated copy of the final candidate.
+
+Run the equivalent of:
+
+```sh
+bun install --frozen-lockfile
+```
+
+Then, using that final isolated candidate:
+
+```sh
+node --import tsx --test tests/*.test.mjs tests/functions/*.test.mjs
+bun run lint
+bun run build
+```
+
+Record:
+
+- Bun version.
+- Node version.
+- npm version, if used.
+- Actual timestamp.
+- Exact working directory.
+- Exact command.
+- Exit code.
+- Tests collected, passed, failed and skipped.
+- TypeScript result.
+- Build result.
+- Existing warnings, if any.
+
+Do not report the earlier 98-test result as a fresh final pass.
+
+Do not claim that 98 tests must still be the total count; legitimate new regression tests may increase the count.
+
+If a step fails, report the failure and fix only defects within this authorized correction scope.
+
+### Step 4 — Protected-file checks
+
+Rerun the existing protected-file manifest verification against the final source tree.
+
+Verify the previously protected 35 files and check the final diff for all forbidden targets.
+
+A passing checksum check does not excuse an unexpected change to another protected file.
+
+### Step 5 — Scope and artifact checks
+
+Verify:
+
+- No additional Supabase client.
+- No unexpected migration or schema edit.
+- No authentication/approval/Telegram changes.
+- No hidden weakening of tests.
+- No unrelated dependency updates.
+- No agent reports or internal evidence copied into public application assets.
+- No new source changes after the final successful test run.
+
+If another change is made after verification, rerun the affected final checks.
+
+---
+
+# 12. REQUIRED EXPORT
+
+Produce **one final ZIP** suitable for independent pre-publication review.
+
+Suggested name:
+
+```text
+remaining_implementation_final_prepush_evidence.zip
+```
+
+Include:
+
+```text
+remaining_implementation.diff
+final_correction_only.diff
+DATABASE_CONTRACT_REQUESTS.md
+CALENDAR_REFERENCE_MATRIX.md
+protected_baseline_rem.sha256
+TASK_CONTRACT.md
+ledger.tsv
+logs/
+```
+
+The complete diff must represent the **entire final candidate against GitHub baseline**, not just the newly corrected files.
+
+The correction-only diff must represent **only the changes made after the previously reviewed corrected ZIP**.
+
+Include all relevant verification logs, including negative results, and a concise file inventory explaining each final change.
+
+For the ZIP, report:
+
+- Actual filename.
+- Actual size in bytes.
+- Actual SHA-256 checksum.
+- Actual entry count.
+- Which files changed compared with the previous corrected candidate.
+
+Keep evidence outside tracked application/public assets.
+
+**Do not push or deploy. Gemini works in Google AI Studio and is not required to create a PR.**
+
+---
+
+# 13. EXACT FINAL REPORT FORMAT
+
+Return a factual report using these headings:
+
+## A. VERIFIED STARTING STATE
+
+- Baseline repository and commit.
+- Current workspace comparison method.
+- Previous corrected candidate identified.
+- Local Git metadata availability.
+- Any starting differences.
+
+## B. FRESHNESS DEFECTS REPRODUCED
+
+For each defect:
+
+- Relevant source owner.
+- Reproduction steps.
+- Exact failing test.
+- Actual failure result.
+
+## C. CORRECTIONS IMPLEMENTED
+
+Explain the smallest source changes for:
+
+1. Account-change freshness.
+2. Dedicated refresh crossing 08:00.
+3. Ordinary Notes hydration crossing 08:00.
+4. Failed post-boundary refresh and retry.
+5. Estimated allowance display.
+6. CMS loading-test reachability.
+7. Migration filename correction.
+
+## D. EXACT FILES CHANGED
+
+List the files changed **by this correction**, not the entire historic candidate.
+
+Explain why each change was necessary.
+
+## E. TEST RESULTS
+
+Include exact final test totals and command outputs.
+
+Distinguish focused tests, complete suite, TypeScript and build.
+
+## F. PROTECTED-FILE VERIFICATION
+
+State actual checksum and diff-check results.
+
+## G. PARENT NOTES CONTRACT STATUS
+
+Explicitly distinguish:
+
+- **Frontend freshness handling:** implemented/tested or not.
+- **Estimated remaining count:** derived from refreshed server records; not an authoritative quota response.
+- **Server send enforcement:** existing database authority, unchanged by this packet.
+- **Authoritative quota-read projection:** still unavailable, unless independently established otherwise.
+- **Teacher-tag contract:** outstanding and unchanged.
+
+Do not claim complete end-to-end quota acceptance from frontend tests.
+
+## H. CHECKS NOT RUN
+
+Identify browser, hosted database, RLS, real multi-session and deployment checks that were not executed.
+
+## I. EXPORT CONTENTS AND CHECKSUM
+
+Provide the final ZIP contents, exact checksum and correction-only diff reference.
+
+## J. PUBLICATION STATE
+
+Use this wording unless the evidence requires a more restrictive conclusion:
+
+**FINAL WORKSPACE CANDIDATE PREPARED FOR INDEPENDENT REVIEW — NOT PUSHED OR DEPLOYED.**
+
+Do not describe the work as published, production-verified or whole-app complete.
+
+---
+
+# 14. COMPLETION CONDITIONS
+
+This final correction packet is ready for Owner/Codex review only when:
+
+- [ ] The previous corrected candidate and its valid features are preserved.
+- [ ] An eligible account without verified records is correctly treated as unverified.
+- [ ] Account-switch stale completions cannot update the new account.
+- [ ] Dedicated refreshes crossing 08:00 cannot certify the new quota cycle.
+- [ ] Ordinary Notes hydration crossing 08:00 cannot certify the new quota cycle.
+- [ ] Older hydration results cannot overwrite newer successful reads.
+- [ ] A failed post-boundary refresh does not create a fake allowance.
+- [ ] Retry can establish a fresh estimate from current server records.
+- [ ] AR/FR/EN quota wording explicitly says the balance is estimated.
+- [ ] The database remains the actual enforcement authority.
+- [ ] The CMS loading test represents a reachable state.
+- [ ] The migration filename is corrected to `20261113150000_account_governance_foundation.sql`.
+- [ ] Required behavioral regressions show RED then GREEN.
+- [ ] The final frozen Bun test/typecheck/build checks pass on the last edited candidate.
+- [ ] Protected files remain unchanged.
+- [ ] Both complete and correction-only diffs are exported.
+- [ ] No GitHub push, PR, deployment or hosted SQL mutation occurred.
+
+**Do not replace missing evidence with confident narrative.**
+
+If one item cannot be completed inside the authorized scope, identify that exact limitation, preserve the valid work, and mark that item `BLOCKED` or `PARTIAL` instead of inventing a workaround.
+
+---
+
+# FINAL INSTRUCTION
+
+**Execute this focused correction now in the existing Google AI Studio workspace.**
+
+Do not produce another roadmap.
+
+Do not restart the original remaining-work implementation.
+
+Do not re-audit unrelated features.
+
+Do not change the database.
+
+Do not rewrite working code.
+
+Do not ask for a PR workflow.
+
+**Fix only the remaining verified defects, prove the relevant behaviors, preserve the valid implementation, and export the final reviewable evidence ZIP.**
+
+Publication remains on hold until the Owner receives an independent review of that final export.

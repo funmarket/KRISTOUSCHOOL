@@ -7,6 +7,7 @@ import type {
   AdminDirectoryMember,
   Announcement,
   BackendOpResult,
+  BackendOpStatus,
   CalendarEvent,
   CalendarEventCategory,
   ClassDocumentItem,
@@ -31,6 +32,29 @@ import type {
 
 export const PARENT_NOTES_DAILY_QUOTA = 11;
 export const SHORT_MESSAGE_MAX_CHARS = 200;
+
+export function isSafeExternalOrAssetUrl(rawUrl: string | null | undefined): boolean {
+  if (typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/assets/') && !trimmed.startsWith('//')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+export function countUnreadThreads(
+  threads: readonly MessageThread[] | null | undefined,
+  status?: BackendOpStatus,
+): number {
+  if (status !== 'READY' || !Array.isArray(threads)) return 0;
+  return threads.filter((thread) => Boolean(thread.unread)).length;
+}
 
 export function getTunisTimeParts(date: Date = new Date()): {
   year: number;

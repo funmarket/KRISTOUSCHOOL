@@ -6,6 +6,7 @@ import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { countUnreadThreads } from '../../lib/schoolContent';
 
 export interface TeacherHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -32,7 +33,10 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
     classesList,
     selectedClassId,
     setSelectedClassId,
+    messages,
+    messagesStatus,
   } = useApp();
+  const unreadMessagesCount = countUnreadThreads(messages, messagesStatus);
 
   // Strictly scope teacher classes to the authenticated teacher's server-verified assignedClassIds.
   // Never fall back to MOCK_CLASSES or unassigned class records.
@@ -161,6 +165,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
             id="teacher-messages"
             title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
             actionLabel={openActionLabel}
+            statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
             icon="💬"
             tone="purple"
             onClick={() => setActiveTab('messages')}

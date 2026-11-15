@@ -257,7 +257,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
       const next = !prev;
       if (next) {
         setStartDate(selectedDate);
-        setEndDate((currEnd) => (currEnd && currEnd >= selectedDate ? selectedDate : selectedDate));
+        setEndDate(selectedDate);
       }
       return next;
     });
@@ -1072,6 +1072,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
                 {selectedDayEvents.length > pagedDayEvents.length && (
                   <button
                     type="button"
+                    data-testid="calendar-load-more-btn"
                     onClick={() => setAgendaLimit((n) => n + AGENDA_PAGE_SIZE)}
                     className="w-full py-2 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-900"
                   >

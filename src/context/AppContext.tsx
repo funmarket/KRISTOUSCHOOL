@@ -65,7 +65,6 @@ import {
 import {
   fetchActiveFoodMenu,
   fetchPublicContent,
-  getRemainingParentNotesQuota,
   listClassCommunityContent,
   listMessageThreads,
   listMyNotifications,
@@ -83,6 +82,11 @@ import {
   saveMyPreferences,
   sendParentNote as sendParentNoteRpc,
 } from '../lib/schoolContent';
+import {
+  createParentNotesQuotaBoundaryController,
+  getNextTunisBoundaryDelayMs,
+  type ParentNotesBoundarySnapshot,
+} from '../lib/parentNotesBoundary';
 import {
   applyAllNotificationsOptimisticRead,
   applySingleNotificationOptimisticRead,
@@ -149,7 +153,10 @@ interface AppContextType {
   parentNotes: ParentNote[];
   notesStatus: BackendOpStatus;
   notesError: string | null;
-  remainingParentNotesToday: number;
+  remainingParentNotesToday: number | null;
+  isRefreshingParentNotesQuota: boolean;
+  parentNotesQuotaStale: boolean;
+  parentNotesQuotaVerified: boolean;
   messages: MessageThread[];
   messagesStatus: BackendOpStatus;
   messagesError: string | null;
@@ -163,6 +170,7 @@ interface AppContextType {
   directoryError: string | null;
   publicContent: Record<string, PublicContentEntry>;
   publicContentStatus: BackendOpStatus;
+  publicContentError: string | null;
   enrollmentApplications: EnrollmentApplication[];
   enrollmentsStatus: BackendOpStatus;
   enrollmentsError: string | null;
@@ -201,6 +209,7 @@ interface AppContextType {
   telegramLinkNotice: 'success' | 'error' | null;
   dismissTelegramLinkNotice: () => void;
   refreshSchoolData: () => Promise<boolean>;
+  refreshParentNotesQuota: () => Promise<boolean>;
   addParentNote: (
     childId: string,
     topic: ParentNote['topic'],
@@ -311,6 +320,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [publicContent, setPublicContent] = useState<Record<string, PublicContentEntry>>({});
   const [publicContentStatus, setPublicContentStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
+  const [publicContentError, setPublicContentError] = useState<string | null>(null);
 
   const [enrollmentApplications, setEnrollmentApplications] = useState<EnrollmentApplication[]>([]);
   const [enrollmentsStatus, setEnrollmentsStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
@@ -344,6 +354,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pendingMarkAllReadsRef = useRef<Map<number, ReadonlySet<string>>>(new Map());
   const confirmedReadSeqByIdRef = useRef<Map<string, number>>(new Map());
   const latestMarkAllConfirmedSeqRef = useRef<number>(0);
+  const notesBoundaryControllerRef = useRef<ReturnType<typeof createParentNotesQuotaBoundaryController> | null>(null);
+  if (!notesBoundaryControllerRef.current) {
+    notesBoundaryControllerRef.current = createParentNotesQuotaBoundaryController({
+      fetchNotes: () => listParentNotes(),
+      getCurrentIdentity: () => currentIdentityRef.current,
+      onApplyNotes: (notes) => {
+        if (!mountedRef.current) return;
+        setParentNotes(notes);
+      },
+      onClearNotes: () => {
+        if (!mountedRef.current) return;
+        setParentNotes([]);
+      },
+      onStatusChange: (status, err) => {
+        if (!mountedRef.current) return;
+        setNotesStatus(status);
+        setNotesError(err);
+      },
+      onSnapshotChange: (snapshot) => {
+        if (!mountedRef.current) return;
+        setNotesBoundarySnapshot(snapshot);
+      },
+    });
+  }
+  const [notesBoundarySnapshot, setNotesBoundarySnapshot] = useState<ParentNotesBoundarySnapshot>(() =>
+    notesBoundaryControllerRef.current!.getSnapshot(),
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -391,6 +428,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           generation: authGenerationRef.current,
         };
         resetNotificationTracking();
+        setParentNotes([]);
+        setNotesStatus('BLOCKED_BACKEND');
+        setNotesError(null);
+        const eligibleForNotes = Boolean(
+          nextUser &&
+            nextUser.accountStatus === 'APPROVED' &&
+            nextUser.role !== 'STUDENT' &&
+            nextUser.role !== 'SCHOOL_STAFF',
+        );
+        notesBoundaryControllerRef.current?.setIdentity(eligibleForNotes);
       }
       setCurrentUser(nextUser);
       setCurrentRoleState(nextUser ? nextUser.role : null);
@@ -442,6 +489,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setParentNotes([]);
     setNotesStatus('BLOCKED_BACKEND');
     setNotesError(null);
+    notesBoundaryControllerRef.current?.setIdentity(false);
     setMessages([]);
     setMessagesStatus('BLOCKED_BACKEND');
     setMessagesError(null);
@@ -532,6 +580,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPublicContentStatus(contentRes.status);
       if (contentRes.ok && contentRes.data) {
         setPublicContent(contentRes.data);
+        setPublicContentError(null);
+      } else if (contentRes.status === 'BLOCKED_BACKEND') {
+        setPublicContent({});
+        setPublicContentError(null);
+      } else {
+        setPublicContent({});
+        setPublicContentError(
+          contentRes.errorMessage || contentRes.errorCode || 'Failed to load public content.',
+        );
       }
 
       return calRes.ok || calRes.status === 'BLOCKED_BACKEND';
@@ -544,6 +601,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCalendarError(message);
       setBroadcastsStatus('ERROR');
       setBroadcastsError(message);
+      setPublicContentStatus('ERROR');
+      setPublicContent({});
+      setPublicContentError(message);
       return false;
     }
   }, [currentUser?.id]);
@@ -744,24 +804,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Parent Notes
         if (user.role !== 'STUDENT' && user.role !== 'SCHOOL_STAFF') {
+          const notesReq = notesBoundaryControllerRef.current?.beginHydrationRequest(
+            origin,
+            mountedRef.current,
+          );
           const notesRes = await listParentNotes();
           if (!isStillValid()) return false;
-          setNotesStatus(notesRes.status);
-          if (notesRes.ok && notesRes.data) {
-            setParentNotes(notesRes.data);
-            setNotesError(null);
-          } else if (notesRes.status === 'UNAUTHORIZED') {
-            setParentNotes([]);
-            setNotesError(notesRes.errorMessage || notesRes.errorCode || 'Not authorized to view parent notes.');
-          } else if (notesRes.status === 'ERROR') {
-            setNotesError(notesRes.errorMessage || notesRes.errorCode || 'Failed to load parent notes.');
-          } else {
-            setNotesError(null);
+          if (
+            notesReq &&
+            notesBoundaryControllerRef.current?.isRequestCurrent(notesReq, mountedRef.current)
+          ) {
+            setNotesStatus(notesRes.status);
+            const certifiedCurrentCycle = notesBoundaryControllerRef.current.recordHydratedResult(
+              origin,
+              notesRes,
+              notesReq.startedAt,
+              mountedRef.current,
+              notesReq,
+            );
+            if (notesRes.ok && notesRes.data) {
+              setParentNotes(notesRes.data);
+              setNotesError(null);
+              if (!certifiedCurrentCycle) {
+                void notesBoundaryControllerRef.current.checkBoundaryAndRefresh();
+              }
+            } else if (notesRes.status === 'UNAUTHORIZED') {
+              setParentNotes([]);
+              setNotesError(notesRes.errorMessage || notesRes.errorCode || 'Not authorized to view parent notes.');
+            } else if (notesRes.status === 'ERROR') {
+              setNotesError(notesRes.errorMessage || notesRes.errorCode || 'Failed to load parent notes.');
+            } else {
+              setNotesError(null);
+            }
           }
         } else {
           setNotesStatus('UNAUTHORIZED');
           setParentNotes([]);
           setNotesError('Parent notes are unavailable for this role.');
+          notesBoundaryControllerRef.current?.setIdentity(false);
         }
 
         // Operational Direct Messages (all except STUDENT)
@@ -852,6 +932,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id, currentUser?.accountStatus]);
+
+  useEffect(() => {
+    const eligible = Boolean(
+      currentUser &&
+        currentUser.accountStatus === 'APPROVED' &&
+        currentUser.role !== 'STUDENT' &&
+        currentUser.role !== 'SCHOOL_STAFF',
+    );
+    if (!eligible) return;
+
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    const controller = notesBoundaryControllerRef.current;
+    if (!controller) return;
+
+    const runBoundaryCheck = () => {
+      if (cancelled) return;
+      void controller.checkBoundaryAndRefresh();
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      timerId = setTimeout(() => {
+        runBoundaryCheck();
+        scheduleNext();
+      }, getNextTunisBoundaryDelayMs());
+    };
+
+    scheduleNext();
+
+    const handleVisibility = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        runBoundaryCheck();
+      }
+    };
+    const handleFocus = () => runBoundaryCheck();
+    const handlePageShow = () => runBoundaryCheck();
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+      window.addEventListener('pageshow', handlePageShow);
+    }
+
+    return () => {
+      cancelled = true;
+      if (timerId !== null) clearTimeout(timerId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('pageshow', handlePageShow);
+      }
+    };
+  }, [currentUser?.id, currentUser?.accountStatus, currentUser?.role]);
 
   useEffect(() => {
     if (!currentUser || currentUser.accountStatus !== 'APPROVED' || !selectedClassId) return;
@@ -1192,7 +1330,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const remainingParentNotesToday = getRemainingParentNotesQuota(parentNotes, currentUser?.id);
+  const refreshParentNotesQuota = useCallback(async (): Promise<boolean> => {
+    if (!notesBoundaryControllerRef.current) return false;
+    return notesBoundaryControllerRef.current.refreshNow();
+  }, []);
+
+  const remainingParentNotesToday =
+    notesBoundarySnapshot && notesBoundaryControllerRef.current
+      ? notesBoundaryControllerRef.current.computeRemainingQuota(parentNotes, currentUser?.id)
+      : null;
 
   const addParentNote = async (
     childId: string,
@@ -1543,6 +1689,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notesStatus,
         notesError,
         remainingParentNotesToday,
+        isRefreshingParentNotesQuota: notesBoundarySnapshot.refreshing,
+        parentNotesQuotaStale: notesBoundarySnapshot.quotaStale,
+        parentNotesQuotaVerified: notesBoundarySnapshot.quotaVerified,
         messages,
         messagesStatus,
         messagesError,
@@ -1556,6 +1705,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         directoryError,
         publicContent,
         publicContentStatus,
+        publicContentError,
         enrollmentApplications,
         enrollmentsStatus,
         enrollmentsError,
@@ -1574,6 +1724,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         telegramLinkNotice,
         dismissTelegramLinkNotice: () => setTelegramLinkNotice(null),
         refreshSchoolData,
+        refreshParentNotesQuota,
         addParentNote,
         replyParentNote,
         addClassQuestion,

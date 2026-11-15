@@ -120,7 +120,9 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [isHomeroom, setIsHomeroom] = useState(true);
   const [teacherActive, setTeacherActive] = useState(true);
 
-  const [approvedAccounts, setApprovedAccounts] = useState<GovernanceAccountRecord[]>([]);
+  const [teacherAccounts, setTeacherAccounts] = useState<GovernanceAccountRecord[]>([]);
+  const [parentAccounts, setParentAccounts] = useState<GovernanceAccountRecord[]>([]);
+  const [studentAccounts, setStudentAccounts] = useState<GovernanceAccountRecord[]>([]);
   const [accountsError, setAccountsError] = useState<string | null>(null);
 
   const isAuthorized = canAccessAppTab(currentUser, 'classes');
@@ -130,53 +132,60 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   useEffect(() => {
     if (!canLoadAccounts) {
-      setApprovedAccounts([]);
+      setTeacherAccounts([]);
+      setParentAccounts([]);
+      setStudentAccounts([]);
       setAccountsError(null);
       return;
     }
     let cancelled = false;
-    void listAccountDirectory({ status: 'APPROVED', limit: 100 })
-      .then((res) => {
+    void Promise.all([
+      listAccountDirectory({ status: 'APPROVED', role: 'TEACHER', limit: 100 }),
+      listAccountDirectory({ status: 'APPROVED', role: 'PARENT', limit: 100 }),
+      listAccountDirectory({ status: 'APPROVED', role: 'STUDENT', limit: 100 }),
+    ])
+      .then(([teachersRes, parentsRes, studentsRes]) => {
         if (cancelled) return;
-        if (res.ok && res.data) {
-          setApprovedAccounts(res.data.items);
-          setAccountsError(null);
-        } else if (res.errorCode !== 'backend_unavailable') {
-          setApprovedAccounts([]);
-          setAccountsError(res.errorMessage || res.errorCode || t('error'));
-        }
+        const responses = [teachersRes, parentsRes, studentsRes];
+        const firstError = responses.find(
+          (res) => !res.ok && res.errorCode !== 'backend_unavailable',
+        );
+        setTeacherAccounts(
+          teachersRes.ok && teachersRes.data
+            ? teachersRes.data.items.filter(
+                (acc) => acc.activeRoles.includes('TEACHER') || acc.requestedRole === 'TEACHER',
+              )
+            : [],
+        );
+        setParentAccounts(
+          parentsRes.ok && parentsRes.data
+            ? parentsRes.data.items.filter(
+                (acc) => acc.activeRoles.includes('PARENT') || acc.requestedRole === 'PARENT',
+              )
+            : [],
+        );
+        setStudentAccounts(
+          studentsRes.ok && studentsRes.data
+            ? studentsRes.data.items.filter(
+                (acc) => acc.activeRoles.includes('STUDENT') || acc.requestedRole === 'STUDENT',
+              )
+            : [],
+        );
+        setAccountsError(
+          firstError ? firstError.errorMessage || firstError.errorCode || t('error') : null,
+        );
       })
       .catch((err) => {
         if (cancelled) return;
-        setApprovedAccounts([]);
+        setTeacherAccounts([]);
+        setParentAccounts([]);
+        setStudentAccounts([]);
         setAccountsError(err instanceof Error ? err.message : t('error'));
       });
     return () => {
       cancelled = true;
     };
   }, [canLoadAccounts, currentUser?.id, t]);
-
-  const teacherAccounts = useMemo(
-    () =>
-      approvedAccounts.filter(
-        (acc) => acc.activeRoles.includes('TEACHER') || acc.requestedRole === 'TEACHER',
-      ),
-    [approvedAccounts],
-  );
-  const parentAccounts = useMemo(
-    () =>
-      approvedAccounts.filter(
-        (acc) => acc.activeRoles.includes('PARENT') || acc.requestedRole === 'PARENT',
-      ),
-    [approvedAccounts],
-  );
-  const studentAccounts = useMemo(
-    () =>
-      approvedAccounts.filter(
-        (acc) => acc.activeRoles.includes('STUDENT') || acc.requestedRole === 'STUDENT',
-      ),
-    [approvedAccounts],
-  );
 
   const levelOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -848,6 +857,22 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             </div>
           </div>
 
+          {!canLoadAccounts && (
+            <p
+              data-testid="assignable-accounts-blocked-notice"
+              className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2.5 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+            >
+              {pickText(
+                {
+                  ar: 'قوائم اختيار الأولياء والتلاميذ بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال المعرف (UUID) يدوياً لربط الحساب.',
+                  fr: 'Les listes nominatives de parents et d’élèves ne sont pas encore disponibles pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.',
+                  en: 'Named parent and student selection lists are not yet available for this delegated role; you can still enter the account UUID directly.',
+                },
+                language,
+              )}
+            </p>
+          )}
+
           {accountsError && (
             <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>
           )}
@@ -947,6 +972,21 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
               </label>
             </div>
           </div>
+          {!canLoadAccounts && (
+            <p
+              data-testid="assignable-accounts-blocked-notice"
+              className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2.5 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+            >
+              {pickText(
+                {
+                  ar: 'قائمة اختيار المربين بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال معرف المربي (UUID) يدوياً.',
+                  fr: 'La liste nominative des enseignants n’est pas encore disponible pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.',
+                  en: 'The named teacher selection list is not yet available for this delegated role; you can still enter the teacher UUID directly.',
+                },
+                language,
+              )}
+            </p>
+          )}
           {accountsError && (
             <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>
           )}

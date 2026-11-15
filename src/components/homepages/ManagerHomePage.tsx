@@ -11,6 +11,7 @@ import {
   getDelegatedOversightTargets,
 } from './homepageAccess';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { countUnreadThreads } from '../../lib/schoolContent';
 import {
   OwnerGovernanceSection,
   OwnerGovernanceWorkspace,
@@ -33,8 +34,11 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
     operationalCounts,
     operationalCountsLoaded,
     schoolContextError,
+    messages,
+    messagesStatus,
     refreshSchoolData,
   } = useApp();
+  const unreadMessagesCount = countUnreadThreads(messages, messagesStatus);
   const [showControlCenter, setShowControlCenter] = useState(false);
   const [govSection, setGovSection] = useState<OwnerGovernanceSection | null>(null);
 
@@ -303,6 +307,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
             id="manager-messages"
             title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
             actionLabel={openActionLabel}
+            statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
             icon="💬"
             tone="purple"
             onClick={() => setActiveTab('messages')}

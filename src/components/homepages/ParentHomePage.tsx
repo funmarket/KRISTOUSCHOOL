@@ -5,6 +5,7 @@ import { HomeShortcutCard } from './shared/HomeShortcutCard';
 import { HomeCardGrid } from './shared/HomeCardGrid';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { countUnreadThreads } from '../../lib/schoolContent';
 
 export interface ParentHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -25,7 +26,16 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
   setActiveTab,
   onNavigateToSubTab,
 }) => {
-  const { language, currentUser, childrenList, selectedChildId, setSelectedChildId } = useApp();
+  const {
+    language,
+    currentUser,
+    childrenList,
+    selectedChildId,
+    setSelectedChildId,
+    messages,
+    messagesStatus,
+  } = useApp();
+  const unreadMessagesCount = countUnreadThreads(messages, messagesStatus);
 
   // Strictly scope linked children to the authenticated parent's server-verified linkedChildrenIds.
   // Never fall back to MOCK_CHILDREN or unlinked child records.
@@ -203,6 +213,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
           id="parent-messages"
           title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
           actionLabel={openActionLabel}
+          statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
           icon="💬"
           tone="purple"
           onClick={() => setActiveTab('messages')}
