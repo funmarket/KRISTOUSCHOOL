@@ -73,9 +73,7 @@ export function classifySupabaseError(error: unknown): {
     rawCode === '42P01' ||
     rawMessage.includes('Could not find the function') ||
     rawMessage.includes('Could not find the table') ||
-    rawMessage.includes('schema cache') ||
-    rawMessage.includes('Failed to fetch') ||
-    rawMessage.includes('NetworkError')
+    rawMessage.includes('schema cache')
   ) {
     return {
       status: 'BLOCKED_BACKEND',
@@ -86,6 +84,7 @@ export function classifySupabaseError(error: unknown): {
 
   if (
     rawCode === '42501' ||
+    rawCode === 'PGRST301' ||
     rawMessage.includes('actor_unauthenticated') ||
     rawMessage.includes('actor_not_approved') ||
     rawMessage.includes('insufficient_authority') ||

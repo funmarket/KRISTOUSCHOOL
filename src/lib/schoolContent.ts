@@ -1,3 +1,5 @@
+export { listSchoolCalendarEvents } from './calendar/calendarQueries.ts';
+export { getMonthCalendarRange, sortCalendarEvents, getEventsForCalendarDate } from './calendar/calendarModel.ts';
 import { supabase, classifySupabaseError } from './supabase.ts';
 import { CANONICAL_SCHOOL_LEVELS } from './schoolOperations.ts';
 import type {
@@ -138,44 +140,6 @@ export function canParticipantMessage(
     return false;
   }
   return true;
-}
-
-export function getMonthCalendarRange(
-  year: number,
-  monthIndex: number,
-): { startDate: string; endDate: string } {
-  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const mm = String(monthIndex + 1).padStart(2, '0');
-  return {
-    startDate: `${year}-${mm}-01`,
-    endDate: `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`,
-  };
-}
-
-export function sortCalendarEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
-  return [...events].sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
-    if (Boolean(a.isAllDay) !== Boolean(b.isAllDay)) return a.isAllDay ? -1 : 1;
-    const ta = a.startTime || '';
-    const tb = b.startTime || '';
-    if (ta !== tb) return ta.localeCompare(tb);
-    const titleCmp = a.title.localeCompare(b.title);
-    if (titleCmp !== 0) return titleCmp;
-    return a.id.localeCompare(b.id);
-  });
-}
-
-export function getEventsForCalendarDate(
-  events: readonly CalendarEvent[],
-  dateStr: string,
-): CalendarEvent[] {
-  return sortCalendarEvents(
-    events.filter((ev) => {
-      const start = ev.date;
-      const end = ev.endDate && ev.endDate >= start ? ev.endDate : start;
-      return dateStr >= start && dateStr <= end;
-    }),
-  );
 }
 
 function unavailableResult<T>(): BackendOpResult<T> {
@@ -338,83 +302,6 @@ export async function publishSchoolBroadcast(
         createdAt: String(row.published_at || row.created_at),
       },
     };
-  } catch (err) {
-    return { ok: false, ...classifySupabaseError(err) };
-  }
-}
-
-export async function listSchoolCalendarEvents(
-  userId?: string | null,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any = supabase,
-  options?: {
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-  },
-): Promise<BackendOpResult<CalendarEvent[]>> {
-  if (!client) return unavailableResult();
-  try {
-    let query = client
-      .from('school_calendar_events')
-      .select(
-        'id, class_id, title, description, category, start_date, end_date, is_all_day, start_time, end_time, timezone, is_public, status, cancellation_reason',
-      )
-      .order('start_date', { ascending: true });
-
-    if (options?.endDate && typeof query?.lte === 'function') {
-      query = query.lte('start_date', options.endDate);
-    }
-    if (options?.startDate && typeof query?.gte === 'function') {
-      query = query.gte('end_date', options.startDate);
-    }
-    if (typeof query?.limit === 'function') {
-      query = query.limit(options?.limit ?? 250);
-    }
-
-    const { data, error } = await query;
-    if (error) return { ok: false, ...classifySupabaseError(error) };
-
-    const eventRows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-    const responseMap = new Map<string, CalendarEvent['myResponse']>();
-    if (userId && eventRows.length > 0) {
-      let respQuery = client
-        .from('school_calendar_responses')
-        .select('event_id, response')
-        .eq('user_id', userId);
-      if (typeof respQuery?.in === 'function') {
-        respQuery = respQuery.in(
-          'event_id',
-          eventRows.map((row) => String(row.id)),
-        );
-      }
-      const { data: respData, error: respErr } = await respQuery;
-      if (respErr) return { ok: false, ...classifySupabaseError(respErr) };
-      if (Array.isArray(respData)) {
-        for (const r of respData as { event_id: string; response: CalendarEvent['myResponse'] }[]) {
-          responseMap.set(r.event_id, r.response);
-        }
-      }
-    }
-
-    const mapped: CalendarEvent[] = eventRows.map((row) => ({
-      id: String(row.id),
-      classId: row.class_id ? String(row.class_id) : undefined,
-      title: String(row.title),
-      description: String(row.description ?? ''),
-      category: (String(row.category) as CalendarEventCategory) || 'EVENT',
-      date: String(row.start_date),
-      endDate: row.end_date ? String(row.end_date) : String(row.start_date),
-      isAllDay: row.is_all_day !== false,
-      startTime: row.start_time ? String(row.start_time) : null,
-      endTime: row.end_time ? String(row.end_time) : null,
-      timezone: row.timezone ? String(row.timezone) : 'Africa/Tunis',
-      isPublic: Boolean(row.is_public),
-      status: (String(row.status) as CalendarEvent['status']) || 'SCHEDULED',
-      cancellationReason: row.cancellation_reason ? String(row.cancellation_reason) : null,
-      myResponse: responseMap.get(String(row.id)) ?? null,
-    }));
-    return { ok: true, status: 'READY', data: sortCalendarEvents(mapped) };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }

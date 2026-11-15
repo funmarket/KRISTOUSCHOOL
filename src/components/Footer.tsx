@@ -2,8 +2,13 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { ShieldCheck, MapPin, Phone, Mail } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+export const Footer: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
   const { language, t } = useApp();
+  const navigate = (event: React.MouseEvent<HTMLAnchorElement>, tab: string) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onNavigate(tab);
+  };
 
   return (
     <footer className="bg-white dark:bg-[#090909] border-t border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
@@ -34,10 +39,10 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">{t('navigation')}</h4>
           <ul className="space-y-2 text-xs font-medium">
-            <li><a href="#home" className="hover:text-k-brand transition-colors">{t('home')}</a></li>
-            <li><a href="#directory" className="hover:text-k-brand transition-colors">{t('teachers')}</a></li>
-            <li><a href="#foodMenu" className="hover:text-k-brand transition-colors">{t('foodMenu')}</a></li>
-            <li><a href="#registration" className="hover:text-k-brand transition-colors">{t('registration')}</a></li>
+            <li><a href="#home" onClick={(event) => navigate(event, 'home')} className="hover:text-k-brand transition-colors">{t('home')}</a></li>
+            <li><a href="#directory" onClick={(event) => navigate(event, 'directory')} className="hover:text-k-brand transition-colors">{t('teachers')}</a></li>
+            <li><a href="#foodMenu" onClick={(event) => navigate(event, 'foodMenu')} className="hover:text-k-brand transition-colors">{t('foodMenu')}</a></li>
+            <li><a href="#registration" onClick={(event) => navigate(event, 'registration')} className="hover:text-k-brand transition-colors">{t('registration')}</a></li>
           </ul>
         </div>
 

@@ -88,6 +88,7 @@ import {
   applySingleNotificationOptimisticRead,
   isMatchingApprovedAccountContext,
   mergeRefreshedNotifications,
+  captureNotificationReadSnapshot,
   reconcileFailedMarkAllNotificationsRead,
   reconcileFailedSingleNotificationRead,
   resolvePreferencesPersistOutcome,
@@ -339,7 +340,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const notificationsRef = useRef<NotificationItem[]>([]);
   const notifSeqRef = useRef<number>(0);
   const inFlightSingleReadsRef = useRef<Set<string>>(new Set());
-  const markAllInFlightCountRef = useRef<number>(0);
+  const pendingNotificationSnapshotsRef = useRef<Map<number, PendingNotificationSnapshot>>(new Map());
+  const pendingMarkAllReadsRef = useRef<Map<number, ReadonlySet<string>>>(new Map());
   const confirmedReadSeqByIdRef = useRef<Map<string, number>>(new Map());
   const latestMarkAllConfirmedSeqRef = useRef<number>(0);
 
@@ -367,7 +369,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetNotificationTracking = useCallback(() => {
     inFlightSingleReadsRef.current.clear();
-    markAllInFlightCountRef.current = 0;
+    pendingMarkAllReadsRef.current.clear();
+    pendingNotificationSnapshotsRef.current.clear();
     confirmedReadSeqByIdRef.current.clear();
     latestMarkAllConfirmedSeqRef.current = 0;
     setMarkingNotificationIds([]);
@@ -605,7 +608,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             mergeRefreshedNotifications(
               notifRes.data,
               inFlightSingleReadsRef.current,
-              markAllInFlightCountRef.current > 0,
+              pendingMarkAllReadsRef.current,
+              confirmedReadSeqByIdRef.current,
             ),
           );
           setNotificationsError(null);
@@ -1333,7 +1337,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           mergeRefreshedNotifications(
             readback.data,
             inFlightSingleReadsRef.current,
-            markAllInFlightCountRef.current > 0,
+            pendingMarkAllReadsRef.current,
+            confirmedReadSeqByIdRef.current,
           ),
         );
       }
@@ -1351,14 +1356,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       generation: currentIdentityRef.current.generation,
     };
     const requestSeq = ++notifSeqRef.current;
-    const existing = notificationsRef.current.find((item) => item.id === id);
-    const snapshot: PendingNotificationSnapshot = {
-      originUserId: currentUser.id,
-      originGeneration: origin.generation,
-      requestSeq,
-      targetIds: [id],
-      previouslyUnreadIds: existing && !existing.read ? [id] : [],
-    };
+    const snapshot = captureNotificationReadSnapshot(
+      notificationsRef.current, [id], pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
+    );
+    pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
 
     inFlightSingleReadsRef.current.add(id);
     setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
@@ -1382,6 +1383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
+      pendingNotificationSnapshotsRef.current.delete(requestSeq);
       inFlightSingleReadsRef.current.delete(id);
       setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
 
@@ -1390,10 +1392,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (requestSeq > prevSeq) {
           confirmedReadSeqByIdRef.current.set(id, requestSeq);
         }
+        updateNotificationsState((prev) => mergeRefreshedNotifications(
+          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
+        ));
         return;
       }
 
-      updateNotificationsState((prev) =>
+      updateNotificationsState((prev) => mergeRefreshedNotifications(
         reconcileFailedSingleNotificationRead(
           prev,
           snapshot,
@@ -1402,7 +1407,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           latestMarkAllConfirmedSeqRef.current,
           mountedRef.current,
         ).notifications,
-      );
+        inFlightSingleReadsRef.current,
+        pendingMarkAllReadsRef.current,
+        confirmedReadSeqByIdRef.current,
+      ));
 
       if (res.status !== 'BLOCKED_BACKEND') {
         setNotificationsError(
@@ -1424,16 +1432,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       generation: currentIdentityRef.current.generation,
     };
     const requestSeq = ++notifSeqRef.current;
-    const { previouslyUnreadIds } = applyAllNotificationsOptimisticRead(notificationsRef.current);
-    const snapshot: PendingNotificationSnapshot = {
-      originUserId: currentUser.id,
-      originGeneration: origin.generation,
-      requestSeq,
-      targetIds: [...previouslyUnreadIds],
-      previouslyUnreadIds,
-    };
+    const snapshot = captureNotificationReadSnapshot(
+      notificationsRef.current, notificationsRef.current.map(item => item.id),
+      pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
+    );
+    pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
 
-    markAllInFlightCountRef.current += 1;
+    pendingMarkAllReadsRef.current.set(requestSeq, new Set(snapshot.targetIds));
     setMarkingAllNotifications(true);
     setNotificationsError(null);
     updateNotificationsState((prev) => applyAllNotificationsOptimisticRead(prev).nextNotifications);
@@ -1455,17 +1460,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
-      markAllInFlightCountRef.current = Math.max(0, markAllInFlightCountRef.current - 1);
-      setMarkingAllNotifications(markAllInFlightCountRef.current > 0);
+      pendingNotificationSnapshotsRef.current.delete(requestSeq);
+      pendingMarkAllReadsRef.current.delete(requestSeq);
+      setMarkingAllNotifications(pendingMarkAllReadsRef.current.size > 0);
 
       if (res.ok) {
+        for (const id of snapshot.targetIds) {
+          confirmedReadSeqByIdRef.current.set(id, Math.max(requestSeq, confirmedReadSeqByIdRef.current.get(id) ?? 0));
+        }
         if (requestSeq > latestMarkAllConfirmedSeqRef.current) {
           latestMarkAllConfirmedSeqRef.current = requestSeq;
         }
+        updateNotificationsState((prev) => mergeRefreshedNotifications(
+          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
+        ));
         return;
       }
 
-      updateNotificationsState((prev) =>
+      updateNotificationsState((prev) => mergeRefreshedNotifications(
         reconcileFailedMarkAllNotificationsRead(
           prev,
           snapshot,
@@ -1474,7 +1486,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           latestMarkAllConfirmedSeqRef.current,
           mountedRef.current,
         ).notifications,
-      );
+        inFlightSingleReadsRef.current,
+        pendingMarkAllReadsRef.current,
+        confirmedReadSeqByIdRef.current,
+      ));
 
       if (res.status !== 'BLOCKED_BACKEND') {
         setNotificationsError(

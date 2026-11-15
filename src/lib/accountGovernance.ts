@@ -268,20 +268,22 @@ export function classifyGovernanceRpcError(error: unknown): {
       ? (error as { message: string }).message.trim()
       : '';
 
-  // PostgREST / PostgreSQL missing RPC function or unreachable backend -> backend_unavailable
+  // Only missing contracts indicate an undeployed backend. Transport errors remain retryable failures.
   if (
     rawCode === 'PGRST202' ||
     rawCode === '42883' ||
     rawCode === '42P01' ||
-    rawMessage.includes('Could not find the function') ||
-    rawMessage.includes('Failed to fetch') ||
-    rawMessage.includes('NetworkError')
+    rawMessage.includes('Could not find the function')
   ) {
     return {
       errorCode: 'backend_unavailable',
       errorMessage:
         'The Supabase account-governance RPC contract is not yet deployed on the server.',
     };
+  }
+
+  if (rawCode === 'PGRST301') {
+    return { errorCode: 'actor_unauthenticated', errorMessage: rawMessage || 'Session is not valid. Sign in again.' };
   }
 
   for (const known of KNOWN_ERROR_CODES) {
