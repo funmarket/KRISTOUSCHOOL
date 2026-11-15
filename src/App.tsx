@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import {
   AppTab,
+  NotificationItem,
   ClassStudentRosterItem,
   CommunitySubTab,
   DirectorySubTab,
   HomePageKey,
 } from './types';
 import { Navbar } from './components/Navbar';
+import { createNotificationTargetIntent, getNotificationActorKey, type NotificationTargetIntent } from './lib/notificationTargetNavigation';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 import { HomePageResolver } from './components/homepages/HomePageResolver';
@@ -42,6 +44,21 @@ function MainLayout() {
   const [announcementsSubTab, setAnnouncementsSubTab] = useState<'broadcasts' | 'calendar'>('broadcasts');
   const [oversightHomePage, setOversightHomePage] = useState<HomePageKey | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [notificationTarget, setNotificationTarget] = useState<NotificationTargetIntent | null>(null);
+  const notificationRequestSeq = useRef(0);
+
+  useEffect(() => {
+    setNotificationTarget(null);
+  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
+
+  const handleNotificationTarget = (notification: NotificationItem): boolean => {
+    const actorKey = getNotificationActorKey(currentUser);
+    const intent = createNotificationTargetIntent(notification, actorKey, ++notificationRequestSeq.current);
+    if (!intent || !canAccessAppTab(currentUser, intent.tab)) return false;
+    setNotificationTarget(intent);
+    setActiveTab(intent.tab);
+    return true;
+  };
 
   // Reset oversight inspection whenever the authenticated identity or role changes
   useEffect(() => {
@@ -49,6 +66,7 @@ function MainLayout() {
   }, [currentUser?.id, currentUser?.role]);
 
   const handleSetTab = (nextTab: string) => {
+    setNotificationTarget(null);
     if (canAccessAppTab(currentUser, nextTab as AppTab)) {
       if (nextTab === 'announcements') {
         setAnnouncementsSubTab('broadcasts');
@@ -63,6 +81,7 @@ function MainLayout() {
     tab: 'community' | 'directory' | 'announcements',
     subTab: string,
   ) => {
+    setNotificationTarget(null);
     if (tab === 'community') {
       if (!canAccessAppTab(currentUser, 'community')) {
         setActiveTab('home');
@@ -113,6 +132,7 @@ function MainLayout() {
         activeTab={activeTab}
         setActiveTab={handleSetTab}
         onNavigateToSubTab={handleNavigateToSubTab}
+        onNavigateToNotificationTarget={handleNotificationTarget}
       />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
@@ -158,7 +178,7 @@ function MainLayout() {
 
         {activeTab === 'notes' &&
           (canAccessAppTab(currentUser, 'notes') ? (
-            <ParentNotesView />
+            <ParentNotesView notificationTarget={notificationTarget} />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}
@@ -169,7 +189,7 @@ function MainLayout() {
 
         {activeTab === 'messages' &&
           (canAccessAppTab(currentUser, 'messages') ? (
-            <MessagesView />
+            <MessagesView notificationTarget={notificationTarget} />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}
@@ -207,7 +227,7 @@ function MainLayout() {
 
         {activeTab === 'foodMenu' && <FoodMenuView />}
         {activeTab === 'directory' && <DirectoryView initialSubTab={directorySubTab} />}
-        {activeTab === 'registration' && <RegistrationView />}
+        {activeTab === 'registration' && <RegistrationView notificationTarget={notificationTarget} />}
       </main>
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
