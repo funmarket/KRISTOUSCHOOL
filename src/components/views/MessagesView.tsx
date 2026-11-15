@@ -48,6 +48,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
   const mountedRef = useRef(true);
   const recipientsGenRef = useRef(0);
   const activeIdentityRef = useRef(identityKey);
+  const appliedNotificationRequestRef = useRef<number | null>(null);
   activeIdentityRef.current = identityKey;
 
   useEffect(() => {
@@ -138,7 +139,14 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
       return;
     }
     if (notificationIntent) {
-      setSelectedThreadId(notificationResolution.state === 'found' ? notificationResolution.record.id : '');
+      if (appliedNotificationRequestRef.current !== notificationIntent.requestId) {
+        if (notificationResolution.state === 'found' || notificationResolution.state === 'unavailable') {
+          appliedNotificationRequestRef.current = notificationIntent.requestId;
+          setSelectedThreadId(notificationResolution.state === 'found' ? notificationResolution.record.id : '');
+        } else {
+          setSelectedThreadId('');
+        }
+      }
       return;
     }
     if (messages.length > 0 && !messages.some((m) => m.id === selectedThreadId)) {
