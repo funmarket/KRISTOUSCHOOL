@@ -48,7 +48,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
   const mountedRef = useRef(true);
   const recipientsGenRef = useRef(0);
   const activeIdentityRef = useRef(identityKey);
-  const appliedNotificationRequestRef = useRef<number | null>(null);
+  const appliedNotificationRequestRef = useRef<string | null>(null);
   activeIdentityRef.current = identityKey;
 
   useEffect(() => {
@@ -139,10 +139,12 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
       return;
     }
     if (notificationIntent) {
-      if (appliedNotificationRequestRef.current !== notificationIntent.requestId) {
-        if (notificationResolution.state === 'found' || notificationResolution.state === 'unavailable') {
-          appliedNotificationRequestRef.current = notificationIntent.requestId;
-          setSelectedThreadId(notificationResolution.state === 'found' ? notificationResolution.record.id : '');
+      const requestKey = `${notificationIntent.actorKey}::${notificationIntent.requestId}`;
+      if (appliedNotificationRequestRef.current !== requestKey) {
+        if (notificationResolution.state === 'found') {
+          // A transient ERROR, unavailable record or pending request must remain retryable.
+          appliedNotificationRequestRef.current = requestKey;
+          setSelectedThreadId(notificationResolution.record.id);
         } else {
           setSelectedThreadId('');
         }
