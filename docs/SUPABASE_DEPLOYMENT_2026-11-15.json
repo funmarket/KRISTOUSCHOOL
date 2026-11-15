@@ -1,0 +1,183 @@
+{
+  "project_id": "ofppapwofhovhroyjtkc",
+  "project_name": "KRISTOUSCHOOL",
+  "postgres_version": "17.11",
+  "source_baseline": "94d24e763a0bcfd3577b94b9b2a9cd0ec697be25",
+  "status": "INSTALLED_AND_METADATA_VERIFIED",
+  "migration_history_policy": "Source and hosted timestamps differ; match by this explicit name/content mapping. Historical rows and source files were preserved. Do not blindly db push, reset, replay or repair history.",
+  "migrations": [
+    {
+      "source_file": "supabase/migrations/20261110210000_authentication_foundation.sql",
+      "source_sha256": "8d448c616e800d3f863caacde6918771131d212ae02cc9bf54ad98b51f1f660e",
+      "installed_version": "20261110212125",
+      "installed_name": "authentication_foundation"
+    },
+    {
+      "source_file": "supabase/migrations/20261110222200_revoke_auth_trigger_execute.sql",
+      "source_sha256": "67bcf9666c06b20a46ec2d66c1ed07f78a1483736d442e69cf856fb1a6004891",
+      "installed_version": "20261110212204",
+      "installed_name": "revoke_auth_trigger_execute"
+    },
+    {
+      "source_file": "supabase/migrations/20261110222300_revoke_auth_trigger_execute_public.sql",
+      "source_sha256": "e900b646a4db0005dbb08b050560f171beb3026257f58bd16556cffd24d93f78",
+      "installed_version": "20261110212239",
+      "installed_name": "revoke_auth_trigger_execute_public"
+    },
+    {
+      "source_file": "supabase/migrations/20261111030000_atomic_telegram_account_link.sql",
+      "source_sha256": "6068a5b772f328e9176c8600c0c4fe4d57b094858791ea73da3605957bd0d500",
+      "installed_version": "20261111150532",
+      "installed_name": "atomic_telegram_account_link"
+    },
+    {
+      "source_file": "supabase/migrations/20261112190435_canonical_account_roles.sql",
+      "source_sha256": "b98028135a661a50fb894f0dd78d353a1dc9b598619bbf622ee8139f5374a479",
+      "installed_version": "20261112190435",
+      "installed_name": "canonical_account_roles"
+    },
+    {
+      "source_file": "supabase/migrations/20261113120000_human_friendly_usernames.sql",
+      "source_sha256": "fd58c0322f3595e9d0d53c912533a0fa605940867b593776a9d24f38beecaca0",
+      "installed_version": "20261113120000",
+      "installed_name": "human_friendly_usernames"
+    },
+    {
+      "source_file": "supabase/migrations/20261113150000_account_governance_foundation.sql",
+      "source_sha256": "2854740a27b2e275121bbc3475828df97e775cb8e25be6baea2a005825394f55",
+      "installed_version": "20261113150000",
+      "installed_name": "account_governance_foundation"
+    },
+    {
+      "source_file": "supabase/migrations/20261114100000_gov02_manager_delegation_and_preferences.sql",
+      "source_sha256": "13061dd02a7636812df05d5539c24cff0921d0602526d522aafe2faf686ea00e",
+      "installed_version": "20261115005628",
+      "installed_name": "gov02_manager_delegation_and_preferences"
+    },
+    {
+      "source_file": "supabase/migrations/20261114110000_people_family_academics_enrollment.sql",
+      "source_sha256": "777cf9a82e3c742987fe520cd1d70b506b847e02e1b6944c4ccbfd48d66e3ace",
+      "installed_version": "20261115005910",
+      "installed_name": "people_family_academics_enrollment"
+    },
+    {
+      "source_file": "supabase/migrations/20261114120000_broadcasts_calendar_class_community.sql",
+      "source_sha256": "3e24fbf33718dcd3a6ab579295ed8d5f580d324f92a14f756a9395acabfc1b92",
+      "installed_version": "20261115010521",
+      "installed_name": "broadcasts_calendar_class_community"
+    },
+    {
+      "source_file": "supabase/migrations/20261114130000_parent_notes_and_messaging.sql",
+      "source_sha256": "f3b503a9922db6f8af9b3e361eca9b70e5ed71e2dbb9422c4d79323d21f9b0ec",
+      "installed_version": "20261115011519",
+      "installed_name": "parent_notes_and_messaging"
+    },
+    {
+      "source_file": "supabase/migrations/20261114140000_directory_food_menu_public_content.sql",
+      "source_sha256": "a60a784e129fb69841607faa74e3f34497a9de0630db06dfa43f911890f8996b",
+      "installed_version": "20261115011625",
+      "installed_name": "directory_food_menu_public_content"
+    },
+    {
+      "source_file": "supabase/migrations/20261115003630_fix_broadcast_level_validation.sql",
+      "source_sha256": "6d8fe03f3bd38cd6b3e108c5404b0ec7f7a22db2b5510b9771cd573ab5bab593",
+      "installed_version": "20261115011700",
+      "installed_name": "fix_broadcast_level_validation"
+    },
+    {
+      "source_file": "supabase/migrations/20261115012023_harden_school_helper_grants.sql",
+      "source_sha256": "d134d266cfb520280634775216765e29c15818c5cfda01d962de8bf61749f89c",
+      "installed_version": "20261115012206",
+      "installed_name": "harden_school_helper_grants"
+    }
+  ],
+  "counts": {
+    "public_tables": 35,
+    "public_tables_with_rls": 35,
+    "public_functions": 59,
+    "installed_migrations": 14,
+    "accounts_preserved": 3,
+    "approved_owner_preserved": 1,
+    "telegram_link_preserved": 1
+  },
+  "generated_types": {
+    "path": "src/lib/database.types.ts",
+    "method": "Supabase generate_typescript_types connector, exact hosted post-install schema",
+    "raw_output_sha256": "51802e6a681ab0031071df36a8cf3f9bdfecb38c09ccf221344dfede4f95feb0",
+    "regenerated_after_permission_correction": "BYTE_IDENTICAL"
+  },
+  "verification": {
+    "isolated_pg": "PostgreSQL18.6/PGlite, synthetic Auth and Supabase-style direct default EXECUTE grants; pgcrypto install omitted; not full hostedPG17 reset",
+    "sql_assertions_passed": 148,
+    "node_tests_passed": 59,
+    "typecheck": "PASS",
+    "build": "PASS",
+    "anonymous_hosted_read_smoke": {
+      "database_role": "anon",
+      "rls_active": true,
+      "public_levels": 6,
+      "visible_broadcasts": 0,
+      "visible_calendar_events": 0,
+      "visible_gallery": 0,
+      "visible_directory": 0,
+      "visible_menus": 0,
+      "visible_public_content": 0
+    },
+    "owner_hosted_read_smoke": {
+      "database_role": "authenticated",
+      "rls_active": true,
+      "approved": true,
+      "owner_authority": true,
+      "class_roster_count": 0,
+      "operational_counts": {
+        "activeClasses": 0,
+        "openInquiries": 0,
+        "activeStudents": 0,
+        "pendingAdmissions": 0
+      },
+      "message_recipient_count": 0,
+      "visible_parent_notes": 0,
+      "visible_thread_participants": 0,
+      "visible_thread_messages": 0
+    },
+    "account_profile_role_and_telegram_fingerprints": "UNCHANGED",
+    "protected_existing_authentication_routine_fingerprints": "UNCHANGED",
+    "browser": "NOT RUN: environment prohibits sockets",
+    "real_multi_session_concurrency": "NOT RUN"
+  },
+  "remaining_unimplemented_domains": [
+    "Pickup arrival/release",
+    "Attendance and absence workflows",
+    "Assessment/report cards",
+    "Private media storage/upload",
+    "Staff tasks and settings as documented decision gates"
+  ],
+  "security_advisories": [
+    {
+      "name": "rls_enabled_no_policy",
+      "count": 1,
+      "level": "INFO"
+    },
+    {
+      "name": "anon_security_definer_function_executable",
+      "count": 2,
+      "level": "WARN"
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "count": 43,
+      "level": "WARN"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "count": 1,
+      "level": "WARN"
+    }
+  ],
+  "security_advisory_context": {
+    "rls_enabled_no_policy": "notification_outbox intentionally unavailable to API roles; internal SECURITY DEFINER notification enqueue owns writes",
+    "anon_security_definer_function_executable": "Only intentional public enrollment and public inquiry intake RPCs remain",
+    "authenticated_security_definer_function_executable": "Reviewed RPC/helper surface; authorization is enforced within these functions and RLS; count is not independent acceptance",
+    "auth_leaked_password_protection": "Pre-existing project setting, unchanged"
+  }
+}
