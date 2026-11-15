@@ -88,6 +88,7 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
     isWithinParentNotesTunisWindow(),
   );
   const lastObservedQuotaDayRef = useRef<string>(getParentNotesQuotaDay());
+  const appliedNoteNotificationRequestRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,7 +188,8 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
   const notificationResolution = resolveNotificationTarget(notificationIntent, getNotificationActorKey(currentUser), notesStatus, isHydratingSchoolData, visibleNotes);
 
   useEffect(() => {
-    if (!notificationIntent || notificationResolution.state !== 'found') return;
+    if (!notificationIntent || notificationResolution.state !== 'found' || appliedNoteNotificationRequestRef.current === notificationIntent.requestId) return;
+    appliedNoteNotificationRequestRef.current = notificationIntent.requestId;
     const note = notificationResolution.record;
     if (currentUser?.role === 'PARENT' && scopedChildren.some((child) => child.id === note.childId) && selectedChildId !== note.childId) {
       setSelectedChildId(note.childId);
