@@ -14,12 +14,15 @@ import {
   Send,
   Menu,
   Volume2,
+  VolumeX,
+  Smartphone,
   CheckCheck,
 } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
 }
 
 const NOTIFICATION_SOUNDS: readonly NotificationSoundOption[] = [
@@ -30,7 +33,11 @@ const NOTIFICATION_SOUNDS: readonly NotificationSoundOption[] = [
   'Silent',
 ];
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab: _activeTab, setActiveTab }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  activeTab: _activeTab,
+  setActiveTab,
+  onNavigateToSubTab,
+}) => {
   const {
     currentUser,
     language,
@@ -44,6 +51,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab: _activeTab, setActive
     markAllNotificationsRead,
     notificationSound,
     setNotificationSound,
+    soundMuted,
+    setSoundMuted,
+    vibrationEnabled,
+    setVibrationEnabled,
+    notificationsError,
+    markingNotificationIds,
+    markingAllNotifications,
+    preferencesError,
+    preferencesSyncStatus,
+    refreshSchoolData,
     connectTelegram,
     telegramLinkNotice,
     dismissTelegramLinkNotice,
@@ -161,45 +178,78 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab: _activeTab, setActive
                     {unreadCount > 0 && (
                       <button
                         type="button"
+                        disabled={markingAllNotifications}
                         onClick={markAllNotificationsRead}
                         title={pickText(
                           { ar: 'تحديد الكل كمقروء', fr: 'Tout lire', en: 'Mark all read' },
                           language,
                         )}
-                        className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40"
                       >
                         <CheckCheck className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
+                {notificationsError && (
+                  <div
+                    role="alert"
+                    data-testid="notifications-error-alert"
+                    className="mx-3 mt-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-[11px] font-semibold text-red-700 dark:text-red-300 flex items-center justify-between gap-2"
+                  >
+                    <span>{notificationsError}</span>
+                    <button
+                      type="button"
+                      onClick={() => void refreshSchoolData()}
+                      className="rounded-md bg-red-700 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-red-800 shrink-0"
+                    >
+                      {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                    </button>
+                  </div>
+                )}
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
                   {notifications.length === 0 ? (
                     <div className="p-4 text-center text-sm text-gray-500">
                       {t('noNotifications')}
                     </div>
                   ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        onClick={() => {
-                          markNotificationRead(n.id);
-                          if (n.targetTab && canAccessAppTab(currentUser, n.targetTab as AppTab)) {
-                            setActiveTab(n.targetTab);
-                            setShowNotifications(false);
-                          }
-                        }}
-                        className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${!n.read ? 'bg-k-brand/10 dark:bg-k-brand/10' : ''}`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-xs text-gray-900 dark:text-white">
-                            {n.title}
-                          </span>
-                          <span className="text-[10px] text-gray-400">{n.time}</span>
+                    notifications.map((n) => {
+                      const isBusy = markingAllNotifications || markingNotificationIds.includes(n.id);
+                      return (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            if (!n.read && !isBusy) {
+                              markNotificationRead(n.id);
+                            }
+                            if (n.targetTab === 'calendar' && canAccessAppTab(currentUser, 'announcements')) {
+                              if (onNavigateToSubTab) {
+                                onNavigateToSubTab('announcements', 'calendar');
+                              } else {
+                                setActiveTab('announcements');
+                              }
+                              setShowNotifications(false);
+                            } else if (n.targetTab && canAccessAppTab(currentUser, n.targetTab as AppTab)) {
+                              setActiveTab(n.targetTab);
+                              setShowNotifications(false);
+                            }
+                          }}
+                          className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+                            !n.read ? 'bg-k-brand/10 dark:bg-k-brand/10' : ''
+                          } ${isBusy ? 'opacity-70' : ''}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-xs text-gray-900 dark:text-white">
+                              {n.title}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              {isBusy ? t('loading') : n.time}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{n.message}</p>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">{n.message}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -421,6 +471,96 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab: _activeTab, setActive
                         {notificationSound}
                       </button>
                     </div>
+
+                    <div className="px-4 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {soundMuted ? (
+                          <VolumeX className="w-3.5 h-3.5 text-red-500" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5 text-gray-400" />
+                        )}
+                        <span>
+                          {pickText({ ar: 'كتم الصوت', fr: 'Muet', en: 'Mute' }, language)}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Toggle sound mute"
+                        aria-pressed={soundMuted}
+                        onClick={() => setSoundMuted(!soundMuted)}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+                          soundMuted
+                            ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {soundMuted
+                          ? pickText({ ar: 'مكتوم', fr: 'Activé', en: 'Muted' }, language)
+                          : pickText({ ar: 'مفعّل', fr: 'Désactivé', en: 'On' }, language)}
+                      </button>
+                    </div>
+
+                    <div className="px-4 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <Smartphone className="w-3.5 h-3.5 text-gray-400" />
+                        <span>
+                          {pickText({ ar: 'الاهتزاز', fr: 'Vibration', en: 'Vibration' }, language)}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Toggle notification vibration"
+                        aria-pressed={vibrationEnabled}
+                        onClick={() => setVibrationEnabled(!vibrationEnabled)}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+                          vibrationEnabled
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {vibrationEnabled
+                          ? pickText({ ar: 'مفعّل', fr: 'Activé', en: 'On' }, language)
+                          : pickText({ ar: 'معطّل', fr: 'Désactivé', en: 'Off' }, language)}
+                      </button>
+                    </div>
+
+                    <div className="px-4 py-1.5 flex items-center justify-between gap-2 text-[10px] font-bold">
+                      <span className="text-gray-400">
+                        {pickText({ ar: 'حالة التفضيلات:', fr: 'Préférences :', en: 'Sync status:' }, language)}
+                      </span>
+                      <span
+                        data-testid="preferences-sync-status"
+                        className={`px-2 py-0.5 rounded-md ${
+                          preferencesSyncStatus === 'SAVED'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            : preferencesSyncStatus === 'SAVING'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                            : preferencesSyncStatus === 'ERROR'
+                            ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                        }`}
+                      >
+                        {preferencesSyncStatus === 'SAVING'
+                          ? t('loading')
+                          : preferencesSyncStatus === 'SAVED'
+                          ? pickText({ ar: 'محفوظة', fr: 'Enregistré', en: 'Saved' }, language)
+                          : preferencesSyncStatus === 'UNAVAILABLE'
+                          ? pickText({ ar: 'محلي (دون خادم)', fr: 'Local (hors serveur)', en: 'Local (backend pending)' }, language)
+                          : preferencesSyncStatus === 'ERROR'
+                          ? t('error')
+                          : pickText({ ar: 'عرض محلي', fr: 'Affichage local', en: 'Local display' }, language)}
+                      </span>
+                    </div>
+
+                    {preferencesError && (
+                      <div
+                        role="alert"
+                        data-testid="preferences-error-alert"
+                        className="mx-3 my-1.5 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 dark:text-red-300"
+                      >
+                        {preferencesError}
+                      </div>
+                    )}
 
                     {currentUser && (
                       <>

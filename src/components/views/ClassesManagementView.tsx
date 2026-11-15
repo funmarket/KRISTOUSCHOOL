@@ -1,7 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ClassStudentRosterItem, SchoolClassSummary } from '../../types';
-import { canAccessAppTab, canManageClassesUi } from '../homepages/homepageAccess';
+import {
+  canAccessAppTab,
+  canManageClassesUi,
+  canReviewOrdinaryAccountsUi,
+} from '../homepages/homepageAccess';
 import { HomePageHeader } from '../homepages/shared/HomePageHeader';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
@@ -11,6 +15,7 @@ import {
   createAndEnrollStudent,
   createSchoolClass,
 } from '../../lib/schoolOperations';
+import { listAccountDirectory, type GovernanceAccountRecord } from '../../lib/accountGovernance';
 import {
   ArrowLeft,
   Search,
@@ -21,6 +26,7 @@ import {
   UserPlus,
   AlertCircle,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import '../homepages/shared/HomePageLayout.css';
 
@@ -28,13 +34,14 @@ export type ClassesBackendStatus =
   | 'LOADING'
   | 'BACKEND_NOT_IMPLEMENTED'
   | 'READY'
-  | 'ERROR';
+  | 'ERROR'
+  | 'UNAUTHORIZED';
 
 export interface ClassesManagementViewProps {
   initialClasses?: SchoolClassSummary[];
   initialRosters?: Record<string, ClassStudentRosterItem[]>;
   backendStatus?: ClassesBackendStatus;
-  onRefresh?: () => Promise<void> | void;
+  onRefresh?: () => Promise<boolean | void> | void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -104,14 +111,72 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [studentBirthDate, setStudentBirthDate] = useState('');
   const [enrollClassId, setEnrollClassId] = useState('');
   const [relationshipLabel, setRelationshipLabel] = useState('Parent');
+  const [parentUserId, setParentUserId] = useState('');
+  const [linkedProfileId, setLinkedProfileId] = useState('');
 
   // Assign teacher state
   const [teacherUserId, setTeacherUserId] = useState('');
   const [assignClassId, setAssignClassId] = useState('');
   const [isHomeroom, setIsHomeroom] = useState(true);
+  const [teacherActive, setTeacherActive] = useState(true);
+
+  const [approvedAccounts, setApprovedAccounts] = useState<GovernanceAccountRecord[]>([]);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
 
   const isAuthorized = canAccessAppTab(currentUser, 'classes');
-  const canManage = canManageClassesUi(currentUser);
+  const isBackendUnauthorized = backendStatus === 'UNAUTHORIZED';
+  const canManage = canManageClassesUi(currentUser) && !isBackendUnauthorized;
+  const canLoadAccounts = canManage && canReviewOrdinaryAccountsUi(currentUser);
+
+  useEffect(() => {
+    if (!canLoadAccounts) {
+      setApprovedAccounts([]);
+      setAccountsError(null);
+      return;
+    }
+    let cancelled = false;
+    void listAccountDirectory({ status: 'APPROVED', limit: 100 })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok && res.data) {
+          setApprovedAccounts(res.data.items);
+          setAccountsError(null);
+        } else if (res.errorCode !== 'backend_unavailable') {
+          setApprovedAccounts([]);
+          setAccountsError(res.errorMessage || res.errorCode || t('error'));
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setApprovedAccounts([]);
+        setAccountsError(err instanceof Error ? err.message : t('error'));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canLoadAccounts, currentUser?.id, t]);
+
+  const teacherAccounts = useMemo(
+    () =>
+      approvedAccounts.filter(
+        (acc) => acc.activeRoles.includes('TEACHER') || acc.requestedRole === 'TEACHER',
+      ),
+    [approvedAccounts],
+  );
+  const parentAccounts = useMemo(
+    () =>
+      approvedAccounts.filter(
+        (acc) => acc.activeRoles.includes('PARENT') || acc.requestedRole === 'PARENT',
+      ),
+    [approvedAccounts],
+  );
+  const studentAccounts = useMemo(
+    () =>
+      approvedAccounts.filter(
+        (acc) => acc.activeRoles.includes('STUDENT') || acc.requestedRole === 'STUDENT',
+      ),
+    [approvedAccounts],
+  );
 
   const levelOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -176,90 +241,118 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || !canManage) return;
     setOpFeedback(null);
     setSubmitting(true);
-    const res = await createSchoolClass({
-      academicYearCode,
-      levelCode,
-      name: className,
-      capacity,
-      roomLabel,
-    });
-    setSubmitting(false);
-    if (!res.ok) {
-      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
-      return;
+    try {
+      const res = await createSchoolClass({
+        academicYearCode,
+        levelCode,
+        name: className,
+        capacity,
+        roomLabel,
+      });
+      if (!res.ok) {
+        setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+      setClassName('');
+      setRoomLabel('');
+      setActiveForm('none');
+      setOpFeedback({
+        type: 'success',
+        text: pickText(
+          { ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created on server.' },
+          language,
+        ),
+      });
+      await onRefresh?.();
+    } catch (err) {
+      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+    } finally {
+      setSubmitting(false);
     }
-    setClassName('');
-    setRoomLabel('');
-    setActiveForm('none');
-    setOpFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created on server.' },
-        language,
-      ),
-    });
-    await onRefresh?.();
   };
 
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || !canManage) return;
     setOpFeedback(null);
     setSubmitting(true);
     const targetClassId = enrollClassId || initialClasses[0]?.id || '';
-    const res = await createAndEnrollStudent({
-      studentCode,
-      fullName: studentFullName,
-      birthDate: studentBirthDate,
-      classId: targetClassId,
-      relationshipLabel,
-    });
-    setSubmitting(false);
-    if (!res.ok) {
-      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
-      return;
+    try {
+      const res = await createAndEnrollStudent({
+        studentCode,
+        fullName: studentFullName,
+        birthDate: studentBirthDate,
+        classId: targetClassId,
+        relationshipLabel,
+        parentUserId: parentUserId.trim() || null,
+        linkedProfileId: linkedProfileId.trim() || null,
+      });
+      if (!res.ok) {
+        setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+      setStudentCode('');
+      setStudentFullName('');
+      setStudentBirthDate('');
+      setParentUserId('');
+      setLinkedProfileId('');
+      setActiveForm('none');
+      setOpFeedback({
+        type: 'success',
+        text: pickText(
+          { ar: 'تم تسجيل التلميذ في القسم بنجاح.', fr: 'Élève inscrit dans la classe.', en: 'Student created and enrolled.' },
+          language,
+        ),
+      });
+      await onRefresh?.();
+    } catch (err) {
+      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+    } finally {
+      setSubmitting(false);
     }
-    setStudentCode('');
-    setStudentFullName('');
-    setStudentBirthDate('');
-    setActiveForm('none');
-    setOpFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم تسجيل التلميذ في القسم بنجاح.', fr: 'Élève inscrit dans la classe.', en: 'Student created and enrolled.' },
-        language,
-      ),
-    });
-    await onRefresh?.();
   };
 
   const handleAssignTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || !canManage) return;
     setOpFeedback(null);
     setSubmitting(true);
     const targetClassId = assignClassId || initialClasses[0]?.id || '';
-    const res = await assignTeacherToClass({
-      teacherUserId: teacherUserId.trim(),
-      classId: targetClassId,
-      isHomeroom,
-      active: true,
-    });
-    setSubmitting(false);
-    if (!res.ok) {
-      setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
-      return;
+    try {
+      const res = await assignTeacherToClass({
+        teacherUserId: teacherUserId.trim(),
+        classId: targetClassId,
+        isHomeroom,
+        active: teacherActive,
+      });
+      if (!res.ok) {
+        setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+      setTeacherUserId('');
+      setTeacherActive(true);
+      setActiveForm('none');
+      setOpFeedback({
+        type: 'success',
+        text: teacherActive
+          ? pickText(
+              { ar: 'تم تعيين المربي للقسم بنجاح.', fr: 'Enseignant affecté à la classe.', en: 'Teacher assigned to class.' },
+              language,
+            )
+          : pickText(
+              { ar: 'تم إلغاء تعيين المربي من القسم.', fr: 'Enseignant retiré de la classe.', en: 'Teacher unassigned from class.' },
+              language,
+            ),
+      });
+      await onRefresh?.();
+    } catch (err) {
+      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+    } finally {
+      setSubmitting(false);
     }
-    setTeacherUserId('');
-    setActiveForm('none');
-    setOpFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم تعيين المربي للقسم بنجاح.', fr: 'Enseignant affecté à la classe.', en: 'Teacher assigned to class.' },
-        language,
-      ),
-    });
-    await onRefresh?.();
   };
 
   if (!isAuthorized) {
@@ -680,6 +773,85 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
               className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
             />
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                {pickText(
+                  { ar: 'ربط حساب الولي (اختياري)', fr: 'Lier un compte Parent (optionnel)', en: 'Link Parent Account (optional)' },
+                  language,
+                )}
+              </label>
+              {parentAccounts.length > 0 && (
+                <select
+                  aria-label="Select parent account"
+                  value={parentAccounts.some((p) => p.id === parentUserId) ? parentUserId : ''}
+                  onChange={(e) => setParentUserId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+                >
+                  <option value="">
+                    {pickText({ ar: '— دون ربط ولي —', fr: '— Aucun parent sélectionné —', en: '— No parent account —' }, language)}
+                  </option>
+                  {parentAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.fullName} (@{acc.username})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="text"
+                value={parentUserId}
+                onChange={(e) => setParentUserId(e.target.value)}
+                placeholder={pickText(
+                  { ar: 'معرف حساب الولي (UUID اختياري)', fr: 'UUID compte parent (optionnel)', en: 'Parent User UUID (optional)' },
+                  language,
+                )}
+                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                {pickText(
+                  { ar: 'ربط حساب التلميذ (اختياري)', fr: 'Lier un compte Élève (optionnel)', en: 'Link Student Account (optional)' },
+                  language,
+                )}
+              </label>
+              {studentAccounts.length > 0 && (
+                <select
+                  aria-label="Select student account"
+                  value={studentAccounts.some((s) => s.id === linkedProfileId) ? linkedProfileId : ''}
+                  onChange={(e) => setLinkedProfileId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+                >
+                  <option value="">
+                    {pickText({ ar: '— دون ربط حساب تلميذ —', fr: '— Aucun compte élève —', en: '— No student account —' }, language)}
+                  </option>
+                  {studentAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.fullName} (@{acc.username})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="text"
+                value={linkedProfileId}
+                onChange={(e) => setLinkedProfileId(e.target.value)}
+                placeholder={pickText(
+                  { ar: 'معرف حساب التلميذ (UUID اختياري)', fr: 'UUID compte élève (optionnel)', en: 'Linked Student Profile UUID (optional)' },
+                  language,
+                )}
+                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          {accountsError && (
+            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>
+          )}
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -705,17 +877,36 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4"
         >
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-            {pickText({ ar: 'تعيين مربي للقسم', fr: 'Affecter un enseignant à la classe', en: 'Assign Teacher to Class' }, language)}
+            {pickText({ ar: 'تعيين أو سحب مربي للقسم', fr: 'Affecter ou retirer un enseignant', en: 'Assign or Unassign Class Teacher' }, language)}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-            <input
-              type="text"
-              required
-              value={teacherUserId}
-              onChange={(e) => setTeacherUserId(e.target.value)}
-              placeholder="Teacher User UUID"
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
+            <div className="space-y-1.5 sm:col-span-2">
+              {teacherAccounts.length > 0 && (
+                <select
+                  aria-label="Select approved teacher"
+                  value={teacherAccounts.some((acc) => acc.id === teacherUserId) ? teacherUserId : ''}
+                  onChange={(e) => setTeacherUserId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+                >
+                  <option value="">
+                    {pickText({ ar: '— اختر مربياً معتمداً —', fr: '— Sélectionner un enseignant —', en: '— Select approved teacher —' }, language)}
+                  </option>
+                  {teacherAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.fullName} (@{acc.username})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="text"
+                required
+                value={teacherUserId}
+                onChange={(e) => setTeacherUserId(e.target.value)}
+                placeholder="Teacher User UUID"
+                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
+              />
+            </div>
             <select
               required
               value={assignClassId}
@@ -732,15 +923,33 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                 ))
               )}
             </select>
-            <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-              <input
-                type="checkbox"
-                checked={isHomeroom}
-                onChange={(e) => setIsHomeroom(e.target.checked)}
-              />
-              <span>{pickText({ ar: 'مربي رئيسي', fr: 'Enseignant principal', en: 'Homeroom teacher' }, language)}</span>
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={isHomeroom}
+                  onChange={(e) => setIsHomeroom(e.target.checked)}
+                />
+                <span>{pickText({ ar: 'مربي رئيسي', fr: 'Enseignant principal', en: 'Homeroom teacher' }, language)}</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={teacherActive}
+                  onChange={(e) => setTeacherActive(e.target.checked)}
+                />
+                <span>
+                  {pickText(
+                    { ar: 'تعيين نشط (إزالة التحديد للسحب)', fr: 'Affectation active (décocher pour retirer)', en: 'Active assignment (uncheck to unassign)' },
+                    language,
+                  )}
+                </span>
+              </label>
+            </div>
           </div>
+          {accountsError && (
+            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -858,6 +1067,70 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
         </div>
       )}
 
+      {/* State 2a: Backend Unauthorized (always shown, hides private rosters) */}
+      {isBackendUnauthorized && (
+        <div
+          data-testid="classes-unauthorized-state"
+          role="alert"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              {pickText(
+                {
+                  ar: 'غير مصرح بعرض قائمة الأقسام أو التلاميذ من الخادم.',
+                  fr: 'Accès non autorisé aux classes et listes d’élèves.',
+                  en: 'Not authorized to access school classes and student rosters.',
+                },
+                language,
+              )}
+            </span>
+          </div>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={() => void onRefresh()}
+              className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+            >
+              {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* State 2b: Backend Error (shown even if cached classes exist) */}
+      {backendStatus === 'ERROR' && (
+        <div
+          data-testid="classes-error-state"
+          role="alert"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-red-800 dark:text-red-300"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {pickText(
+                {
+                  ar: 'تعذر تحميل قائمة الأقسام والتلاميذ من الخادم.',
+                  fr: 'Impossible de charger les classes et listes d’élèves depuis le serveur.',
+                  en: 'Failed to load classes and student rosters from server.',
+                },
+                language,
+              )}
+            </span>
+          </div>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={() => void onRefresh()}
+              className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+            >
+              {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* State 3: Ready but 0 matching classes */}
       {backendStatus === 'READY' && filteredClasses.length === 0 && (
         <div data-testid="classes-empty-state">
@@ -883,8 +1156,8 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
         </div>
       )}
 
-      {/* State 4: Ready with verified class cards */}
-      {filteredClasses.length > 0 && (
+      {/* State 4: Verified class cards (never shown when UNAUTHORIZED) */}
+      {!isBackendUnauthorized && filteredClasses.length > 0 && (
         <div
           data-testid="classes-card-grid"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"

@@ -20,6 +20,7 @@ import type {
   NotificationItem,
   NotificationSoundOption,
   ParentNote,
+  PublicContentEntry,
   SchoolBroadcastItem,
   TeacherDirectoryMember,
   ThemeMode,
@@ -64,6 +65,34 @@ export function isWithinParentNotesTunisWindow(date: Date = new Date()): boolean
 
 export function getTunisSchoolDay(date: Date = new Date()): string {
   return getTunisTimeParts(date).dateStr;
+}
+
+/**
+ * Returns the active Parent Notes quota cycle day anchored to 08:00 Africa/Tunis.
+ * Before 08:00 Tunis, the prior school day's cycle remains active until the 08:00 reset.
+ */
+export function getParentNotesQuotaDay(date: Date = new Date()): string {
+  const parts = getTunisTimeParts(date);
+  if (parts.hour >= 8) {
+    return parts.dateStr;
+  }
+  const prevUtcDay = new Date(Date.UTC(parts.year, parts.month - 1, parts.day - 1));
+  return `${prevUtcDay.getUTCFullYear()}-${String(prevUtcDay.getUTCMonth() + 1).padStart(2, '0')}-${String(prevUtcDay.getUTCDate()).padStart(2, '0')}`;
+}
+
+export function getRemainingParentNotesQuota(
+  notes: readonly ParentNote[],
+  parentUserId: string | null | undefined,
+  date: Date = new Date(),
+): number {
+  if (!parentUserId) return PARENT_NOTES_DAILY_QUOTA;
+  const activeQuotaDay = getParentNotesQuotaDay(date);
+  const used = notes.filter((n) => {
+    if (n.parentId !== parentUserId) return false;
+    const noteDay = n.schoolDay || getParentNotesQuotaDay(new Date(n.createdAt));
+    return noteDay === activeQuotaDay;
+  }).length;
+  return Math.max(0, PARENT_NOTES_DAILY_QUOTA - used);
 }
 
 export function validateParentNoteSubmission(
@@ -111,15 +140,42 @@ export function canParticipantMessage(
   return true;
 }
 
+export function getMonthCalendarRange(
+  year: number,
+  monthIndex: number,
+): { startDate: string; endDate: string } {
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const mm = String(monthIndex + 1).padStart(2, '0');
+  return {
+    startDate: `${year}-${mm}-01`,
+    endDate: `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`,
+  };
+}
+
+export function sortCalendarEvents(events: readonly CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (Boolean(a.isAllDay) !== Boolean(b.isAllDay)) return a.isAllDay ? -1 : 1;
+    const ta = a.startTime || '';
+    const tb = b.startTime || '';
+    if (ta !== tb) return ta.localeCompare(tb);
+    const titleCmp = a.title.localeCompare(b.title);
+    if (titleCmp !== 0) return titleCmp;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export function getEventsForCalendarDate(
   events: readonly CalendarEvent[],
   dateStr: string,
 ): CalendarEvent[] {
-  return events.filter((ev) => {
-    const start = ev.date;
-    const end = ev.endDate && ev.endDate >= start ? ev.endDate : start;
-    return dateStr >= start && dateStr <= end;
-  });
+  return sortCalendarEvents(
+    events.filter((ev) => {
+      const start = ev.date;
+      const end = ev.endDate && ev.endDate >= start ? ev.endDate : start;
+      return dateStr >= start && dateStr <= end;
+    }),
+  );
 }
 
 function unavailableResult<T>(): BackendOpResult<T> {
@@ -291,23 +347,49 @@ export async function listSchoolCalendarEvents(
   userId?: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
+  options?: {
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  },
 ): Promise<BackendOpResult<CalendarEvent[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client
+    let query = client
       .from('school_calendar_events')
       .select(
         'id, class_id, title, description, category, start_date, end_date, is_all_day, start_time, end_time, timezone, is_public, status, cancellation_reason',
       )
       .order('start_date', { ascending: true });
+
+    if (options?.endDate && typeof query?.lte === 'function') {
+      query = query.lte('start_date', options.endDate);
+    }
+    if (options?.startDate && typeof query?.gte === 'function') {
+      query = query.gte('end_date', options.startDate);
+    }
+    if (typeof query?.limit === 'function') {
+      query = query.limit(options?.limit ?? 250);
+    }
+
+    const { data, error } = await query;
     if (error) return { ok: false, ...classifySupabaseError(error) };
 
+    const eventRows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
     const responseMap = new Map<string, CalendarEvent['myResponse']>();
-    if (userId) {
-      const { data: respData } = await client
+    if (userId && eventRows.length > 0) {
+      let respQuery = client
         .from('school_calendar_responses')
         .select('event_id, response')
         .eq('user_id', userId);
+      if (typeof respQuery?.in === 'function') {
+        respQuery = respQuery.in(
+          'event_id',
+          eventRows.map((row) => String(row.id)),
+        );
+      }
+      const { data: respData, error: respErr } = await respQuery;
+      if (respErr) return { ok: false, ...classifySupabaseError(respErr) };
       if (Array.isArray(respData)) {
         for (const r of respData as { event_id: string; response: CalendarEvent['myResponse'] }[]) {
           responseMap.set(r.event_id, r.response);
@@ -315,26 +397,24 @@ export async function listSchoolCalendarEvents(
       }
     }
 
-    const mapped: CalendarEvent[] = Array.isArray(data)
-      ? data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          classId: row.class_id ? String(row.class_id) : undefined,
-          title: String(row.title),
-          description: String(row.description ?? ''),
-          category: (String(row.category) as CalendarEventCategory) || 'EVENT',
-          date: String(row.start_date),
-          endDate: row.end_date ? String(row.end_date) : String(row.start_date),
-          isAllDay: row.is_all_day !== false,
-          startTime: row.start_time ? String(row.start_time) : null,
-          endTime: row.end_time ? String(row.end_time) : null,
-          timezone: row.timezone ? String(row.timezone) : 'Africa/Tunis',
-          isPublic: Boolean(row.is_public),
-          status: (String(row.status) as CalendarEvent['status']) || 'SCHEDULED',
-          cancellationReason: row.cancellation_reason ? String(row.cancellation_reason) : null,
-          myResponse: responseMap.get(String(row.id)) ?? null,
-        }))
-      : [];
-    return { ok: true, status: 'READY', data: mapped };
+    const mapped: CalendarEvent[] = eventRows.map((row) => ({
+      id: String(row.id),
+      classId: row.class_id ? String(row.class_id) : undefined,
+      title: String(row.title),
+      description: String(row.description ?? ''),
+      category: (String(row.category) as CalendarEventCategory) || 'EVENT',
+      date: String(row.start_date),
+      endDate: row.end_date ? String(row.end_date) : String(row.start_date),
+      isAllDay: row.is_all_day !== false,
+      startTime: row.start_time ? String(row.start_time) : null,
+      endTime: row.end_time ? String(row.end_time) : null,
+      timezone: row.timezone ? String(row.timezone) : 'Africa/Tunis',
+      isPublic: Boolean(row.is_public),
+      status: (String(row.status) as CalendarEvent['status']) || 'SCHEDULED',
+      cancellationReason: row.cancellation_reason ? String(row.cancellation_reason) : null,
+      myResponse: responseMap.get(String(row.id)) ?? null,
+    }));
+    return { ok: true, status: 'READY', data: sortCalendarEvents(mapped) };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
@@ -479,16 +559,19 @@ export async function listClassCommunityContent(
     if (annRes.error) return { ok: false, ...classifySupabaseError(annRes.error) };
     if (hwRes.error) return { ok: false, ...classifySupabaseError(hwRes.error) };
     if (qRes.error) return { ok: false, ...classifySupabaseError(qRes.error) };
+    if (docRes.error) return { ok: false, ...classifySupabaseError(docRes.error) };
+    if (galRes.error) return { ok: false, ...classifySupabaseError(galRes.error) };
 
     const questionsRows = Array.isArray(qRes.data) ? (qRes.data as Record<string, unknown>[]) : [];
     const questionIds = questionsRows.map((q) => String(q.id));
     const repliesMap = new Map<string, ClassQuestionReply[]>();
     if (questionIds.length > 0) {
-      const { data: repRows } = await client
+      const { data: repRows, error: repErr } = await client
         .from('class_question_replies')
         .select('*')
         .in('question_id', questionIds)
         .order('created_at', { ascending: true });
+      if (repErr) return { ok: false, ...classifySupabaseError(repErr) };
       if (Array.isArray(repRows)) {
         for (const r of repRows as Record<string, unknown>[]) {
           const qid = String(r.question_id);
@@ -904,10 +987,12 @@ export async function listMessageThreads(
     if (threadRows.length === 0) return { ok: true, status: 'READY', data: [] };
 
     const threadIds = threadRows.map((t) => String(t.id));
-    const [{ data: participants }, { data: messages }] = await Promise.all([
+    const [{ data: participants, error: partErr }, { data: messages, error: msgErr }] = await Promise.all([
       client.from('thread_participants').select('thread_id, user_id, unread').in('thread_id', threadIds),
       client.from('thread_messages').select('*').in('thread_id', threadIds).order('created_at', { ascending: true }),
     ]);
+    if (partErr) return { ok: false, ...classifySupabaseError(partErr) };
+    if (msgErr) return { ok: false, ...classifySupabaseError(msgErr) };
 
     const partByThread = new Map<string, { userId: string; unread: boolean }[]>();
     if (Array.isArray(participants)) {
@@ -1320,3 +1405,39 @@ export async function markAllNotificationsReadOnServer(
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
+
+export async function fetchPublicContent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<Record<string, PublicContentEntry>>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client
+      .from('school_public_content')
+      .select('slug, title_ar, title_fr, title_en, body_ar, body_fr, body_en, is_published, updated_at')
+      .eq('is_published', true);
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    const entries: Record<string, PublicContentEntry> = {};
+    if (Array.isArray(data)) {
+      for (const row of data as Record<string, unknown>[]) {
+        const slug = String(row.slug || '').trim();
+        if (!slug) continue;
+        entries[slug] = {
+          slug,
+          titleAr: String(row.title_ar ?? ''),
+          titleFr: String(row.title_fr ?? ''),
+          titleEn: String(row.title_en ?? ''),
+          bodyAr: String(row.body_ar ?? ''),
+          bodyFr: String(row.body_fr ?? ''),
+          bodyEn: String(row.body_en ?? ''),
+          isPublished: Boolean(row.is_published),
+          updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+        };
+      }
+    }
+    return { ok: true, status: 'READY', data: entries };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+

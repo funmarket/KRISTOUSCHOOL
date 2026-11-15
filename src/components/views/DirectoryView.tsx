@@ -4,7 +4,7 @@ import { DirectorySubTab } from '../../types';
 import { canManagePublicContentUi } from '../homepages/homepageAccess';
 import { pickText } from '../../i18n/homepages';
 import { upsertDirectoryEntry } from '../../lib/schoolContent';
-import { Plus, AlertCircle, CheckCircle2, Edit3 } from 'lucide-react';
+import { Plus, AlertCircle, CheckCircle2, Edit3, Lock } from 'lucide-react';
 
 export interface DirectoryViewProps {
   initialSubTab?: DirectorySubTab;
@@ -13,10 +13,21 @@ export interface DirectoryViewProps {
 export const DirectoryView: React.FC<DirectoryViewProps> = ({
   initialSubTab = 'teachers',
 }) => {
-  const { currentUser, teachers, admins, directoryStatus, language, refreshSchoolData, t } = useApp();
+  const {
+    currentUser,
+    teachers,
+    admins,
+    directoryStatus,
+    directoryError,
+    isHydratingSchoolData,
+    language,
+    refreshSchoolData,
+    t,
+  } = useApp();
   const [tab, setTab] = useState<DirectorySubTab>(initialSubTab);
 
   const canManage = canManagePublicContentUi(currentUser);
+  const isDirectoryUnauthorized = directoryStatus === 'UNAUTHORIZED';
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -38,6 +49,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     type: 'TEACHER' | 'ADMIN',
     entry: { id: string; name: string; title: string; bio: string; tags: string[]; languages?: string[]; isPublished?: boolean },
   ) => {
+    if (isDirectoryUnauthorized) return;
     setEditingId(directoryStatus === 'READY' ? entry.id : null);
     setEntryType(type);
     setDisplayName(entry.name);
@@ -51,45 +63,51 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving || isDirectoryUnauthorized) return;
     setFeedback(null);
     setSaving(true);
-    const res = await upsertDirectoryEntry({
-      id: editingId,
-      entryType,
-      displayName,
-      title,
-      bio,
-      tags: tagsCsv
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-      languages: languagesCsv
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-      isPublished,
-    });
-    setSaving(false);
+    try {
+      const res = await upsertDirectoryEntry({
+        id: editingId,
+        entryType,
+        displayName,
+        title,
+        bio,
+        tags: tagsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        languages: languagesCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        isPublished,
+      });
 
-    if (!res.ok) {
-      setFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
-      return;
+      if (!res.ok) {
+        setFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+
+      setShowForm(false);
+      setEditingId(null);
+      setDisplayName('');
+      setTitle('');
+      setBio('');
+      setTagsCsv('');
+      setFeedback({
+        type: 'success',
+        text: pickText(
+          { ar: 'تم حفظ بطاقة الدليل بنجاح.', fr: 'Fiche annuaire enregistrée.', en: 'Directory entry saved.' },
+          language,
+        ),
+      });
+      await refreshSchoolData();
+    } catch (err) {
+      setFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+    } finally {
+      setSaving(false);
     }
-
-    setShowForm(false);
-    setEditingId(null);
-    setDisplayName('');
-    setTitle('');
-    setBio('');
-    setTagsCsv('');
-    setFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم حفظ بطاقة الدليل بنجاح.', fr: 'Fiche annuaire enregistrée.', en: 'Directory entry saved.' },
-        language,
-      ),
-    });
-    await refreshSchoolData();
   };
 
   return (
@@ -101,7 +119,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">
               {t('directoryTitle')}
             </h1>
-            {directoryStatus !== 'READY' && (
+            {directoryStatus === 'BLOCKED_BACKEND' && (
               <span
                 data-testid="directory-preview-badge"
                 className="px-2.5 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[10px] font-extrabold text-amber-700 dark:text-amber-300"
@@ -131,7 +149,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             </button>
           </div>
 
-          {canManage && (
+          {canManage && !isDirectoryUnauthorized && (
             <button
               type="button"
               data-testid="directory-add-entry-btn"
@@ -155,6 +173,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
       {feedback && (
         <div
+          role={feedback.type === 'error' ? 'alert' : 'status'}
           className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
             feedback.type === 'error'
               ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900'
@@ -166,7 +185,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
       )}
 
-      {canManage && showForm && (
+      {canManage && !isDirectoryUnauthorized && showForm && (
         <form
           onSubmit={handleSave}
           className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
@@ -246,7 +265,88 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </form>
       )}
 
-      {tab === 'teachers' ? (
+      {isDirectoryUnauthorized && (
+        <div
+          data-testid="directory-unauthorized-banner"
+          role="alert"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              {directoryError ||
+                pickText(
+                  {
+                    ar: 'غير مصرح بعرض دليل المدرسة حالياً.',
+                    fr: 'Accès non autorisé à l’annuaire de l’école.',
+                    en: 'Not authorized to access the school directory.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {directoryStatus === 'ERROR' && (
+        <div
+          data-testid="directory-error-banner"
+          role="alert"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-red-800 dark:text-red-300"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {directoryError ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل بيانات الدليل المباشر من الخادم.',
+                    fr: 'Impossible de charger l’annuaire en direct depuis le serveur.',
+                    en: 'Failed to load live school directory from server.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {isDirectoryUnauthorized ? null : isHydratingSchoolData && teachers.length === 0 && admins.length === 0 ? (
+        <div
+          data-testid="directory-loading-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500"
+        >
+          {t('loading')}
+        </div>
+      ) : tab === 'teachers' && teachers.length === 0 && directoryStatus === 'READY' ? (
+        <div
+          data-testid="directory-empty-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500"
+        >
+          {t('noItems')}
+        </div>
+      ) : tab === 'admin' && admins.length === 0 && directoryStatus === 'READY' ? (
+        <div
+          data-testid="directory-empty-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500"
+        >
+          {t('noItems')}
+        </div>
+      ) : tab === 'teachers' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {teachers.map((teach) => (
             <div key={teach.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4 sm:gap-5">

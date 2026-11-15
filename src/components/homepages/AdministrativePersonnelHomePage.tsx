@@ -9,7 +9,7 @@ import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18
 
 export interface AdministrativePersonnelHomePageProps {
   setActiveTab: (tab: string) => void;
-  onNavigateToSubTab?: (tab: 'community' | 'directory', subTab: string) => void;
+  onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
 }
 
 export const AdministrativePersonnelHomePage: React.FC<
@@ -19,6 +19,8 @@ export const AdministrativePersonnelHomePage: React.FC<
     language,
     currentUser,
     operationalCounts,
+    operationalCountsLoaded,
+    schoolContextError,
     publicInquiries,
     inquiriesStatus,
     refreshSchoolData,
@@ -128,22 +130,38 @@ export const AdministrativePersonnelHomePage: React.FC<
             </button>
           </div>
 
+          {schoolContextError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-2"
+            >
+              <span>{schoolContextError}</span>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="rounded-lg bg-red-600 px-2.5 py-1 text-white text-[11px] font-bold hover:bg-red-700"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
               <span className="text-slate-500 font-bold">{pickText({ ar: 'الأقسام النشطة', fr: 'Classes actives', en: 'Active Classes' }, language)}</span>
-              <div className="text-lg font-black mt-0.5">{operationalCounts.activeClasses ?? 0}</div>
+              <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeClasses ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
               <span className="text-slate-500 font-bold">{pickText({ ar: 'التلاميذ المسجلون', fr: 'Élèves inscrits', en: 'Active Students' }, language)}</span>
-              <div className="text-lg font-black mt-0.5">{operationalCounts.activeStudents ?? 0}</div>
+              <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeStudents ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
               <span className="text-slate-500 font-bold">{pickText({ ar: 'ملفات التسجيل المعلقة', fr: 'Admissions en attente', en: 'Pending Admissions' }, language)}</span>
-              <div className="text-lg font-black mt-0.5">{operationalCounts.pendingAdmissions ?? 0}</div>
+              <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.pendingAdmissions ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
               <span className="text-slate-500 font-bold">{pickText({ ar: 'استفسارات مفتوحة', fr: 'Demandes ouvertes', en: 'Open Inquiries' }, language)}</span>
-              <div className="text-lg font-black mt-0.5">{operationalCounts.openInquiries ?? 0}</div>
+              <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.openInquiries ?? 0) : '—'}</div>
             </div>
           </div>
 
@@ -153,7 +171,7 @@ export const AdministrativePersonnelHomePage: React.FC<
             </div>
           )}
 
-          {inquiriesStatus !== 'READY' ? (
+          {inquiriesStatus === 'BLOCKED_BACKEND' ? (
             <EmptyFeatureState
               state="BLOCKED_BACKEND"
               title={pickText(
@@ -165,6 +183,30 @@ export const AdministrativePersonnelHomePage: React.FC<
                 language,
               )}
             />
+          ) : inquiriesStatus !== 'READY' ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-3"
+            >
+              <span>
+                {inquiriesStatus === 'UNAUTHORIZED'
+                  ? pickText(
+                      { ar: 'صلاحيات عرض الاستفسارات العامة غير مفعلة لهذا الحساب.', fr: 'Accès aux demandes publiques non autorisé.', en: 'Not authorized to read public inquiries.' },
+                      language,
+                    )
+                  : pickText(
+                      { ar: 'تعذر تحميل استفسارات الموقع العام من الخادم.', fr: 'Erreur de chargement des demandes publiques.', en: 'Unable to load public inquiries from the server.' },
+                      language,
+                    )}
+              </span>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="rounded-xl bg-red-600 px-3 py-1.5 text-white text-xs font-bold hover:bg-red-700 shrink-0"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
           ) : publicInquiries.length === 0 ? (
             <p className="text-xs text-slate-500">
               {pickText(
@@ -322,7 +364,11 @@ export const AdministrativePersonnelHomePage: React.FC<
           actionLabel={openActionLabel}
           icon="🗓️"
           tone="yellow"
-          onClick={() => setActiveTab('announcements')}
+          onClick={() =>
+            onNavigateToSubTab
+              ? onNavigateToSubTab('announcements', 'calendar')
+              : setActiveTab('announcements')
+          }
         />
 
         <HomeShortcutCard

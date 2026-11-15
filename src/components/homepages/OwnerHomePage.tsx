@@ -16,7 +16,7 @@ import { isSupabaseConfigured } from '../../lib/supabase';
 
 export interface OwnerHomePageProps {
   setActiveTab: (tab: string) => void;
-  onNavigateToSubTab?: (tab: 'community' | 'directory', subTab: string) => void;
+  onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
   onInspectRoleHome?: (homeKey: HomePageKey | null) => void;
 }
 
@@ -38,28 +38,40 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   const { language } = useApp();
   const [activeGovernanceSection, setActiveGovernanceSection] =
     useState<OwnerGovernanceSection | null>(null);
-  const [governanceBackendReady, setGovernanceBackendReady] = useState<boolean>(false);
+  const [governanceBackendStatus, setGovernanceBackendStatus] = useState<
+    'LOADING' | 'READY' | 'ERROR' | 'BLOCKED_BACKEND'
+  >(isSupabaseConfigured ? 'LOADING' : 'BLOCKED_BACKEND');
   const [governancePanel, setGovernancePanel] = useState<{
     title: string;
     description: string;
     state: CardAvailabilityState;
   } | null>(null);
 
+  const [governanceRetrySeq, setGovernanceRetrySeq] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     if (!isSupabaseConfigured) {
-      setGovernanceBackendReady(false);
+      setGovernanceBackendStatus('BLOCKED_BACKEND');
       return;
     }
+    setGovernanceBackendStatus('LOADING');
     void fetchGovernanceActorScope().then((res) => {
-      if (!cancelled) {
-        setGovernanceBackendReady(Boolean(res.ok && res.data));
+      if (cancelled) return;
+      if (res.ok && res.data) {
+        setGovernanceBackendStatus('READY');
+      } else if (res.errorCode === 'backend_unavailable') {
+        setGovernanceBackendStatus('BLOCKED_BACKEND');
+      } else {
+        setGovernanceBackendStatus('ERROR');
       }
+    }).catch(() => {
+      if (!cancelled) setGovernanceBackendStatus('ERROR');
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [governanceRetrySeq]);
 
   const openGovernanceSection = (section: OwnerGovernanceSection) => {
     setGovernancePanel(null);
@@ -78,13 +90,18 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   const blockedBackendLabel = pickText(HOMEPAGE_COMMON_TEXT.backendBlockedBadge, language);
   const comingSoonLabel = pickText(HOMEPAGE_COMMON_TEXT.comingSoonBadge, language);
 
-  const governanceCardState: CardAvailabilityState = governanceBackendReady
-    ? 'AVAILABLE'
-    : 'BLOCKED_BACKEND';
-  const governanceCardActionLabel = governanceBackendReady
-    ? openActionLabel
-    : blockedBackendLabel;
-  const governanceCardBadge = governanceBackendReady ? undefined : blockedBackendLabel;
+  const governanceCardState: CardAvailabilityState =
+    governanceBackendStatus === 'BLOCKED_BACKEND' ? 'BLOCKED_BACKEND' : 'AVAILABLE';
+  const governanceCardActionLabel =
+    governanceBackendStatus === 'BLOCKED_BACKEND' ? blockedBackendLabel : openActionLabel;
+  const governanceCardBadge =
+    governanceBackendStatus === 'READY'
+      ? undefined
+      : governanceBackendStatus === 'LOADING'
+      ? pickText({ ar: 'جاري التحقق...', fr: 'Vérification...', en: 'Checking...' }, language)
+      : governanceBackendStatus === 'ERROR'
+      ? pickText({ ar: 'خطأ في التحميل', fr: 'Erreur serveur', en: 'Server Error' }, language)
+      : blockedBackendLabel;
 
   return (
     <div className="kh-role-page" data-testid="homepage-OWNER_HOME">
@@ -135,8 +152,36 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
           activeSection={activeGovernanceSection}
           onSelectSection={(sec) => setActiveGovernanceSection(sec)}
           onClose={() => setActiveGovernanceSection(null)}
-          onScopeVerified={(available) => setGovernanceBackendReady(available)}
+          onScopeVerified={(available) =>
+            setGovernanceBackendStatus(available ? 'READY' : 'BLOCKED_BACKEND')
+          }
         />
+      )}
+
+      {governanceBackendStatus === 'ERROR' && (
+        <div
+          role="alert"
+          data-testid="owner-governance-error-banner"
+          className="mb-4 rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-xs font-bold text-red-700 dark:text-red-300 flex flex-wrap items-center justify-between gap-2"
+        >
+          <span>
+            {pickText(
+              {
+                ar: 'تعذر التحقق من جاهزية وحدة حوكمة الحسابات عبر الخادم.',
+                fr: 'Impossible de vérifier la disponibilité du module de gouvernance.',
+                en: 'Unable to verify Account Governance backend readiness from server.',
+              },
+              language,
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => setGovernanceRetrySeq((s) => s + 1)}
+            className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
       )}
 
       {governancePanel && (

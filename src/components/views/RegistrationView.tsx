@@ -10,7 +10,7 @@ import {
   submitEnrollmentApplication,
   type SubmitEnrollmentReceipt,
 } from '../../lib/schoolOperations';
-import { CheckCircle2, Send, AlertCircle, FileText } from 'lucide-react';
+import { CheckCircle2, Send, AlertCircle, FileText, Lock } from 'lucide-react';
 
 const REVIEW_DECISIONS: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'>[] = [
   'UNDER_REVIEW',
@@ -26,6 +26,8 @@ export const RegistrationView: React.FC = () => {
     currentUser,
     enrollmentApplications,
     enrollmentsStatus,
+    enrollmentsError,
+    isHydratingSchoolData,
     language,
     refreshSchoolData,
     t,
@@ -57,54 +59,60 @@ export const RegistrationView: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setErrorMsg('');
     setSubmitted(false);
     setReceipt(null);
     setSubmitting(true);
 
-    const res = await submitEnrollmentApplication({
-      studentFullName: formData.childName,
-      birthDate: formData.birthDate,
-      desiredLevelCode: formData.level,
-      parentFullName: formData.parentName,
-      phone: formData.phone,
-      email: formData.email,
-      notes: formData.notes,
-    });
+    try {
+      const res = await submitEnrollmentApplication({
+        studentFullName: formData.childName,
+        birthDate: formData.birthDate,
+        desiredLevelCode: formData.level,
+        parentFullName: formData.parentName,
+        phone: formData.phone,
+        email: formData.email,
+        notes: formData.notes,
+      });
 
-    setSubmitting(false);
+      if (!res.ok || !res.data) {
+        setErrorMsg(
+          res.status === 'BLOCKED_BACKEND'
+            ? pickText(
+                {
+                  ar: 'بوابة التسجيل بانتظار تفعيل جدول طلبات الالتحاق في Supabase. لم يتم تسجيل أي طلب وهمي.',
+                  fr: 'Le service d’inscription en ligne attend le déploiement du contrat Supabase. Aucune demande fictive enregistrée.',
+                  en: 'Enrollment submission is awaiting verified Supabase backend deployment. No fake request was stored.',
+                },
+                language,
+              )
+            : res.errorMessage || res.errorCode || t('error'),
+        );
+        return;
+      }
 
-    if (!res.ok || !res.data) {
-      setErrorMsg(
-        res.status === 'BLOCKED_BACKEND'
-          ? pickText(
-              {
-                ar: 'بوابة التسجيل بانتظار تفعيل جدول طلبات الالتحاق في Supabase. لم يتم تسجيل أي طلب وهمي.',
-                fr: 'Le service d’inscription en ligne attend le déploiement du contrat Supabase. Aucune demande fictive enregistrée.',
-                en: 'Enrollment submission is awaiting verified Supabase backend deployment. No fake request was stored.',
-              },
-              language,
-            )
-          : res.errorMessage || res.errorCode || t('error'),
-      );
-      return;
+      setReceipt(res.data);
+      setSubmitted(true);
+      setFormData({
+        childName: '',
+        birthDate: '',
+        level: 'CP',
+        parentName: '',
+        phone: '',
+        email: '',
+        notes: '',
+      });
+      await refreshSchoolData();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : t('error'));
+    } finally {
+      setSubmitting(false);
     }
-
-    setReceipt(res.data);
-    setSubmitted(true);
-    setFormData({
-      childName: '',
-      birthDate: '',
-      level: 'CP',
-      parentName: '',
-      phone: '',
-      email: '',
-      notes: '',
-    });
-    await refreshSchoolData();
   };
 
   const handleReviewSave = async (appId: string, currentStatus: EnrollmentApplicationStatus, expectedVersion: number) => {
+    if (reviewingId || enrollmentsStatus === 'UNAUTHORIZED') return;
     setReviewFeedback(null);
     setReviewingId(appId);
     const fallbackDecision: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'> =
@@ -112,30 +120,38 @@ export const RegistrationView: React.FC = () => {
     const decision = reviewDecisionMap[appId] ?? fallbackDecision;
     const reviewNote = reviewNoteMap[appId] ?? '';
 
-    const res = await reviewEnrollmentApplication({
-      applicationId: appId,
-      decision,
-      reviewNote,
-      expectedVersion,
-    });
-    setReviewingId(null);
+    try {
+      const res = await reviewEnrollmentApplication({
+        applicationId: appId,
+        decision,
+        reviewNote,
+        expectedVersion,
+      });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        setReviewFeedback({
+          type: 'error',
+          text: res.errorMessage || res.errorCode || t('error'),
+        });
+        return;
+      }
+
+      setReviewFeedback({
+        type: 'success',
+        text: pickText(
+          { ar: 'تم تحديث حالة ملف التسجيل بنجاح.', fr: 'Dossier mis à jour.', en: 'Enrollment application updated.' },
+          language,
+        ),
+      });
+      await refreshSchoolData();
+    } catch (err) {
       setReviewFeedback({
         type: 'error',
-        text: res.errorMessage || res.errorCode || t('error'),
+        text: err instanceof Error ? err.message : t('error'),
       });
-      return;
+    } finally {
+      setReviewingId(null);
     }
-
-    setReviewFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم تحديث حالة ملف التسجيل بنجاح.', fr: 'Dossier mis à jour.', en: 'Enrollment application updated.' },
-        language,
-      ),
-    });
-    await refreshSchoolData();
   };
 
   return (
@@ -186,6 +202,7 @@ export const RegistrationView: React.FC = () => {
           {errorMsg && (
             <div
               data-testid="registration-error-banner"
+              role="alert"
               className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2"
             >
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -318,11 +335,14 @@ export const RegistrationView: React.FC = () => {
                     )}
               </h2>
             </div>
-            <span className="text-xs font-bold text-gray-500">{enrollmentApplications.length}</span>
+            <span className="text-xs font-bold text-gray-500">
+              {enrollmentsStatus === 'UNAUTHORIZED' ? 0 : enrollmentApplications.length}
+            </span>
           </div>
 
           {reviewFeedback && (
             <div
+              role={reviewFeedback.type === 'error' ? 'alert' : 'status'}
               className={`p-3 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
                 reviewFeedback.type === 'error'
                   ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900'
@@ -334,31 +354,104 @@ export const RegistrationView: React.FC = () => {
             </div>
           )}
 
-          {enrollmentsStatus === 'BLOCKED_BACKEND' && enrollmentApplications.length === 0 ? (
-            <EmptyFeatureState
-              state="BLOCKED_BACKEND"
-              title={pickText(
-                { ar: 'سجل طلبات التسجيل بانتظار التفعيل في الخادم', fr: 'Suivi des inscriptions en attente du serveur', en: 'Enrollment Queue Pending Backend Deployment' },
-                language,
-              )}
-              description={pickText(
-                {
-                  ar: 'الجدول enrollment_applications غير منشور بعد في Supabase.',
-                  fr: 'La table enrollment_applications n’est pas encore déployée sur Supabase.',
-                  en: 'public.enrollment_applications is awaiting deployment on Supabase.',
-                },
-                language,
-              )}
-            />
-          ) : enrollmentApplications.length === 0 ? (
-            <p className="text-xs text-gray-500 py-4 text-center">
-              {pickText(
-                { ar: 'لا توجد طلبات تسجيل مسجلة حالياً.', fr: 'Aucune demande d’inscription enregistrée.', en: 'No enrollment applications found.' },
-                language,
-              )}
-            </p>
-          ) : (
-            <div className="space-y-3">
+          {/* Always show UNAUTHORIZED / ERROR banners even when cached records exist */}
+          {enrollmentsStatus === 'UNAUTHORIZED' && (
+            <div
+              data-testid="enrollments-unauthorized-state"
+              role="alert"
+              className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200"
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <Lock className="w-4 h-4 shrink-0" />
+                <span>
+                  {enrollmentsError ||
+                    pickText(
+                      {
+                        ar: 'غير مصرح بالوصول إلى ملفات طلبات التسجيل.',
+                        fr: 'Accès non autorisé aux dossiers d’inscription.',
+                        en: 'Not authorized to access enrollment applications.',
+                      },
+                      language,
+                    )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
+          )}
+
+          {enrollmentsStatus === 'ERROR' && (
+            <div
+              data-testid="enrollments-error-state"
+              role="alert"
+              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-red-800 dark:text-red-300"
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  {enrollmentsError ||
+                    pickText(
+                      {
+                        ar: 'تعذر تحميل ملفات التسجيل من الخادم.',
+                        fr: 'Impossible de charger les dossiers d’inscription.',
+                        en: 'Failed to load enrollment applications from server.',
+                      },
+                      language,
+                    )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
+          )}
+
+          {enrollmentsStatus !== 'UNAUTHORIZED' && (
+            <>
+              {isHydratingSchoolData && enrollmentApplications.length === 0 ? (
+                <div
+                  data-testid="enrollments-loading-state"
+                  className="text-xs font-bold text-gray-500 py-6 text-center"
+                >
+                  {t('loading')}
+                </div>
+              ) : enrollmentsStatus === 'BLOCKED_BACKEND' && enrollmentApplications.length === 0 ? (
+                <EmptyFeatureState
+                  state="BLOCKED_BACKEND"
+                  title={pickText(
+                    { ar: 'سجل طلبات التسجيل بانتظار التفعيل في الخادم', fr: 'Suivi des inscriptions en attente du serveur', en: 'Enrollment Queue Pending Backend Deployment' },
+                    language,
+                  )}
+                  description={pickText(
+                    {
+                      ar: 'الجدول enrollment_applications غير منشور بعد في Supabase.',
+                      fr: 'La table enrollment_applications n’est pas encore déployée sur Supabase.',
+                      en: 'public.enrollment_applications is awaiting deployment on Supabase.',
+                    },
+                    language,
+                  )}
+                />
+              ) : enrollmentApplications.length === 0 && enrollmentsStatus === 'READY' ? (
+                <p
+                  data-testid="enrollments-empty-state"
+                  className="text-xs text-gray-500 py-4 text-center"
+                >
+                  {pickText(
+                    { ar: 'لا توجد طلبات تسجيل مسجلة حالياً.', fr: 'Aucune demande d’inscription enregistrée.', en: 'No enrollment applications found.' },
+                    language,
+                  )}
+                </p>
+              ) : enrollmentApplications.length > 0 ? (
+                <div className="space-y-3">
               {enrollmentApplications.map((app) => {
                 const defaultDecision: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'> =
                   app.status !== 'DRAFT' && app.status !== 'SUBMITTED' ? app.status : 'UNDER_REVIEW';
@@ -433,7 +526,9 @@ export const RegistrationView: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       )}

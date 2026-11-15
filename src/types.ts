@@ -412,3 +412,16 @@ export interface UserPreferencesState {
   soundMuted: boolean;
   vibrationEnabled: boolean;
 }
+
+export interface PublicContentEntry {
+  slug: string;
+  titleAr: string;
+  titleFr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyFr: string;
+  bodyEn: string;
+  isPublished: boolean;
+  updatedAt?: string;
+}
+

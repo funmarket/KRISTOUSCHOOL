@@ -9,7 +9,7 @@ import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18
 
 export interface SchoolStaffHomePageProps {
   setActiveTab: (tab: string) => void;
-  onNavigateToSubTab?: (tab: 'community' | 'directory', subTab: string) => void;
+  onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
 }
 
 export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
@@ -84,7 +84,11 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
           actionLabel={openActionLabel}
           icon="📅"
           tone="yellow"
-          onClick={() => setActiveTab('announcements')}
+          onClick={() =>
+            onNavigateToSubTab
+              ? onNavigateToSubTab('announcements', 'calendar')
+              : setActiveTab('announcements')
+          }
         />
 
         <HomeShortcutCard

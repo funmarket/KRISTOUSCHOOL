@@ -41,7 +41,19 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   onOpenAuth,
   onNavigateToSubTab,
 }) => {
-  const { language, t, announcements, broadcastsStatus, foodMenu, currentUser } = useApp();
+  const {
+    language,
+    t,
+    announcements,
+    broadcastsStatus,
+    broadcastsError,
+    foodMenu,
+    foodMenuStatus,
+    foodMenuError,
+    publicContent,
+    currentUser,
+    refreshSchoolData,
+  } = useApp();
   const exploreSectionRef = useRef<HTMLDivElement | null>(null);
   const levelsSectionRef = useRef<HTMLDivElement | null>(null);
   const activitiesSectionRef = useRef<HTMLDivElement | null>(null);
@@ -62,17 +74,48 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     message: string;
   } | null>(null);
 
+  const broadcastsHasError = broadcastsStatus === 'ERROR' || broadcastsStatus === 'UNAUTHORIZED';
+  const foodMenuHasError = foodMenuStatus === 'ERROR' || foodMenuStatus === 'UNAUTHORIZED';
+
   // The signed-in feed may contain internal notices and drafts. Public Site
-  // requires explicit publication; retain the existing labelled public demos.
-  const publicAnnouncements = announcements.filter(
-    (a) =>
-      !a.classId &&
-      (a.isDemoPreview === true ||
-        (a.isPublic === true &&
-          a.audienceScope === 'PUBLIC_SITE' &&
-          'status' in a &&
-          a.status === 'PUBLISHED')),
-  );
+  // requires explicit publication; retain the existing labelled public demos
+  // ONLY when not in ERROR / UNAUTHORIZED state.
+  const publicAnnouncements = broadcastsHasError
+    ? []
+    : announcements.filter(
+        (a) =>
+          !a.classId &&
+          (a.isDemoPreview === true ||
+            (a.isPublic === true &&
+              a.audienceScope === 'PUBLIC_SITE' &&
+              'status' in a &&
+              a.status === 'PUBLISHED')),
+      );
+
+  const isAnnouncementsDemo =
+    !broadcastsHasError &&
+    (broadcastsStatus === 'BLOCKED_BACKEND' || publicAnnouncements.some((a) => a.isDemoPreview === true));
+  const isMenuDemo =
+    !foodMenuHasError &&
+    (foodMenu.isDemoPreview === true || foodMenuStatus === 'BLOCKED_BACKEND');
+
+  const pickPublicEntry = (slug: string, field: 'title' | 'body'): string | null => {
+    const entry = publicContent?.[slug];
+    if (!entry || !entry.isPublished) return null;
+    const raw =
+      field === 'title'
+        ? language === 'ar'
+          ? entry.titleAr
+          : language === 'fr'
+          ? entry.titleFr
+          : entry.titleEn
+        : language === 'ar'
+        ? entry.bodyAr
+        : language === 'fr'
+        ? entry.bodyFr
+        : entry.bodyEn;
+    return raw && raw.trim() ? raw.trim() : null;
+  };
 
   const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +258,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
             <h1>
               Kristou <strong>School</strong>
             </h1>
-            <p>{t('heroDescription')}</p>
+            <p>{pickPublicEntry('hero', 'body') ?? t('heroDescription')}</p>
             <div className="kr-actions">
               <button
                 type="button"
@@ -271,7 +314,11 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               </h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="kr-chip" data-testid="announcements-preview-badge">
-                  {t('demoPreview')}
+                  {broadcastsHasError
+                    ? t('error')
+                    : isAnnouncementsDemo
+                    ? t('demoPreview')
+                    : pickText({ ar: 'منشور', fr: 'Publié', en: 'Published' }, language)}
                 </span>
                 <button
                   type="button"
@@ -282,6 +329,34 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                 </button>
               </div>
             </div>
+            {broadcastsHasError && (
+              <div
+                role="alert"
+                data-testid="public-announcements-error-banner"
+                className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 flex items-center justify-between gap-2"
+              >
+                <span>
+                  {broadcastsError ||
+                    pickText(
+                      {
+                        ar: 'تعذر تحميل الإعلانات العامة من الخادم.',
+                        fr: 'Impossible de charger les annonces publiques.',
+                        en: 'Unable to load live public announcements.',
+                      },
+                      language,
+                    )}
+                </span>
+                {typeof refreshSchoolData === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => void refreshSchoolData()}
+                    className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
+                  >
+                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  </button>
+                )}
+              </div>
+            )}
             {publicAnnouncements.length ? (
               publicAnnouncements.slice(0, 2).map((ann, index) => (
                 <article className="kr-announcement" key={ann.id}>
@@ -295,14 +370,15 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                     )}
                     <h3>{ann.title}</h3>
                     <time dateTime={ann.createdAt}>
-                      {new Date(ann.createdAt).toLocaleDateString()} • {t('demoPreview')}
+                      {new Date(ann.createdAt).toLocaleDateString()}
+                      {ann.isDemoPreview ? ` • ${t('demoPreview')}` : ''}
                     </time>
                     <p>{ann.body}</p>
                   </div>
                 </article>
               ))
             ) : (
-              <p>{t('noItems')}</p>
+              !broadcastsHasError && <p>{t('noItems')}</p>
             )}
           </section>
 
@@ -313,9 +389,39 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
               </h2>
               <span className="kr-chip">{t('canteenBrand')}</span>
             </div>
-            <p className="kr-week" data-testid="canteen-preview-badge">
-              {foodMenu.weekRange} • {t('demoPreview')}
-            </p>
+            {foodMenuHasError ? (
+              <div
+                role="alert"
+                data-testid="public-food-menu-error-banner"
+                className="my-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 flex items-center justify-between gap-2"
+              >
+                <span>
+                  {foodMenuError ||
+                    pickText(
+                      {
+                        ar: 'تعذر تحميل قائمة الطعام من الخادم.',
+                        fr: 'Impossible de charger le menu de la cantine.',
+                        en: 'Unable to load live canteen menu.',
+                      },
+                      language,
+                    )}
+                </span>
+                {typeof refreshSchoolData === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => void refreshSchoolData()}
+                    className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
+                  >
+                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="kr-week" data-testid="canteen-preview-badge">
+                {foodMenu.weekRange}
+                {isMenuDemo ? ` • ${t('demoPreview')}` : ''}
+              </p>
+            )}
             <div className="kr-meals">
               <img src={`${ASSET}canteen-meal.png`} alt={t('canteenImageAlt')} />
               <div>
@@ -471,24 +577,26 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           <article className="kh-info-panel">
             <div className="space-y-2">
               <h2 className="kh-info-panel-title">
-                {pickText(
-                  {
-                    ar: 'حول مدرسة كريستو (KRISTOU)',
-                    fr: 'À propos de KRISTOU',
-                    en: 'About KRISTOU',
-                  },
-                  language,
-                )}
+                {pickPublicEntry('about', 'title') ??
+                  pickText(
+                    {
+                      ar: 'حول مدرسة كريستو (KRISTOU)',
+                      fr: 'À propos de KRISTOU',
+                      en: 'About KRISTOU',
+                    },
+                    language,
+                  )}
               </h2>
               <p className="kh-info-panel-body">
-                {pickText(
-                  {
-                    ar: 'تجدون هنا التقديم المعتمد للمدرسة، مقاربتنا التربوية، ومعلومات التواصل العامة لمدرسة كريستو في تونس. يتم نشر المعطيات العامة كمحتوى مدرسي معتمد دون كشف أي بيانات خاصة بالتلاميذ.',
-                    fr: 'Présentation approuvée par l’école, approche pédagogique et informations de contact générales figurent ici. Les données publiques sont gérées indépendamment des dossiers privés des élèves.',
-                    en: 'School-approved introduction, educational approach and contact information live here. Public facts are maintained as school content rather than inferred from private data.',
-                  },
-                  language,
-                )}
+                {pickPublicEntry('about', 'body') ??
+                  pickText(
+                    {
+                      ar: 'تجدون هنا التقديم المعتمد للمدرسة، مقاربتنا التربوية، ومعلومات التواصل العامة لمدرسة كريستو في تونس. يتم نشر المعطيات العامة كمحتوى مدرسي معتمد دون كشف أي بيانات خاصة بالتلاميذ.',
+                      fr: 'Présentation approuvée par l’école, approche pédagogique et informations de contact générales figurent ici. Les données publiques sont gérées indépendamment des dossiers privés des élèves.',
+                      en: 'School-approved introduction, educational approach and contact information live here. Public facts are maintained as school content rather than inferred from private data.',
+                    },
+                    language,
+                  )}
               </p>
             </div>
           </article>
@@ -799,7 +907,20 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
             },
             language,
           )}
-          subtitle={t('demoPreview')}
+          subtitle={
+            broadcastsHasError
+              ? t('error')
+              : isAnnouncementsDemo
+              ? t('demoPreview')
+              : pickText(
+                  {
+                    ar: 'بلاغات المدرسة المعتمدة',
+                    fr: 'Annonces officielles publiées',
+                    en: 'Published school notices',
+                  },
+                  language,
+                )
+          }
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {publicAnnouncements.map((item) => (
@@ -807,7 +928,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="kh-info-chip">
-                      {item.createdAt} • {t('demoPreview')}
+                      {item.createdAt}
+                      {item.isDemoPreview ? ` • ${t('demoPreview')}` : ''}
                     </span>
                     <span className="text-xs font-bold text-slate-500">{item.authorName}</span>
                   </div>
@@ -823,14 +945,17 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
       {/* Public Contact & Location — using approved location and neutral verification notice */}
       <div ref={contactSectionRef}>
         <HomeSection
-          title={pickText(
-            {
-              ar: `معلومات الاتصال — ${t('school')}`,
-              fr: `Coordonnées — ${t('school')}`,
-              en: `Contact & Location — ${t('school')}`,
-            },
-            language,
-          )}
+          title={
+            pickPublicEntry('contact', 'title') ??
+            pickText(
+              {
+                ar: `معلومات الاتصال — ${t('school')}`,
+                fr: `Coordonnées — ${t('school')}`,
+                en: `Contact & Location — ${t('school')}`,
+              },
+              language,
+            )
+          }
         >
           <div className="kh-info-panel">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
@@ -847,14 +972,15 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                   📞 {pickText({ ar: 'الاستقبال والإدارة', fr: 'Accueil & Secrétariat', en: 'Reception & Office' }, language)}
                 </strong>
                 <span className="kh-info-panel-body">
-                  {pickText(
-                    {
-                      ar: 'بيانات الهاتف والعنوان التفصيلي تُنشر بعد التحديث الرسمي من إدارة المدرسة.',
-                      fr: 'Les coordonnées téléphoniques et l’adresse précise sont publiées après validation officielle par la direction.',
-                      en: 'Official street address and reception telephone details are published upon school administration verification.',
-                    },
-                    language,
-                  )}
+                  {pickPublicEntry('contact', 'body') ??
+                    pickText(
+                      {
+                        ar: 'بيانات الهاتف والعنوان التفصيلي تُنشر بعد التحديث الرسمي من إدارة المدرسة.',
+                        fr: 'Les coordonnées téléphoniques et l’adresse précise sont publiées après validation officielle par la direction.',
+                        en: 'Official street address and reception telephone details are published upon school administration verification.',
+                      },
+                      language,
+                    )}
                 </span>
               </div>
               <div>

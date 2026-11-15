@@ -29,10 +29,17 @@ import { ClassesManagementView } from './components/views/ClassesManagementView'
 import { RegistrationView } from './components/views/RegistrationView';
 
 function MainLayout() {
-  const { currentUser, classRosters, classesBackendStatus, refreshSchoolData } = useApp();
+  const {
+    currentUser,
+    classRosters,
+    classesBackendStatus,
+    isHydratingSchoolData,
+    refreshSchoolData,
+  } = useApp();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [communitySubTab, setCommunitySubTab] = useState<CommunitySubTab>('announcements');
   const [directorySubTab, setDirectorySubTab] = useState<DirectorySubTab>('teachers');
+  const [announcementsSubTab, setAnnouncementsSubTab] = useState<'broadcasts' | 'calendar'>('broadcasts');
   const [oversightHomePage, setOversightHomePage] = useState<HomePageKey | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
@@ -43,13 +50,19 @@ function MainLayout() {
 
   const handleSetTab = (nextTab: string) => {
     if (canAccessAppTab(currentUser, nextTab as AppTab)) {
+      if (nextTab === 'announcements') {
+        setAnnouncementsSubTab('broadcasts');
+      }
       setActiveTab(nextTab);
     } else {
       setActiveTab('home');
     }
   };
 
-  const handleNavigateToSubTab = (tab: 'community' | 'directory', subTab: string) => {
+  const handleNavigateToSubTab = (
+    tab: 'community' | 'directory' | 'announcements',
+    subTab: string,
+  ) => {
     if (tab === 'community') {
       if (!canAccessAppTab(currentUser, 'community')) {
         setActiveTab('home');
@@ -57,6 +70,16 @@ function MainLayout() {
       }
       setCommunitySubTab(subTab as CommunitySubTab);
       setActiveTab('community');
+      return;
+    }
+
+    if (tab === 'announcements') {
+      if (!canAccessAppTab(currentUser, 'announcements')) {
+        setActiveTab('home');
+        return;
+      }
+      setAnnouncementsSubTab(subTab === 'calendar' ? 'calendar' : 'broadcasts');
+      setActiveTab('announcements');
       return;
     }
 
@@ -74,16 +97,23 @@ function MainLayout() {
     return map;
   }, [classRosters]);
 
-  const mappedClassesStatus =
-    classesBackendStatus === 'READY'
-      ? 'READY'
-      : classesBackendStatus === 'ERROR'
-      ? 'ERROR'
-      : 'BACKEND_NOT_IMPLEMENTED';
+  const mappedClassesStatus = isHydratingSchoolData
+    ? 'LOADING'
+    : classesBackendStatus === 'READY'
+    ? 'READY'
+    : classesBackendStatus === 'UNAUTHORIZED'
+    ? 'UNAUTHORIZED'
+    : classesBackendStatus === 'ERROR'
+    ? 'ERROR'
+    : 'BACKEND_NOT_IMPLEMENTED';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] text-gray-900 dark:text-gray-100 flex flex-col transition-colors selection:bg-blue-600 selection:text-white">
-      <Navbar activeTab={activeTab} setActiveTab={handleSetTab} />
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={handleSetTab}
+        onNavigateToSubTab={handleNavigateToSubTab}
+      />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
         {activeTab === 'home' && (
@@ -106,7 +136,7 @@ function MainLayout() {
 
         {activeTab === 'announcements' &&
           (canAccessAppTab(currentUser, 'announcements') ? (
-            <GlobalAnnouncementsCalendarView />
+            <GlobalAnnouncementsCalendarView initialSubTab={announcementsSubTab} />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}

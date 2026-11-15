@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { pickText } from '../../i18n/homepages';
 import { canAccessAppTab } from '../homepages/homepageAccess';
@@ -9,8 +9,9 @@ import {
   sendOperationalMessage,
   SHORT_MESSAGE_MAX_CHARS,
 } from '../../lib/schoolContent';
+import { reconcileSelectedRecipientId } from '../../lib/appStateGuards';
 import { MessageRecipientOption } from '../../types';
-import { MessageSquare, Send, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import { MessageSquare, Send, AlertCircle, CheckCircle2, Plus, Lock } from 'lucide-react';
 
 export const MessagesView: React.FC = () => {
   const {
@@ -18,11 +19,15 @@ export const MessagesView: React.FC = () => {
     language,
     messages,
     messagesStatus,
+    messagesError,
+    isHydratingSchoolData,
     refreshSchoolData,
     t,
   } = useApp();
 
   const [recipients, setRecipients] = useState<MessageRecipientOption[]>([]);
+  const [recipientsError, setRecipientsError] = useState<string | null>(null);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
   const [recipientId, setRecipientId] = useState('');
   const [subject, setSubject] = useState('');
   const [newContent, setNewContent] = useState('');
@@ -33,24 +38,105 @@ export const MessagesView: React.FC = () => {
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const isAuthorized = canAccessAppTab(currentUser, 'messages');
+  const isBackendUnauthorized = messagesStatus === 'UNAUTHORIZED';
+  const identityKey = `${currentUser?.id ?? 'anon'}::${currentUser?.accountStatus ?? 'none'}`;
+
+  const mountedRef = useRef(true);
+  const recipientsGenRef = useRef(0);
+  const activeIdentityRef = useRef(identityKey);
+  activeIdentityRef.current = identityKey;
 
   useEffect(() => {
-    if (!isAuthorized) return;
-    void listApprovedMessageRecipients().then((res) => {
-      if (res.ok && res.data) {
-        setRecipients(res.data);
-        if (res.data.length > 0 && !recipientId) {
-          setRecipientId(res.data[0].id);
-        }
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      recipientsGenRef.current += 1;
+    };
+  }, []);
+
+  const loadRecipients = useCallback(async () => {
+    if (!isAuthorized || !currentUser || currentUser.accountStatus !== 'APPROVED' || isBackendUnauthorized) {
+      recipientsGenRef.current += 1;
+      setRecipients([]);
+      setRecipientId('');
+      setRecipientsError(null);
+      setLoadingRecipients(false);
+      return;
+    }
+
+    const reqGen = ++recipientsGenRef.current;
+    const capturedIdentity = activeIdentityRef.current;
+    setLoadingRecipients(true);
+
+    try {
+      const res = await listApprovedMessageRecipients();
+      if (
+        !mountedRef.current ||
+        reqGen !== recipientsGenRef.current ||
+        activeIdentityRef.current !== capturedIdentity
+      ) {
+        return;
       }
-    });
-  }, [isAuthorized, recipientId]);
+
+      if (res.ok && res.data) {
+        setRecipientsError(null);
+        setRecipients(res.data);
+        setRecipientId((prev) => reconcileSelectedRecipientId(prev, res.data!));
+      } else if (res.status === 'UNAUTHORIZED') {
+        setRecipients([]);
+        setRecipientId('');
+        setRecipientsError(res.errorMessage || res.errorCode || t('unauthorized'));
+      } else if (res.status !== 'BLOCKED_BACKEND') {
+        setRecipientsError(res.errorMessage || res.errorCode || t('error'));
+      } else {
+        setRecipientsError(null);
+      }
+    } catch (err) {
+      if (
+        mountedRef.current &&
+        reqGen === recipientsGenRef.current &&
+        activeIdentityRef.current === capturedIdentity
+      ) {
+        setRecipientsError(err instanceof Error ? err.message : t('error'));
+      }
+    } finally {
+      if (
+        mountedRef.current &&
+        reqGen === recipientsGenRef.current &&
+        activeIdentityRef.current === capturedIdentity
+      ) {
+        setLoadingRecipients(false);
+      }
+    }
+  }, [currentUser, isAuthorized, isBackendUnauthorized, t]);
+
+  // Reset obsolete recipient/thread state on identity or authority transitions, then reload
+  useEffect(() => {
+    recipientsGenRef.current += 1;
+    setRecipients([]);
+    setRecipientId('');
+    setRecipientsError(null);
+    setSelectedThreadId('');
+    setSubject('');
+    setNewContent('');
+    setReplyText('');
+    setFeedback(null);
+    setShowCompose(false);
+
+    if (isAuthorized && currentUser?.accountStatus === 'APPROVED' && !isBackendUnauthorized) {
+      void loadRecipients();
+    }
+  }, [identityKey, isAuthorized, isBackendUnauthorized, currentUser?.accountStatus, loadRecipients]);
 
   useEffect(() => {
+    if (isBackendUnauthorized) {
+      setSelectedThreadId('');
+      return;
+    }
     if (messages.length > 0 && !messages.some((m) => m.id === selectedThreadId)) {
       setSelectedThreadId(messages[0].id);
     }
-  }, [messages, selectedThreadId]);
+  }, [isBackendUnauthorized, messages, selectedThreadId]);
 
   if (!isAuthorized) {
     return (
@@ -69,41 +155,66 @@ export const MessagesView: React.FC = () => {
     );
   }
 
-  const activeThread = messages.find((m) => m.id === selectedThreadId) ?? null;
+  const activeThread = !isBackendUnauthorized
+    ? messages.find((m) => m.id === selectedThreadId) ?? null
+    : null;
 
   const handleSendNew = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || isBackendUnauthorized) return;
+    const capturedIdentity = activeIdentityRef.current;
     setFeedback(null);
     setSubmitting(true);
-    const res = await sendOperationalMessage(recipientId, subject, newContent);
-    setSubmitting(false);
-    if (!res.ok) {
-      setFeedback({ type: 'error', text: res.errorMessage || t('error') });
-      return;
-    }
-    setSubject('');
-    setNewContent('');
-    setShowCompose(false);
-    setFeedback({ type: 'success', text: t('success') });
-    await refreshSchoolData();
-    if (res.data?.threadId) {
-      setSelectedThreadId(res.data.threadId);
+    try {
+      const res = await sendOperationalMessage(recipientId, subject, newContent);
+      if (!mountedRef.current || activeIdentityRef.current !== capturedIdentity) return;
+      if (!res.ok) {
+        setFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+      setSubject('');
+      setNewContent('');
+      setShowCompose(false);
+      setFeedback({ type: 'success', text: t('success') });
+      await refreshSchoolData();
+      if (mountedRef.current && activeIdentityRef.current === capturedIdentity && res.data?.threadId) {
+        setSelectedThreadId(res.data.threadId);
+      }
+    } catch (err) {
+      if (mountedRef.current && activeIdentityRef.current === capturedIdentity) {
+        setFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+      }
+    } finally {
+      if (mountedRef.current) {
+        setSubmitting(false);
+      }
     }
   };
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeThread) return;
+    if (!activeThread || submitting || isBackendUnauthorized) return;
+    const capturedIdentity = activeIdentityRef.current;
     setFeedback(null);
     setSubmitting(true);
-    const res = await replyOperationalThread(activeThread.id, replyText);
-    setSubmitting(false);
-    if (!res.ok) {
-      setFeedback({ type: 'error', text: res.errorMessage || t('error') });
-      return;
+    try {
+      const res = await replyOperationalThread(activeThread.id, replyText);
+      if (!mountedRef.current || activeIdentityRef.current !== capturedIdentity) return;
+      if (!res.ok) {
+        setFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+        return;
+      }
+      setReplyText('');
+      await refreshSchoolData();
+    } catch (err) {
+      if (mountedRef.current && activeIdentityRef.current === capturedIdentity) {
+        setFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+      }
+    } finally {
+      if (mountedRef.current) {
+        setSubmitting(false);
+      }
     }
-    setReplyText('');
-    await refreshSchoolData();
   };
 
   return (
@@ -125,8 +236,9 @@ export const MessagesView: React.FC = () => {
         </div>
         <button
           type="button"
+          disabled={isBackendUnauthorized}
           onClick={() => setShowCompose((v) => !v)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
           <span>
@@ -137,6 +249,7 @@ export const MessagesView: React.FC = () => {
 
       {feedback && (
         <div
+          role={feedback.type === 'error' ? 'alert' : 'status'}
           className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
             feedback.type === 'error'
               ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
@@ -152,7 +265,7 @@ export const MessagesView: React.FC = () => {
         </div>
       )}
 
-      {showCompose && (
+      {!isBackendUnauthorized && showCompose && (
         <form
           onSubmit={handleSendNew}
           className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
@@ -160,13 +273,31 @@ export const MessagesView: React.FC = () => {
           <h2 className="font-bold text-sm text-gray-900 dark:text-white">
             {pickText({ ar: 'إرسال رسالة قصيرة', fr: 'Envoyer un message court', en: 'Send Short Message' }, language)}
           </h2>
+          {recipientsError && (
+            <div
+              role="alert"
+              className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 flex items-center justify-between gap-3"
+            >
+              <span>{recipientsError}</span>
+              <button
+                type="button"
+                onClick={() => void loadRecipients()}
+                className="px-3 py-1 rounded-lg bg-red-700 text-white font-bold text-[11px]"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select
               value={recipientId}
+              disabled={loadingRecipients}
               onChange={(e) => setRecipientId(e.target.value)}
               className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
             >
-              {recipients.length === 0 ? (
+              {loadingRecipients ? (
+                <option value="">{t('loading')}</option>
+              ) : recipients.length === 0 ? (
                 <option value="">
                   {pickText({ ar: 'لا يوجد مستلمون متاحون', fr: 'Aucun destinataire', en: 'No recipients available' }, language)}
                 </option>
@@ -202,7 +333,7 @@ export const MessagesView: React.FC = () => {
             </span>
             <button
               type="submit"
-              disabled={submitting || !recipientId}
+              disabled={submitting || !recipientId || loadingRecipients}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
@@ -212,7 +343,75 @@ export const MessagesView: React.FC = () => {
         </form>
       )}
 
-      {messagesStatus === 'BLOCKED_BACKEND' && messages.length === 0 ? (
+      {/* Always show UNAUTHORIZED or ERROR banners even when cached messages exist */}
+      {isBackendUnauthorized && (
+        <div
+          data-testid="messages-unauthorized-state"
+          role="alert"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              {messagesError ||
+                pickText(
+                  {
+                    ar: 'غير مصرح بالوصول إلى المحادثات التشغيلية. تم مسح البيانات الخاصة.',
+                    fr: 'Accès non autorisé à la messagerie opérationnelle. Données masquées.',
+                    en: 'Not authorized to access operational messages. Private threads cleared.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {messagesStatus === 'ERROR' && (
+        <div
+          data-testid="messages-error-state"
+          role="alert"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-red-800 dark:text-red-300"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {messagesError ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل المحادثات التشغيلية من الخادم.',
+                    fr: 'Impossible de charger les conversations depuis le serveur.',
+                    en: 'Failed to load operational message threads from server.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {!isBackendUnauthorized && isHydratingSchoolData && messages.length === 0 ? (
+        <div
+          data-testid="messages-loading-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500"
+        >
+          {t('loading')}
+        </div>
+      ) : !isBackendUnauthorized && messagesStatus === 'BLOCKED_BACKEND' && messages.length === 0 ? (
         <EmptyFeatureState
           state="BLOCKED_BACKEND"
           title={pickText(
@@ -232,12 +431,14 @@ export const MessagesView: React.FC = () => {
             language,
           )}
         />
-      ) : (
+      ) : !isBackendUnauthorized ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Thread List */}
           <div className="bg-white dark:bg-[#111111] p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2">
             {messages.length === 0 ? (
-              <p className="text-xs text-gray-500 text-center py-6">{t('noItems')}</p>
+              <p className="text-xs text-gray-500 text-center py-6">
+                {messagesStatus === 'READY' ? t('noItems') : ''}
+              </p>
             ) : (
               messages.map((thread) => (
                 <button
@@ -267,7 +468,7 @@ export const MessagesView: React.FC = () => {
             {!activeThread ? (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs gap-2">
                 <MessageSquare className="w-6 h-6" />
-                <span>{t('noItems')}</span>
+                <span>{messagesStatus === 'READY' ? t('noItems') : ''}</span>
               </div>
             ) : (
               <>
@@ -313,7 +514,7 @@ export const MessagesView: React.FC = () => {
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

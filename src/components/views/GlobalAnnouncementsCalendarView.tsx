@@ -8,26 +8,40 @@ import {
 } from '../homepages/homepageAccess';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
+import { ParentNotesPanel } from './Shared/ParentNotesPanel';
 import { publishSchoolBroadcast } from '../../lib/schoolContent';
 import { CANONICAL_SCHOOL_LEVELS } from '../../lib/schoolOperations';
 import { SchoolBroadcastItem } from '../../types';
-import { Megaphone, Calendar as CalendarIcon, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Megaphone, Calendar as CalendarIcon, Send, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 
-export const GlobalAnnouncementsCalendarView: React.FC = () => {
+export interface GlobalAnnouncementsCalendarViewProps {
+  initialSubTab?: 'broadcasts' | 'calendar';
+}
+
+export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalendarViewProps> = ({
+  initialSubTab = 'broadcasts',
+}) => {
   const {
     currentUser,
     language,
     broadcasts,
     broadcastsStatus,
+    broadcastsError,
     calendarEvents,
     calendarStatus,
+    calendarError,
+    isHydratingSchoolData,
     classRosters,
     classesList,
     refreshSchoolData,
     t,
   } = useApp();
 
-  const [subTab, setSubTab] = useState<'broadcasts' | 'calendar'>('broadcasts');
+  const [subTab, setSubTab] = useState<'broadcasts' | 'calendar'>(initialSubTab);
+
+  React.useEffect(() => {
+    setSubTab(initialSubTab);
+  }, [initialSubTab]);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [priority, setPriority] = useState<'NORMAL' | 'URGENT'>('NORMAL');
@@ -212,7 +226,7 @@ export const GlobalAnnouncementsCalendarView: React.FC = () => {
 
       {subTab === 'broadcasts' && (
         <div className="space-y-5">
-          {canBroadcast && (
+          {canBroadcast && broadcastsStatus !== 'UNAUTHORIZED' && (
             <form
               onSubmit={handlePublishBroadcast}
               className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4"
@@ -416,72 +430,151 @@ export const GlobalAnnouncementsCalendarView: React.FC = () => {
             </form>
           )}
 
-          {broadcastsStatus === 'BLOCKED_BACKEND' && broadcasts.length === 0 ? (
-            <EmptyFeatureState
-              state="BLOCKED_BACKEND"
-              title={pickText(
-                {
-                  ar: 'الإعلانات المدرسية بانتظار التفعيل في الخادم',
-                  fr: 'Annonces générales en attente du contrat serveur',
-                  en: 'School Broadcasts Pending Backend Deployment',
-                },
-                language,
-              )}
-              description={pickText(
-                {
-                  ar: 'جدول school_broadcasts غير منشور بعد في قاعدة بيانات Supabase.',
-                  fr: 'La table public.school_broadcasts n’est pas encore déployée sur Supabase.',
-                  en: 'public.school_broadcasts is awaiting deployment on Supabase.',
-                },
-                language,
-              )}
-            />
-          ) : broadcasts.length === 0 ? (
-            <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500">
-              {t('noItems')}
+          {broadcastsStatus === 'UNAUTHORIZED' && (
+            <div
+              data-testid="broadcasts-unauthorized-state"
+              role="alert"
+              className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200"
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <Lock className="w-4 h-4 shrink-0" />
+                <span>
+                  {broadcastsError ||
+                    pickText(
+                      {
+                        ar: 'غير مصرح بعرض الإعلانات المدرسية.',
+                        fr: 'Accès non autorisé aux annonces scolaires.',
+                        en: 'Not authorized to view school broadcasts.',
+                      },
+                      language,
+                    )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {broadcasts.map((ann) => (
-                <div
-                  key={ann.id}
-                  className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {ann.priority === 'URGENT' && (
-                        <span className="px-2 py-0.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-extrabold uppercase">
-                          {t('urgent')}
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold">
-                        {formatScopeBadge(ann)}
-                      </span>
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                        {ann.authorName}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(ann.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white">{ann.title}</h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{ann.body}</p>
+          )}
+
+          {broadcastsStatus === 'ERROR' && (
+            <div
+              data-testid="broadcasts-error-state"
+              role="alert"
+              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-red-800 dark:text-red-300"
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  {broadcastsError ||
+                    pickText(
+                      {
+                        ar: 'تعذر تحميل الإعلانات المدرسية من الخادم.',
+                        fr: 'Impossible de charger les annonces scolaires.',
+                        en: 'Failed to load school broadcasts from server.',
+                      },
+                      language,
+                    )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshSchoolData()}
+                className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            </div>
+          )}
+
+          {broadcastsStatus !== 'UNAUTHORIZED' && (
+            <>
+              {isHydratingSchoolData && broadcasts.length === 0 ? (
+                <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500">
+                  {t('loading')}
                 </div>
-              ))}
-            </div>
+              ) : broadcastsStatus === 'BLOCKED_BACKEND' && broadcasts.length === 0 ? (
+                <EmptyFeatureState
+                  state="BLOCKED_BACKEND"
+                  title={pickText(
+                    {
+                      ar: 'الإعلانات المدرسية بانتظار التفعيل في الخادم',
+                      fr: 'Annonces générales en attente du contrat serveur',
+                      en: 'School Broadcasts Pending Backend Deployment',
+                    },
+                    language,
+                  )}
+                  description={pickText(
+                    {
+                      ar: 'جدول school_broadcasts غير منشور بعد في قاعدة بيانات Supabase.',
+                      fr: 'La table public.school_broadcasts n’est pas encore déployée sur Supabase.',
+                      en: 'public.school_broadcasts is awaiting deployment on Supabase.',
+                    },
+                    language,
+                  )}
+                />
+              ) : broadcasts.length === 0 && broadcastsStatus === 'READY' ? (
+                <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500">
+                  {t('noItems')}
+                </div>
+              ) : broadcasts.length > 0 ? (
+                <div className="space-y-4">
+                  {broadcasts.map((ann) => (
+                    <div
+                      key={ann.id}
+                      className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {ann.priority === 'URGENT' && (
+                            <span className="px-2 py-0.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-extrabold uppercase">
+                              {t('urgent')}
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold">
+                            {formatScopeBadge(ann)}
+                          </span>
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                            {ann.authorName}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {new Date(ann.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-base text-gray-900 dark:text-white">{ann.title}</h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{ann.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       )}
 
       {subTab === 'calendar' && (
-        <SchoolCalendarPanel
-          events={calendarEvents}
-          backendStatus={calendarStatus}
-          classId={null}
-          canManage={canCalendar}
-          onRefresh={refreshSchoolData}
-        />
+        <div className="space-y-8">
+          <SchoolCalendarPanel
+            events={calendarEvents}
+            backendStatus={calendarStatus}
+            classId={null}
+            canManage={canCalendar}
+            canRespond={currentUser?.accountStatus === 'APPROVED'}
+            isLoading={isHydratingSchoolData}
+            errorMessage={calendarError}
+            onRefresh={refreshSchoolData}
+          />
+
+          {currentUser &&
+            currentUser.accountStatus === 'APPROVED' &&
+            canAccessAppTab(currentUser, 'notes') && (
+              <ParentNotesPanel embeddedUnderCalendar />
+            )}
+        </div>
       )}
     </div>
   );

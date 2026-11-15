@@ -16,7 +16,7 @@ import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18
 export interface HomePageResolverProps {
   setActiveTab: (tab: string) => void;
   onOpenAuth: (mode?: 'signin' | 'register') => void;
-  onNavigateToSubTab?: (tab: 'community' | 'directory', subTab: string) => void;
+  onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
   requestedHomePage?: HomePageKey | null;
   onInspectRoleHome?: (homeKey: HomePageKey | null) => void;
 }

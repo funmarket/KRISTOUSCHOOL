@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CommunitySubTab } from '../../types';
-import { canModerateCommunityUi } from '../homepages/homepageAccess';
+import { canAccessAppTab, canModerateCommunityUi } from '../homepages/homepageAccess';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
+import { ParentNotesPanel } from './Shared/ParentNotesPanel';
 import { pickText } from '../../i18n/homepages';
 import { createClassAnnouncement, createClassHomework } from '../../lib/schoolContent';
 import {
@@ -17,6 +18,7 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Lock,
 } from 'lucide-react';
 
 export interface ClassCommunityViewProps {
@@ -35,10 +37,14 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
     homeworkList,
     calendarEvents,
     calendarStatus,
+    calendarError,
     classDocuments,
     classGallery,
     classQuestions,
     communityStatus,
+    communityError,
+    isHydratingSchoolData,
+    isLoadingClassCommunity,
     addClassQuestion,
     replyClassQuestion,
     moderateClassQuestion,
@@ -334,8 +340,68 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
         </div>
       )}
 
+      {communityStatus === 'UNAUTHORIZED' && activeSubTab !== 'calendar' && (
+        <div
+          data-testid="community-unauthorized-banner"
+          role="alert"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              {communityError ||
+                pickText(
+                  {
+                    ar: 'غير مصرح بالوصول إلى بيانات هذا القسم.',
+                    fr: 'Accès non autorisé au contenu de cette classe.',
+                    en: 'Not authorized to access class community content.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {communityStatus === 'ERROR' && activeSubTab !== 'calendar' && (
+        <div
+          data-testid="community-error-banner"
+          role="alert"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-red-800 dark:text-red-300"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {communityError ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل محتوى مجتمع القسم من الخادم.',
+                    fr: 'Impossible de charger les données de la communauté de classe.',
+                    en: 'Failed to load class community data from server.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
       {/* Announcements Tab */}
-      {activeSubTab === 'announcements' && (
+      {activeSubTab === 'announcements' && communityStatus !== 'UNAUTHORIZED' && (
         <div className="space-y-4">
           {canModerate && activeClass && (
             <div className="space-y-3">
@@ -422,7 +488,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
       )}
 
       {/* Homework Tab */}
-      {activeSubTab === 'homework' && (
+      {activeSubTab === 'homework' && communityStatus !== 'UNAUTHORIZED' && (
         <div className="space-y-4">
           {canModerate && activeClass && (
             <div className="space-y-3">
@@ -517,19 +583,34 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
         </div>
       )}
 
-      {/* Calendar Tab */}
+      {/* Calendar Tab + Under-Calendar Private Parent Notes */}
       {activeSubTab === 'calendar' && (
-        <SchoolCalendarPanel
-          events={scopedCalendarEvents}
-          backendStatus={calendarStatus}
-          classId={activeClass?.id ?? null}
-          canManage={canModerate}
-          onRefresh={refreshSchoolData}
-        />
+        <div className="space-y-8">
+          <SchoolCalendarPanel
+            events={scopedCalendarEvents}
+            backendStatus={calendarStatus}
+            classId={activeClass?.id ?? null}
+            canManage={canModerate}
+            canRespond={currentUser?.accountStatus === 'APPROVED'}
+            isLoading={isHydratingSchoolData || isLoadingClassCommunity}
+            errorMessage={calendarError}
+            onRefresh={refreshSchoolData}
+          />
+
+          {currentUser &&
+            currentUser.accountStatus === 'APPROVED' &&
+            canAccessAppTab(currentUser, 'notes') && (
+              <ParentNotesPanel
+                classId={activeClass?.id ?? null}
+                classNameLabel={activeClass?.name ?? null}
+                embeddedUnderCalendar
+              />
+            )}
+        </div>
       )}
 
       {/* Class Questions Tab */}
-      {activeSubTab === 'questions' && (
+      {activeSubTab === 'questions' && communityStatus !== 'UNAUTHORIZED' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-2">{t('askClassmates')}</h3>
@@ -556,7 +637,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                 </span>
                 <button
                   type="submit"
-                  disabled={postingQuestion}
+                  disabled={postingQuestion || !activeClass}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -641,7 +722,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
       )}
 
       {/* Documents Tab */}
-      {activeSubTab === 'documents' && (
+      {activeSubTab === 'documents' && communityStatus !== 'UNAUTHORIZED' && (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
             <FileText className="w-4 h-4" />
@@ -696,7 +777,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
       )}
 
       {/* Gallery Tab */}
-      {activeSubTab === 'gallery' && (
+      {activeSubTab === 'gallery' && communityStatus !== 'UNAUTHORIZED' && (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
             <ImageIcon className="w-4 h-4" />
@@ -724,22 +805,17 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                 </figure>
               ))}
             </div>
-          ) : (
+          ) : communityStatus === 'BLOCKED_BACKEND' ? (
             <div className="space-y-3">
               <p className="text-xs text-gray-500">
-                {communityStatus === 'BLOCKED_BACKEND'
-                  ? pickText(
-                      {
-                        ar: 'معرض صور القسم بانتظار التفعيل في الخادم — يتم عرض صور الحرم المدرسي المعتمدة فقط.',
-                        fr: 'La galerie de classe attend le contrat serveur — aperçu campus affiché.',
-                        en: 'Class gallery is awaiting backend deployment — verified campus photos shown below.',
-                      },
-                      language,
-                    )
-                  : pickText(
-                      { ar: 'لا توجد صور مضافة لهذا القسم حالياً.', fr: 'Aucune photo publiée pour cette classe.', en: 'No class gallery photos posted yet.' },
-                      language,
-                    )}
+                {pickText(
+                  {
+                    ar: 'معرض صور القسم بانتظار التفعيل في الخادم — يتم عرض صور الحرم المدرسي المعتمدة فقط.',
+                    fr: 'La galerie de classe attend le contrat serveur — aperçu campus affiché.',
+                    en: 'Class gallery is awaiting backend deployment — verified campus photos shown below.',
+                  },
+                  language,
+                )}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
@@ -756,6 +832,17 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                 ))}
               </div>
             </div>
+          ) : (
+            <p className="text-xs text-gray-500">
+              {pickText(
+                {
+                  ar: 'لا توجد صور مضافة لهذا القسم حالياً.',
+                  fr: 'Aucune photo publiée pour cette classe.',
+                  en: 'No class gallery photos posted yet.',
+                },
+                language,
+              )}
+            </p>
           )}
         </div>
       )}

@@ -4,11 +4,24 @@ import { FoodMenuItem } from '../../types';
 import { canManageFoodMenuUi } from '../homepages/homepageAccess';
 import { pickText } from '../../i18n/homepages';
 import { saveFoodMenuWeek } from '../../lib/schoolContent';
-import { Utensils, Calendar, Edit3, Plus, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Utensils, Calendar, Edit3, Plus, Trash2, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 
 export const FoodMenuView: React.FC = () => {
-  const { currentUser, foodMenu, foodMenuStatus, language, refreshSchoolData, t } = useApp();
+  const {
+    currentUser,
+    foodMenu,
+    foodMenuStatus,
+    foodMenuError,
+    isHydratingSchoolData,
+    language,
+    refreshSchoolData,
+    t,
+  } = useApp();
   const canManage = canManageFoodMenuUi(currentUser);
+  const isFoodMenuUnauthorized = foodMenuStatus === 'UNAUTHORIZED';
+  const isFoodMenuDemo =
+    foodMenuStatus === 'BLOCKED_BACKEND' ||
+    (foodMenu.isDemoPreview === true && foodMenuStatus !== 'ERROR' && foodMenuStatus !== 'UNAUTHORIZED');
 
   const [editing, setEditing] = useState(false);
   const [editWeekRange, setEditWeekRange] = useState(foodMenu.weekRange);
@@ -25,28 +38,37 @@ export const FoodMenuView: React.FC = () => {
 
   const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving || isFoodMenuUnauthorized) return;
     setFeedback(null);
     setSaving(true);
-    const res = await saveFoodMenuWeek(editWeekRange, editItems, true);
-    setSaving(false);
+    try {
+      const res = await saveFoodMenuWeek(editWeekRange, editItems, true);
 
-    if (!res.ok) {
+      if (!res.ok) {
+        setFeedback({
+          type: 'error',
+          text: res.errorMessage || res.errorCode || t('error'),
+        });
+        return;
+      }
+
+      setEditing(false);
+      setFeedback({
+        type: 'success',
+        text: pickText(
+          { ar: 'تم حفظ ونشر قائمة الطعام بنجاح.', fr: 'Menu de la cantine publié.', en: 'Food menu saved and published.' },
+          language,
+        ),
+      });
+      await refreshSchoolData();
+    } catch (err) {
       setFeedback({
         type: 'error',
-        text: res.errorMessage || res.errorCode || t('error'),
+        text: err instanceof Error ? err.message : t('error'),
       });
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    setEditing(false);
-    setFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم حفظ ونشر قائمة الطعام بنجاح.', fr: 'Menu de la cantine publié.', en: 'Food menu saved and published.' },
-        language,
-      ),
-    });
-    await refreshSchoolData();
   };
 
   return (
@@ -65,7 +87,7 @@ export const FoodMenuView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {(foodMenu.isDemoPreview || foodMenuStatus !== 'READY') && (
+          {isFoodMenuDemo && (
             <span
               data-testid="food-menu-preview-badge"
               className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-[11px] font-extrabold text-amber-700 dark:text-amber-300"
@@ -73,11 +95,13 @@ export const FoodMenuView: React.FC = () => {
               {t('demoPreview')}
             </span>
           )}
-          <div className="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>{foodMenu.weekRange}</span>
-          </div>
-          {canManage && (
+          {!isFoodMenuUnauthorized && (
+            <div className="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>{foodMenu.weekRange}</span>
+            </div>
+          )}
+          {canManage && !isFoodMenuUnauthorized && (
             <button
               type="button"
               data-testid="food-menu-edit-toggle"
@@ -93,6 +117,7 @@ export const FoodMenuView: React.FC = () => {
 
       {feedback && (
         <div
+          role={feedback.type === 'error' ? 'alert' : 'status'}
           className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
             feedback.type === 'error'
               ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900'
@@ -104,7 +129,7 @@ export const FoodMenuView: React.FC = () => {
         </div>
       )}
 
-      {canManage && editing && (
+      {canManage && !isFoodMenuUnauthorized && editing && (
         <form
           onSubmit={handleSaveMenu}
           className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
@@ -231,9 +256,84 @@ export const FoodMenuView: React.FC = () => {
         </form>
       )}
 
+      {isFoodMenuUnauthorized && (
+        <div
+          data-testid="food-menu-unauthorized-banner"
+          role="alert"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              {foodMenuError ||
+                pickText(
+                  {
+                    ar: 'غير مصرح بعرض قائمة المطعم المدرسي حالياً.',
+                    fr: 'Accès non autorisé au menu de la cantine.',
+                    en: 'Not authorized to access canteen food menu.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
+      {foodMenuStatus === 'ERROR' && (
+        <div
+          data-testid="food-menu-error-banner"
+          role="alert"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-red-800 dark:text-red-300"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {foodMenuError ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل قائمة المطعم الأسبوعية من الخادم.',
+                    fr: 'Impossible de charger le menu hebdomadaire depuis le serveur.',
+                    en: 'Failed to load live canteen food menu from server.',
+                  },
+                  language,
+                )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshSchoolData()}
+            className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+          >
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          </button>
+        </div>
+      )}
+
       {/* Days list */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {foodMenu.items.map((item, idx) => (
+      {isFoodMenuUnauthorized ? null : isHydratingSchoolData && foodMenu.items.length === 0 ? (
+        <div
+          data-testid="food-menu-loading-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500"
+        >
+          {t('loading')}
+        </div>
+      ) : foodMenu.items.length === 0 && foodMenuStatus === 'READY' ? (
+        <div
+          data-testid="food-menu-empty-state"
+          className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500"
+        >
+          {t('noItems')}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {foodMenu.items.map((item, idx) => (
           <div key={idx} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <h3 className="font-extrabold text-base text-blue-600 dark:text-blue-400">{item.day}</h3>
@@ -268,7 +368,8 @@ export const FoodMenuView: React.FC = () => {
             )}
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
