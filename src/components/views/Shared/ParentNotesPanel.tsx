@@ -10,18 +10,21 @@ import {
   PARENT_NOTES_DAILY_QUOTA,
 } from '../../../lib/schoolContent';
 import { getNextTunisBoundaryDelayMs } from '../../../lib/parentNotesBoundary';
+import { getCurrentNotificationTarget, getNotificationActorKey, resolveNotificationTarget, type NotificationTargetIntent } from '../../../lib/notificationTargetNavigation';
 import { Clock, AlertCircle, CheckCircle2, Send, Lock, ShieldCheck } from 'lucide-react';
 
 export interface ParentNotesPanelProps {
   classId?: string | null;
   classNameLabel?: string | null;
   embeddedUnderCalendar?: boolean;
+  notificationTarget?: NotificationTargetIntent | null;
 }
 
 export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
   classId = null,
   classNameLabel = null,
   embeddedUnderCalendar = false,
+  notificationTarget = null,
 }) => {
   const {
     currentUser,
@@ -179,6 +182,18 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
     if (!classId) return roleFiltered;
     return roleFiltered.filter((n) => n.classId === classId);
   }, [canAccessNotes, classId, currentUser?.id, isStaffReviewer, notesStatus, parentNotes]);
+
+  const notificationIntent = getCurrentNotificationTarget(notificationTarget, getNotificationActorKey(currentUser), 'notes');
+  const notificationResolution = resolveNotificationTarget(notificationIntent, getNotificationActorKey(currentUser), notesStatus, isHydratingSchoolData, visibleNotes);
+
+  useEffect(() => {
+    if (!notificationIntent || notificationResolution.state !== 'found') return;
+    const note = notificationResolution.record;
+    if (currentUser?.role === 'PARENT' && scopedChildren.some((child) => child.id === note.childId) && selectedChildId !== note.childId) {
+      setSelectedChildId(note.childId);
+    }
+    document.getElementById(`notification-parent-note-${note.id}`)?.scrollIntoView({ block: 'nearest' });
+  }, [notificationIntent?.requestId, notificationResolution.state, notificationResolution.record?.id, currentUser?.role, scopedChildren, selectedChildId, setSelectedChildId]);
 
   if (!canAccessNotes) {
     if (embeddedUnderCalendar) {
@@ -375,6 +390,11 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
       className="space-y-5"
       data-testid={embeddedUnderCalendar ? 'under-calendar-parent-notes' : 'parent-notes-panel'}
     >
+      {notificationIntent && notificationResolution.state === 'unavailable' && (
+        <p role="status" data-testid="notification-target-unavailable" className="rounded-xl border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs font-semibold text-amber-900 dark:text-amber-200">
+          {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.' }, language)}
+        </p>
+      )}
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] p-5 sm:p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -831,7 +851,10 @@ export const ParentNotesPanel: React.FC<ParentNotesPanelProps> = ({
                   return (
                   <div
                     key={n.id}
-                    className="bg-white dark:bg-[#111111] p-5 sm:p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3"
+                    id={`notification-parent-note-${n.id}`}
+                    className={notificationIntent?.refId === n.id
+                      ? 'bg-blue-50/80 dark:bg-blue-950/20 p-5 sm:p-6 rounded-3xl border border-blue-400 dark:border-blue-700 shadow-sm space-y-3'
+                      : 'bg-white dark:bg-[#111111] p-5 sm:p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3'}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
