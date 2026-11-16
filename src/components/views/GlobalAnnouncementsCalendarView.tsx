@@ -4,7 +4,8 @@ import { pickText } from '../../i18n/homepages';
 import {
   canAccessAppTab,
   canManageBroadcastsUi,
-  canManageCalendarUi,
+  getCalendarPermissionsUi,
+  resolveTeacherAssignedClasses,
 } from '../homepages/homepageAccess';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
@@ -53,11 +54,25 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const availableClasses = useMemo(() => {
-    if (classRosters.length > 0) {
-      return classRosters.map((c) => ({ id: c.id, name: c.name, level: c.level }));
+    const byId = new Map<string, { id: string; name: string; level?: string }>();
+    for (const c of classRosters) {
+      byId.set(c.id, { id: c.id, name: c.name, level: c.level });
     }
-    return classesList.map((c) => ({ id: c.id, name: c.name, level: c.level }));
+    for (const c of classesList) {
+      if (!byId.has(c.id)) {
+        byId.set(c.id, { id: c.id, name: c.name, level: c.level });
+      }
+    }
+    return Array.from(byId.values());
   }, [classRosters, classesList]);
+
+  const teacherAssignedClasses = useMemo(
+    () =>
+      currentUser?.role === 'TEACHER'
+        ? resolveTeacherAssignedClasses(currentUser, availableClasses)
+        : [],
+    [currentUser, availableClasses],
+  );
 
   if (!canAccessAppTab(currentUser, 'announcements')) {
     return (
@@ -70,7 +85,10 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
   }
 
   const canBroadcast = canManageBroadcastsUi(currentUser);
-  const canCalendar = canManageCalendarUi(currentUser);
+  const calendarPerms = getCalendarPermissionsUi(currentUser, {
+    classId: null,
+    assignedClassIds: teacherAssignedClasses.map((c) => c.id),
+  });
 
   const handleScopeChange = (nextScope: SchoolBroadcastItem['audienceScope']) => {
     setAudienceScope(nextScope);
@@ -562,8 +580,13 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
             events={calendarEvents}
             backendStatus={calendarStatus}
             classId={null}
-            canManage={canCalendar}
-            canRespond={currentUser?.accountStatus === 'APPROVED'}
+            canManage={calendarPerms.canManageCalendar}
+            canManageCalendar={calendarPerms.canManageCalendar}
+            canCreate={calendarPerms.canCreate}
+            canCancel={calendarPerms.canCancel}
+            canRespond={calendarPerms.canRespond}
+            assignedClasses={teacherAssignedClasses}
+            allClasses={availableClasses}
             isLoading={isHydratingSchoolData}
             errorMessage={calendarError}
             onRefresh={refreshSchoolData}

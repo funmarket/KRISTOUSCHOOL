@@ -1,5 +1,15 @@
 export { listSchoolCalendarEvents } from './calendar/calendarQueries.ts';
 export { getMonthCalendarRange, sortCalendarEvents, getEventsForCalendarDate } from './calendar/calendarModel.ts';
+export {
+  resolveCalendarAudiencePlan,
+  validateCalendarCreateInput,
+  type CalendarAudienceMode,
+  type CalendarAudienceOptionDescriptor,
+  type CalendarAudiencePlan,
+  type CalendarClassOption,
+  type CalendarCreateValidationResult,
+} from './calendar/calendarAudience.ts';
+import { validateCalendarCreateInput, type CalendarAudienceMode } from './calendar/calendarAudience.ts';
 import { supabase, classifySupabaseError } from './supabase.ts';
 import { CANONICAL_SCHOOL_LEVELS } from './schoolOperations.ts';
 import type {
@@ -341,16 +351,32 @@ export async function upsertSchoolCalendarEvent(
     classId?: string | null;
     isAllDay?: boolean;
     isPublic?: boolean;
+    audienceMode?: CalendarAudienceMode;
+    actorRole?: AccountRole | null;
+    canManageCalendar?: boolean;
+    allowedClassIds?: readonly string[];
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<CalendarEvent>> {
-  if (input.title.trim().length < 2 || !input.startDate) {
-    return { ok: false, status: 'ERROR', errorCode: 'invalid_event_input', errorMessage: 'Title and start date are required.' };
-  }
-  const endDate = input.endDate && input.endDate.trim() ? input.endDate.trim() : input.startDate;
-  if (endDate < input.startDate) {
-    return { ok: false, status: 'ERROR', errorCode: 'invalid_date_range', errorMessage: 'End date must be on or after start date.' };
+  const validation = validateCalendarCreateInput({
+    title: input.title,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    audienceMode: input.audienceMode,
+    classId: input.classId,
+    isPublic: input.isPublic,
+    actorRole: input.actorRole,
+    canManageCalendar: input.canManageCalendar,
+    allowedClassIds: input.allowedClassIds,
+  });
+  if (validation.valid === false) {
+    return {
+      ok: false,
+      status: validation.status,
+      errorCode: validation.errorCode,
+      errorMessage: validation.errorMessage,
+    };
   }
   if (!client) return unavailableResult();
   try {
@@ -359,10 +385,10 @@ export async function upsertSchoolCalendarEvent(
       p_description: input.description.trim(),
       p_category: input.category,
       p_start_date: input.startDate,
-      p_end_date: endDate,
-      p_class_id: input.classId || null,
+      p_end_date: validation.endDate,
+      p_class_id: validation.classId,
       p_is_all_day: input.isAllDay ?? true,
-      p_is_public: Boolean(input.isPublic) && !input.classId,
+      p_is_public: validation.classId ? false : validation.isPublic,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const row = (data ?? {}) as Record<string, unknown>;

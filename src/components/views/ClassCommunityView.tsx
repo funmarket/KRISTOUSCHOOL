@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CommunitySubTab } from '../../types';
-import { canAccessAppTab, canModerateCommunityUi } from '../homepages/homepageAccess';
+import {
+  canAccessAppTab,
+  canModerateCommunityUi,
+  getCalendarPermissionsUi,
+  resolveTeacherAssignedClasses,
+} from '../homepages/homepageAccess';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
 import { ParentNotesPanel } from './Shared/ParentNotesPanel';
@@ -35,6 +40,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
   const {
     currentUser,
     classesList,
+    classRosters,
     selectedClassId,
     setSelectedClassId,
     announcements,
@@ -84,21 +90,66 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
 
   const canModerate = canModerateCommunityUi(currentUser);
 
+  const allClassOptions = useMemo(() => {
+    const byId = new Map<
+      string,
+      { id: string; name: string; level?: string; teacherName: string; academicYear: string }
+    >();
+    for (const c of classesList) {
+      byId.set(c.id, {
+        id: c.id,
+        name: c.name,
+        level: c.level,
+        teacherName: c.teacherName,
+        academicYear: c.academicYear,
+      });
+    }
+    for (const r of classRosters ?? []) {
+      if (!byId.has(r.id)) {
+        byId.set(r.id, {
+          id: r.id,
+          name: r.name,
+          level: r.level,
+          teacherName: r.homeroomTeacherName || '',
+          academicYear: r.academicYear,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  }, [classesList, classRosters]);
+
+  const teacherAssignedClasses = useMemo(
+    () =>
+      currentUser?.role === 'TEACHER'
+        ? resolveTeacherAssignedClasses(currentUser, allClassOptions)
+        : [],
+    [currentUser, allClassOptions],
+  );
+
   const accessibleClasses = useMemo(() => {
     if (
       currentUser &&
       (currentUser.role === 'PARENT' || currentUser.role === 'STUDENT' || currentUser.role === 'TEACHER')
     ) {
       if (!currentUser.assignedClassIds || currentUser.assignedClassIds.length === 0) return [];
-      return classesList.filter((cls) => currentUser.assignedClassIds?.includes(cls.id));
+      return allClassOptions.filter((cls) => currentUser.assignedClassIds?.includes(cls.id));
     }
-    return classesList;
-  }, [classesList, currentUser]);
+    return allClassOptions;
+  }, [allClassOptions, currentUser]);
 
   const activeClass = useMemo(() => {
     if (accessibleClasses.length === 0) return null;
     return accessibleClasses.find((cls) => cls.id === selectedClassId) ?? accessibleClasses[0];
   }, [accessibleClasses, selectedClassId]);
+
+  const calendarPerms = useMemo(
+    () =>
+      getCalendarPermissionsUi(currentUser, {
+        classId: activeClass?.id ?? null,
+        assignedClassIds: teacherAssignedClasses.map((c) => c.id),
+      }),
+    [currentUser, activeClass, teacherAssignedClasses],
+  );
 
   const scopedAnnouncements = useMemo(() => {
     if (!activeClass) return announcements.filter((a) => !a.classId);
@@ -594,8 +645,13 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
             events={scopedCalendarEvents}
             backendStatus={calendarStatus}
             classId={activeClass?.id ?? null}
-            canManage={canModerate}
-            canRespond={currentUser?.accountStatus === 'APPROVED'}
+            canManage={calendarPerms.canManageCalendar}
+            canManageCalendar={calendarPerms.canManageCalendar}
+            canCreate={calendarPerms.canCreate}
+            canCancel={calendarPerms.canCancel}
+            canRespond={calendarPerms.canRespond}
+            assignedClasses={teacherAssignedClasses}
+            allClasses={allClassOptions}
             isLoading={isHydratingSchoolData || isLoadingClassCommunity}
             errorMessage={calendarError}
             onRefresh={refreshSchoolData}

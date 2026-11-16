@@ -636,7 +636,9 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
 
   // Render check: ATTENDING / ACKNOWLEDGED / DECLINED (no "Maybe" relabel), CANCELLED event hides RSVP & shows safety notice
   const todayTunis = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());
-  globalThis.__P1_FOLLOWUP_CTX__ = baseCtx();
+  globalThis.__P1_FOLLOWUP_CTX__ = baseCtx({
+    currentUser: makeUser({ role: 'APP_ADMIN', assignedClassIds: [] }),
+  });
   const calHtml = renderToStaticMarkup(
     React.createElement(SchoolCalendarPanel, {
       events: [
@@ -649,6 +651,8 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
       onRefresh: async () => true,
     }),
   );
+  assert.ok(calHtml.includes('data-testid="calendar-add-event-btn"'));
+  assert.ok(calHtml.includes('data-testid="calendar-cancel-event-btn"'));
   assert.ok(calHtml.includes('Attending'));
   assert.ok(calHtml.includes('Acknowledge'));
   assert.ok(calHtml.includes('Decline'));
@@ -656,6 +660,22 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
   assert.ok(calHtml.includes('data-testid="calendar-event-cancelled-badge"'));
   assert.ok(calHtml.includes('does not record pupil absence, school closure, or pickup release'));
   assert.ok(calHtml.includes('data-testid="calendar-timezone-badge"'));
+
+  // PARENT cannot escalate permissions even if caller mistakenly passes canManage: true
+  globalThis.__P1_FOLLOWUP_CTX__ = baseCtx();
+  const parentCalHtml = renderToStaticMarkup(
+    React.createElement(SchoolCalendarPanel, {
+      events: [
+        { id: 'ev-open', title: 'Open House', description: '', category: 'EVENT', date: todayTunis, isAllDay: true, isPublic: true, status: 'SCHEDULED' },
+      ],
+      backendStatus: 'READY',
+      canManage: true,
+      canRespond: true,
+      onRefresh: async () => true,
+    }),
+  );
+  assert.ok(!parentCalHtml.includes('data-testid="calendar-add-event-btn"'));
+  assert.ok(!parentCalHtml.includes('data-testid="calendar-cancel-event-btn"'));
 
   // Public visitor / unapproved user cannot see RSVP buttons or Add Event
   globalThis.__P1_FOLLOWUP_CTX__ = baseCtx({ currentUser: null });
