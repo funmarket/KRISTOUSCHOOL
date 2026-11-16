@@ -242,7 +242,7 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
           caps.includes('FULL_ACCESS')
         );
       }
-      if (user.role === 'ADMINISTRATIVE_PERSONNEL') {
+      if (user.role === 'ADMINISTRATIVE_PERSONNEL' || user.role === 'TEACHER') {
         return true;
       }
       if (user.role === 'SCHOOL_STAFF') {

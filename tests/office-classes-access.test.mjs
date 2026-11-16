@@ -50,12 +50,17 @@ test('Packet C: Managers preserve delegated read, manage, and FULL_ACCESS bounda
   }
 });
 
-test('Packet C: other roles retain existing Classes scope', () => {
+test('Packet C / Teacher T1: other roles retain existing Classes scope', () => {
   assert.equal(canAccessAppTab(user('APP_ADMIN', []), 'classes'), true);
   assert.equal(canManageClassesUi(user('APP_ADMIN', [])), true);
-  for (const role of ['PARENT', 'STUDENT', 'TEACHER']) {
+  for (const role of ['PARENT', 'STUDENT']) {
     assert.equal(canAccessAppTab(user(role, ['CLASSES_MANAGE']), 'classes'), false, `No implicit Classes admin: ${role}`);
     assert.equal(canManageClassesUi(user(role, ['CLASSES_MANAGE'])), false);
+  }
+  assert.equal(canAccessAppTab(user('TEACHER', ['CLASSES_MANAGE']), 'classes'), true, 'Approved Teacher can access My Classes');
+  assert.equal(canManageClassesUi(user('TEACHER', ['CLASSES_MANAGE'])), false, 'Teacher cannot access Classes admin controls');
+  for (const status of ['PENDING', 'REJECTED', 'SUSPENDED', 'REVOKED']) {
+    assert.equal(canAccessAppTab(user('TEACHER', [], status), 'classes'), false, `Unapproved Teacher denied Classes: ${status}`);
   }
   assert.equal(canAccessAppTab(user('SCHOOL_STAFF', []), 'classes'), false);
   assert.equal(canAccessAppTab(user('SCHOOL_STAFF', ['CLASSES_ROSTER_VIEW']), 'classes'), true);

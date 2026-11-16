@@ -95,6 +95,8 @@ import {
   captureNotificationReadSnapshot,
   reconcileFailedMarkAllNotificationsRead,
   reconcileFailedSingleNotificationRead,
+  reconcileSelectedClassId,
+  resolveClassesRosterFetchStrategy,
   resolvePreferencesPersistOutcome,
   type AccountIdentityContext,
   type PendingNotificationSnapshot,
@@ -127,6 +129,7 @@ interface AppContextType {
   classesList: ClassItem[];
   classRosters: SchoolClassWithRoster[];
   classesBackendStatus: BackendOpStatus;
+  classesError: string | null;
   selectedClassId: string;
   setSelectedClassId: (classId: string) => void;
   selectedChildId: string;
@@ -280,6 +283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [classesList, setClassesList] = useState<ClassItem[]>([]);
   const [classRosters, setClassRosters] = useState<SchoolClassWithRoster[]>([]);
   const [classesBackendStatus, setClassesBackendStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
+  const [classesError, setClassesError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [operationalCounts, setOperationalCounts] = useState<OperationalCounts>({});
@@ -428,6 +432,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           generation: authGenerationRef.current,
         };
         resetNotificationTracking();
+        setChildrenList([]);
+        setClassesList([]);
+        setClassRosters([]);
+        setClassesBackendStatus('BLOCKED_BACKEND');
+        setClassesError(null);
+        setSelectedClassId('');
+        setSelectedChildId('');
         setParentNotes([]);
         setNotesStatus('BLOCKED_BACKEND');
         setNotesError(null);
@@ -474,6 +485,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClassesList([]);
     setClassRosters([]);
     setClassesBackendStatus('BLOCKED_BACKEND');
+    setClassesError(null);
     setSelectedClassId('');
     setSelectedChildId('');
     setOperationalCounts({});
@@ -708,27 +720,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (ctxRes.status === 'UNAUTHORIZED') {
             setChildrenList([]);
             setClassesList([]);
+            setSelectedChildId('');
+            resolvedClassIds = [];
+            setCurrentUser((prev) =>
+              prev && prev.id === user.id
+                ? {
+                    ...prev,
+                    linkedChildrenIds: [],
+                    assignedClassIds: [],
+                  }
+                : prev,
+            );
           }
           if (ctxRes.status !== 'BLOCKED_BACKEND') {
             setSchoolContextError(ctxRes.errorMessage || ctxRes.errorCode || 'Unable to load school context.');
           }
         }
 
-        // Classes & Rosters for Owner / Admin / Teachers / delegated Managers
-        if (
-          user.role === 'APP_ADMIN' ||
-          user.role === 'ADMINISTRATIVE_PERSONNEL' ||
-          user.role === 'TEACHER' ||
-          (user.role === 'MANAGER' &&
-            (user.capabilities?.includes('CLASSES_ROSTER_VIEW') ||
-              user.capabilities?.includes('CLASSES_MANAGE') ||
-              user.capabilities?.includes('FULL_ACCESS')))
-        ) {
+        // Classes & Rosters for Owner / Admin / Teachers / delegated Managers / permitted School Staff
+        const classesStrategy = resolveClassesRosterFetchStrategy(user, ctxRes);
+        if (classesStrategy.action === 'SKIP_CONFIRMED_ZERO_ASSIGNMENTS') {
+          setClassesBackendStatus('READY');
+          setClassesError(null);
+          setClassRosters([]);
+          resolvedClassIds = [];
+        } else if (classesStrategy.action === 'SKIP_ROLE_NO_ROSTER_PERMISSION') {
+          // Clear roster-only state/status while preserving verified class membership for Community, Calendar & Notes.
+          setClassesBackendStatus('UNAUTHORIZED');
+          setClassesError(null);
+          setClassRosters([]);
+        } else if (classesStrategy.action === 'SKIP_UNAUTHORIZED') {
+          setClassesBackendStatus('UNAUTHORIZED');
+          setClassesError(classesStrategy.reason);
+          setClassRosters([]);
+          resolvedClassIds = [];
+        } else {
           const rostersRes = await fetchSchoolClassesWithRosters();
           if (!isStillValid()) return false;
           setClassesBackendStatus(rostersRes.status);
           if (rostersRes.ok && rostersRes.data) {
             setClassRosters(rostersRes.data);
+            setClassesError(null);
             if (user.role === 'APP_ADMIN' || user.role === 'ADMINISTRATIVE_PERSONNEL' || user.role === 'MANAGER') {
               setClassesList((prev) =>
                 prev.length > 0
@@ -744,22 +776,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     })),
               );
             }
-            if (resolvedClassIds.length === 0 && rostersRes.data.length > 0) {
+            if (user.role === 'TEACHER') {
+              const rosterClassIds = rostersRes.data.map((r) => r.id);
+              resolvedClassIds = rosterClassIds;
+              setCurrentUser((prev) =>
+                prev && prev.id === user.id ? { ...prev, assignedClassIds: rosterClassIds } : prev,
+              );
+            } else if (resolvedClassIds.length === 0 && rostersRes.data.length > 0) {
               resolvedClassIds = rostersRes.data.map((r) => r.id);
             }
-          } else if (rostersRes.status === 'UNAUTHORIZED') {
-            setClassRosters([]);
+          } else {
+            setClassesError(
+              rostersRes.status === 'BLOCKED_BACKEND'
+                ? null
+                : rostersRes.errorMessage || rostersRes.errorCode || 'Failed to load classes.',
+            );
+            if (rostersRes.status === 'UNAUTHORIZED') {
+              setClassRosters([]);
+              if (user.role === 'TEACHER') {
+                resolvedClassIds = [];
+                setCurrentUser((prev) =>
+                  prev && prev.id === user.id ? { ...prev, assignedClassIds: [] } : prev,
+                );
+              }
+            }
           }
-        } else {
-          setClassesBackendStatus('UNAUTHORIZED');
-          setClassRosters([]);
         }
 
-        const targetClassId =
-          activeClassFilter && resolvedClassIds.includes(activeClassFilter)
-            ? activeClassFilter
-            : resolvedClassIds[0] || '';
-        if (targetClassId && targetClassId !== selectedClassId) {
+        const targetClassId = reconcileSelectedClassId(
+          activeClassFilter ?? selectedClassId,
+          resolvedClassIds,
+        );
+        if (targetClassId !== selectedClassId) {
           setSelectedClassId(targetClassId);
         }
 
@@ -1203,10 +1251,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persistPreferencesUpdate({ vibrationEnabled: enabled });
   };
 
-  const t = (key: TranslationKey): string => {
-    const dict = translations[language] || translations.en;
-    return dict[key] || translations.en[key] || key;
-  };
+  const t = useCallback(
+    (key: TranslationKey): string => {
+      const dict = translations[language] || translations.en;
+      return dict[key] || translations.en[key] || key;
+    },
+    [language],
+  );
 
   // Merge school-wide broadcasts (only show demo preview when status === 'BLOCKED_BACKEND',
   // never when an ordinary network/permission ERROR or UNAUTHORIZED occurred) + class announcements.
@@ -1663,6 +1714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         classesList,
         classRosters,
         classesBackendStatus,
+        classesError,
         selectedClassId,
         setSelectedClassId,
         selectedChildId,

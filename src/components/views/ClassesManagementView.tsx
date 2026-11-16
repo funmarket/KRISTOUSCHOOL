@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ClassStudentRosterItem, SchoolClassSummary } from '../../types';
 import {
   canAccessAppTab,
   canManageClassesUi,
   canReviewOrdinaryAccountsUi,
+  resolveTeacherAssignedClasses,
 } from '../homepages/homepageAccess';
 import { HomePageHeader } from '../homepages/shared/HomePageHeader';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
@@ -27,6 +28,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Lock,
+  MessageSquare,
 } from 'lucide-react';
 import '../homepages/shared/HomePageLayout.css';
 
@@ -41,7 +43,9 @@ export interface ClassesManagementViewProps {
   initialClasses?: SchoolClassSummary[];
   initialRosters?: Record<string, ClassStudentRosterItem[]>;
   backendStatus?: ClassesBackendStatus;
+  errorMessage?: string | null;
   onRefresh?: () => Promise<boolean | void> | void;
+  onOpenClassCommunity?: (classId: string) => void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -83,9 +87,17 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   initialClasses = [],
   initialRosters = {},
   backendStatus = 'BACKEND_NOT_IMPLEMENTED',
+  errorMessage = null,
   onRefresh,
+  onOpenClassCommunity,
 }) => {
-  const { currentUser, language, t } = useApp();
+  const {
+    currentUser,
+    language,
+    t,
+    selectedClassId: sharedSelectedClassId,
+    setSelectedClassId: setSharedSelectedClassId,
+  } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('ALL');
@@ -124,18 +136,48 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [parentAccounts, setParentAccounts] = useState<GovernanceAccountRecord[]>([]);
   const [studentAccounts, setStudentAccounts] = useState<GovernanceAccountRecord[]>([]);
   const [accountsError, setAccountsError] = useState<string | null>(null);
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const isAuthorized = canAccessAppTab(currentUser, 'classes');
   const isBackendUnauthorized = backendStatus === 'UNAUTHORIZED';
   const canManage = canManageClassesUi(currentUser) && !isBackendUnauthorized;
+  const isTeacherView = currentUser?.role === 'TEACHER' && !canManage;
   const canLoadAccounts = canManage && canReviewOrdinaryAccountsUi(currentUser);
+
+  const scopedInitialClasses = useMemo(
+    () =>
+      isTeacherView
+        ? resolveTeacherAssignedClasses(currentUser, initialClasses)
+        : initialClasses,
+    [isTeacherView, currentUser, initialClasses],
+  );
+
+  useEffect(() => {
+    setSelectedClassId(null);
+    setStudentSearchQuery('');
+    setRosterPage(1);
+    setSelectedLevel('ALL');
+    setSelectedYear('ALL');
+  }, [currentUser?.id, currentUser?.role]);
+
+  useEffect(() => {
+    if (
+      isBackendUnauthorized ||
+      (selectedClassId && !scopedInitialClasses.some((cls) => cls.id === selectedClassId))
+    ) {
+      setSelectedClassId(null);
+      setStudentSearchQuery('');
+      setRosterPage(1);
+    }
+  }, [isBackendUnauthorized, scopedInitialClasses, selectedClassId]);
 
   useEffect(() => {
     if (!canLoadAccounts) {
-      setTeacherAccounts([]);
-      setParentAccounts([]);
-      setStudentAccounts([]);
-      setAccountsError(null);
+      setTeacherAccounts((prev) => (prev.length === 0 ? prev : []));
+      setParentAccounts((prev) => (prev.length === 0 ? prev : []));
+      setStudentAccounts((prev) => (prev.length === 0 ? prev : []));
+      setAccountsError((prev) => (prev === null ? prev : null));
       return;
     }
     let cancelled = false;
@@ -172,7 +214,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             : [],
         );
         setAccountsError(
-          firstError ? firstError.errorMessage || firstError.errorCode || t('error') : null,
+          firstError ? firstError.errorMessage || firstError.errorCode || tRef.current('error') : null,
         );
       })
       .catch((err) => {
@@ -180,61 +222,82 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
         setTeacherAccounts([]);
         setParentAccounts([]);
         setStudentAccounts([]);
-        setAccountsError(err instanceof Error ? err.message : t('error'));
+        setAccountsError(err instanceof Error ? err.message : tRef.current('error'));
       });
     return () => {
       cancelled = true;
     };
-  }, [canLoadAccounts, currentUser?.id, t]);
+  }, [canLoadAccounts, currentUser?.id]);
 
   const levelOptions = useMemo(() => {
     const seen = new Set<string>();
     const list: { value: string; label: string }[] = [];
-    for (const lbl of [t('level1'), t('level2'), t('level3'), t('level4'), t('level5'), t('level6')]) {
-      if (lbl && !seen.has(lbl)) {
-        seen.add(lbl);
-        list.push({ value: lbl, label: lbl });
+    if (!isTeacherView) {
+      for (const lbl of [t('level1'), t('level2'), t('level3'), t('level4'), t('level5'), t('level6')]) {
+        if (lbl && !seen.has(lbl)) {
+          seen.add(lbl);
+          list.push({ value: lbl, label: lbl });
+        }
+      }
+      for (const lvl of CANONICAL_SCHOOL_LEVELS) {
+        if (!seen.has(lvl.code)) {
+          seen.add(lvl.code);
+          list.push({
+            value: lvl.code,
+            label: language === 'ar' ? lvl.labelAr : language === 'fr' ? lvl.labelFr : lvl.labelEn,
+          });
+        }
       }
     }
-    for (const lvl of CANONICAL_SCHOOL_LEVELS) {
-      if (!seen.has(lvl.code)) {
-        seen.add(lvl.code);
-        list.push({
-          value: lvl.code,
-          label: language === 'ar' ? lvl.labelAr : language === 'fr' ? lvl.labelFr : lvl.labelEn,
-        });
-      }
-    }
-    for (const cls of initialClasses) {
+    for (const cls of scopedInitialClasses) {
       if (cls.level && !seen.has(cls.level)) {
         seen.add(cls.level);
         list.push({ value: cls.level, label: cls.level });
       }
     }
     return list;
-  }, [initialClasses, language, t]);
+  }, [isTeacherView, scopedInitialClasses, language, t]);
 
   const yearOptions = useMemo(() => {
-    const seen = new Set<string>(['2025-2026', '2026-2027']);
-    for (const cls of initialClasses) {
+    const seen = new Set<string>(isTeacherView ? [] : ['2025-2026', '2026-2027']);
+    for (const cls of scopedInitialClasses) {
       if (cls.academicYear) seen.add(cls.academicYear);
     }
     return Array.from(seen);
-  }, [initialClasses]);
+  }, [isTeacherView, scopedInitialClasses]);
+
+  const effectiveSelectedLevel =
+    selectedLevel === 'ALL' ||
+    levelOptions.some((opt) => opt.value === selectedLevel) ||
+    scopedInitialClasses.some((cls) => cls.level === selectedLevel || cls.levelCode === selectedLevel)
+      ? selectedLevel
+      : 'ALL';
+
+  const effectiveSelectedYear =
+    selectedYear === 'ALL' || yearOptions.includes(selectedYear) ? selectedYear : 'ALL';
 
   const filteredClasses = useMemo(
-    () => filterSchoolClasses(initialClasses, searchQuery, selectedLevel, selectedYear),
-    [initialClasses, searchQuery, selectedLevel, selectedYear],
+    () =>
+      filterSchoolClasses(
+        scopedInitialClasses,
+        searchQuery,
+        effectiveSelectedLevel,
+        effectiveSelectedYear,
+      ),
+    [scopedInitialClasses, searchQuery, effectiveSelectedLevel, effectiveSelectedYear],
   );
 
   const selectedClass = useMemo(
-    () => initialClasses.find((cls) => cls.id === selectedClassId) ?? null,
-    [initialClasses, selectedClassId],
+    () =>
+      !isBackendUnauthorized && selectedClassId
+        ? scopedInitialClasses.find((cls) => cls.id === selectedClassId) ?? null
+        : null,
+    [isBackendUnauthorized, scopedInitialClasses, selectedClassId],
   );
 
   const rawRoster = useMemo(
-    () => (selectedClassId ? initialRosters[selectedClassId] ?? [] : []),
-    [initialRosters, selectedClassId],
+    () => (selectedClass ? initialRosters[selectedClass.id] ?? [] : []),
+    [initialRosters, selectedClass],
   );
 
   const filteredRoster = useMemo(
@@ -243,10 +306,11 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   );
 
   const totalRosterPages = Math.max(1, Math.ceil(filteredRoster.length / ROSTER_PAGE_SIZE));
+  const safeRosterPage = Math.min(rosterPage, totalRosterPages);
   const paginatedRoster = useMemo(() => {
-    const start = (rosterPage - 1) * ROSTER_PAGE_SIZE;
+    const start = (safeRosterPage - 1) * ROSTER_PAGE_SIZE;
     return filteredRoster.slice(start, start + ROSTER_PAGE_SIZE);
-  }, [filteredRoster, rosterPage]);
+  }, [filteredRoster, safeRosterPage]);
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,31 +456,64 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   // Screen 2: Class Detail -> Student Roster View
   if (selectedClass) {
+    const isZeroStudentsEnrolled = rawRoster.length === 0;
     return (
       <div className="kh-role-page space-y-6 pb-12" data-testid="class-detail-roster-view">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            data-testid="back-to-classes-btn"
-            onClick={() => {
-              setSelectedClassId(null);
-              setStudentSearchQuery('');
-              setRosterPage(1);
-            }}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#111111] px-4 py-2.5 text-xs font-extrabold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>
-              {pickText(
-                {
-                  ar: 'العودة إلى قائمة الأقسام',
-                  fr: 'Retour aux classes',
-                  en: 'Back to Classes',
-                },
-                language,
-              )}
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="back-to-classes-btn"
+              onClick={() => {
+                setSelectedClassId(null);
+                setStudentSearchQuery('');
+                setRosterPage(1);
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#111111] px-4 py-2.5 text-xs font-extrabold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-xs"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>
+                {pickText(
+                  isTeacherView
+                    ? {
+                        ar: 'العودة إلى أقسامي',
+                        fr: 'Retour à mes classes',
+                        en: 'Back to My Classes',
+                      }
+                    : {
+                        ar: 'العودة إلى قائمة الأقسام',
+                        fr: 'Retour aux classes',
+                        en: 'Back to Classes',
+                      },
+                  language,
+                )}
+              </span>
+            </button>
+
+            {onOpenClassCommunity && (
+              <button
+                type="button"
+                data-testid={`open-class-community-from-roster-${selectedClass.id}`}
+                onClick={() => {
+                  setSharedSelectedClassId?.(selectedClass.id);
+                  onOpenClassCommunity(selectedClass.id);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-xs font-extrabold text-[#1E3A6D] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>
+                  {pickText(
+                    {
+                      ar: 'فتح فضاء القسم',
+                      fr: 'Ouvrir l’espace classe',
+                      en: 'Open Class Community',
+                    },
+                    language,
+                  )}
+                </span>
+              </button>
+            )}
+          </div>
 
           <span className="kh-info-chip">
             {selectedClass.academicYear} • {selectedClass.level}
@@ -424,7 +521,12 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
         </div>
 
         <HomePageHeader
-          badgeText={pickText(HOMEPAGE_COMMON_TEXT.classesNav, language)}
+          badgeText={pickText(
+            isTeacherView
+              ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }
+              : HOMEPAGE_COMMON_TEXT.classesNav,
+            language,
+          )}
           title={selectedClass.name}
           subtitle={pickText(
             {
@@ -435,6 +537,39 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             language,
           )}
         />
+
+        {backendStatus === 'ERROR' && (
+          <div
+            data-testid="classes-error-state"
+            role="alert"
+            className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-red-800 dark:text-red-300"
+          >
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {errorMessage ||
+                  pickText(
+                    {
+                      ar: 'تعذر تحديث قائمة التلاميذ من الخادم.',
+                      fr: 'Impossible de rafraîchir la liste des élèves depuis le serveur.',
+                      en: 'Failed to refresh student roster from the server.',
+                    },
+                    language,
+                  )}
+              </span>
+            </div>
+            {onRefresh && (
+              <button
+                type="button"
+                data-testid="classes-retry-btn"
+                onClick={() => void onRefresh()}
+                className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
+              >
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Roster Search Bar */}
         <div className="bg-white dark:bg-[#111111] p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -450,9 +585,9 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
               }}
               placeholder={pickText(
                 {
-                  ar: 'البحث عن تلميذ بالاسم أو المعرف المدرسي...',
-                  fr: 'Rechercher un élève par nom ou code élève...',
-                  en: 'Search student by full name or student code...',
+                  ar: 'البحث عن تلميذ بالاسم أو المعرف المدرسي أو الولي...',
+                  fr: 'Rechercher un élève par nom, code élève ou parent...',
+                  en: 'Search student by full name, student code, or guardian...',
                 },
                 language,
               )}
@@ -474,25 +609,39 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
         {/* Student Roster Table / Empty State */}
         {paginatedRoster.length === 0 ? (
-          <EmptyFeatureState
-            state="AVAILABLE_READ_ONLY"
-            title={pickText(
-              {
-                ar: 'لا يوجد تلاميذ مسجلون في هذا القسم حالياً',
-                fr: 'Aucun élève inscrit dans cette classe',
-                en: 'No students enrolled in this class',
-              },
-              language,
-            )}
-            description={pickText(
-              {
-                ar: 'تظهر هنا قائمة التلاميذ الفعليين المسجلين في هذا القسم من جدول التسجيلات المدرسية دون أي بيانات تجريبية.',
-                fr: 'La liste nominative affiche uniquement les élèves réellement inscrits dans cette classe via la base de données.',
-                en: 'Only verified student enrollments for this class are displayed here. No mock children are ever substituted.',
-              },
-              language,
-            )}
-          />
+          <div data-testid="roster-empty-state">
+            <EmptyFeatureState
+              state="AVAILABLE_READ_ONLY"
+              title={pickText(
+                isZeroStudentsEnrolled
+                  ? {
+                      ar: 'لا يوجد تلاميذ مسجلون في هذا القسم حالياً',
+                      fr: 'Aucun élève inscrit dans cette classe',
+                      en: 'No students enrolled in this class',
+                    }
+                  : {
+                      ar: 'لا يوجد تلاميذ مطابقون للبحث',
+                      fr: 'Aucun élève ne correspond à la recherche',
+                      en: 'No matching students found',
+                    },
+                language,
+              )}
+              description={pickText(
+                isZeroStudentsEnrolled
+                  ? {
+                      ar: 'لم يتم تسجيل أي تلميذ في هذا القسم حتى الآن. ستظهر القائمة بمجرد تأكيد التسجيل من الإدارة.',
+                      fr: 'Aucun élève n’est encore inscrit dans cette classe. La liste apparaîtra dès la validation par la direction.',
+                      en: 'No student enrollments are linked to this class yet. Verified students will appear here once enrolled.',
+                    }
+                  : {
+                      ar: 'جرّب تعديل كلمات البحث لعرض التلاميذ المسجلين في هذا القسم.',
+                      fr: 'Modifiez votre recherche pour afficher les élèves inscrits dans cette classe.',
+                      en: 'Try adjusting your search query to view enrolled students in this class.',
+                    },
+                language,
+              )}
+            />
+          </div>
         ) : (
           <div className="bg-white dark:bg-[#111111] rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -550,18 +699,20 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
               <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
                 <button
                   type="button"
-                  disabled={rosterPage <= 1}
+                  data-testid="roster-prev-page-btn"
+                  disabled={safeRosterPage <= 1}
                   onClick={() => setRosterPage((p) => Math.max(1, p - 1))}
                   className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold disabled:opacity-40"
                 >
                   {pickText({ ar: 'السابق', fr: 'Précédent', en: 'Previous' }, language)}
                 </button>
-                <span className="font-bold text-gray-600 dark:text-gray-400">
-                  {rosterPage} / {totalRosterPages}
+                <span data-testid="roster-page-indicator" className="font-bold text-gray-600 dark:text-gray-400">
+                  {safeRosterPage} / {totalRosterPages}
                 </span>
                 <button
                   type="button"
-                  disabled={rosterPage >= totalRosterPages}
+                  data-testid="roster-next-page-btn"
+                  disabled={safeRosterPage >= totalRosterPages}
                   onClick={() => setRosterPage((p) => Math.min(totalRosterPages, p + 1))}
                   className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold disabled:opacity-40"
                 >
@@ -579,21 +730,38 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   return (
     <div className="kh-role-page space-y-6 pb-12" data-testid="classes-management-view">
       <HomePageHeader
-        badgeText={pickText(HOMEPAGE_COMMON_TEXT.classesNav, language)}
+        badgeText={pickText(
+          isTeacherView
+            ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }
+            : HOMEPAGE_COMMON_TEXT.classesNav,
+          language,
+        )}
         title={pickText(
-          {
-            ar: 'إدارة الأقسام وقوائم التلاميذ',
-            fr: 'Gestion des Classes & Listes d’Élèves',
-            en: 'School Classes & Student Rosters',
-          },
+          isTeacherView
+            ? {
+                ar: 'أقسامي وقوائم التلاميذ',
+                fr: 'Mes classes & Listes d’élèves',
+                en: 'My Classes & Student Rosters',
+              }
+            : {
+                ar: 'إدارة الأقسام وقوائم التلاميذ',
+                fr: 'Gestion des Classes & Listes d’Élèves',
+                en: 'School Classes & Student Rosters',
+              },
           language,
         )}
         subtitle={pickText(
-          {
-            ar: 'استعرض جميع الأقسام الدراسية لمدرسة كريستو وافتح كل قسم لمعاينة قائمة التلاميذ المسجلين فيه.',
-            fr: 'Consultez les classes de l’école KRISTOU et ouvrez chaque classe pour afficher la liste nominative des élèves inscrits.',
-            en: 'Browse KRISTOU School classes by level and academic year, and open any class to inspect its enrolled student roster.',
-          },
+          isTeacherView
+            ? {
+                ar: 'استعرض الأقسام المسندة إليك وافتح قائمة التلاميذ المسجلين في كل قسم أو انتقل إلى فضاء القسم.',
+                fr: 'Consultez vos classes assignées, ouvrez la liste des élèves inscrits ou accédez à l’espace de classe.',
+                en: 'Browse your assigned classes, open each class’s enrolled student roster, or jump to its class community.',
+              }
+            : {
+                ar: 'استعرض جميع الأقسام الدراسية لمدرسة كريستو وافتح كل قسم لمعاينة قائمة التلاميذ المسجلين فيه.',
+                fr: 'Consultez les classes de l’école KRISTOU et ouvrez chaque classe pour afficher la liste nominative des élèves inscrits.',
+                en: 'Browse KRISTOU School classes by level and academic year, and open any class to inspect its enrolled student roster.',
+              },
           language,
         )}
       >
@@ -1034,7 +1202,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           <select
             aria-label="Filter by level"
             data-testid="classes-level-filter"
-            value={selectedLevel}
+            value={effectiveSelectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
             className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-2.5 px-3.5 text-xs font-semibold text-gray-900 dark:text-white"
           >
@@ -1053,7 +1221,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           <select
             aria-label="Filter by academic year"
             data-testid="classes-year-filter"
-            value={selectedYear}
+            value={effectiveSelectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
             className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-2.5 px-3.5 text-xs font-semibold text-gray-900 dark:text-white"
           >
@@ -1083,24 +1251,36 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
       )}
 
       {/* State 2: Backend Not Implemented (Honest Default until Supabase tables are deployed) */}
-      {backendStatus === 'BACKEND_NOT_IMPLEMENTED' && initialClasses.length === 0 && (
+      {backendStatus === 'BACKEND_NOT_IMPLEMENTED' && scopedInitialClasses.length === 0 && (
         <div data-testid="classes-backend-pending-state">
           <EmptyFeatureState
             state="BLOCKED_BACKEND"
             title={pickText(
-              {
-                ar: 'جداول الأقسام وقوائم التلاميذ بانتظار التفعيل في الخادم (Pending Backend)',
-                fr: 'Tables des classes et listes d’élèves en attente du contrat serveur (Pending Backend)',
-                en: 'Classes & Student Roster Persistence Pending Backend Deployment',
-              },
+              isTeacherView
+                ? {
+                    ar: 'خدمة الأقسام قيد التفعيل على الخادم',
+                    fr: 'Service des classes en attente d’activation serveur',
+                    en: 'Classes Service Unavailable on Backend',
+                  }
+                : {
+                    ar: 'جداول الأقسام وقوائم التلاميذ بانتظار التفعيل في الخادم (Pending Backend)',
+                    fr: 'Tables des classes et listes d’élèves en attente du contrat serveur (Pending Backend)',
+                    en: 'Classes & Student Roster Persistence Pending Backend Deployment',
+                  },
               language,
             )}
             description={pickText(
-              {
-                ar: 'واجهة إدارة الأقسام جاهزة ومحمية بصلاحيات مالك المدرسة (APP_ADMIN)، ولكن لم يتم بعد نشر جداول school_classes و students و class_enrollments في قاعدة بيانات Supabase. التزاماً بقواعد الأمان، لا يتم عرض أي أقسام أو تلاميذ وهميين (Mock Data).',
-                fr: 'L’interface Classes → Élèves est prête et protégée pour APP_ADMIN, mais les tables Supabase school_classes, students et class_enrollments ne sont pas encore déployées. Conformément aux règles de sécurité, aucune classe ni liste d’élèves fictive n’est affichée.',
-                en: 'The Owner Classes → Student Roster UI is wired and access-controlled, but the Supabase tables (public.school_classes, public.students, public.class_enrollments) and RLS policies have not been deployed yet. Zero mock classes or mock student records are fabricated.',
-              },
+              isTeacherView
+                ? {
+                    ar: 'تعذر الوصول إلى خدمة الأقسام في الخادم حالياً. لا يتم عرض أي أقسام أو تلاميذ غير موثقين.',
+                    fr: 'Le service serveur des classes n’est pas encore disponible. Aucune classe ni liste d’élèves fictive n’est affichée.',
+                    en: 'The school classes service is not yet available from the backend. No unverified classes or students are shown.',
+                  }
+                : {
+                    ar: 'واجهة إدارة الأقسام جاهزة ومحمية بصلاحيات الإدارة المدرسية، ولكن لم يتم بعد نشر جداول الأقسام والتلاميذ في الخادم. التزاماً بقواعد الأمان، لا يتم عرض أي أقسام أو تلاميذ وهميين.',
+                    fr: 'L’interface Classes → Élèves est prête et protégée, mais les services serveur des classes ne sont pas encore déployés. Conformément aux règles de sécurité, aucune donnée fictive n’est affichée.',
+                    en: 'The Classes & Student Roster UI is wired and access-controlled, but backend services are not deployed yet. Zero mock classes or mock student records are fabricated.',
+                  },
               language,
             )}
           />
@@ -1117,19 +1297,21 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           <div className="flex items-center gap-2 font-semibold">
             <Lock className="w-4 h-4 shrink-0" />
             <span>
-              {pickText(
-                {
-                  ar: 'غير مصرح بعرض قائمة الأقسام أو التلاميذ من الخادم.',
-                  fr: 'Accès non autorisé aux classes et listes d’élèves.',
-                  en: 'Not authorized to access school classes and student rosters.',
-                },
-                language,
-              )}
+              {errorMessage ||
+                pickText(
+                  {
+                    ar: 'غير مصرح بعرض قائمة الأقسام أو التلاميذ من الخادم.',
+                    fr: 'Accès non autorisé aux classes et listes d’élèves.',
+                    en: 'Not authorized to access school classes and student rosters.',
+                  },
+                  language,
+                )}
             </span>
           </div>
           {onRefresh && (
             <button
               type="button"
+              data-testid="classes-unauthorized-retry-btn"
               onClick={() => void onRefresh()}
               className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
             >
@@ -1149,19 +1331,21 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           <div className="flex items-center gap-2 font-semibold">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
-              {pickText(
-                {
-                  ar: 'تعذر تحميل قائمة الأقسام والتلاميذ من الخادم.',
-                  fr: 'Impossible de charger les classes et listes d’élèves depuis le serveur.',
-                  en: 'Failed to load classes and student rosters from server.',
-                },
-                language,
-              )}
+              {errorMessage ||
+                pickText(
+                  {
+                    ar: 'تعذر تحميل قائمة الأقسام والتلاميذ من الخادم.',
+                    fr: 'Impossible de charger les classes et listes d’élèves depuis le serveur.',
+                    en: 'Failed to load classes and student rosters from server.',
+                  },
+                  language,
+                )}
             </span>
           </div>
           {onRefresh && (
             <button
               type="button"
+              data-testid="classes-retry-btn"
               onClick={() => void onRefresh()}
               className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
             >
@@ -1177,19 +1361,31 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           <EmptyFeatureState
             state="AVAILABLE_READ_ONLY"
             title={pickText(
-              {
-                ar: 'لا توجد أقسام مطابقة للبحث',
-                fr: 'Aucune classe trouvée',
-                en: 'No classes found',
-              },
+              isTeacherView && scopedInitialClasses.length === 0
+                ? {
+                    ar: 'لا توجد أقسام مسندة لحسابك حالياً',
+                    fr: 'Aucune classe assignée pour le moment',
+                    en: 'No classes assigned yet',
+                  }
+                : {
+                    ar: 'لا توجد أقسام مطابقة للبحث',
+                    fr: 'Aucune classe trouvée',
+                    en: 'No classes found',
+                  },
               language,
             )}
             description={pickText(
-              {
-                ar: 'لم يتم العثور على أقسام مسجلة تطابق معايير التصفية الحالية.',
-                fr: 'Aucune classe enregistrée ne correspond aux filtres sélectionnés.',
-                en: 'No server-verified classes match the current search or filter criteria.',
-              },
+              isTeacherView && scopedInitialClasses.length === 0
+                ? {
+                    ar: 'ستظهر هنا الأقسام الدراسية المسندة إليك وقوائم التلاميذ الخاصة بها فور تعيينها من طرف إدارة المدرسة.',
+                    fr: 'Vos classes assignées et leurs listes d’élèves apparaîtront ici dès leur affectation par la direction de l’école.',
+                    en: 'Your assigned classes and student rosters will appear here once assigned by school administration.',
+                  }
+                : {
+                    ar: 'لم يتم العثور على أقسام مسجلة تطابق معايير التصفية الحالية.',
+                    fr: 'Aucune classe enregistrée ne correspond aux filtres sélectionnés.',
+                    en: 'No server-verified classes match the current search or filter criteria.',
+                  },
               language,
             )}
           />
@@ -1202,71 +1398,126 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           data-testid="classes-card-grid"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          {filteredClasses.map((cls) => (
-            <article
-              key={cls.id}
-              data-testid={`class-card-${cls.id}`}
-              className="kh-info-panel flex flex-col justify-between gap-4"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="kh-info-chip">{cls.level}</span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-zinc-400">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>{cls.academicYear}</span>
-                  </span>
-                </div>
-
-                <h2 className="kh-info-panel-title text-lg">{cls.name}</h2>
-
-                <div className="space-y-1 text-xs text-slate-600 dark:text-zinc-300">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span>
-                      {t('teacherLabel')} :{' '}
-                      <strong>{cls.homeroomTeacherName || '—'}</strong>
+          {filteredClasses.map((cls) => {
+            const isSharedSelected = Boolean(sharedSelectedClassId && sharedSelectedClassId === cls.id);
+            return (
+              <article
+                key={cls.id}
+                data-testid={`class-card-${cls.id}`}
+                data-selected={isSharedSelected ? 'true' : 'false'}
+                className={`kh-info-panel flex flex-col justify-between gap-4 ${
+                  isSharedSelected ? 'ring-2 ring-[#1E3A6D] dark:ring-blue-500' : ''
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="kh-info-chip">{cls.level}</span>
+                      {isSharedSelected && (
+                        <span
+                          data-testid={`class-selected-badge-${cls.id}`}
+                          className="inline-flex items-center px-2 py-0.5 rounded-xl text-[10px] font-extrabold bg-blue-100 text-[#1E3A6D] dark:bg-blue-950/70 dark:text-blue-300"
+                        >
+                          {pickText({ ar: 'محدد', fr: 'Sélectionnée', en: 'Selected' }, language)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-zinc-400">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{cls.academicYear}</span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+
+                  <h2 className="kh-info-panel-title text-lg">{cls.name}</h2>
+
+                  <div className="space-y-1 text-xs text-slate-600 dark:text-zinc-300">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span>
+                        {t('teacherLabel')} :{' '}
+                        <strong>{cls.homeroomTeacherName || '—'}</strong>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>
+                        {pickText(
+                          {
+                            ar: `التلاميذ المسجلون: ${cls.activeStudentCount}`,
+                            fr: `Élèves inscrits : ${cls.activeStudentCount}`,
+                            en: `Enrolled students: ${cls.activeStudentCount}`,
+                          },
+                          language,
+                        )}
+                      </span>
+                    </div>
+                    {cls.roomLabel && (
+                      <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                        {pickText(
+                          {
+                            ar: `القاعة: ${cls.roomLabel}`,
+                            fr: `Salle : ${cls.roomLabel}`,
+                            en: `Room: ${cls.roomLabel}`,
+                          },
+                          language,
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    data-testid={`view-class-students-${cls.id}`}
+                    onClick={() => {
+                      setSharedSelectedClassId?.(cls.id);
+                      setSelectedClassId(cls.id);
+                      setStudentSearchQuery('');
+                      setRosterPage(1);
+                    }}
+                    className="w-full rounded-2xl bg-[#1E3A6D] hover:bg-[#162C54] text-white font-extrabold text-xs py-3 px-4 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
                     <span>
                       {pickText(
                         {
-                          ar: `التلاميذ المسجلون: ${cls.activeStudentCount}`,
-                          fr: `Élèves inscrits : ${cls.activeStudentCount}`,
-                          en: `Enrolled students: ${cls.activeStudentCount}`,
+                          ar: 'عرض قائمة التلاميذ',
+                          fr: 'Voir les élèves',
+                          en: 'View Students',
                         },
                         language,
                       )}
                     </span>
-                  </div>
-                </div>
-              </div>
+                  </button>
 
-              <button
-                type="button"
-                data-testid={`view-class-students-${cls.id}`}
-                onClick={() => {
-                  setSelectedClassId(cls.id);
-                  setStudentSearchQuery('');
-                  setRosterPage(1);
-                }}
-                className="w-full rounded-2xl bg-[#1E3A6D] hover:bg-[#162C54] text-white font-extrabold text-xs py-3 px-4 transition-colors flex items-center justify-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                <span>
-                  {pickText(
-                    {
-                      ar: 'عرض قائمة التلاميذ',
-                      fr: 'Voir les élèves',
-                      en: 'View Students',
-                    },
-                    language,
+                  {onOpenClassCommunity && (
+                    <button
+                      type="button"
+                      data-testid={`open-class-community-${cls.id}`}
+                      onClick={() => {
+                        setSharedSelectedClassId?.(cls.id);
+                        onOpenClassCommunity(cls.id);
+                      }}
+                      className="w-full rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/70 hover:bg-slate-100 dark:hover:bg-zinc-900 text-[#1E3A6D] dark:text-blue-300 font-extrabold text-xs py-2.5 px-4 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>
+                        {pickText(
+                          {
+                            ar: 'فتح فضاء القسم',
+                            fr: 'Ouvrir l’espace classe',
+                            en: 'Open Class Community',
+                          },
+                          language,
+                        )}
+                      </span>
+                    </button>
                   )}
-                </span>
-              </button>
-            </article>
-          ))}
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

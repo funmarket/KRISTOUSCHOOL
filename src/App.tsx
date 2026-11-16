@@ -35,6 +35,8 @@ function MainLayout() {
     currentUser,
     classRosters,
     classesBackendStatus,
+    classesError,
+    setSelectedClassId,
     isHydratingSchoolData,
     refreshSchoolData,
   } = useApp();
@@ -215,7 +217,12 @@ function MainLayout() {
               initialClasses={classRosters}
               initialRosters={rostersRecord}
               backendStatus={mappedClassesStatus}
+              errorMessage={classesError}
               onRefresh={refreshSchoolData}
+              onOpenClassCommunity={(classId) => {
+                setSelectedClassId(classId);
+                handleNavigateToSubTab('community', 'announcements');
+              }}
             />
           ) : (
             <HomePageResolver

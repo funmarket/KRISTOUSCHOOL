@@ -375,7 +375,8 @@ test('Task 1.8 — Owner Classes -> Students requirement: menu placement (Teache
   assert.ok(classesIdx > teachersIdx, 'Expected Classes button directly after Teachers in Navbar.tsx');
   assert.ok(registrationIdx > classesIdx, 'Expected Registration button directly after Classes in Navbar.tsx');
 
-  // 2. Access control: APP_ADMIN allowed; MANAGER allowed only with CLASSES_ROSTER_VIEW or FULL_ACCESS; PARENT/STUDENT/TEACHER denied
+  // 2. Access control: APP_ADMIN allowed; MANAGER allowed only with CLASSES_ROSTER_VIEW or FULL_ACCESS; approved TEACHER allowed read-only (T1); PARENT/STUDENT denied
+  const { canManageClassesUi } = await import('../src/components/homepages/homepageAccess.ts');
   const owner = { id: 'o-1', username: 'owner', fullName: 'Owner', role: 'APP_ADMIN', accountStatus: 'APPROVED', capabilities: ['APP_ADMIN'] };
   const managerNoCap = { id: 'm-1', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: ['MANAGER'] };
   const managerWithCap = { id: 'm-2', username: 'mgr2', fullName: 'Manager 2', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: ['MANAGER', 'CLASSES_ROSTER_VIEW'] };
@@ -385,7 +386,8 @@ test('Task 1.8 — Owner Classes -> Students requirement: menu placement (Teache
   assert.equal(canAccessAppTab(owner, 'classes'), true);
   assert.equal(canAccessAppTab(managerNoCap, 'classes'), false);
   assert.equal(canAccessAppTab(managerWithCap, 'classes'), true);
-  assert.equal(canAccessAppTab(teacher, 'classes'), false);
+  assert.equal(canAccessAppTab(teacher, 'classes'), true);
+  assert.equal(canManageClassesUi(teacher), false);
   assert.equal(canAccessAppTab(parent, 'classes'), false);
 
   // 3. ClassesManagementView never imports or references MOCK_CLASSES or MOCK_CHILDREN

@@ -3,6 +3,7 @@ import type {
   BackendOpResult,
   MessageRecipientOption,
   NotificationItem,
+  User,
 } from '../types.ts';
 
 export type PreferencesSyncStatus =
@@ -291,4 +292,77 @@ export function reconcileSelectedRecipientId(
     return currentRecipientId;
   }
   return freshRecipients[0].id;
+}
+
+export type ClassesRosterFetchStrategy =
+  | { action: 'FETCH_ROSTERS' }
+  | { action: 'SKIP_CONFIRMED_ZERO_ASSIGNMENTS' }
+  | { action: 'SKIP_ROLE_NO_ROSTER_PERMISSION' }
+  | { action: 'SKIP_UNAUTHORIZED'; reason: string | null };
+
+/**
+ * Determines whether school-class roster hydration should invoke `list_school_classes_with_rosters`.
+ * - An unapproved account or an `UNAUTHORIZED` `get_my_school_context` response fails closed (`SKIP_UNAUTHORIZED`).
+ * - A role without administrative roster access (e.g. `PARENT`, `STUDENT`, un-delegated `MANAGER` / `SCHOOL_STAFF`)
+ *   skips only the roster fetch (`SKIP_ROLE_NO_ROSTER_PERMISSION`) while preserving verified class-community membership.
+ * - A successful `get_my_school_context` result confirming zero assignments for an approved `TEACHER`
+ *   resolves cleanly to an empty Teacher class list without triggering `insufficient_authority`.
+ * - A failed (`ERROR` or `BLOCKED_BACKEND`) context response for a roster-capable role does NOT prove zero assignments.
+ */
+export function resolveClassesRosterFetchStrategy(
+  user: Pick<User, 'role' | 'capabilities' | 'accountStatus'>,
+  ctxRes: BackendOpResult<{ assignedClassIds: string[] }>,
+): ClassesRosterFetchStrategy {
+  if (user.accountStatus !== 'APPROVED') {
+    return { action: 'SKIP_UNAUTHORIZED', reason: 'actor_not_approved' };
+  }
+
+  if (ctxRes.status === 'UNAUTHORIZED') {
+    return {
+      action: 'SKIP_UNAUTHORIZED',
+      reason: ctxRes.errorMessage || ctxRes.errorCode || 'Not authorized to load classes.',
+    };
+  }
+
+  const caps = Array.isArray(user.capabilities) ? user.capabilities : [];
+  const roleCanLoadRosters =
+    user.role === 'APP_ADMIN' ||
+    user.role === 'ADMINISTRATIVE_PERSONNEL' ||
+    user.role === 'TEACHER' ||
+    (user.role === 'MANAGER' &&
+      (caps.includes('CLASSES_ROSTER_VIEW') ||
+        caps.includes('CLASSES_MANAGE') ||
+        caps.includes('FULL_ACCESS'))) ||
+    (user.role === 'SCHOOL_STAFF' && caps.includes('CLASSES_ROSTER_VIEW'));
+
+  if (!roleCanLoadRosters) {
+    return { action: 'SKIP_ROLE_NO_ROSTER_PERMISSION' };
+  }
+
+  if (
+    user.role === 'TEACHER' &&
+    ctxRes.ok &&
+    ctxRes.data &&
+    Array.isArray(ctxRes.data.assignedClassIds) &&
+    ctxRes.data.assignedClassIds.length === 0
+  ) {
+    return { action: 'SKIP_CONFIRMED_ZERO_ASSIGNMENTS' };
+  }
+
+  return { action: 'FETCH_ROSTERS' };
+}
+
+/**
+ * Reconciles selected class ID against the user's current authoritative class IDs.
+ * Clears stale class IDs immediately when assignments are removed or empty.
+ */
+export function reconcileSelectedClassId(
+  preferredClassId: string | null | undefined,
+  authorizedClassIds: readonly string[],
+): string {
+  if (authorizedClassIds.length === 0) return '';
+  if (preferredClassId && authorizedClassIds.includes(preferredClassId)) {
+    return preferredClassId;
+  }
+  return authorizedClassIds[0];
 }

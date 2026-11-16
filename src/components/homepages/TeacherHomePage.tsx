@@ -137,7 +137,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
             actionLabel={openActionLabel}
             icon="🏫"
             tone="blue"
-            onClick={() => openCommunitySubTab('announcements')}
+            onClick={() => setActiveTab('classes')}
           />
 
           <HomeShortcutCard
