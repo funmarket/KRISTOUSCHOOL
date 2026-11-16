@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { pickText } from '../../i18n/homepages';
 import { canAccessAppTab } from '../homepages/homepageAccess';
+import { getCurrentNotificationTarget, getNotificationActorKey, resolveNotificationTarget, type NotificationTargetIntent } from '../../lib/notificationTargetNavigation';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import {
   countUnreadThreads,
@@ -14,7 +15,7 @@ import { reconcileSelectedRecipientId } from '../../lib/appStateGuards';
 import { MessageRecipientOption } from '../../types';
 import { MessageSquare, Send, AlertCircle, CheckCircle2, Plus, Lock } from 'lucide-react';
 
-export const MessagesView: React.FC = () => {
+export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetIntent | null }> = ({ notificationTarget = null }) => {
   const {
     currentUser,
     language,
@@ -41,10 +42,13 @@ export const MessagesView: React.FC = () => {
   const isAuthorized = canAccessAppTab(currentUser, 'messages');
   const isBackendUnauthorized = messagesStatus === 'UNAUTHORIZED';
   const identityKey = `${currentUser?.id ?? 'anon'}::${currentUser?.accountStatus ?? 'none'}`;
+  const notificationIntent = getCurrentNotificationTarget(notificationTarget, getNotificationActorKey(currentUser), 'messages');
+  const notificationResolution = resolveNotificationTarget(notificationIntent, getNotificationActorKey(currentUser), messagesStatus, isHydratingSchoolData, messages);
 
   const mountedRef = useRef(true);
   const recipientsGenRef = useRef(0);
   const activeIdentityRef = useRef(identityKey);
+  const appliedNotificationRequestRef = useRef<string | null>(null);
   activeIdentityRef.current = identityKey;
 
   useEffect(() => {
@@ -134,10 +138,29 @@ export const MessagesView: React.FC = () => {
       setSelectedThreadId('');
       return;
     }
+    if (notificationIntent) {
+      const requestKey = `${notificationIntent.actorKey}::${notificationIntent.requestId}`;
+      if (appliedNotificationRequestRef.current !== requestKey) {
+        if (notificationResolution.state === 'found') {
+          // A transient ERROR, unavailable record or pending request must remain retryable.
+          appliedNotificationRequestRef.current = requestKey;
+          setSelectedThreadId(notificationResolution.record.id);
+        } else {
+          setSelectedThreadId('');
+        }
+      }
+      return;
+    }
     if (messages.length > 0 && !messages.some((m) => m.id === selectedThreadId)) {
       setSelectedThreadId(messages[0].id);
     }
-  }, [isBackendUnauthorized, messages, selectedThreadId]);
+  }, [isBackendUnauthorized, messages, selectedThreadId, notificationIntent, notificationResolution.state, notificationResolution.record?.id]);
+
+  useEffect(() => {
+    if (notificationIntent && notificationResolution.state === 'found') {
+      document.getElementById(`notification-thread-${notificationResolution.record.id}`)?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [notificationIntent?.requestId, notificationResolution.state, notificationResolution.record?.id]);
 
   if (!isAuthorized) {
     return (
@@ -261,6 +284,11 @@ export const MessagesView: React.FC = () => {
         </button>
       </div>
 
+      {notificationIntent && notificationResolution.state === 'unavailable' && (
+        <p role="status" data-testid="notification-target-unavailable" className="rounded-xl border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs font-semibold text-amber-900 dark:text-amber-200">
+          {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.' }, language)}
+        </p>
+      )}
       {feedback && (
         <div
           role={feedback.type === 'error' ? 'alert' : 'status'}
@@ -457,6 +485,7 @@ export const MessagesView: React.FC = () => {
               messages.map((thread) => (
                 <button
                   key={thread.id}
+                  id={`notification-thread-${thread.id}`}
                   type="button"
                   onClick={() => setSelectedThreadId(thread.id)}
                   className={`w-full text-start p-3 rounded-2xl border transition-all ${

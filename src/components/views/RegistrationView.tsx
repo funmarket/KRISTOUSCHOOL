@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { EnrollmentApplicationStatus } from '../../types';
 import { canReviewEnrollmentsUi } from '../homepages/homepageAccess';
+import { getCurrentNotificationTarget, getNotificationActorKey, resolveNotificationTarget, type NotificationTargetIntent } from '../../lib/notificationTargetNavigation';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { pickText } from '../../i18n/homepages';
 import {
@@ -21,7 +22,7 @@ const REVIEW_DECISIONS: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTE
   'ENROLLED',
 ];
 
-export const RegistrationView: React.FC = () => {
+export const RegistrationView: React.FC<{ notificationTarget?: NotificationTargetIntent | null }> = ({ notificationTarget = null }) => {
   const {
     currentUser,
     enrollmentApplications,
@@ -56,6 +57,14 @@ export const RegistrationView: React.FC = () => {
 
   const canReview = canReviewEnrollmentsUi(currentUser);
   const showApplicationsSection = currentUser?.accountStatus === 'APPROVED';
+  const notificationIntent = getCurrentNotificationTarget(notificationTarget, getNotificationActorKey(currentUser), 'registration');
+  const notificationResolution = resolveNotificationTarget(notificationIntent, getNotificationActorKey(currentUser), enrollmentsStatus, isHydratingSchoolData, enrollmentApplications);
+
+  useEffect(() => {
+    if (notificationIntent && notificationResolution.state === 'found') {
+      document.getElementById(`notification-enrollment-${notificationResolution.record.id}`)?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [notificationIntent?.requestId, notificationResolution.state, notificationResolution.record?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,6 +329,11 @@ export const RegistrationView: React.FC = () => {
           data-testid="enrollment-applications-section"
           className="bg-white dark:bg-[#111111] p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4"
         >
+          {notificationIntent && notificationResolution.state === 'unavailable' && (
+            <p role="status" data-testid="notification-target-unavailable" className="rounded-xl border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs font-semibold text-amber-900 dark:text-amber-200">
+              {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.' }, language)}
+            </p>
+          )}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -458,7 +472,8 @@ export const RegistrationView: React.FC = () => {
                 return (
                   <div
                     key={app.id}
-                    className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/50 space-y-3"
+                    id={`notification-enrollment-${app.id}`}
+                    className={`p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/50 space-y-3 ${notificationIntent?.refId === app.id ? 'ring-2 ring-blue-500' : ''}`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>

@@ -4,7 +4,7 @@ import { AuthModal } from './AuthModal';
 import { getTelegramLinkCopy } from '../i18n/telegram-link';
 import { canAccessAppTab } from './homepages/homepageAccess';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../i18n/homepages';
-import { AppTab, NotificationSoundOption } from '../types';
+import { AppTab, NotificationItem, NotificationSoundOption } from '../types';
 import { filterLoadedNotifications, NOTIFICATION_CATEGORIES, type NotificationFilter } from '../lib/notificationFilters';
 import {
   Bell,
@@ -24,6 +24,7 @@ interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
+  onNavigateToNotificationTarget?: (notification: NotificationItem) => boolean;
 }
 
 const NOTIFICATION_SOUNDS: readonly NotificationSoundOption[] = [
@@ -48,6 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab: _activeTab,
   setActiveTab,
   onNavigateToSubTab,
+  onNavigateToNotificationTarget,
 }) => {
   const {
     currentUser,
@@ -263,7 +265,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                             if (!n.read && !isBusy) {
                               markNotificationRead(n.id);
                             }
-                            if (n.targetTab === 'calendar' && canAccessAppTab(currentUser, 'announcements')) {
+                            if (onNavigateToNotificationTarget?.(n)) {
+                              setShowNotifications(false);
+                            } else if (n.targetTab === 'calendar' && canAccessAppTab(currentUser, 'announcements')) {
                               if (onNavigateToSubTab) {
                                 onNavigateToSubTab('announcements', 'calendar');
                               } else {
