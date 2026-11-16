@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DirectorySubTab } from '../../types';
 import { canManagePublicContentUi } from '../homepages/homepageAccess';
 import { pickText } from '../../i18n/homepages';
 import { upsertDirectoryEntry } from '../../lib/schoolContent';
-import { Plus, AlertCircle, CheckCircle2, Edit3, Lock } from 'lucide-react';
+import { visibleDirectoryEntries } from '../../lib/directoryVisibility';
+import { Plus, AlertCircle, CheckCircle2, Edit3, Lock, X, ChevronRight } from 'lucide-react';
 
 export interface DirectoryViewProps {
   initialSubTab?: DirectorySubTab;
@@ -40,9 +41,50 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   const [isPublished, setIsPublished] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [selectedDirectoryEntry, setSelectedDirectoryEntry] = useState<{ kind: 'TEACHER' | 'ADMIN'; id: string } | null>(null);
+  const detailDialogRef = useRef<HTMLDialogElement>(null);
+  const detailOpenerRef = useRef<HTMLButtonElement>(null);
+
+  const visibleTeachers = visibleDirectoryEntries(teachers, directoryStatus, canManage);
+  const visibleAdmins = visibleDirectoryEntries(admins, directoryStatus, canManage);
+  const canOpenDetails = directoryStatus === 'READY' && !isHydratingSchoolData;
+  const selectedTeacher = canOpenDetails && selectedDirectoryEntry?.kind === 'TEACHER'
+    ? visibleTeachers.find((entry) => entry.id === selectedDirectoryEntry.id)
+    : undefined;
+  const selectedAdmin = canOpenDetails && selectedDirectoryEntry?.kind === 'ADMIN'
+    ? visibleAdmins.find((entry) => entry.id === selectedDirectoryEntry.id)
+    : undefined;
+  const selectedMember = selectedTeacher ?? selectedAdmin;
+  const detailTags = selectedTeacher?.classes ?? selectedAdmin?.responsibilities ?? [];
+  const detailLanguages = selectedTeacher?.languages ?? selectedAdmin?.languages ?? [];
+
+  const closeDirectoryProfile = () => {
+    const dialog = detailDialogRef.current;
+    if (dialog?.open) dialog.close();
+    setSelectedDirectoryEntry(null);
+    if (detailOpenerRef.current?.isConnected) detailOpenerRef.current.focus();
+  };
+
+  useLayoutEffect(() => {
+    const dialog = detailDialogRef.current;
+    if (!dialog) return;
+    if (selectedMember && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLButtonElement>('[data-testid="directory-detail-close"]')?.focus();
+    } else if (!selectedMember && dialog.open) {
+      dialog.close();
+    }
+  }, [selectedMember]);
+
+  const openDirectoryProfile = (opener: HTMLButtonElement, kind: 'TEACHER' | 'ADMIN', id: string) => {
+    if (!canOpenDetails) return;
+    detailOpenerRef.current = opener;
+    setSelectedDirectoryEntry({ kind, id });
+  };
 
   useEffect(() => {
     setTab(initialSubTab);
+    setSelectedDirectoryEntry(null);
   }, [initialSubTab]);
 
   const startEdit = (
@@ -325,21 +367,21 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
       )}
 
-      {isDirectoryUnauthorized ? null : isHydratingSchoolData && teachers.length === 0 && admins.length === 0 ? (
+      {isDirectoryUnauthorized ? null : isHydratingSchoolData && visibleTeachers.length === 0 && visibleAdmins.length === 0 ? (
         <div
           data-testid="directory-loading-state"
           className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500"
         >
           {t('loading')}
         </div>
-      ) : tab === 'teachers' && teachers.length === 0 && directoryStatus === 'READY' ? (
+      ) : tab === 'teachers' && visibleTeachers.length === 0 && directoryStatus === 'READY' ? (
         <div
           data-testid="directory-empty-state"
           className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500"
         >
           {t('noItems')}
         </div>
-      ) : tab === 'admin' && admins.length === 0 && directoryStatus === 'READY' ? (
+      ) : tab === 'admin' && visibleAdmins.length === 0 && directoryStatus === 'READY' ? (
         <div
           data-testid="directory-empty-state"
           className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500"
@@ -348,88 +390,178 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
       ) : tab === 'teachers' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {teachers.map((teach) => (
-            <div key={teach.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4 sm:gap-5">
-              <img src={teach.photoUrl} alt={teach.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-500 shadow-md shrink-0" />
-              <div className="space-y-2 flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white">{teach.name}</h3>
-                  {canManage && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        startEdit('TEACHER', {
-                          id: teach.id,
-                          name: teach.name,
-                          title: teach.title,
-                          bio: teach.bio,
-                          tags: teach.classes,
-                          languages: teach.languages,
-                          isPublished: teach.isPublished,
-                        })
-                      }
-                      aria-label={`Edit ${teach.name}`}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">{teach.title}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{teach.bio}</p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {teach.classes.map((cls, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold rounded-lg">
-                      {cls}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {visibleTeachers.map((teach) => (
+            <div key={teach.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4">
+              <button
+                type="button"
+                data-testid={'directory-open-' + teach.id}
+                disabled={!canOpenDetails}
+                onClick={(event) => openDirectoryProfile(event.currentTarget, 'TEACHER', teach.id)}
+                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of' }, language) + ' ' + teach.name}
+                className="flex flex-1 items-start gap-4 sm:gap-5 min-w-0 text-start rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:opacity-90"
+              >
+                <img src={teach.photoUrl || '/assets/kristou-logo.png'} alt={teach.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-500 shadow-md shrink-0" />
+                <span className="space-y-2 flex-1 min-w-0">
+                  <span className="block font-bold text-base text-gray-900 dark:text-white">{teach.name}</span>
+                  <span className="block text-xs text-blue-600 dark:text-blue-400 font-semibold">{teach.title}</span>
+                  {teach.bio && <span className="block text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{teach.bio}</span>}
+                  <span className="flex flex-wrap gap-1.5 pt-1">
+                    {teach.classes.map((cls, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold rounded-lg">
+                        {cls}
+                      </span>
+                    ))}
+                  </span>
+                  {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details' }, language)}
+                    <ChevronRight className="w-3 h-3" />
+                  </span>}
+                  {canManage && teach.isPublished !== true && directoryStatus === 'READY' && <span className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft' }, language)}
+                  </span>}
+                </span>
+              </button>
+              {canManage && !isDirectoryUnauthorized && (
+                <button
+                  type="button"
+                  onClick={() => startEdit('TEACHER', {
+                    id: teach.id, name: teach.name, title: teach.title, bio: teach.bio,
+                    tags: teach.classes, languages: teach.languages, isPublished: teach.isPublished,
+                  })}
+                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit' }, language) + ' ' + teach.name}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {admins.map((adm) => (
-            <div key={adm.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4 sm:gap-5">
-              <img src={adm.photoUrl} alt={adm.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500 shadow-md shrink-0" />
-              <div className="space-y-2 flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white">{adm.name}</h3>
-                  {canManage && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        startEdit('ADMIN', {
-                          id: adm.id,
-                          name: adm.name,
-                          title: adm.title,
-                          bio: adm.bio,
-                          tags: adm.responsibilities,
-                          isPublished: adm.isPublished,
-                        })
-                      }
-                      aria-label={`Edit ${adm.name}`}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{adm.title}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{adm.bio}</p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {adm.responsibilities.map((resp, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg">
-                      {resp}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {visibleAdmins.map((adm) => (
+            <div key={adm.id} className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-start gap-4">
+              <button
+                type="button"
+                data-testid={'directory-open-' + adm.id}
+                disabled={!canOpenDetails}
+                onClick={(event) => openDirectoryProfile(event.currentTarget, 'ADMIN', adm.id)}
+                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of' }, language) + ' ' + adm.name}
+                className="flex flex-1 items-start gap-4 sm:gap-5 min-w-0 text-start rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-90"
+              >
+                <img src={adm.photoUrl || '/assets/kristou-logo.png'} alt={adm.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500 shadow-md shrink-0" />
+                <span className="space-y-2 flex-1 min-w-0">
+                  <span className="block font-bold text-base text-gray-900 dark:text-white">{adm.name}</span>
+                  <span className="block text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{adm.title}</span>
+                  {adm.bio && <span className="block text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{adm.bio}</span>}
+                  <span className="flex flex-wrap gap-1.5 pt-1">
+                    {adm.responsibilities.map((resp, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg">
+                        {resp}
+                      </span>
+                    ))}
+                  </span>
+                  {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details' }, language)}
+                    <ChevronRight className="w-3 h-3" />
+                  </span>}
+                  {canManage && adm.isPublished !== true && directoryStatus === 'READY' && <span className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft' }, language)}
+                  </span>}
+                </span>
+              </button>
+              {canManage && !isDirectoryUnauthorized && (
+                <button
+                  type="button"
+                  onClick={() => startEdit('ADMIN', {
+                    id: adm.id, name: adm.name, title: adm.title, bio: adm.bio,
+                    tags: adm.responsibilities, languages: adm.languages, isPublished: adm.isPublished,
+                  })}
+                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit' }, language) + ' ' + adm.name}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
+      <dialog
+        ref={detailDialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="directory-detail-title"
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
+        onClose={closeDirectoryProfile}
+        onCancel={() => setSelectedDirectoryEntry(null)}
+        data-testid="directory-detail-dialog"
+        className="m-auto w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-gray-200 bg-white p-5 sm:p-7 text-gray-900 shadow-2xl backdrop:bg-gray-950/70 dark:border-gray-800 dark:bg-[#111111] dark:text-white"
+      >
+        {selectedMember && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <h2 id="directory-detail-title" className="text-xl font-extrabold leading-snug break-words">
+                {selectedMember.name}
+              </h2>
+              <button
+                type="button"
+                data-testid="directory-detail-close"
+                onClick={closeDirectoryProfile}
+                aria-label={pickText({ ar: 'إغلاق التفاصيل', fr: 'Fermer le profil', en: 'Close profile' }, language)}
+                className="rounded-xl p-2 shrink-0 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {selectedMember.isPublished !== true && canManage && (
+              <p data-testid="directory-unpublished-preview" className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                {pickText({
+                  ar: 'معاينة إدارية — هذه البطاقة غير منشورة للزوار.',
+                  fr: 'Aperçu de gestion — cette fiche n’est pas publique.',
+                  en: 'Management preview — this profile is not published to visitors.',
+                }, language)}
+              </p>
+            )}
+            <div className="flex items-start gap-4">
+              <img
+                src={selectedMember.photoUrl || '/assets/kristou-logo.png'}
+                onError={(event) => {
+                  if (!event.currentTarget.src.endsWith('/assets/kristou-logo.png')) {
+                    event.currentTarget.src = '/assets/kristou-logo.png';
+                  }
+                }}
+                alt={selectedMember.name}
+                className="h-24 w-24 shrink-0 rounded-2xl border-2 border-blue-500 object-cover sm:h-28 sm:w-28"
+              />
+              <div className="min-w-0">
+                {selectedMember.title && <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 break-words">{selectedMember.title}</p>}
+                {detailLanguages.length > 0 && (
+                  <p className="mt-3 text-xs leading-relaxed">
+                    <strong>{pickText({ ar: 'اللغات', fr: 'Langues', en: 'Languages' }, language)}: </strong>
+                    {detailLanguages.join(' · ')}
+                  </p>
+                )}
+              </div>
+            </div>
+            {selectedMember.bio && <p className="text-sm leading-7 whitespace-pre-wrap break-words">{selectedMember.bio}</p>}
+            {detailTags.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="text-xs font-bold">
+                  {selectedTeacher
+                    ? pickText({ ar: 'الأقسام والمواد', fr: 'Classes et disciplines', en: 'Classes and subjects' }, language)
+                    : pickText({ ar: 'المسؤوليات', fr: 'Responsabilités', en: 'Responsibilities' }, language)}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {detailTags.map((item, index) => (
+                    <span key={index} className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">{item}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </dialog>
     </div>
   );
 };

@@ -350,6 +350,7 @@ export interface AdminDirectoryMember {
   photoUrl: string;
   bio: string;
   responsibilities: string[];
+  languages?: string[];
   isPublished?: boolean;
 }
 
