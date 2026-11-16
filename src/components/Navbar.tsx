@@ -112,44 +112,32 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (!profileMenuRef.current?.contains(event.target as Node)) setShowProfileMenu(false);
       if (!notificationsMenuRef.current?.contains(event.target as Node)) setShowNotifications(false);
     };
-    const handleMenuKeyDown = (event: KeyboardEvent) => {
+    const dismissEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        const activeMenu = profileMenuRef.current?.contains(document.activeElement)
+          ? profileMenuRef.current
+          : notificationsMenuRef.current;
         setShowProfileMenu(false);
         setShowNotifications(false);
+        activeMenu?.querySelector('button')?.focus({ preventScroll: true });
         return;
       }
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      if (target?.closest('input, textarea, select, [contenteditable], [role="combobox"], [role="slider"]')) return;
-      const panel = notificationsMenuRef.current?.contains(target)
-        ? notificationsScrollRef.current
-        : profileMenuRef.current?.contains(target)
-        ? profileScrollRef.current
-        : profileScrollRef.current ?? notificationsScrollRef.current;
-      if (!panel) return;
-      const pageStep = Math.max(40, panel.clientHeight * 0.9);
-      const maxScroll = Math.max(0, panel.scrollHeight - panel.clientHeight);
-      let nextScroll: number;
-      switch (event.key) {
-        case 'ArrowDown': nextScroll = panel.scrollTop + 40; break;
-        case 'ArrowUp': nextScroll = panel.scrollTop - 40; break;
-        case 'PageDown': nextScroll = panel.scrollTop + pageStep; break;
-        case 'PageUp': nextScroll = panel.scrollTop - pageStep; break;
-        case 'Home': nextScroll = 0; break;
-        case 'End': nextScroll = maxScroll; break;
-        default: return;
-      }
-      // Keep keyboard scrolling in the panel instead of the locked background.
-      event.preventDefault();
-      panel.scrollTop = Math.max(0, Math.min(maxScroll, nextScroll));
     };
     document.addEventListener('pointerdown', dismissOutside);
-    document.addEventListener('keydown', handleMenuKeyDown);
+    document.addEventListener('keydown', dismissEscape);
     return () => {
       document.removeEventListener('pointerdown', dismissOutside);
-      document.removeEventListener('keydown', handleMenuKeyDown);
+      document.removeEventListener('keydown', dismissEscape);
     };
   }, [navbarMenuOpen]);
+
+  useEffect(() => {
+    if (showNotifications) notificationsScrollRef.current?.focus({ preventScroll: true });
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (showProfileMenu) profileScrollRef.current?.focus({ preventScroll: true });
+  }, [showProfileMenu]);
 
   useEffect(() => {
     if (!navbarMenuOpen) return;
@@ -246,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {showNotifications && (
               <div id="navbar-notifications" className="absolute end-0 top-full pt-2 w-80 max-w-[calc(100vw-2rem)] z-50">
-                <div ref={notificationsScrollRef} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3">
+                <div ref={notificationsScrollRef} role="region" tabIndex={0} aria-label={t('notifications')} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-k-brand">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">
                     {t('notifications')}
@@ -401,7 +389,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div
                 className="absolute end-0 top-full pt-1.5 w-[min(19rem,calc(100vw-1rem))] z-50"
               >
-                <div ref={profileScrollRef} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
+                <div ref={profileScrollRef} role="region" tabIndex={0} aria-label={currentUser ? t('account') : t('login')} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-k-brand">
                   {currentUser && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                       <p className="font-bold text-sm text-gray-900 dark:text-white">
