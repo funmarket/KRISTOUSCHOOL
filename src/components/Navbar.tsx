@@ -5,6 +5,7 @@ import { getTelegramLinkCopy } from '../i18n/telegram-link';
 import { canAccessAppTab } from './homepages/homepageAccess';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../i18n/homepages';
 import { AppTab, NotificationSoundOption } from '../types';
+import { filterLoadedNotifications, NOTIFICATION_CATEGORIES, type NotificationFilter } from '../lib/notificationFilters';
 import {
   Bell,
   Moon,
@@ -32,6 +33,16 @@ const NOTIFICATION_SOUNDS: readonly NotificationSoundOption[] = [
   'Gentle Pop',
   'Silent',
 ];
+
+const NOTIFICATION_FILTER_LABELS: Record<NotificationFilter, { ar: string; fr: string; en: string }> = {
+  all: { ar: 'الكل', fr: 'Tout', en: 'All' },
+  pickup: { ar: 'الاستلام', fr: 'Sortie', en: 'Pickup' },
+  note: { ar: 'ملاحظات', fr: 'Notes', en: 'Notes' },
+  announcement: { ar: 'الإعلانات', fr: 'Annonces', en: 'Announcements' },
+  message: { ar: 'الرسائل', fr: 'Messages', en: 'Messages' },
+  calendar: { ar: 'التقويم', fr: 'Calendrier', en: 'Calendar' },
+  system: { ar: 'النظام', fr: 'Système', en: 'System' },
+};
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab: _activeTab,
@@ -67,6 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState<NotificationFilter>('all');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [telegramLinkUrl, setTelegramLinkUrl] = useState<string | null>(null);
@@ -104,7 +116,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, [showProfileMenu]);
 
+  useEffect(() => {
+    setNotificationFilter('all');
+  }, [currentUser?.id, currentUser?.accountStatus]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const filteredNotifications = filterLoadedNotifications(notifications, notificationFilter);
 
   return (
     <header
@@ -191,6 +208,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                     )}
                   </div>
                 </div>
+                <div className="px-3 pt-2" aria-label={pickText({ ar: 'تصفية الإشعارات', fr: 'Filtrer les notifications', en: 'Filter notifications' }, language)} role="group">
+                  <div className="flex gap-1.5 overflow-x-auto pb-1" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    {(['all', ...NOTIFICATION_CATEGORIES] as NotificationFilter[]).map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        aria-pressed={notificationFilter === category}
+                        onClick={() => setNotificationFilter(category)}
+                        className={notificationFilter === category
+                          ? 'shrink-0 rounded-full bg-k-brand px-2.5 py-1 text-[11px] font-semibold text-white'
+                          : 'shrink-0 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200'}
+                      >
+                        {pickText(NOTIFICATION_FILTER_LABELS[category], language)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+                    {pickText({ ar: 'التصفية تشمل آخر 40 إشعاراً محمّلاً كحد أقصى', fr: 'Filtres sur les 40 dernières notifications chargées au maximum', en: 'Filters apply to up to 40 most recent loaded notifications' }, language)}
+                  </p>
+                </div>
                 {notificationsError && (
                   <div
                     role="alert"
@@ -208,12 +245,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
-                  {notifications.length === 0 ? (
+                  {filteredNotifications.length === 0 ? (
                     <div className="p-4 text-center text-sm text-gray-500">
-                      {t('noNotifications')}
+                      {notificationsError
+                        ? pickText({ ar: 'تعذر تحميل الإشعارات', fr: 'Notifications indisponibles', en: 'Notifications unavailable' }, language)
+                        : notifications.length === 0
+                          ? t('noNotifications')
+                          : pickText({ ar: 'لا توجد إشعارات في هذه الفئة ضمن العناصر المحمّلة', fr: 'Aucune notification de cette catégorie parmi les éléments chargés', en: 'No notifications in this category among loaded items' }, language)}
                     </div>
                   ) : (
-                    notifications.map((n) => {
+                    filteredNotifications.map((n) => {
                       const isBusy = markingAllNotifications || markingNotificationIds.includes(n.id);
                       return (
                         <div
