@@ -1,12 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { getCalendarPermissionsUi } from '../../homepages/homepageAccess';
+import { getCalendarPermissionsUi, canReviewOrdinaryAccountsUi } from '../../homepages/homepageAccess';
 import { useCalendarMonth, type CalendarMonthLoader } from '../../../lib/calendar/useCalendarMonth';
+import { listAccountDirectory } from '../../../lib/accountGovernance';
 import {
   resolveCalendarAudiencePlan,
   type CalendarAudienceMode,
   type CalendarClassOption,
+  type CalendarTeacherOption,
 } from '../../../lib/calendar/calendarAudience';
+import {
+  calendarEventMatchesAuthorizedClasses,
+  getVisibleCalendarTargetClassIds,
+  isWholeSchoolCalendarEvent,
+} from '../../../lib/calendar/calendarModel';
 import {
   AccountRole,
   BackendOpStatus,
@@ -49,6 +56,7 @@ export interface SchoolCalendarPanelProps {
   canRespond?: boolean;
   assignedClasses?: CalendarClassOption[];
   allClasses?: CalendarClassOption[];
+  teacherOptions?: CalendarTeacherOption[];
   isLoading?: boolean;
   errorMessage?: string | null;
   onRefresh: () => Promise<boolean | void>;
@@ -102,6 +110,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
   canRespond,
   assignedClasses,
   allClasses,
+  teacherOptions,
   isLoading: isHydrating = false,
   errorMessage: hydrationError = null,
   onRefresh: refreshSchoolData,
@@ -170,6 +179,21 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     return [];
   }, [allClasses, resolvedAssignedClasses, isSchoolCalendarManager, classId]);
 
+  const [loadedTeacherOptions, setLoadedTeacherOptions] = useState<CalendarTeacherOption[]>([]);
+  const [teacherDirectoryBlocked, setTeacherDirectoryBlocked] = useState<boolean>(false);
+  const [loadingTeachers, setLoadingTeachers] = useState<boolean>(false);
+
+  const isTeacherDirectoryBlockedLocally =
+    teacherOptions === undefined &&
+    isSchoolCalendarManager &&
+    !isAccountUnapproved &&
+    !canReviewOrdinaryAccountsUi(currentUser);
+  const effectiveTeacherOptions = teacherOptions ?? loadedTeacherOptions;
+  const effectiveTeacherPickerBlocked =
+    teacherOptions === undefined &&
+    isSchoolCalendarManager &&
+    (isTeacherDirectoryBlockedLocally || teacherDirectoryBlocked);
+
   const audiencePlan = useMemo(
     () =>
       resolveCalendarAudiencePlan({
@@ -178,8 +202,18 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
         contextClassId: classId,
         assignedClasses: resolvedAssignedClasses,
         allClasses: resolvedAllClasses,
+        teacherOptions: effectiveTeacherOptions,
+        teacherPickerBlocked: effectiveTeacherPickerBlocked,
       }),
-    [effectiveActorRole, isSchoolCalendarManager, classId, resolvedAssignedClasses, resolvedAllClasses],
+    [
+      effectiveActorRole,
+      isSchoolCalendarManager,
+      classId,
+      resolvedAssignedClasses,
+      resolvedAllClasses,
+      effectiveTeacherOptions,
+      effectiveTeacherPickerBlocked,
+    ],
   );
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -190,6 +224,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
   const [endDate, setEndDate] = useState(todayStr);
   const [audienceMode, setAudienceMode] = useState<CalendarAudienceMode>(audiencePlan.defaultMode);
   const [targetClassId, setTargetClassId] = useState<string>(audiencePlan.defaultClassId);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(audiencePlan.defaultTeacherUserId);
   const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -252,6 +287,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
 
   const mountedRef = useRef(true);
   const requestGenRef = useRef(0);
+  const teacherFetchGenRef = useRef(0);
   const activeScopeRef = useRef(activeScopeKey);
   activeScopeRef.current = activeScopeKey;
   const lastScopeKeyRef = useRef(activeScopeKey);
@@ -275,6 +311,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     return () => {
       mountedRef.current = false;
       requestGenRef.current += 1;
+      teacherFetchGenRef.current += 1;
     };
   }, []);
 
@@ -292,6 +329,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     setEndDate(todayStr);
     setAudienceMode(audiencePlan.defaultMode);
     setTargetClassId(audiencePlan.defaultClassId);
+    setSelectedTeacherId(audiencePlan.defaultTeacherUserId);
     setIsPublic(false);
     setCancellingId(null);
     setCancelReason('');
@@ -300,6 +338,18 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     setRsvpPendingId(null);
     setAgendaLimit(AGENDA_PAGE_SIZE);
   }, [activeScopeKey, todayStr, audiencePlan.defaultMode, audiencePlan.defaultClassId]);
+
+  useEffect(() => {
+    if (audiencePlan.selectableTeachers.length === 0) {
+      setSelectedTeacherId('');
+      return;
+    }
+    setSelectedTeacherId((prev) =>
+      prev && audiencePlan.selectableTeachers.some((teacher) => teacher.id === prev)
+        ? prev
+        : audiencePlan.defaultTeacherUserId || audiencePlan.selectableTeachers[0].id,
+    );
+  }, [audiencePlan.selectableTeachers, audiencePlan.defaultTeacherUserId]);
 
   const monthRange = useMemo(
     () => getMonthCalendarRange(cursorYear, cursorMonth),
@@ -326,6 +376,96 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     backendStatus === 'UNAUTHORIZED' ||
     isAccountUnapproved ||
     (currentUser === null && classId !== null);
+
+  useEffect(() => {
+    if (teacherOptions !== undefined) {
+      setLoadedTeacherOptions([]);
+      setTeacherDirectoryBlocked(false);
+      setLoadingTeachers(false);
+      return;
+    }
+    if (!isSchoolCalendarManager || isUnauthorized) {
+      teacherFetchGenRef.current += 1;
+      setLoadedTeacherOptions([]);
+      setTeacherDirectoryBlocked(false);
+      setLoadingTeachers(false);
+      return;
+    }
+    if (!canReviewOrdinaryAccountsUi(currentUser)) {
+      teacherFetchGenRef.current += 1;
+      setLoadedTeacherOptions([]);
+      setTeacherDirectoryBlocked(true);
+      setLoadingTeachers(false);
+      return;
+    }
+
+    const capturedScope = activeScopeKey;
+    const teacherGen = ++teacherFetchGenRef.current;
+    setLoadingTeachers(true);
+    setTeacherDirectoryBlocked(false);
+
+    void (async () => {
+      const pageSize = 100;
+      const collected: CalendarTeacherOption[] = [];
+      const seenIds = new Set<string>();
+      for (let offset = 0; ; offset += pageSize) {
+        let res;
+        try {
+          res = await listAccountDirectory({
+            status: 'APPROVED',
+            role: 'TEACHER',
+            limit: pageSize,
+            offset,
+          });
+        } catch {
+          res = { ok: false, errorCode: 'governance_operation_failed' as const };
+        }
+        if (
+          !mountedRef.current ||
+          activeScopeRef.current !== capturedScope ||
+          teacherFetchGenRef.current !== teacherGen
+        ) {
+          return;
+        }
+        if (!res.ok || !res.data) {
+          setLoadedTeacherOptions([]);
+          setTeacherDirectoryBlocked(true);
+          setLoadingTeachers(false);
+          return;
+        }
+        for (const acc of res.data.items) {
+          if (
+            acc.accountStatus === 'APPROVED' &&
+            (acc.activeRoles.includes('TEACHER') || acc.requestedRole === 'TEACHER') &&
+            !seenIds.has(acc.id)
+          ) {
+            seenIds.add(acc.id);
+            collected.push({
+              id: acc.id,
+              fullName: acc.fullName,
+              username: acc.username,
+            });
+          }
+        }
+        if (
+          res.data.items.length < pageSize ||
+          offset + res.data.items.length >= res.data.totalCount
+        ) {
+          break;
+        }
+      }
+      if (
+        !mountedRef.current ||
+        activeScopeRef.current !== capturedScope ||
+        teacherFetchGenRef.current !== teacherGen
+      ) {
+        return;
+      }
+      setLoadedTeacherOptions(collected);
+      setTeacherDirectoryBlocked(false);
+      setLoadingTeachers(false);
+    })();
+  }, [teacherOptions, isSchoolCalendarManager, isUnauthorized, currentUser, activeScopeKey]);
 
   const authorizedUserClassIdSet = useMemo(() => {
     const base = new Set(currentUser?.assignedClassIds ?? []);
@@ -362,16 +502,15 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
       (event) =>
         event.date <= monthRange.endDate && (event.endDate || event.date) >= monthRange.startDate,
     );
-    if (
-      effectiveActorRole === 'TEACHER' ||
-      effectiveActorRole === 'PARENT' ||
-      effectiveActorRole === 'STUDENT'
-    ) {
-      if (!isSchoolCalendarManager) {
-        return inRange.filter(
-          (event) => !event.classId || authorizedUserClassIdSet.has(event.classId),
-        );
-      }
+    if (effectiveActorRole === null) {
+      return inRange.filter(
+        (event) => isWholeSchoolCalendarEvent(event) && event.isPublic !== false,
+      );
+    }
+    if (!isSchoolCalendarManager) {
+      return inRange.filter((event) =>
+        calendarEventMatchesAuthorizedClasses(event, authorizedUserClassIdSet),
+      );
     }
     return inRange;
   }, [
@@ -474,12 +613,20 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     () => audiencePlan.options.find((opt) => opt.mode === audienceMode) ?? null,
     [audiencePlan.options, audienceMode],
   );
-  const isAudienceContractPending =
-    audienceMode === 'TEACHER_CLASSES' ||
-    audienceMode === 'ALL_MY_CLASSES' ||
-    selectedAudienceDescriptor?.supportedByBackend === false;
   const missingTargetClassForSingle =
     audienceMode === 'SINGLE_CLASS' && !targetClassId.trim();
+  const missingTargetTeacherForTeacherClasses =
+    audienceMode === 'TEACHER_CLASSES' &&
+    (effectiveTeacherPickerBlocked || loadingTeachers || !selectedTeacherId.trim());
+  const missingClassesForAllMyClasses =
+    audienceMode === 'ALL_MY_CLASSES' && resolvedAssignedClasses.length === 0;
+  const isCreateSubmitDisabled =
+    submitting ||
+    backendStatus !== 'READY' ||
+    selectedAudienceDescriptor?.supportedByBackend === false ||
+    missingTargetClassForSingle ||
+    missingTargetTeacherForTeacherClasses ||
+    missingClassesForAllMyClasses;
 
   const chooseDate = (dateStr: string) => {
     setSelectedDate(dateStr);
@@ -513,7 +660,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
   };
 
   const toggleCreateForm = () => {
-    if (isUnauthorized || !canCreateResolved) return;
+    if (isUnauthorized || !canCreateResolved || backendStatus !== 'READY') return;
     setFeedback(null);
     setRefreshWarning(null);
     setCancellingId(null);
@@ -525,6 +672,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
         setEndDate(selectedDate);
         setAudienceMode(audiencePlan.defaultMode);
         setTargetClassId(audiencePlan.defaultClassId);
+        setSelectedTeacherId(
+          audiencePlan.defaultTeacherUserId || audiencePlan.selectableTeachers[0]?.id || '',
+        );
         setIsPublic(false);
       }
       return next;
@@ -539,6 +689,11 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
     if (nextMode === 'SINGLE_CLASS' && !targetClassId) {
       setTargetClassId(
         audiencePlan.defaultClassId || audiencePlan.selectableClasses[0]?.id || '',
+      );
+    }
+    if (nextMode === 'TEACHER_CLASSES' && !selectedTeacherId) {
+      setSelectedTeacherId(
+        audiencePlan.defaultTeacherUserId || audiencePlan.selectableTeachers[0]?.id || '',
       );
     }
   };
@@ -625,7 +780,15 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting || !canCreateResolved || isUnauthorized) return;
+    if (
+      submitting ||
+      !canCreateResolved ||
+      isUnauthorized ||
+      backendStatus !== 'READY' ||
+      selectedAudienceDescriptor?.supportedByBackend === false
+    ) {
+      return;
+    }
     setFeedback(null);
     setRefreshWarning(null);
 
@@ -640,6 +803,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
         startDate,
         endDate,
         classId: audienceMode === 'SINGLE_CLASS' ? targetClassId : null,
+        teacherUserId: audienceMode === 'TEACHER_CLASSES' ? selectedTeacherId : null,
         isAllDay: true,
         isPublic: audienceMode === 'WHOLE_SCHOOL' && audiencePlan.canSetPublic ? isPublic : false,
         audienceMode,
@@ -655,7 +819,18 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
         return;
       }
       if (!res.ok) {
-        setFeedback({ type: 'error', text: res.errorMessage || t('error') });
+        const errMsg =
+          res.errorCode === 'calendar_no_eligible_classes'
+            ? pickText(
+                {
+                  ar: 'لا توجد أقسام نشطة مؤهلة لهذا الحدث في الروزنامة.',
+                  fr: 'Aucune classe active éligible n’est disponible pour cet événement.',
+                  en: 'No active eligible classes are available for this calendar event.',
+                },
+                language,
+              )
+            : res.errorMessage || t('error');
+        setFeedback({ type: 'error', text: errMsg });
         return;
       }
 
@@ -836,18 +1011,18 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
       case 'TEACHER_CLASSES':
         return pickText(
           {
-            ar: 'أقسام أستاذ محدد (غير متاح حالياً)',
-            fr: 'Classes d’un enseignant (Indisponible pour le moment)',
-            en: 'One selected teacher’s assigned classes (Not yet available)',
+            ar: 'أقسام أستاذ محدد',
+            fr: 'Classes d’un enseignant sélectionné',
+            en: 'One selected teacher’s assigned classes',
           },
           language,
         );
       case 'ALL_MY_CLASSES':
         return pickText(
           {
-            ar: 'جميع أقسامي المسندة (غير متاح حالياً)',
-            fr: 'Toutes mes classes attribuées (Indisponible pour le moment)',
-            en: 'All of my assigned classes (Not yet available)',
+            ar: 'جميع أقسامي المسندة',
+            fr: 'Toutes mes classes attribuées',
+            en: 'All of my assigned classes',
           },
           language,
         );
@@ -924,7 +1099,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
             ))}
           </select>
 
-          {canCreateResolved && !isUnauthorized && (
+          {canCreateResolved && !isUnauthorized && backendStatus === 'READY' && (
             <button
               type="button"
               data-testid="calendar-add-event-btn"
@@ -1004,7 +1179,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
       )}
 
       {/* Create Event Form (starts from selected date; retains draft on failed commit) */}
-      {canCreateResolved && !isUnauthorized && showCreateForm && (
+      {canCreateResolved && !isUnauthorized && backendStatus === 'READY' && showCreateForm && (
         <form
           onSubmit={handleCreate}
           data-testid="calendar-create-form"
@@ -1066,48 +1241,98 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
                 </select>
               </label>
             )}
+            {audienceMode === 'TEACHER_CLASSES' && (
+              <label className="space-y-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                <span>
+                  {pickText({ ar: 'الأستاذ المستهدف', fr: 'Enseignant cible', en: 'Target teacher' }, language)}
+                </span>
+                {loadingTeachers ? (
+                  <div
+                    data-testid="calendar-teacher-picker-loading"
+                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs text-gray-500"
+                  >
+                    {t('loading')}
+                  </div>
+                ) : effectiveTeacherPickerBlocked || audiencePlan.selectableTeachers.length === 0 ? (
+                  <div
+                    data-testid={
+                      effectiveTeacherPickerBlocked
+                        ? 'calendar-teacher-picker-unavailable'
+                        : 'calendar-teacher-picker-empty'
+                    }
+                    role="status"
+                    className="p-2.5 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {effectiveTeacherPickerBlocked
+                        ? pickText(
+                            {
+                              ar: 'اختيار الأستاذ غير متاح لهذا الحساب حالياً. يمكنك استخدام خيار «كامل المدرسة» أو «قسم واحد محدد».',
+                              fr: 'La sélection d’un enseignant n’est pas disponible pour ce compte actuellement. Utilisez « Toute l’école » ou « Une classe sélectionnée ».',
+                              en: 'Selecting a teacher is unavailable for this account right now. Use "Whole school" or "One selected class" instead.',
+                            },
+                            language,
+                          )
+                        : pickText(
+                            {
+                              ar: 'لا يوجد أساتذة معتمدون متاحون للاختيار حالياً.',
+                              fr: 'Aucun enseignant approuvé n’est disponible pour le moment.',
+                              en: 'No approved teachers are available to select right now.',
+                            },
+                            language,
+                          )}
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    data-testid="calendar-teacher-select"
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
+                  >
+                    {audiencePlan.selectableTeachers.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.fullName}
+                        {teacher.username ? ` (@${teacher.username})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+            )}
           </div>
 
-          {isAudienceContractPending && (
+          {audienceMode === 'ALL_MY_CLASSES' && (
             <div
-              data-testid="calendar-audience-contract-pending"
+              data-testid={
+                resolvedAssignedClasses.length > 0
+                  ? 'calendar-all-my-classes-summary'
+                  : 'calendar-no-assigned-classes-notice'
+              }
               role="status"
-              className="p-3.5 rounded-2xl text-xs font-semibold bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 border border-amber-200 dark:border-amber-900 space-y-1"
+              className="p-3.5 rounded-2xl text-xs font-semibold bg-blue-50 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200 border border-blue-200 dark:border-blue-900 flex items-center gap-2"
             >
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 shrink-0" />
-                <span>
-                  {audienceMode === 'TEACHER_CLASSES'
-                    ? pickText(
-                        {
-                          ar: 'إنشاء حدث موحد لجميع أقسام أستاذ محدد غير متاح حالياً. يمكنك حالياً اختيار قسم واحد محدد أو كامل المدرسة.',
-                          fr: 'La création d’un événement groupé pour toutes les classes d’un enseignant n’est pas encore disponible. Choisissez « Une classe sélectionnée » ou « Toute l’école ».',
-                          en: 'Publishing one event across all classes of a selected teacher is not yet available. Choose "One selected class" or "Whole school".',
-                        },
-                        language,
-                      )
-                    : pickText(
-                        {
-                          ar: 'إرسال حدث واحد إلى جميع أقسامك المسندة دفعة واحدة غير متاح حالياً. يمكنك حالياً اختيار «أحد أقسامي المسندة».',
-                          fr: 'La publication d’un même événement pour toutes vos classes attribuées n’est pas encore disponible. Utilisez « Une de mes classes attribuées ».',
-                          en: 'Publishing one event to all of your assigned classes at once is not yet available. Use "One of my assigned classes" for now.',
-                        },
-                        language,
-                      )}
-                </span>
-              </div>
-              {audienceMode === 'ALL_MY_CLASSES' && resolvedAssignedClasses.length === 1 && (
-                <p className="text-[11px] font-normal text-amber-800 dark:text-amber-300 ps-6">
-                  {pickText(
-                    {
-                      ar: 'ملاحظة: لديك قسم واحد مسند حالياً، لذا يغطيه خيار القسم الواحد مباشرة.',
-                      fr: 'Remarque : vous avez actuellement une seule classe attribuée, déjà couverte par « Une de mes classes attribuées ».',
-                      en: 'Note: you currently have one assigned class, which "One of my assigned classes" covers directly.',
-                    },
-                    language,
-                  )}
-                </p>
-              )}
+              <Users className="w-4 h-4 shrink-0" />
+              <span>
+                {resolvedAssignedClasses.length > 0
+                  ? pickText(
+                      {
+                        ar: `سيظهر هذا الحدث في جميع أقسامك المسندة: ${resolvedAssignedClasses.map((c) => c.name).join('، ')}`,
+                        fr: `Cet événement sera visible dans toutes vos classes attribuées : ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
+                        en: `This event will appear across all of your assigned classes: ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
+                      },
+                      language,
+                    )
+                  : pickText(
+                      {
+                        ar: 'لا توجد أقسام مسندة لحسابك حالياً.',
+                        fr: 'Aucune classe active n’est attribuée à votre compte actuellement.',
+                        en: 'No active assigned classes are available for your account.',
+                      },
+                      language,
+                    )}
+              </span>
             </div>
           )}
 
@@ -1202,7 +1427,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
             <button
               type="submit"
               data-testid="calendar-submit-event-btn"
-              disabled={submitting || isAudienceContractPending || missingTargetClassForSingle}
+              disabled={isCreateSubmitDisabled}
               className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
             >
               {submitting ? t('loading') : t('save')}
@@ -1417,7 +1642,22 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
             ) : (
               <div className="space-y-3">
                 {pagedDayEvents.map((ev) => {
-                  const classLabel = ev.classId ? classNameById.get(ev.classId) || ev.classId : null;
+                  const isWholeSchool = isWholeSchoolCalendarEvent(ev);
+                  const visibleTargetClassIds = getVisibleCalendarTargetClassIds(ev);
+                  const visibleTargetNames = visibleTargetClassIds.map(
+                    (cid) => classNameById.get(cid) || cid,
+                  );
+                  const scopeBadgeLabel = isWholeSchool
+                    ? pickText(
+                        { ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school' },
+                        language,
+                      )
+                    : visibleTargetNames.length > 0
+                    ? visibleTargetNames.join(', ')
+                    : pickText(
+                        { ar: 'قسم مستهدف', fr: 'Classe ciblée', en: 'Targeted class' },
+                        language,
+                      );
                   const isCancelled = ev.status === 'CANCELLED';
                   return (
                     <div
@@ -1440,14 +1680,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = ({
                             className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
                           >
                             <Users className="w-3 h-3" />
-                            <span>
-                              {classLabel
-                                ? classLabel
-                                : pickText(
-                                    { ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school' },
-                                    language,
-                                  )}
-                            </span>
+                            <span>{scopeBadgeLabel}</span>
                           </span>
                           {ev.isPublic && (
                             <span

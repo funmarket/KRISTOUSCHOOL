@@ -197,9 +197,17 @@ export type CalendarEventCategory =
   | 'TRIP'
   | 'OTHER';
 
+export type CalendarAudienceMode =
+  | 'WHOLE_SCHOOL'
+  | 'SINGLE_CLASS'
+  | 'TEACHER_CLASSES'
+  | 'ALL_MY_CLASSES';
+
 export interface CalendarEvent {
   id: string;
+  audienceMode?: CalendarAudienceMode;
   classId?: string;
+  targetClassIds?: string[];
   title: string;
   date: string;
   endDate?: string;

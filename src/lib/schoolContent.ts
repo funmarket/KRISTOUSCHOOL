@@ -1,16 +1,26 @@
 export { listSchoolCalendarEvents } from './calendar/calendarQueries.ts';
-export { getMonthCalendarRange, sortCalendarEvents, getEventsForCalendarDate } from './calendar/calendarModel.ts';
+export {
+  getMonthCalendarRange,
+  sortCalendarEvents,
+  getEventsForCalendarDate,
+  isWholeSchoolCalendarEvent,
+  getVisibleCalendarTargetClassIds,
+  calendarEventMatchesClassScope,
+  calendarEventMatchesAuthorizedClasses,
+} from './calendar/calendarModel.ts';
 export {
   resolveCalendarAudiencePlan,
   validateCalendarCreateInput,
   type CalendarAudienceMode,
   type CalendarAudienceOptionDescriptor,
   type CalendarAudiencePlan,
+  type CalendarAudienceUnavailableReason,
   type CalendarClassOption,
   type CalendarCreateValidationResult,
+  type CalendarTeacherOption,
 } from './calendar/calendarAudience.ts';
 import { validateCalendarCreateInput, type CalendarAudienceMode } from './calendar/calendarAudience.ts';
-import { supabase, classifySupabaseError } from './supabase.ts';
+import { supabase, classifySupabaseError, type DatabaseSchema } from './supabase.ts';
 import { CANONICAL_SCHOOL_LEVELS } from './schoolOperations.ts';
 import type {
   AccountRole,
@@ -349,6 +359,7 @@ export async function upsertSchoolCalendarEvent(
     startDate: string;
     endDate?: string;
     classId?: string | null;
+    teacherUserId?: string | null;
     isAllDay?: boolean;
     isPublic?: boolean;
     audienceMode?: CalendarAudienceMode;
@@ -363,8 +374,10 @@ export async function upsertSchoolCalendarEvent(
     title: input.title,
     startDate: input.startDate,
     endDate: input.endDate,
+    category: input.category,
     audienceMode: input.audienceMode,
     classId: input.classId,
+    teacherUserId: input.teacherUserId,
     isPublic: input.isPublic,
     actorRole: input.actorRole,
     canManageCalendar: input.canManageCalendar,
@@ -380,33 +393,105 @@ export async function upsertSchoolCalendarEvent(
   }
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('upsert_school_calendar_event', {
+    const rpcArgs: DatabaseSchema['public']['Functions']['create_school_calendar_event']['Args'] = {
       p_title: input.title.trim(),
       p_description: input.description.trim(),
       p_category: input.category,
       p_start_date: input.startDate,
       p_end_date: validation.endDate,
-      p_class_id: validation.classId,
+      p_audience_mode: validation.audienceMode,
       p_is_all_day: input.isAllDay ?? true,
-      p_is_public: validation.classId ? false : validation.isPublic,
-    });
+      p_is_public: validation.audienceMode === 'WHOLE_SCHOOL' ? validation.isPublic : false,
+      ...(validation.audienceMode === 'SINGLE_CLASS' && validation.classId
+        ? { p_class_id: validation.classId }
+        : {}),
+      ...(validation.audienceMode === 'TEACHER_CLASSES' && validation.teacherUserId
+        ? { p_teacher_user_id: validation.teacherUserId }
+        : {}),
+    };
+    const { data, error } = await client.rpc('create_school_calendar_event', rpcArgs);
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const row = (data ?? {}) as Record<string, unknown>;
+    if (!data || typeof data !== 'object') {
+      return {
+        ok: false,
+        status: 'ERROR',
+        errorCode: 'invalid_calendar_event_response',
+        errorMessage: 'Calendar event response was missing.',
+      };
+    }
+    const row = data as Record<string, unknown>;
+    const validModes: readonly CalendarAudienceMode[] = [
+      'WHOLE_SCHOOL',
+      'SINGLE_CLASS',
+      'TEACHER_CLASSES',
+      'ALL_MY_CLASSES',
+    ];
+    const validCategories: readonly CalendarEventCategory[] = [
+      'EVENT',
+      'EXAM',
+      'TEST',
+      'MEETING',
+      'HOLIDAY',
+      'CLOSURE',
+      'ACTIVITY',
+      'TRIP',
+      'OTHER',
+    ];
+    const validStatuses: readonly NonNullable<CalendarEvent['status']>[] = [
+      'SCHEDULED',
+      'RESCHEDULED',
+      'CANCELLED',
+    ];
+    const rawId = typeof row.id === 'string' && row.id.trim() ? row.id.trim() : null;
+    const rawTitle = typeof row.title === 'string' && row.title.trim() ? row.title : null;
+    const rawStart =
+      typeof row.start_date === 'string' && row.start_date.trim() ? row.start_date : null;
+    const rowAudienceMode = validModes.find((m) => m === row.audience_mode);
+    const rowCategory = validCategories.find((c) => c === row.category);
+    const rowStatus = validStatuses.find((s) => s === row.status);
+    if (
+      !rawId ||
+      !rawTitle ||
+      !rawStart ||
+      !rowAudienceMode ||
+      !rowCategory ||
+      !rowStatus ||
+      typeof row.is_public !== 'boolean'
+    ) {
+      return {
+        ok: false,
+        status: 'ERROR',
+        errorCode: 'invalid_calendar_event_response',
+        errorMessage: 'Calendar event response was incomplete.',
+      };
+    }
+    const rowClassId =
+      typeof row.class_id === 'string' && row.class_id.trim() ? row.class_id.trim() : undefined;
+
     return {
       ok: true,
       status: 'READY',
       data: {
-        id: String(row.id),
-        classId: row.class_id ? String(row.class_id) : undefined,
-        title: String(row.title),
-        description: String(row.description ?? ''),
-        category: String(row.category) as CalendarEventCategory,
-        date: String(row.start_date),
-        endDate: String(row.end_date ?? row.start_date),
+        id: rawId,
+        audienceMode: rowAudienceMode,
+        classId: rowAudienceMode === 'WHOLE_SCHOOL' ? undefined : rowClassId,
+        title: rawTitle,
+        description: typeof row.description === 'string' ? row.description : '',
+        category: rowCategory,
+        date: rawStart,
+        endDate:
+          typeof row.end_date === 'string' && row.end_date.trim() ? row.end_date : rawStart,
         isAllDay: row.is_all_day !== false,
-        timezone: String(row.timezone ?? 'Africa/Tunis'),
-        isPublic: Boolean(row.is_public),
-        status: (String(row.status) as CalendarEvent['status']) || 'SCHEDULED',
+        startTime: typeof row.start_time === 'string' ? row.start_time : null,
+        endTime: typeof row.end_time === 'string' ? row.end_time : null,
+        timezone:
+          typeof row.timezone === 'string' && row.timezone.trim()
+            ? row.timezone
+            : 'Africa/Tunis',
+        isPublic: row.is_public,
+        status: rowStatus,
+        cancellationReason:
+          typeof row.cancellation_reason === 'string' ? row.cancellation_reason : null,
       },
     };
   } catch (err) {

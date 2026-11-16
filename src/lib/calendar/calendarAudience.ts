@@ -1,10 +1,11 @@
-import type { AccountRole, BackendOpStatus } from '../../types.ts';
+import type {
+  AccountRole,
+  BackendOpStatus,
+  CalendarAudienceMode,
+  CalendarEventCategory,
+} from '../../types.ts';
 
-export type CalendarAudienceMode =
-  | 'WHOLE_SCHOOL'
-  | 'SINGLE_CLASS'
-  | 'TEACHER_CLASSES'
-  | 'ALL_MY_CLASSES';
+export type { CalendarAudienceMode };
 
 export interface CalendarClassOption {
   id: string;
@@ -12,20 +13,46 @@ export interface CalendarClassOption {
   level?: string;
 }
 
+export interface CalendarTeacherOption {
+  id: string;
+  fullName: string;
+  username?: string;
+}
+
+export type CalendarAudienceUnavailableReason =
+  | 'no_assigned_classes'
+  | 'teacher_picker_unavailable'
+  | 'no_teachers_available';
+
 export interface CalendarAudienceOptionDescriptor {
   mode: CalendarAudienceMode;
   supportedByBackend: boolean;
-  contractPendingReason?: 'multi_class_contract_pending';
+  unavailableReason?: CalendarAudienceUnavailableReason;
+  contractPendingReason?: string;
 }
 
 export interface CalendarAudiencePlan {
   options: CalendarAudienceOptionDescriptor[];
   defaultMode: CalendarAudienceMode;
   defaultClassId: string;
+  defaultTeacherUserId: string;
   selectableClasses: CalendarClassOption[];
+  selectableTeachers: CalendarTeacherOption[];
   canSetPublic: boolean;
   isTeacherWithoutAssignments: boolean;
 }
+
+const VALID_CATEGORIES: ReadonlySet<CalendarEventCategory> = new Set([
+  'EVENT',
+  'EXAM',
+  'TEST',
+  'MEETING',
+  'HOLIDAY',
+  'CLOSURE',
+  'ACTIVITY',
+  'TRIP',
+  'OTHER',
+]);
 
 export function resolveCalendarAudiencePlan(input: {
   actorRole: AccountRole | null | undefined;
@@ -33,9 +60,12 @@ export function resolveCalendarAudiencePlan(input: {
   contextClassId?: string | null;
   assignedClasses?: readonly CalendarClassOption[];
   allClasses?: readonly CalendarClassOption[];
+  teacherOptions?: readonly CalendarTeacherOption[];
+  teacherPickerBlocked?: boolean;
 }): CalendarAudiencePlan {
   const assigned = [...(input.assignedClasses ?? [])];
   const all = [...(input.allClasses ?? [])];
+  const selectableTeachers = input.teacherPickerBlocked ? [] : [...(input.teacherOptions ?? [])];
 
   if (input.canManageCalendar) {
     const selectableClasses: CalendarClassOption[] =
@@ -56,11 +86,14 @@ export function resolveCalendarAudiencePlan(input: {
           mode: 'TEACHER_CLASSES',
           supportedByBackend: false,
           contractPendingReason: 'multi_class_contract_pending',
+          ...(input.teacherPickerBlocked ? { unavailableReason: 'teacher_picker_unavailable' as const } : {}),
         },
       ],
       defaultMode: matchedContextClass ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL',
       defaultClassId: matchedContextClass || selectableClasses[0]?.id || '',
+      defaultTeacherUserId: selectableTeachers[0]?.id || '',
       selectableClasses,
+      selectableTeachers,
       canSetPublic: true,
       isTeacherWithoutAssignments: false,
     };
@@ -70,10 +103,15 @@ export function resolveCalendarAudiencePlan(input: {
     const matchedAssignedClass = input.contextClassId
       ? assigned.find((c) => c.id === input.contextClassId)?.id
       : undefined;
+    const hasAssignedClasses = assigned.length > 0;
 
     return {
       options: [
-        { mode: 'SINGLE_CLASS', supportedByBackend: assigned.length > 0 },
+        {
+          mode: 'SINGLE_CLASS',
+          supportedByBackend: hasAssignedClasses,
+          ...(hasAssignedClasses ? {} : { unavailableReason: 'no_assigned_classes' as const }),
+        },
         {
           mode: 'ALL_MY_CLASSES',
           supportedByBackend: false,
@@ -82,9 +120,11 @@ export function resolveCalendarAudiencePlan(input: {
       ],
       defaultMode: 'SINGLE_CLASS',
       defaultClassId: matchedAssignedClass || assigned[0]?.id || '',
+      defaultTeacherUserId: '',
       selectableClasses: assigned,
+      selectableTeachers: [],
       canSetPublic: false,
-      isTeacherWithoutAssignments: assigned.length === 0,
+      isTeacherWithoutAssignments: !hasAssignedClasses,
     };
   }
 
@@ -92,7 +132,9 @@ export function resolveCalendarAudiencePlan(input: {
     options: [],
     defaultMode: 'WHOLE_SCHOOL',
     defaultClassId: '',
+    defaultTeacherUserId: '',
     selectableClasses: [],
+    selectableTeachers: [],
     canSetPublic: false,
     isTeacherWithoutAssignments: false,
   };
@@ -103,6 +145,7 @@ export type CalendarCreateValidationResult =
       valid: true;
       audienceMode: CalendarAudienceMode;
       classId: string | null;
+      teacherUserId: string | null;
       isPublic: boolean;
       endDate: string;
     }
@@ -117,8 +160,10 @@ export function validateCalendarCreateInput(input: {
   title: string;
   startDate: string;
   endDate?: string;
+  category?: CalendarEventCategory;
   audienceMode?: CalendarAudienceMode;
   classId?: string | null;
+  teacherUserId?: string | null;
   isPublic?: boolean;
   actorRole?: AccountRole | null;
   canManageCalendar?: boolean;
@@ -142,46 +187,73 @@ export function validateCalendarCreateInput(input: {
       errorMessage: 'End date must be on or after start date.',
     };
   }
+  if (input.category !== undefined && !VALID_CATEGORIES.has(input.category)) {
+    return {
+      valid: false,
+      status: 'ERROR',
+      errorCode: 'invalid_category',
+      errorMessage: 'Select a valid calendar event category.',
+    };
+  }
 
   const rawClassId = input.classId ? input.classId.trim() : '';
+  const rawTeacherId = input.teacherUserId ? input.teacherUserId.trim() : '';
   const audienceMode: CalendarAudienceMode =
-    input.audienceMode ?? (rawClassId ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL');
+    input.audienceMode ??
+    (rawTeacherId ? 'TEACHER_CLASSES' : rawClassId ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL');
 
   if (audienceMode === 'TEACHER_CLASSES' || audienceMode === 'ALL_MY_CLASSES') {
     return {
       valid: false,
       status: 'BLOCKED_BACKEND',
       errorCode: 'multi_class_contract_pending',
-      errorMessage:
-        'Multi-class and teacher-targeted calendar events are not yet available. Select a single class or whole school.',
+      errorMessage: 'Multi-class calendar events are temporarily unavailable while backend support is prepared.',
     };
   }
 
   const isManager =
     input.canManageCalendar === true ||
-    input.actorRole === 'APP_ADMIN' ||
-    input.actorRole === 'ADMINISTRATIVE_PERSONNEL';
+    (input.canManageCalendar === undefined &&
+      (input.actorRole === 'APP_ADMIN' || input.actorRole === 'ADMINISTRATIVE_PERSONNEL'));
   const isTeacherActor = input.actorRole === 'TEACHER' && input.canManageCalendar !== true;
+  const hasKnownActorRestriction =
+    input.canManageCalendar === false || input.actorRole !== undefined;
 
   if (audienceMode === 'WHOLE_SCHOOL') {
-    if (isTeacherActor || input.canManageCalendar === false) {
+    if (hasKnownActorRestriction && !isManager) {
       return {
         valid: false,
         status: 'UNAUTHORIZED',
-        errorCode: 'teacher_cannot_create_school_wide',
-        errorMessage: 'Teachers cannot create school-wide or public calendar events.',
+        errorCode: isTeacherActor
+          ? 'teacher_cannot_create_school_wide'
+          : 'insufficient_authority',
+        errorMessage: isTeacherActor
+          ? 'Teachers cannot create school-wide or public calendar events.'
+          : 'You are not authorized to create school-wide calendar events.',
       };
     }
     return {
       valid: true,
       audienceMode,
       classId: null,
+      teacherUserId: null,
       isPublic: Boolean(input.isPublic),
       endDate,
     };
   }
 
+
+
   // SINGLE_CLASS
+  if (hasKnownActorRestriction && !isManager && input.actorRole !== 'TEACHER') {
+    return {
+      valid: false,
+      status: 'UNAUTHORIZED',
+      errorCode: 'insufficient_authority',
+      errorMessage: 'You are not authorized to create class calendar events.',
+    };
+  }
+
   if (!rawClassId) {
     return {
       valid: false,
@@ -216,6 +288,7 @@ export function validateCalendarCreateInput(input: {
     valid: true,
     audienceMode: 'SINGLE_CLASS',
     classId: rawClassId,
+    teacherUserId: null,
     isPublic: false,
     endDate,
   };

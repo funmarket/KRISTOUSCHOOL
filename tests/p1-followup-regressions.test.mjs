@@ -593,7 +593,7 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
   const recorded = {};
   const mockClient = {
     from: (table) => {
-      if (table === 'school_calendar_events') {
+      if (table === 'school_calendar_event_feed') {
         const q = {
           select: () => q,
           order: () => q,
@@ -603,7 +603,19 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
             recorded.range = [start, end];
             return {
               data: [
-                { id: 'ev-1', title: 'Bounded Event', category: 'EVENT', start_date: '2026-11-15', end_date: '2026-11-15', status: 'SCHEDULED', timezone: 'Africa/Tunis' },
+                {
+                  id: 'ev-1',
+                  audience_mode: 'TEACHER_CLASSES',
+                  class_id: 'class-1',
+                  target_class_ids: ['class-1', 'class-2'],
+                  title: 'Bounded Event',
+                  category: 'EVENT',
+                  start_date: '2026-11-15',
+                  end_date: '2026-11-15',
+                  is_public: false,
+                  status: 'SCHEDULED',
+                  timezone: 'Africa/Tunis',
+                },
               ],
               error: null,
             };
@@ -633,6 +645,8 @@ test('4: calendar month range, deterministic sorting, bounded adapter query, RSV
   assert.deepEqual(recorded.range, [0, 99]);
   assert.deepEqual(recorded.respIds, ['ev-1']);
   assert.equal(calRes.data[0].myResponse, 'ACKNOWLEDGED');
+  assert.equal(calRes.data[0].audienceMode, 'TEACHER_CLASSES');
+  assert.deepEqual(calRes.data[0].targetClassIds, ['class-1', 'class-2']);
 
   // Render check: ATTENDING / ACKNOWLEDGED / DECLINED (no "Maybe" relabel), CANCELLED event hides RSVP & shows safety notice
   const todayTunis = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());

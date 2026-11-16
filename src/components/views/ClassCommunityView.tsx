@@ -12,6 +12,7 @@ import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
 import { ParentNotesPanel } from './Shared/ParentNotesPanel';
 import { pickText } from '../../i18n/homepages';
 import {
+  calendarEventMatchesClassScope,
   createClassAnnouncement,
   createClassHomework,
   isSafeExternalOrAssetUrl,
@@ -162,7 +163,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
   }, [activeClass, homeworkList]);
 
   const scopedCalendarEvents = useMemo(() => {
-    return calendarEvents.filter((ev) => !ev.classId || (activeClass && ev.classId === activeClass.id));
+    return calendarEvents.filter((ev) => calendarEventMatchesClassScope(ev, activeClass?.id ?? null));
   }, [activeClass, calendarEvents]);
 
   const scopedDocuments = useMemo(() => {

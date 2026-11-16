@@ -439,6 +439,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setClassesError(null);
         setSelectedClassId('');
         setSelectedChildId('');
+        setCalendarEvents([]);
+        setCalendarError(null);
         setParentNotes([]);
         setNotesStatus('BLOCKED_BACKEND');
         setNotesError(null);
@@ -553,6 +555,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else if (calRes.status === 'UNAUTHORIZED') {
         setCalendarEvents([]);
         setCalendarError(calRes.errorMessage || calRes.errorCode || 'Unauthorized to load calendar.');
+      } else if (calRes.status === 'BLOCKED_BACKEND') {
+        setCalendarEvents([]);
+        setCalendarError(null);
       } else if (calRes.status === 'ERROR') {
         setCalendarError(calRes.errorMessage || calRes.errorCode || 'Failed to load calendar events.');
       } else {

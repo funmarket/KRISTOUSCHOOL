@@ -1,5 +1,3 @@
-// Generated from KRISTOUSCHOOL / ofppapwofhovhroyjtkc using Supabase generate_typescript_types.
-// Provenance and installed source-to-server migration mapping: docs/SUPABASE_DEPLOYMENT_2026-11-15.json.
 export type Json =
   | string
   | number
@@ -9,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.18"
-  }
   public: {
     Tables: {
       academic_years: {
@@ -27,6 +20,7 @@ export type Database = {
           starts_on: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           code: string
           created_at?: string
@@ -65,6 +59,7 @@ export type Database = {
           resulting_status: Database["public"]["Enums"]["account_approval_status"]
           target_user_id: string
         }
+        ComputedFields: never
         Insert: {
           action: string
           actor_role: Database["public"]["Enums"]["app_role"]
@@ -121,6 +116,7 @@ export type Database = {
           user_id: string
           verifier_hash: string
         }
+        ComputedFields: never
         Insert: {
           consumed_at?: string | null
           created_at?: string
@@ -159,6 +155,7 @@ export type Database = {
           priority: string
           title: string
         }
+        ComputedFields: never
         Insert: {
           author_name: string
           author_role: string
@@ -209,6 +206,7 @@ export type Database = {
           id: string
           title: string
         }
+        ComputedFields: never
         Insert: {
           author_user_id: string
           class_id: string
@@ -257,6 +255,7 @@ export type Database = {
           is_public: boolean
           title: string
         }
+        ComputedFields: never
         Insert: {
           author_user_id: string
           caption?: string
@@ -305,6 +304,7 @@ export type Database = {
           teacher_name: string
           title: string
         }
+        ComputedFields: never
         Insert: {
           author_user_id: string
           class_id: string
@@ -352,6 +352,7 @@ export type Database = {
           is_hidden: boolean
           question_id: string
         }
+        ComputedFields: never
         Insert: {
           author_name: string
           author_user_id: string
@@ -398,6 +399,7 @@ export type Database = {
           is_hidden: boolean
           moderated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           author_name: string
           author_user_id: string
@@ -458,6 +460,7 @@ export type Database = {
           title: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           bio?: string
           created_at?: string
@@ -518,6 +521,7 @@ export type Database = {
           updated_at: string
           version: number
         }
+        ComputedFields: never
         Insert: {
           birth_date: string
           created_at?: string
@@ -592,6 +596,7 @@ export type Database = {
           side_dish: string
           starter: string
         }
+        ComputedFields: never
         Insert: {
           day_label: string
           day_order: number
@@ -636,6 +641,7 @@ export type Database = {
           week_range: string
           week_start: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           created_by?: string | null
@@ -678,6 +684,7 @@ export type Database = {
           manager_user_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           active?: boolean
           capability: string
@@ -722,6 +729,7 @@ export type Database = {
           subject: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           created_by_user_id: string
@@ -754,15 +762,16 @@ export type Database = {
           dispatched_at: string | null
           event_type: string
           id: string
-          payload: Json
+          payload: NonNullable<Json>
           source_id: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           dispatched_at?: string | null
           event_type: string
           id?: string
-          payload?: Json
+          payload?: NonNullable<Json>
           source_id?: string | null
         }
         Update: {
@@ -770,7 +779,7 @@ export type Database = {
           dispatched_at?: string | null
           event_type?: string
           id?: string
-          payload?: Json
+          payload?: NonNullable<Json>
           source_id?: string | null
         }
         Relationships: []
@@ -786,6 +795,7 @@ export type Database = {
           updated_at: string
           verified_by: string | null
         }
+        ComputedFields: never
         Insert: {
           active?: boolean
           created_at?: string
@@ -850,6 +860,7 @@ export type Database = {
           topic: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           class_id?: string | null
           content: string
@@ -946,6 +957,7 @@ export type Database = {
           username: string
           username_normalized: string | null
         }
+        ComputedFields: never
         Insert: {
           account_status?: Database["public"]["Enums"]["account_approval_status"]
           admission_id?: string | null
@@ -963,7 +975,7 @@ export type Database = {
           status_reviewed_by?: string | null
           updated_at?: string
           username: string
-          username_normalized?: string | null
+          username_normalized?: never
         }
         Update: {
           account_status?: Database["public"]["Enums"]["account_approval_status"]
@@ -982,7 +994,7 @@ export type Database = {
           status_reviewed_by?: string | null
           updated_at?: string
           username?: string
-          username_normalized?: string | null
+          username_normalized?: never
         }
         Relationships: [
           {
@@ -1010,6 +1022,7 @@ export type Database = {
           submitted_by_user_id: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           email?: string | null
@@ -1067,6 +1080,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           active?: boolean
           assigned_by?: string | null
@@ -1120,6 +1134,7 @@ export type Database = {
           title: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           audience_scope?: string
           author_name: string
@@ -1164,8 +1179,47 @@ export type Database = {
           },
         ]
       }
+      school_calendar_event_targets: {
+        Row: {
+          class_id: string
+          event_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          class_id: string
+          event_id: string
+        }
+        Update: {
+          class_id?: string
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_calendar_event_targets_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "school_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_calendar_event_targets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "school_calendar_event_feed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_calendar_event_targets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "school_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_calendar_events: {
         Row: {
+          audience_mode: string
           cancellation_reason: string | null
           category: string
           class_id: string | null
@@ -1184,7 +1238,9 @@ export type Database = {
           title: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
+          audience_mode?: string
           cancellation_reason?: string | null
           category?: string
           class_id?: string | null
@@ -1204,6 +1260,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience_mode?: string
           cancellation_reason?: string | null
           category?: string
           class_id?: string | null
@@ -1247,6 +1304,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           event_id: string
           id?: string
@@ -1262,6 +1320,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "school_calendar_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "school_calendar_event_feed"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "school_calendar_responses_event_id_fkey"
             columns: ["event_id"]
@@ -1291,6 +1356,7 @@ export type Database = {
           room_label: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           academic_year_id: string
           capacity?: number
@@ -1347,6 +1413,7 @@ export type Database = {
           label_fr: string
           sort_order: number
         }
+        ComputedFields: never
         Insert: {
           code: string
           label_ar: string
@@ -1376,6 +1443,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           body_ar: string
           body_en: string
@@ -1423,6 +1491,7 @@ export type Database = {
           student_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           academic_year_id: string
           assigned_by?: string | null
@@ -1491,6 +1560,7 @@ export type Database = {
           student_code: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           birth_date: string
           created_at?: string
@@ -1543,6 +1613,7 @@ export type Database = {
           teacher_user_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           active?: boolean
           assigned_by?: string | null
@@ -1599,6 +1670,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           first_name?: string | null
@@ -1640,6 +1712,7 @@ export type Database = {
           sender_user_id: string
           thread_id: string
         }
+        ComputedFields: never
         Insert: {
           content: string
           created_at?: string
@@ -1680,6 +1753,7 @@ export type Database = {
           unread: boolean
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           id?: string
           thread_id: string
@@ -1722,6 +1796,7 @@ export type Database = {
           target_tab: string | null
           title: string
         }
+        ComputedFields: never
         Insert: {
           body: string
           category: string
@@ -1766,6 +1841,7 @@ export type Database = {
           user_id: string
           vibration_enabled: boolean
         }
+        ComputedFields: never
         Insert: {
           language?: string
           notification_sound?: string
@@ -1796,7 +1872,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      school_calendar_event_feed: {
+        Row: {
+          audience_mode: string | null
+          cancellation_reason: string | null
+          category: string | null
+          class_id: string | null
+          description: string | null
+          end_date: string | null
+          end_time: string | null
+          id: string | null
+          is_all_day: boolean | null
+          is_public: boolean | null
+          start_date: string | null
+          start_time: string | null
+          status: string | null
+          target_class_ids: string[] | null
+          timezone: string | null
+          title: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          audience_mode?: string | null
+          cancellation_reason?: string | null
+          category?: string | null
+          class_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string | null
+          is_all_day?: boolean | null
+          is_public?: boolean | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: string | null
+          target_class_ids?: never
+          timezone?: string | null
+          title?: string | null
+        }
+        Update: {
+          audience_mode?: string | null
+          cancellation_reason?: string | null
+          category?: string | null
+          class_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string | null
+          is_all_day?: boolean | null
+          is_public?: boolean | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: string | null
+          target_class_ids?: never
+          timezone?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_calendar_events_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "school_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_teacher_to_class: {
@@ -1807,6 +1948,14 @@ export type Database = {
           p_teacher_user_id: string
         }
         Returns: Json
+      }
+      calendar_assert_audience: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
+      calendar_can_read_event: {
+        Args: { p_event_id: string }
+        Returns: boolean
       }
       can_access_class: { Args: { p_class_id: string }; Returns: boolean }
       can_access_message_thread: {
@@ -1824,6 +1973,7 @@ export type Database = {
       cancel_school_calendar_event: {
         Args: { p_event_id: string; p_reason: string }
         Returns: {
+          audience_mode: string
           cancellation_reason: string | null
           category: string
           class_id: string | null
@@ -1921,6 +2071,46 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_school_calendar_event: {
+        Args: {
+          p_audience_mode?: string
+          p_category: string
+          p_class_id?: string
+          p_description: string
+          p_end_date?: string
+          p_is_all_day?: boolean
+          p_is_public?: boolean
+          p_start_date: string
+          p_teacher_user_id?: string
+          p_title: string
+        }
+        Returns: {
+          audience_mode: string
+          cancellation_reason: string | null
+          category: string
+          class_id: string | null
+          created_at: string
+          created_by: string
+          description: string
+          end_date: string
+          end_time: string | null
+          id: string
+          is_all_day: boolean
+          is_public: boolean
+          start_date: string
+          start_time: string | null
+          status: string
+          timezone: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "school_calendar_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_school_class: {
         Args: {
           p_academic_year_code: string
@@ -1931,7 +2121,7 @@ export type Database = {
         }
         Returns: Json
       }
-      current_profile_id: { Args: never; Returns: string }
+      current_profile_id: { Args: Record<PropertyKey, never>; Returns: string }
       current_user_has_capability: {
         Args: { p_capability: string }
         Returns: boolean
@@ -1940,6 +2130,7 @@ export type Database = {
         Args: { p_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      dearmor: { Args: { "": string }; Returns: string }
       enqueue_school_notification: {
         Args: {
           p_body: string
@@ -1951,7 +2142,9 @@ export type Database = {
         }
         Returns: string
       }
-      get_my_school_context: { Args: never; Returns: Json }
+      gen_random_uuid: { Args: Record<PropertyKey, never>; Returns: string }
+      gen_salt: { Args: { "": string }; Returns: string }
+      get_my_school_context: { Args: Record<PropertyKey, never>; Returns: Json }
       governance_appoint_privileged_role: {
         Args: {
           p_action: string
@@ -1967,7 +2160,10 @@ export type Database = {
         Args: { p_target_user_id: string }
         Returns: Json
       }
-      governance_get_actor_scope: { Args: never; Returns: Json }
+      governance_get_actor_scope: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       governance_list_account_directory: {
         Args: {
           p_limit?: number
@@ -1978,7 +2174,10 @@ export type Database = {
         }
         Returns: Json
       }
-      governance_list_manager_grants: { Args: never; Returns: Json }
+      governance_list_manager_grants: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       governance_list_pending_accounts: {
         Args: {
           p_limit?: number
@@ -2013,7 +2212,10 @@ export type Database = {
         Returns: Json
       }
       is_allowed_username_codepoint: { Args: { cp: number }; Returns: boolean }
-      is_approved_school_member: { Args: never; Returns: boolean }
+      is_approved_school_member: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_linked_student_self: {
         Args: { p_student_id: string }
         Returns: boolean
@@ -2028,9 +2230,18 @@ export type Database = {
         Returns: boolean
       }
       is_valid_username: { Args: { input: string }; Returns: boolean }
-      list_approved_message_recipients: { Args: never; Returns: Json }
-      list_school_classes_with_rosters: { Args: never; Returns: Json }
-      mark_all_user_notifications_read: { Args: never; Returns: number }
+      list_approved_message_recipients: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      list_school_classes_with_rosters: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      mark_all_user_notifications_read: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       mark_user_notification_read: {
         Args: { p_notification_id: string }
         Returns: boolean
@@ -2056,6 +2267,10 @@ export type Database = {
       }
       normalize_username_display: { Args: { input: string }; Returns: string }
       normalize_username_key: { Args: { input: string }; Returns: string }
+      pgp_armor_headers: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
       post_class_question: {
         Args: { p_class_id: string; p_content: string }
         Returns: {
@@ -2329,6 +2544,7 @@ export type Database = {
           p_title: string
         }
         Returns: {
+          audience_mode: string
           cancellation_reason: string | null
           category: string
           class_id: string | null

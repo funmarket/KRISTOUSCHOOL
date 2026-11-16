@@ -200,10 +200,26 @@ test('schoolContent nested queries propagate Supabase errors instead of ignoring
   // 1. listSchoolCalendarEvents failing on school_calendar_responses
   const calErrClient = {
     from: (table) => {
-      if (table === 'school_calendar_events') {
+      if (table === 'school_calendar_event_feed') {
         const q = {
           select: () => q, order: () => q, lte: () => q, gte: () => q,
-          range: async () => ({ data: [{ id: 'ev-1', title: 'Event 1', category: 'EVENT', start_date: '2026-11-20' }], error: null }),
+          range: async () => ({
+            data: [
+              {
+                id: 'ev-1',
+                audience_mode: 'WHOLE_SCHOOL',
+                class_id: null,
+                target_class_ids: [],
+                title: 'Event 1',
+                category: 'EVENT',
+                start_date: '2026-11-20',
+                end_date: '2026-11-20',
+                is_public: false,
+                status: 'SCHEDULED',
+              },
+            ],
+            error: null,
+          }),
         };
         return q;
       }

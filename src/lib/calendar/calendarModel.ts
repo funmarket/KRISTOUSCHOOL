@@ -25,6 +25,61 @@ export function sortCalendarEvents(events: readonly CalendarEvent[]): CalendarEv
   });
 }
 
+export function isWholeSchoolCalendarEvent(
+  event: Pick<CalendarEvent, 'audienceMode' | 'classId' | 'targetClassIds'>,
+): boolean {
+  if (event.audienceMode !== undefined) {
+    return event.audienceMode === 'WHOLE_SCHOOL';
+  }
+  return !event.classId && (!event.targetClassIds || event.targetClassIds.length === 0);
+}
+
+export function getVisibleCalendarTargetClassIds(
+  event: Pick<CalendarEvent, 'audienceMode' | 'classId' | 'targetClassIds'>,
+): string[] {
+  if (isWholeSchoolCalendarEvent(event)) {
+    return [];
+  }
+  if (Array.isArray(event.targetClassIds)) {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const rawId of event.targetClassIds) {
+      if (typeof rawId !== 'string') continue;
+      const trimmed = rawId.trim();
+      if (trimmed && !seen.has(trimmed)) {
+        seen.add(trimmed);
+        result.push(trimmed);
+      }
+    }
+    return result;
+  }
+  return event.classId ? [event.classId] : [];
+}
+
+export function calendarEventMatchesClassScope(
+  event: Pick<CalendarEvent, 'audienceMode' | 'classId' | 'targetClassIds'>,
+  classId: string | null | undefined,
+): boolean {
+  if (isWholeSchoolCalendarEvent(event)) {
+    return true;
+  }
+  if (!classId) {
+    return false;
+  }
+  return getVisibleCalendarTargetClassIds(event).includes(classId);
+}
+
+export function calendarEventMatchesAuthorizedClasses(
+  event: Pick<CalendarEvent, 'audienceMode' | 'classId' | 'targetClassIds'>,
+  authorizedClassIds: ReadonlySet<string>,
+): boolean {
+  if (isWholeSchoolCalendarEvent(event)) {
+    return true;
+  }
+  const visibleTargets = getVisibleCalendarTargetClassIds(event);
+  return visibleTargets.some((id) => authorizedClassIds.has(id));
+}
+
 export function getEventsForCalendarDate(
   events: readonly CalendarEvent[],
   dateStr: string,

@@ -26,6 +26,13 @@ const {
   validateCalendarCreateInput,
 } = await import('../src/lib/calendar/calendarAudience.ts');
 
+const {
+  isWholeSchoolCalendarEvent,
+  getVisibleCalendarTargetClassIds,
+  calendarEventMatchesClassScope,
+  calendarEventMatchesAuthorizedClasses,
+} = await import('../src/lib/calendar/calendarModel.ts');
+
 const require = createRequire(import.meta.url);
 const tempDir = await mkdtemp(path.join(tmpdir(), 'kristou-cal-takeover-'));
 after(() => rm(tempDir, { recursive: true, force: true }));
@@ -34,12 +41,64 @@ after(() => rm(tempDir, { recursive: true, force: true }));
 globalThis.__CAL_TEST_SUPABASE__ = null;
 globalThis.__CAL_TEST_CTX__ = null;
 
-function createMockSupabase(initialEvents = [], initialResponses = []) {
-  const events = initialEvents.map((e) => ({ ...e }));
+function createMockSupabase(initialEvents = [], initialResponses = [], opts = {}) {
+  const events = initialEvents.map((e) => {
+    const mode = e.audience_mode ?? (e.class_id ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL');
+    const targets = Array.isArray(e.target_class_ids)
+      ? [...e.target_class_ids]
+      : mode === 'WHOLE_SCHOOL'
+      ? []
+      : e.class_id
+      ? [e.class_id]
+      : [];
+    return {
+      ...e,
+      audience_mode: mode,
+      target_class_ids: targets,
+    };
+  });
   const responses = initialResponses.map((r) => ({ ...r }));
   const rpcCalls = [];
+  const teacherAccounts = opts.teacherAccounts ?? [
+    {
+      id: 'teacher-1',
+      username: 'nadia',
+      fullName: 'Mme Nadia',
+      email: null,
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'TEACHER',
+      accountStatus: 'APPROVED',
+      activeRoles: ['TEACHER'],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-10-01T00:00:00Z',
+    },
+    {
+      id: 'teacher-2',
+      username: 'karim',
+      fullName: 'M. Karim',
+      email: null,
+      phone: null,
+      emailConfirmed: true,
+      phoneConfirmed: false,
+      requestedRole: 'TEACHER',
+      accountStatus: 'APPROVED',
+      activeRoles: ['TEACHER'],
+      capabilities: [],
+      governanceVersion: 1,
+      createdAt: '2026-10-01T00:00:00Z',
+    },
+  ];
+  const teacherClassesMap = opts.teacherClassesMap ?? {
+    'teacher-1': ['class-1', 'class-2'],
+    'teacher-2': ['class-1', 'class-2'],
+  };
   let failNextSelect = false;
   let failNextUpsert = false;
+  let failNextUpsertError = null;
+  let directoryError = opts.directoryError ?? null;
 
   const client = {
     rpcCalls,
@@ -48,19 +107,57 @@ function createMockSupabase(initialEvents = [], initialResponses = []) {
     setFailNextSelect(val) {
       failNextSelect = val;
     },
-    setFailNextUpsert(val) {
+    setFailNextUpsert(val, customError = null) {
       failNextUpsert = val;
+      failNextUpsertError = customError;
+    },
+    setDirectoryError(err) {
+      directoryError = err;
     },
     async rpc(fnName, params) {
       rpcCalls.push({ fnName, params });
-      if (fnName === 'upsert_school_calendar_event') {
+      if (fnName === 'governance_list_account_directory') {
+        if (directoryError) {
+          return { data: null, error: directoryError };
+        }
+        return {
+          data: {
+            items: teacherAccounts,
+            totalCount: teacherAccounts.length,
+            limit: params.p_limit ?? 100,
+            offset: params.p_offset ?? 0,
+          },
+          error: null,
+        };
+      }
+      if (fnName === 'create_school_calendar_event') {
         if (failNextUpsert) {
           failNextUpsert = false;
-          return { data: null, error: { code: '42501', message: 'insufficient_authority' } };
+          const err = failNextUpsertError ?? { code: '42501', message: 'insufficient_authority' };
+          failNextUpsertError = null;
+          return { data: null, error: err };
         }
-        const row = {
+        const mode = params.p_audience_mode ?? (params.p_class_id ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL');
+        let targetClassIds = [];
+        if (mode === 'SINGLE_CLASS') {
+          targetClassIds = params.p_class_id ? [params.p_class_id] : [];
+        } else if (mode === 'TEACHER_CLASSES') {
+          targetClassIds = [...(teacherClassesMap[params.p_teacher_user_id] ?? [])];
+          if (targetClassIds.length === 0) {
+            return { data: null, error: { code: 'P0001', message: 'calendar_no_eligible_classes' } };
+          }
+        } else if (mode === 'ALL_MY_CLASSES') {
+          const actorId = globalThis.__CAL_TEST_CTX__?.currentUser?.id ?? 'teacher-1';
+          const fallback = globalThis.__CAL_TEST_CTX__?.currentUser?.assignedClassIds ?? [];
+          targetClassIds = [...(teacherClassesMap[actorId] ?? fallback)];
+          if (targetClassIds.length === 0) {
+            return { data: null, error: { code: 'P0001', message: 'calendar_no_eligible_classes' } };
+          }
+        }
+        const baseRow = {
           id: `ev-${events.length + 1}`,
-          class_id: params.p_class_id ?? null,
+          audience_mode: mode,
+          class_id: mode === 'SINGLE_CLASS' ? (params.p_class_id ?? null) : null,
           title: params.p_title,
           description: params.p_description ?? '',
           category: params.p_category ?? 'EVENT',
@@ -70,12 +167,12 @@ function createMockSupabase(initialEvents = [], initialResponses = []) {
           start_time: null,
           end_time: null,
           timezone: 'Africa/Tunis',
-          is_public: Boolean(params.p_is_public) && !params.p_class_id,
+          is_public: mode === 'WHOLE_SCHOOL' ? Boolean(params.p_is_public) : false,
           status: 'SCHEDULED',
           cancellation_reason: null,
         };
-        events.push(row);
-        return { data: row, error: null };
+        events.push({ ...baseRow, target_class_ids: targetClassIds });
+        return { data: baseRow, error: null };
       }
       if (fnName === 'cancel_school_calendar_event') {
         const target = events.find((e) => e.id === params.p_event_id);
@@ -101,7 +198,7 @@ function createMockSupabase(initialEvents = [], initialResponses = []) {
       return { data: null, error: { message: `Unknown RPC ${fnName}` } };
     },
     from(table) {
-      if (table === 'school_calendar_events') {
+      if (table === 'school_calendar_event_feed') {
         let startLte = null;
         let endGte = null;
         let classScope = null;
@@ -117,7 +214,7 @@ function createMockSupabase(initialEvents = [], initialResponses = []) {
             return q;
           },
           or: (expr) => {
-            const m = expr.match(/class_id\.eq\.([^,)]+)/);
+            const m = expr.match(/target_class_ids\.cs\.\{([^}]+)\}/);
             if (m) classScope = m[1];
             return q;
           },
@@ -130,7 +227,11 @@ function createMockSupabase(initialEvents = [], initialResponses = []) {
               if (startLte && ev.start_date > startLte) return false;
               const evEnd = ev.end_date || ev.start_date;
               if (endGte && evEnd < endGte) return false;
-              if (classScope && ev.class_id !== null && ev.class_id !== classScope) return false;
+              if (classScope) {
+                if (ev.audience_mode !== 'WHOLE_SCHOOL' && !ev.target_class_ids?.includes(classScope)) {
+                  return false;
+                }
+              }
               return true;
             });
             return { data: filtered.slice(start, end + 1), error: null };
@@ -376,7 +477,7 @@ test('1: Calendar permission separation across all 7 roles and Manager capabilit
   }
 });
 
-test('2: Fail-closed audience validation & adapter blocks multi-class loops and teacher escalation', async () => {
+test('2: Audience validation & adapter support 4 modes while blocking unauthorized escalation', async () => {
   const client = createMockSupabase();
   globalThis.__CAL_TEST_SUPABASE__ = client;
 
@@ -394,8 +495,11 @@ test('2: Fail-closed audience validation & adapter blocks multi-class loops and 
     ],
   });
   assert.deepEqual(
-    teacherPlan.options.map((o) => o.mode),
-    ['SINGLE_CLASS', 'ALL_MY_CLASSES'],
+    teacherPlan.options.map((o) => ({ mode: o.mode, supportedByBackend: o.supportedByBackend })),
+    [
+      { mode: 'SINGLE_CLASS', supportedByBackend: true },
+      { mode: 'ALL_MY_CLASSES', supportedByBackend: false },
+    ],
   );
   assert.equal(teacherPlan.canSetPublic, false);
   assert.deepEqual(
@@ -403,22 +507,68 @@ test('2: Fail-closed audience validation & adapter blocks multi-class loops and 
     ['class-1', 'class-2'],
   );
 
-  // ALL_MY_CLASSES and TEACHER_CLASSES fail closed with BLOCKED_BACKEND and ZERO RPC calls
-  for (const mode of ['ALL_MY_CLASSES', 'TEACHER_CLASSES']) {
-    const blocked = await bundledSchoolContent.upsertSchoolCalendarEvent({
-      title: 'Blocked Multi',
-      description: 'Multi-class pending',
-      category: 'EVENT',
-      startDate: '2026-11-20',
-      audienceMode: mode,
-      actorRole: mode === 'TEACHER_CLASSES' ? 'APP_ADMIN' : 'TEACHER',
-      canManageCalendar: mode === 'TEACHER_CLASSES',
-      allowedClassIds: ['class-1', 'class-2'],
-    });
-    assert.equal(blocked.ok, false);
-    assert.equal(blocked.status, 'BLOCKED_BACKEND');
-    assert.equal(blocked.errorCode, 'multi_class_contract_pending');
-  }
+  // Zero-assignment teacher has options with no_assigned_classes / contract_pending
+  const emptyTeacherPlan = resolveCalendarAudiencePlan({
+    actorRole: 'TEACHER',
+    canManageCalendar: false,
+    assignedClasses: [],
+  });
+  assert.equal(emptyTeacherPlan.isTeacherWithoutAssignments, true);
+  assert.deepEqual(
+    emptyTeacherPlan.options.map((o) => ({
+      unavailableReason: o.unavailableReason,
+      contractPendingReason: o.contractPendingReason,
+    })),
+    [
+      { unavailableReason: 'no_assigned_classes', contractPendingReason: undefined },
+      { unavailableReason: undefined, contractPendingReason: 'multi_class_contract_pending' },
+    ],
+  );
+
+  // Admin plan with teachers enables TEACHER_CLASSES; blocked picker disables it with reason
+  const adminWithTeachers = resolveCalendarAudiencePlan({
+    actorRole: 'APP_ADMIN',
+    canManageCalendar: true,
+    allClasses: [{ id: 'class-1', name: 'CP-A' }],
+    teacherOptions: [{ id: 'teacher-1', fullName: 'Mme Nadia' }],
+  });
+  assert.equal(adminWithTeachers.options.find((o) => o.mode === 'TEACHER_CLASSES')?.supportedByBackend, false);
+  assert.equal(adminWithTeachers.defaultTeacherUserId, 'teacher-1');
+
+  const blockedPickerPlan = resolveCalendarAudiencePlan({
+    actorRole: 'MANAGER',
+    canManageCalendar: true,
+    teacherPickerBlocked: true,
+  });
+  assert.equal(blockedPickerPlan.options.find((o) => o.mode === 'TEACHER_CLASSES')?.contractPendingReason, 'multi_class_contract_pending');
+  assert.deepEqual(blockedPickerPlan.selectableTeachers, []);
+
+  // Pending multi-class modes return BLOCKED_BACKEND with multi_class_contract_pending
+  const pendingTeacherClasses = await bundledSchoolContent.upsertSchoolCalendarEvent({
+    title: 'Pending Teacher Classes',
+    description: '',
+    category: 'EVENT',
+    startDate: '2026-11-20',
+    audienceMode: 'TEACHER_CLASSES',
+    teacherUserId: 'teacher-2',
+    actorRole: 'APP_ADMIN',
+    canManageCalendar: true,
+  });
+  assert.equal(pendingTeacherClasses.status, 'BLOCKED_BACKEND');
+  assert.equal(pendingTeacherClasses.errorCode, 'multi_class_contract_pending');
+
+  const pendingAllMyClasses = await bundledSchoolContent.upsertSchoolCalendarEvent({
+    title: 'Pending All My Classes',
+    description: '',
+    category: 'EVENT',
+    startDate: '2026-11-20',
+    audienceMode: 'ALL_MY_CLASSES',
+    actorRole: 'TEACHER',
+    canManageCalendar: false,
+    allowedClassIds: ['class-1'],
+  });
+  assert.equal(pendingAllMyClasses.status, 'BLOCKED_BACKEND');
+  assert.equal(pendingAllMyClasses.errorCode, 'multi_class_contract_pending');
 
   // Teacher trying school-wide, public, or unassigned class rejects BEFORE RPC
   const tWhole = await bundledSchoolContent.upsertSchoolCalendarEvent({
@@ -462,7 +612,7 @@ test('2: Fail-closed audience validation & adapter blocks multi-class loops and 
   assert.equal(tPublic.valid, false);
   assert.equal(tPublic.errorCode, 'teacher_cannot_publish_public');
 
-  assert.equal(client.rpcCalls.length, 0, 'No RPC calls must fire for blocked/unauthorized attempts');
+  assert.equal(client.rpcCalls.length, 0, 'No RPC calls must fire for validation/authorization rejects');
 });
 
 test('3: ClassCommunityView and GlobalAnnouncementsCalendarView honor decoupled calendar vs moderation rights', () => {
@@ -530,7 +680,7 @@ test('3: ClassCommunityView and GlobalAnnouncementsCalendarView honor decoupled 
   assert.ok(teacherGlobalHtml.includes('data-testid="under-calendar-parent-notes"'));
 });
 
-test('4: Interactive Admin audience workflows (WHOLE_SCHOOL public/private, SINGLE_CLASS, TEACHER_CLASSES blocked) + readback', async () => {
+test('4: Interactive Admin audience workflows (WHOLE_SCHOOL, SINGLE_CLASS, TEACHER_CLASSES, and Manager picker gating)', async () => {
   const todayTunis = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());
   const client = createMockSupabase();
   globalThis.__CAL_TEST_SUPABASE__ = client;
@@ -551,11 +701,12 @@ test('4: Interactive Admin audience workflows (WHOLE_SCHOOL public/private, SING
         { id: 'class-1', name: 'CP-A', level: 'CP' },
         { id: 'class-2', name: 'CE1-B', level: 'CE1' },
       ],
+      teacherOptions: [{ id: 'teacher-2', fullName: 'M. Karim', username: 'karim' }],
       onRefresh: async () => true,
     }),
   );
 
-  // Open create form
+  // Open create form; APP_ADMIN automatically hydrated Teacher options via governance_list_account_directory
   await act(async () => {
     mounted.container.querySelector('[data-testid="calendar-add-event-btn"]').click();
   });
@@ -565,18 +716,19 @@ test('4: Interactive Admin audience workflows (WHOLE_SCHOOL public/private, SING
   const optValues = [...audienceSel.querySelectorAll('option')].map((o) => o.value);
   assert.deepEqual(optValues, ['WHOLE_SCHOOL', 'SINGLE_CLASS', 'TEACHER_CLASSES']);
 
-  // Select TEACHER_CLASSES -> must show contract pending and disable submit (0 RPC calls)
+  // Select TEACHER_CLASSES -> Teacher picker renders M. Karim & Mme Nadia, submit disabled (supportedByBackend: false)
   await act(async () => {
     dom.setInputValue(audienceSel, 'TEACHER_CLASSES');
   });
-  assert.ok(mounted.container.querySelector('[data-testid="calendar-audience-contract-pending"]'));
-  assert.equal(
-    mounted.container.querySelector('[data-testid="calendar-submit-event-btn"]').disabled,
-    true,
-  );
-  assert.equal(client.rpcCalls.length, 0);
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 60));
+  });
+  const teacherSel = mounted.container.querySelector('[data-testid="calendar-teacher-select"]');
+  assert.ok(teacherSel, 'Authorized APP_ADMIN must render teacher picker');
+  assert.equal(mounted.container.querySelector('[data-testid="calendar-is-public-checkbox"]'), null);
+  assert.equal(mounted.container.querySelector('[data-testid="calendar-submit-event-btn"]').disabled, true);
 
-  // Switch back to WHOLE_SCHOOL, check isPublic, fill title & submit
+  // Switch to WHOLE_SCHOOL, check isPublic, fill title & submit
   await act(async () => {
     dom.setInputValue(audienceSel, 'WHOLE_SCHOOL');
   });
@@ -594,9 +746,12 @@ test('4: Interactive Admin audience workflows (WHOLE_SCHOOL public/private, SING
     await new Promise((r) => setTimeout(r, 20));
   });
 
-  assert.equal(client.rpcCalls.length, 1);
-  assert.equal(client.rpcCalls[0].params.p_class_id, null);
-  assert.equal(client.rpcCalls[0].params.p_is_public, true);
+  const createCalls = client.rpcCalls.filter((c) => c.fnName === 'create_school_calendar_event');
+  assert.equal(createCalls.length, 1);
+  assert.equal(createCalls[0].params.p_audience_mode, 'WHOLE_SCHOOL');
+  assert.equal(createCalls[0].params.p_class_id, undefined);
+  assert.equal(createCalls[0].params.p_teacher_user_id, undefined);
+  assert.equal(createCalls[0].params.p_is_public, true);
   assert.ok(mounted.container.textContent.includes('School Fair'));
   assert.ok(mounted.container.querySelector('[data-testid="calendar-event-public-badge"]'));
 
@@ -619,18 +774,84 @@ test('4: Interactive Admin audience workflows (WHOLE_SCHOOL public/private, SING
     await new Promise((r) => setTimeout(r, 20));
   });
 
-  assert.equal(client.rpcCalls.length, 2);
-  assert.equal(client.rpcCalls[1].params.p_class_id, 'class-2');
-  assert.equal(client.rpcCalls[1].params.p_is_public, false);
+  const createCalls3 = client.rpcCalls.filter((c) => c.fnName === 'create_school_calendar_event');
+  assert.equal(createCalls3.length, 2);
+  assert.equal(createCalls3[1].params.p_audience_mode, 'SINGLE_CLASS');
+  assert.equal(createCalls3[1].params.p_class_id, 'class-2');
+  assert.equal(createCalls3[1].params.p_teacher_user_id, undefined);
+  assert.equal(createCalls3[1].params.p_is_public, false);
   assert.ok(mounted.container.textContent.includes('CE1-B Dictation'));
-  assert.ok(mounted.container.textContent.includes('CE1-B'));
   assert.equal(mounted.container.querySelectorAll(`[data-testid^="calendar-event-card-"]`).length, 2);
   assert.equal(client.events[0].start_date, todayTunis);
 
   await mounted.unmount();
+
+  // Delegated MANAGER with CALENDAR_MANAGE only (no ACCOUNT_APPROVAL_REVIEW):
+  // fails closed locally with 0 governance_list_account_directory calls, TEACHER_CLASSES disabled, WHOLE_SCHOOL still works
+  const mgrClient = createMockSupabase();
+  globalThis.__CAL_TEST_SUPABASE__ = mgrClient;
+  const calOnlyManager = makeUser({
+    id: 'mgr-cal-only',
+    role: 'MANAGER',
+    capabilities: ['CALENDAR_MANAGE'],
+    assignedClassIds: [],
+  });
+  globalThis.__CAL_TEST_CTX__ = makeCtx({ currentUser: calOnlyManager });
+
+  const mgrMounted = await mountComponent(
+    React.createElement(SchoolCalendarPanel, {
+      events: [],
+      backendStatus: 'READY',
+      classId: null,
+      allClasses: [{ id: 'class-1', name: 'CP-A', level: 'CP' }],
+      onRefresh: async () => true,
+    }),
+  );
+
+  assert.equal(
+    mgrClient.rpcCalls.filter((c) => c.fnName === 'governance_list_account_directory').length,
+    0,
+    'CALENDAR_MANAGE-only Manager must not call governance_list_account_directory',
+  );
+  await act(async () => {
+    mgrMounted.container.querySelector('[data-testid="calendar-add-event-btn"]').click();
+  });
+  await act(async () => {
+    dom.setInputValue(mgrMounted.container.querySelector('[data-testid="calendar-audience-select"]'), 'TEACHER_CLASSES');
+  });
+  assert.ok(mgrMounted.container.querySelector('[data-testid="calendar-teacher-picker-unavailable"]'));
+  assert.equal(mgrMounted.container.querySelector('[data-testid="calendar-submit-event-btn"]').disabled, true);
+  await mgrMounted.unmount();
+
+  // MANAGER with FULL_ACCESS whose directory RPC fails with manager_delegation_required also fails closed honestly
+  const fullMgrClient = createMockSupabase([], [], {
+    directoryError: { code: '42501', message: 'manager_delegation_required' },
+  });
+  globalThis.__CAL_TEST_SUPABASE__ = fullMgrClient;
+  globalThis.__CAL_TEST_CTX__ = makeCtx({
+    currentUser: makeUser({ id: 'mgr-full', role: 'MANAGER', capabilities: ['FULL_ACCESS'], assignedClassIds: [] }),
+  });
+  const fullMgrMounted = await mountComponent(
+    React.createElement(SchoolCalendarPanel, {
+      events: [],
+      backendStatus: 'READY',
+      classId: null,
+      allClasses: [{ id: 'class-1', name: 'CP-A' }],
+      onRefresh: async () => true,
+    }),
+  );
+  await act(async () => {
+    fullMgrMounted.container.querySelector('[data-testid="calendar-add-event-btn"]').click();
+  });
+  await act(async () => {
+    dom.setInputValue(fullMgrMounted.container.querySelector('[data-testid="calendar-audience-select"]'), 'TEACHER_CLASSES');
+  });
+  assert.ok(fullMgrMounted.container.querySelector('[data-testid="calendar-teacher-picker-unavailable"]'));
+  assert.equal(fullMgrMounted.container.querySelector('[data-testid="calendar-submit-event-btn"]').disabled, true);
+  await fullMgrMounted.unmount();
 });
 
-test('5: Interactive Teacher assigned-class workflow, draft retention on failure, and ALL_MY_CLASSES block', async () => {
+test('5: Interactive Teacher SINGLE_CLASS & ALL_MY_CLASSES workflows, draft retention, and server errors', async () => {
   const client = createMockSupabase();
   globalThis.__CAL_TEST_SUPABASE__ = client;
   const teacher = makeUser({
@@ -683,11 +904,14 @@ test('5: Interactive Teacher assigned-class workflow, draft retention on failure
   ].map((o) => o.value);
   assert.deepEqual(classOpts, ['class-1', 'class-2']);
 
-  // Select ALL_MY_CLASSES -> blocked & submit disabled
+  // Select ALL_MY_CLASSES -> summary shows CP-A & CE1-B, submit DISABLED (supportedByBackend: false)
   await act(async () => {
     dom.setInputValue(mounted.container.querySelector('[data-testid="calendar-audience-select"]'), 'ALL_MY_CLASSES');
   });
-  assert.ok(mounted.container.querySelector('[data-testid="calendar-audience-contract-pending"]'));
+  const summaryEl = mounted.container.querySelector('[data-testid="calendar-all-my-classes-summary"]');
+  assert.ok(summaryEl);
+  assert.ok(summaryEl.textContent.includes('CP-A'));
+  assert.ok(summaryEl.textContent.includes('CE1-B'));
   assert.equal(mounted.container.querySelector('[data-testid="calendar-submit-event-btn"]').disabled, true);
 
   // Switch to SINGLE_CLASS, pick CE1-B, test failed RPC retains draft, then retry succeeds
@@ -714,11 +938,13 @@ test('5: Interactive Teacher assigned-class workflow, draft retention on failure
     dom.submitForm(mounted.container.querySelector('[data-testid="calendar-create-form"]'));
   });
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 15));
+    await new Promise((r) => setTimeout(r, 20));
   });
 
-  const lastRpc = client.rpcCalls.at(-1);
+  const lastRpc = client.rpcCalls.filter((c) => c.fnName === 'create_school_calendar_event').at(-1);
+  assert.equal(lastRpc.params.p_audience_mode, 'SINGLE_CLASS');
   assert.equal(lastRpc.params.p_class_id, 'class-2');
+  assert.equal(lastRpc.params.p_teacher_user_id, undefined);
   assert.equal(lastRpc.params.p_is_public, false);
   assert.ok(mounted.container.textContent.includes('Science Lab'));
 
@@ -1259,21 +1485,33 @@ test('11: User-facing AR/FR/EN calendar messages contain zero agent names, contr
     /عقد/,
     /supabase/i,
     /school_calendar_events/i,
+    /school_calendar_event_feed/i,
+    /create_school_calendar_event/i,
+    /governance_list_account_directory/i,
     /duplicate copy/i,
     /mock/i,
     /fake/i,
   ];
 
-  // Validate multi-class error copy
-  for (const mode of ['TEACHER_CLASSES', 'ALL_MY_CLASSES']) {
-    const res = validateCalendarCreateInput({
-      title: 'Check Copy',
+  // Validate calendar error copy
+  for (const caseInput of [
+    {
+      title: 'Check Teacher Required',
       startDate: '2026-11-20',
-      audienceMode: mode,
-      actorRole: mode === 'TEACHER_CLASSES' ? 'APP_ADMIN' : 'TEACHER',
-      canManageCalendar: mode === 'TEACHER_CLASSES',
-      allowedClassIds: ['class-1'],
-    });
+      audienceMode: 'TEACHER_CLASSES',
+      actorRole: 'APP_ADMIN',
+      canManageCalendar: true,
+    },
+    {
+      title: 'Check No Eligible',
+      startDate: '2026-11-20',
+      audienceMode: 'ALL_MY_CLASSES',
+      actorRole: 'TEACHER',
+      canManageCalendar: false,
+      allowedClassIds: [],
+    },
+  ]) {
+    const res = validateCalendarCreateInput(caseInput);
     assert.equal(res.valid, false);
     for (const pat of forbiddenPatterns) {
       assert.doesNotMatch(res.errorMessage, pat);
@@ -1316,17 +1554,25 @@ test('11: User-facing AR/FR/EN calendar messages contain zero agent names, contr
       }
     }
 
-    // Mounted create form for Admin (TEACHER_CLASSES) and Teacher (ALL_MY_CLASSES)
+    // Mounted create form for Manager without directory access (blocked picker), Admin with empty teachers, and Teacher (ALL_MY_CLASSES)
     for (const roleCfg of [
+      {
+        user: makeUser({ role: 'MANAGER', capabilities: ['CALENDAR_MANAGE'], assignedClassIds: [] }),
+        audience: 'TEACHER_CLASSES',
+        teacherOptions: undefined,
+      },
       {
         user: makeUser({ role: 'APP_ADMIN', assignedClassIds: [] }),
         audience: 'TEACHER_CLASSES',
+        teacherOptions: [],
       },
       {
         user: makeUser({ role: 'TEACHER', assignedClassIds: ['class-1', 'class-2'] }),
         audience: 'ALL_MY_CLASSES',
+        teacherOptions: undefined,
       },
     ]) {
+      globalThis.__CAL_TEST_SUPABASE__ = null;
       globalThis.__CAL_TEST_CTX__ = makeCtx({ currentUser: roleCfg.user, language: lang });
       const mounted = await mountComponent(
         React.createElement(SchoolCalendarPanel, {
@@ -1336,6 +1582,7 @@ test('11: User-facing AR/FR/EN calendar messages contain zero agent names, contr
             { id: 'class-1', name: 'CP-A' },
             { id: 'class-2', name: 'CE1-B' },
           ],
+          teacherOptions: roleCfg.teacherOptions,
           onRefresh: async () => true,
           loadMonthEvents: async () => ({ ok: true, status: 'READY', data: [] }),
         }),
@@ -1356,4 +1603,134 @@ test('11: User-facing AR/FR/EN calendar messages contain zero agent names, contr
       await mounted.unmount();
     }
   }
+});
+
+test('12: Multi-class target_class_ids filtering, scope badges, ClassCommunityView class-2 delivery, and fail-closed anonymous filter', () => {
+  const todayTunis = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());
+
+  // Pure calendarModel helpers
+  const multiEv = {
+    id: 'ev-multi',
+    audienceMode: 'TEACHER_CLASSES',
+    classId: 'class-1',
+    targetClassIds: ['class-1', 'class-2'],
+    title: 'Shared Art Workshop',
+    description: '',
+    category: 'ACTIVITY',
+    date: todayTunis,
+    endDate: todayTunis,
+    isAllDay: true,
+    isPublic: false,
+    status: 'SCHEDULED',
+  };
+  const hiddenTargetEv = {
+    id: 'ev-hidden-targets',
+    audienceMode: 'ALL_MY_CLASSES',
+    classId: undefined,
+    targetClassIds: [],
+    title: 'Targeted Hidden Scope',
+    description: '',
+    category: 'EVENT',
+    date: todayTunis,
+    endDate: todayTunis,
+    isAllDay: true,
+    isPublic: false,
+    status: 'SCHEDULED',
+  };
+  const class1OnlyNoClassId = {
+    id: 'ev-c1-only',
+    audienceMode: 'TEACHER_CLASSES',
+    classId: undefined,
+    targetClassIds: ['class-1'],
+    title: 'Class 1 Only Seminar',
+    description: '',
+    category: 'MEETING',
+    date: todayTunis,
+    endDate: todayTunis,
+    isAllDay: true,
+    isPublic: false,
+    status: 'SCHEDULED',
+  };
+
+  assert.equal(isWholeSchoolCalendarEvent(multiEv), false);
+  assert.equal(isWholeSchoolCalendarEvent(hiddenTargetEv), false);
+  assert.deepEqual(getVisibleCalendarTargetClassIds(multiEv), ['class-1', 'class-2']);
+  assert.equal(calendarEventMatchesClassScope(multiEv, 'class-2'), true);
+  assert.equal(calendarEventMatchesClassScope(class1OnlyNoClassId, 'class-2'), false);
+  assert.equal(calendarEventMatchesAuthorizedClasses(multiEv, new Set(['class-2'])), true);
+  assert.equal(calendarEventMatchesAuthorizedClasses(class1OnlyNoClassId, new Set(['class-2'])), false);
+
+  // ClassCommunityView viewing class-2 must include ev-multi (targeting [class-1, class-2]) and exclude ev-c1-only
+  globalThis.__CAL_TEST_CTX__ = makeCtx({
+    currentUser: makeUser({ role: 'PARENT', assignedClassIds: ['class-1', 'class-2'] }),
+    selectedClassId: 'class-2',
+    calendarEvents: [multiEv, class1OnlyNoClassId],
+  });
+  const commClass2Html = renderToStaticMarkup(
+    React.createElement(ClassCommunityView, { initialSubTab: 'calendar' }),
+  );
+  assert.ok(commClass2Html.includes('Shared Art Workshop'), 'Secondary target class-2 must see multi-class event');
+  assert.ok(!commClass2Html.includes('Class 1 Only Seminar'), 'Non-target class-1 event without classId must not leak into class-2');
+
+  // SchoolCalendarPanel scope badge renders visible class names for multi-class and never falls back to Whole school for targeted events
+  globalThis.__CAL_TEST_CTX__ = makeCtx({
+    currentUser: makeUser({ role: 'TEACHER', assignedClassIds: ['class-2'] }),
+  });
+  const teacherHtml = renderToStaticMarkup(
+    React.createElement(SchoolCalendarPanel, {
+      events: [multiEv, class1OnlyNoClassId, hiddenTargetEv],
+      backendStatus: 'READY',
+      classId: null,
+      assignedClasses: [{ id: 'class-2', name: 'CE1-B' }],
+      allClasses: [
+        { id: 'class-1', name: 'CP-A' },
+        { id: 'class-2', name: 'CE1-B' },
+      ],
+      onRefresh: async () => true,
+    }),
+  );
+  assert.ok(teacherHtml.includes('Shared Art Workshop'));
+  assert.ok(teacherHtml.includes('CP-A, CE1-B'));
+  assert.ok(!teacherHtml.includes('Class 1 Only Seminar'));
+
+  // Targeted event with 0 visible class IDs shown to Admin displays "Targeted class", NEVER "Whole school"
+  globalThis.__CAL_TEST_CTX__ = makeCtx({
+    currentUser: makeUser({ role: 'APP_ADMIN', assignedClassIds: [] }),
+  });
+  const adminTargetedEmptyHtml = renderToStaticMarkup(
+    React.createElement(SchoolCalendarPanel, {
+      events: [hiddenTargetEv],
+      backendStatus: 'READY',
+      classId: null,
+      onRefresh: async () => true,
+    }),
+  );
+  assert.ok(adminTargetedEmptyHtml.includes('Targeted class'));
+  assert.ok(!adminTargetedEmptyHtml.includes('Whole school'));
+
+  // Anonymous public visitor sees only WHOLE_SCHOOL + isPublic: true events
+  globalThis.__CAL_TEST_CTX__ = makeCtx({ currentUser: null });
+  const publicWhole = {
+    id: 'ev-pub',
+    audienceMode: 'WHOLE_SCHOOL',
+    targetClassIds: [],
+    title: 'Public Open Day',
+    description: '',
+    category: 'EVENT',
+    date: todayTunis,
+    endDate: todayTunis,
+    isAllDay: true,
+    isPublic: true,
+    status: 'SCHEDULED',
+  };
+  const anonHtml = renderToStaticMarkup(
+    React.createElement(SchoolCalendarPanel, {
+      events: [publicWhole, class1OnlyNoClassId],
+      backendStatus: 'READY',
+      classId: null,
+      onRefresh: async () => true,
+    }),
+  );
+  assert.ok(anonHtml.includes('Public Open Day'));
+  assert.ok(!anonHtml.includes('Class 1 Only Seminar'));
 });
