@@ -88,6 +88,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [connectingTelegram, setConnectingTelegram] = useState(false);
   const telegramCopy = getTelegramLinkCopy(language);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsMenuRef = useRef<HTMLDivElement>(null);
+  const navbarMenuOpen = showProfileMenu || showNotifications;
 
   const startTelegramLink = async () => {
     setConnectingTelegram(true);
@@ -103,12 +105,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   useEffect(() => {
-    if (!showProfileMenu) return;
+    if (!navbarMenuOpen) return;
     const dismissOutside = (event: PointerEvent) => {
       if (!profileMenuRef.current?.contains(event.target as Node)) setShowProfileMenu(false);
+      if (!notificationsMenuRef.current?.contains(event.target as Node)) setShowNotifications(false);
     };
     const dismissEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowProfileMenu(false);
+      if (event.key === 'Escape') {
+        setShowProfileMenu(false);
+        setShowNotifications(false);
+      }
     };
     document.addEventListener('pointerdown', dismissOutside);
     document.addEventListener('keydown', dismissEscape);
@@ -116,7 +122,23 @@ export const Navbar: React.FC<NavbarProps> = ({
       document.removeEventListener('pointerdown', dismissOutside);
       document.removeEventListener('keydown', dismissEscape);
     };
-  }, [showProfileMenu]);
+  }, [navbarMenuOpen]);
+
+  useEffect(() => {
+    if (!navbarMenuOpen) return;
+    // Containment on a list alone cannot protect the page when scrolling its header
+    // or an empty panel. Lock both document scroll owners until every menu closes.
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const htmlOverflow = htmlStyle.overflowY;
+    const bodyOverflow = bodyStyle.overflowY;
+    htmlStyle.overflowY = 'hidden';
+    bodyStyle.overflowY = 'hidden';
+    return () => {
+      htmlStyle.overflowY = htmlOverflow;
+      bodyStyle.overflowY = bodyOverflow;
+    };
+  }, [navbarMenuOpen]);
 
   useEffect(() => {
     setNotificationFilter('all');
@@ -170,6 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Notifications Bell */}
           <div
+            ref={notificationsMenuRef}
             className="relative"
             onPointerEnter={(event) => {
               if (event.pointerType === 'mouse') setShowNotifications(true);
@@ -196,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {showNotifications && (
               <div id="navbar-notifications" className="absolute end-0 top-full pt-2 w-80 max-w-[calc(100vw-2rem)] z-50">
-                <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3">
+                <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">
                     {t('notifications')}
@@ -257,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   </div>
                 )}
-                <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="max-h-80 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-gray-800">
                   {filteredNotifications.length === 0 ? (
                     <div className="p-4 text-center text-sm text-gray-500">
                       {notificationsError
@@ -314,13 +337,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* User Profile / Navigation Menu */}
-          <div ref={profileMenuRef} className="relative">
+          <div
+            ref={profileMenuRef}
+            className="relative"
+            onPointerEnter={(event) => {
+              if (event.pointerType === 'mouse') setShowProfileMenu(true);
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType === 'mouse') setShowProfileMenu(false);
+            }}
+          >
             <button
               type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               aria-label={currentUser ? t('account') : t('login')}
               aria-expanded={showProfileMenu}
-              onMouseEnter={() => setShowProfileMenu(true)}
               className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               {currentUser ? (
@@ -342,7 +373,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             {showProfileMenu && (
               <div
                 className="absolute end-0 top-full pt-1.5 w-[min(19rem,calc(100vw-1rem))] z-50"
-                onMouseLeave={() => setShowProfileMenu(false)}
               >
                 <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
                   {currentUser && (
