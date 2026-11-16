@@ -169,11 +169,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Notifications Bell */}
-          <div className="relative" onMouseLeave={() => setShowNotifications(false)}>
+          <div
+            className="relative"
+            onPointerEnter={(event) => {
+              if (event.pointerType === 'mouse') setShowNotifications(true);
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType === 'mouse') setShowNotifications(false);
+            }}
+          >
             <button
               type="button"
               onClick={() => setShowNotifications(!showNotifications)}
               aria-label={t('notifications')}
+              aria-expanded={showNotifications}
+              aria-controls="navbar-notifications"
               className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <Bell className="w-5 h-5" />
@@ -185,7 +195,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {showNotifications && (
-              <div className="absolute end-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
+              <div id="navbar-notifications" className="absolute end-0 top-full pt-2 w-80 max-w-[calc(100vw-2rem)] z-50">
+                <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">
                     {t('notifications')}
@@ -298,6 +309,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </div>
               </div>
+              </div>
             )}
           </div>
 
@@ -332,7 +344,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="absolute end-0 top-full pt-1.5 w-[min(19rem,calc(100vw-1rem))] z-50"
                 onMouseLeave={() => setShowProfileMenu(false)}
               >
-                <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
+                <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
                   {currentUser && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                       <p className="font-bold text-sm text-gray-900 dark:text-white">
