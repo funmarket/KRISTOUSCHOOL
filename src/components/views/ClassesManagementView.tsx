@@ -107,7 +107,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectionActorId, setSelectionActorId] = useState<string | null>(null);
-  const lastClickedButtonRef = useRef<HTMLButtonElement | null>(null);
+  const rosterContainerRef = useRef<HTMLDivElement | null>(null);
   const lastClickedStudentIdRef = useRef<string | null>(null);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [rosterPage, setRosterPage] = useState(1);
@@ -127,14 +127,15 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   useEffect(() => {
     if (!selectedStudentId && lastClickedStudentIdRef.current) {
-      const btn = document.querySelector(`[data-testid="view-student-${lastClickedStudentIdRef.current}"]`);
+      const btn = rosterContainerRef.current?.querySelector<HTMLButtonElement>(
+        `[data-testid="view-student-${lastClickedStudentIdRef.current}"]`,
+      );
       if (btn instanceof HTMLElement) {
         btn.focus();
       } else {
-        const heading = document.getElementById('roster-heading');
+        const heading = rosterContainerRef.current?.querySelector<HTMLElement>('#roster-heading');
         if (heading instanceof HTMLElement) heading.focus();
       }
-      lastClickedButtonRef.current = null;
       lastClickedStudentIdRef.current = null;
     }
   }, [selectedStudentId]);
@@ -519,7 +520,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
     const isZeroStudentsEnrolled = rawRoster.length === 0;
     return (
-      <div className="kh-role-page space-y-6 pb-12" data-testid="class-detail-roster-view">
+      <div ref={rosterContainerRef} className="kh-role-page space-y-6 pb-12" data-testid="class-detail-roster-view">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -764,8 +765,8 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                           <button
                             type="button"
                             data-testid={`view-student-${student.studentId}`}
-                            onClick={(e) => {
-                              lastClickedButtonRef.current = e.currentTarget;
+                            onClick={() => {
+                              lastClickedStudentIdRef.current = student.studentId;
                               setSelectedStudentId(student.studentId);
                               setSelectionActorId(currentUser?.id ?? null);
                             }}
