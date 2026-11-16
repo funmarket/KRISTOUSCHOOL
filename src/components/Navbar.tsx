@@ -88,6 +88,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [connectingTelegram, setConnectingTelegram] = useState(false);
   const telegramCopy = getTelegramLinkCopy(language);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsMenuRef = useRef<HTMLDivElement>(null);
+  const profileScrollRef = useRef<HTMLDivElement>(null);
+  const notificationsScrollRef = useRef<HTMLDivElement>(null);
+  const navbarMenuOpen = showProfileMenu || showNotifications;
 
   const startTelegramLink = async () => {
     setConnectingTelegram(true);
@@ -103,12 +107,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   useEffect(() => {
-    if (!showProfileMenu) return;
+    if (!navbarMenuOpen) return;
     const dismissOutside = (event: PointerEvent) => {
       if (!profileMenuRef.current?.contains(event.target as Node)) setShowProfileMenu(false);
+      if (!notificationsMenuRef.current?.contains(event.target as Node)) setShowNotifications(false);
     };
     const dismissEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowProfileMenu(false);
+      if (event.key === 'Escape') {
+        const activeMenu = profileMenuRef.current?.contains(document.activeElement)
+          ? profileMenuRef.current
+          : notificationsMenuRef.current;
+        setShowProfileMenu(false);
+        setShowNotifications(false);
+        activeMenu?.querySelector('button')?.focus({ preventScroll: true });
+        return;
+      }
     };
     document.addEventListener('pointerdown', dismissOutside);
     document.addEventListener('keydown', dismissEscape);
@@ -116,7 +129,31 @@ export const Navbar: React.FC<NavbarProps> = ({
       document.removeEventListener('pointerdown', dismissOutside);
       document.removeEventListener('keydown', dismissEscape);
     };
+  }, [navbarMenuOpen]);
+
+  useEffect(() => {
+    if (showNotifications) notificationsScrollRef.current?.focus({ preventScroll: true });
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (showProfileMenu) profileScrollRef.current?.focus({ preventScroll: true });
   }, [showProfileMenu]);
+
+  useEffect(() => {
+    if (!navbarMenuOpen) return;
+    // Containment on a list alone cannot protect the page when scrolling its header
+    // or an empty panel. Lock both document scroll owners until every menu closes.
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const htmlOverflow = htmlStyle.overflowY;
+    const bodyOverflow = bodyStyle.overflowY;
+    htmlStyle.overflowY = 'hidden';
+    bodyStyle.overflowY = 'hidden';
+    return () => {
+      htmlStyle.overflowY = htmlOverflow;
+      bodyStyle.overflowY = bodyOverflow;
+    };
+  }, [navbarMenuOpen]);
 
   useEffect(() => {
     setNotificationFilter('all');
@@ -169,11 +206,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Notifications Bell */}
-          <div className="relative" onMouseLeave={() => setShowNotifications(false)}>
+          <div
+            ref={notificationsMenuRef}
+            className="relative"
+            onPointerEnter={(event) => {
+              if (event.pointerType === 'mouse') setShowNotifications(true);
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType === 'mouse') setShowNotifications(false);
+            }}
+          >
             <button
               type="button"
               onClick={() => setShowNotifications(!showNotifications)}
               aria-label={t('notifications')}
+              aria-expanded={showNotifications}
+              aria-controls="navbar-notifications"
               className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <Bell className="w-5 h-5" />
@@ -185,7 +233,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {showNotifications && (
-              <div className="absolute end-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 z-50">
+              <div id="navbar-notifications" className="absolute end-0 top-full pt-2 w-80 max-w-[calc(100vw-2rem)] z-50">
+                <div ref={notificationsScrollRef} role="region" tabIndex={0} aria-label={t('notifications')} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-k-brand">
                 <div className="px-4 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm">
                     {t('notifications')}
@@ -246,7 +295,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   </div>
                 )}
-                <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {filteredNotifications.length === 0 ? (
                     <div className="p-4 text-center text-sm text-gray-500">
                       {notificationsError
@@ -298,17 +347,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </div>
               </div>
+              </div>
             )}
           </div>
 
           {/* User Profile / Navigation Menu */}
-          <div ref={profileMenuRef} className="relative">
+          <div
+            ref={profileMenuRef}
+            className="relative"
+            onPointerEnter={(event) => {
+              if (event.pointerType === 'mouse') setShowProfileMenu(true);
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType === 'mouse') setShowProfileMenu(false);
+            }}
+          >
             <button
               type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               aria-label={currentUser ? t('account') : t('login')}
               aria-expanded={showProfileMenu}
-              onMouseEnter={() => setShowProfileMenu(true)}
               className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               {currentUser ? (
@@ -330,9 +388,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {showProfileMenu && (
               <div
                 className="absolute end-0 top-full pt-1.5 w-[min(19rem,calc(100vw-1rem))] z-50"
-                onMouseLeave={() => setShowProfileMenu(false)}
               >
-                <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2">
+                <div ref={profileScrollRef} role="region" tabIndex={0} aria-label={currentUser ? t('account') : t('login')} className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain bg-white dark:bg-[#111111] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-k-brand">
                   {currentUser && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                       <p className="font-bold text-sm text-gray-900 dark:text-white">
