@@ -7,6 +7,8 @@ import {
   canReviewOrdinaryAccountsUi,
   resolveTeacherAssignedClasses,
 } from '../homepages/homepageAccess';
+import { StudentOverviewPanel } from './Shared/StudentOverviewPanel';
+import { resolveStudentOverviewSelection } from '../../lib/classes/studentOverview';
 import { HomePageHeader } from '../homepages/shared/HomePageHeader';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
@@ -103,8 +105,39 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [selectedLevel, setSelectedLevel] = useState('ALL');
   const [selectedYear, setSelectedYear] = useState('ALL');
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectionActorId, setSelectionActorId] = useState<string | null>(null);
+  const lastClickedButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lastClickedStudentIdRef = useRef<string | null>(null);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [rosterPage, setRosterPage] = useState(1);
+
+  useEffect(() => {
+    if (backendStatus === 'READY' && selectedClassId && selectedStudentId) {
+      const roster = initialRosters[selectedClassId];
+      if (Array.isArray(roster)) {
+        const exists = roster.some((s) => s.studentId === selectedStudentId);
+        if (!exists) {
+          setSelectedStudentId(null);
+          setSelectionActorId(null);
+        }
+      }
+    }
+  }, [backendStatus, selectedClassId, selectedStudentId, initialRosters]);
+
+  useEffect(() => {
+    if (!selectedStudentId && lastClickedStudentIdRef.current) {
+      const btn = document.querySelector(`[data-testid="view-student-${lastClickedStudentIdRef.current}"]`);
+      if (btn instanceof HTMLElement) {
+        btn.focus();
+      } else {
+        const heading = document.getElementById('roster-heading');
+        if (heading instanceof HTMLElement) heading.focus();
+      }
+      lastClickedButtonRef.current = null;
+      lastClickedStudentIdRef.current = null;
+    }
+  }, [selectedStudentId]);
 
   const [activeForm, setActiveForm] = useState<'none' | 'create-class' | 'enroll-student' | 'assign-teacher'>('none');
   const [opFeedback, setOpFeedback] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
@@ -155,6 +188,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   useEffect(() => {
     setSelectedClassId(null);
+    setSelectedStudentId(null);
     setStudentSearchQuery('');
     setRosterPage(1);
     setSelectedLevel('ALL');
@@ -167,6 +201,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
       (selectedClassId && !scopedInitialClasses.some((cls) => cls.id === selectedClassId))
     ) {
       setSelectedClassId(null);
+      setSelectedStudentId(null);
       setStudentSearchQuery('');
       setRosterPage(1);
     }
@@ -456,6 +491,32 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
   // Screen 2: Class Detail -> Student Roster View
   if (selectedClass) {
+    const selectionAuth = resolveStudentOverviewSelection({
+      currentUser,
+      selectedClassId,
+      selectedStudentId,
+      selectionActorId,
+      classes: scopedInitialClasses,
+      rosters: initialRosters,
+      backendStatus,
+    });
+
+    if (selectionAuth.allowed && selectionAuth.schoolClass && selectionAuth.student) {
+      return (
+        <div className="kh-role-page space-y-6 pb-12" data-testid="student-overview-view">
+          <StudentOverviewPanel
+            student={selectionAuth.student}
+            schoolClass={selectionAuth.schoolClass}
+            onBack={() => {
+              setSelectedStudentId(null);
+              setSelectionActorId(null);
+            }}
+            language={language}
+          />
+        </div>
+      );
+    }
+
     const isZeroStudentsEnrolled = rawRoster.length === 0;
     return (
       <div className="kh-role-page space-y-6 pb-12" data-testid="class-detail-roster-view">
@@ -466,6 +527,8 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
               data-testid="back-to-classes-btn"
               onClick={() => {
                 setSelectedClassId(null);
+                setSelectedStudentId(null);
+                setSelectionActorId(null);
                 setStudentSearchQuery('');
                 setRosterPage(1);
               }}
@@ -520,23 +583,25 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
           </span>
         </div>
 
-        <HomePageHeader
-          badgeText={pickText(
-            isTeacherView
-              ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }
-              : HOMEPAGE_COMMON_TEXT.classesNav,
-            language,
-          )}
-          title={selectedClass.name}
-          subtitle={pickText(
-            {
-              ar: `المربي الرئيسي: ${selectedClass.homeroomTeacherName || 'غير معين'} • عدد التلاميذ المسجلين: ${selectedClass.activeStudentCount}`,
-              fr: `Enseignant principal : ${selectedClass.homeroomTeacherName || 'Non assigné'} • Élèves inscrits : ${selectedClass.activeStudentCount}`,
-              en: `Homeroom Teacher: ${selectedClass.homeroomTeacherName || 'Unassigned'} • Enrolled Students: ${selectedClass.activeStudentCount}`,
-            },
-            language,
-          )}
-        />
+        <div id="roster-heading" tabIndex={-1} className="outline-none focus:ring-2 focus:ring-blue-500 rounded-2xl">
+          <HomePageHeader
+            badgeText={pickText(
+              isTeacherView
+                ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }
+                : HOMEPAGE_COMMON_TEXT.classesNav,
+              language,
+            )}
+            title={selectedClass.name}
+            subtitle={pickText(
+              {
+                ar: `المربي الرئيسي: ${selectedClass.homeroomTeacherName || 'غير معين'} • عدد التلاميذ المسجلين: ${selectedClass.activeStudentCount}`,
+                fr: `Enseignant principal : ${selectedClass.homeroomTeacherName || 'Non assigné'} • Élèves inscrits : ${selectedClass.activeStudentCount}`,
+                en: `Homeroom Teacher: ${selectedClass.homeroomTeacherName || 'Unassigned'} • Enrolled Students: ${selectedClass.activeStudentCount}`,
+              },
+              language,
+            )}
+          />
+        </div>
 
         {backendStatus === 'ERROR' && (
           <div
@@ -663,6 +728,11 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                     <th className="py-3.5 px-4 text-start">
                       {pickText({ ar: 'الحالة', fr: 'Statut', en: 'Status' }, language)}
                     </th>
+                    {isTeacherView && (
+                      <th className="py-3.5 px-4 text-end">
+                        {pickText({ ar: 'إجراءات', fr: 'Actions', en: 'Actions' }, language)}
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -689,6 +759,30 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                           {student.enrollmentStatus}
                         </span>
                       </td>
+                      {isTeacherView && (
+                        <td className="py-3 px-4 text-end">
+                          <button
+                            type="button"
+                            data-testid={`view-student-${student.studentId}`}
+                            onClick={(e) => {
+                              lastClickedButtonRef.current = e.currentTarget;
+                              setSelectedStudentId(student.studentId);
+                              setSelectionActorId(currentUser?.id ?? null);
+                            }}
+                            aria-label={pickText(
+                              {
+                                ar: `عرض ملف التلميذ ${student.fullName}`,
+                                fr: `Afficher le profil de l’élève ${student.fullName}`,
+                                en: `View student profile for ${student.fullName}`,
+                              },
+                              language,
+                            )}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-[#1E3A6D] dark:text-blue-300 font-extrabold text-[11px] transition-colors"
+                          >
+                            <span>{pickText({ ar: 'عرض', fr: 'Voir', en: 'View' }, language)}</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
