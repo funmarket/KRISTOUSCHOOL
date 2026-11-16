@@ -59,46 +59,9 @@ function createMockSupabase(initialEvents = [], initialResponses = [], opts = {}
   });
   const responses = initialResponses.map((r) => ({ ...r }));
   const rpcCalls = [];
-  const teacherAccounts = opts.teacherAccounts ?? [
-    {
-      id: 'teacher-1',
-      username: 'nadia',
-      fullName: 'Mme Nadia',
-      email: null,
-      phone: null,
-      emailConfirmed: true,
-      phoneConfirmed: false,
-      requestedRole: 'TEACHER',
-      accountStatus: 'APPROVED',
-      activeRoles: ['TEACHER'],
-      capabilities: [],
-      governanceVersion: 1,
-      createdAt: '2026-10-01T00:00:00Z',
-    },
-    {
-      id: 'teacher-2',
-      username: 'karim',
-      fullName: 'M. Karim',
-      email: null,
-      phone: null,
-      emailConfirmed: true,
-      phoneConfirmed: false,
-      requestedRole: 'TEACHER',
-      accountStatus: 'APPROVED',
-      activeRoles: ['TEACHER'],
-      capabilities: [],
-      governanceVersion: 1,
-      createdAt: '2026-10-01T00:00:00Z',
-    },
-  ];
-  const teacherClassesMap = opts.teacherClassesMap ?? {
-    'teacher-1': ['class-1', 'class-2'],
-    'teacher-2': ['class-1', 'class-2'],
-  };
   let failNextSelect = false;
   let failNextUpsert = false;
   let failNextUpsertError = null;
-  let directoryError = opts.directoryError ?? null;
 
   const client = {
     rpcCalls,
@@ -111,25 +74,8 @@ function createMockSupabase(initialEvents = [], initialResponses = [], opts = {}
       failNextUpsert = val;
       failNextUpsertError = customError;
     },
-    setDirectoryError(err) {
-      directoryError = err;
-    },
     async rpc(fnName, params) {
       rpcCalls.push({ fnName, params });
-      if (fnName === 'governance_list_account_directory') {
-        if (directoryError) {
-          return { data: null, error: directoryError };
-        }
-        return {
-          data: {
-            items: teacherAccounts,
-            totalCount: teacherAccounts.length,
-            limit: params.p_limit ?? 100,
-            offset: params.p_offset ?? 0,
-          },
-          error: null,
-        };
-      }
       if (fnName === 'create_school_calendar_event') {
         if (failNextUpsert) {
           failNextUpsert = false;
@@ -138,22 +84,7 @@ function createMockSupabase(initialEvents = [], initialResponses = [], opts = {}
           return { data: null, error: err };
         }
         const mode = params.p_audience_mode ?? (params.p_class_id ? 'SINGLE_CLASS' : 'WHOLE_SCHOOL');
-        let targetClassIds = [];
-        if (mode === 'SINGLE_CLASS') {
-          targetClassIds = params.p_class_id ? [params.p_class_id] : [];
-        } else if (mode === 'TEACHER_CLASSES') {
-          targetClassIds = [...(teacherClassesMap[params.p_teacher_user_id] ?? [])];
-          if (targetClassIds.length === 0) {
-            return { data: null, error: { code: 'P0001', message: 'calendar_no_eligible_classes' } };
-          }
-        } else if (mode === 'ALL_MY_CLASSES') {
-          const actorId = globalThis.__CAL_TEST_CTX__?.currentUser?.id ?? 'teacher-1';
-          const fallback = globalThis.__CAL_TEST_CTX__?.currentUser?.assignedClassIds ?? [];
-          targetClassIds = [...(teacherClassesMap[actorId] ?? fallback)];
-          if (targetClassIds.length === 0) {
-            return { data: null, error: { code: 'P0001', message: 'calendar_no_eligible_classes' } };
-          }
-        }
+        const targetClassIds = mode === 'SINGLE_CLASS' ? (params.p_class_id ? [params.p_class_id] : []) : [];
         const baseRow = {
           id: `ev-${events.length + 1}`,
           audience_mode: mode,
