@@ -1179,6 +1179,7 @@ export async function listPublicDirectory(
             photoUrl: String(row.photo_url || '/assets/kristou-logo.png'),
             bio: String(row.bio ?? ''),
             responsibilities: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+            languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
             isPublished: Boolean(row.is_published),
           });
         }
