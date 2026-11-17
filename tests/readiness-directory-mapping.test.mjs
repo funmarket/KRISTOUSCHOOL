@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-globalThis.__KRISTOU_SUPABASE_URL__ = '';
-globalThis.__KRISTOU_SUPABASE_PUBLISHABLE_KEY__ = '';
+globalThis.__KRISTOU_SUPABASE_URL__ = 'https://example.supabase.co';
+globalThis.__KRISTOU_SUPABASE_PUBLISHABLE_KEY__ = 'test-publishable-key';
 
 const { listPublicDirectory } = await import('../src/lib/schoolContent.ts');
 
