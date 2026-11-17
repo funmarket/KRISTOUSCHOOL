@@ -57,6 +57,7 @@ export type AppTab =
   | 'publicSite'
   | 'community'
   | 'announcements'
+  | 'performance'
   | 'notes'
   | 'messages'
   | 'pickup'
@@ -64,6 +65,37 @@ export type AppTab =
   | 'directory'
   | 'classes'
   | 'registration';
+
+export interface TeacherSubjectComponentSummary {
+  id: string;
+  code: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  sortOrder: number;
+}
+
+export interface TeacherAllocatedSubjectItem {
+  allocationId: string;
+  assignmentId: string;
+  teacherUserId: string;
+  classId: string;
+  className: string;
+  levelCode: string;
+  academicYear: string;
+  isHomeroom: boolean;
+  subjectId: string;
+  subjectCode: string;
+  domainCode: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  offeringId: string;
+  active: boolean;
+  allocatedAt: string;
+  version: number;
+  components: TeacherSubjectComponentSummary[];
+}
 
 export type CommunitySubTab =
   | 'announcements'

@@ -256,6 +256,11 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
       return true;
     }
 
+    case 'performance': {
+      // Read-only academic Performance view strictly for approved Teachers and Parents
+      return user.role === 'TEACHER' || user.role === 'PARENT';
+    }
+
     case 'community': {
       if (
         user.role === 'APP_ADMIN' ||

@@ -22,6 +22,7 @@ import { PublicHomePage } from './components/homepages/PublicHomePage';
 import { canAccessAppTab } from './components/homepages/homepageAccess';
 import { ClassCommunityView } from './components/views/ClassCommunityView';
 import { GlobalAnnouncementsCalendarView } from './components/views/GlobalAnnouncementsCalendarView';
+import { PerformanceView } from './components/views/PerformanceView';
 import { MessagesView } from './components/views/MessagesView';
 import { ParentNotesView } from './components/views/ParentNotesView';
 import { PickupBoardView } from './components/views/PickupBoardView';
@@ -159,6 +160,17 @@ function MainLayout() {
         {activeTab === 'announcements' &&
           (canAccessAppTab(currentUser, 'announcements') ? (
             <GlobalAnnouncementsCalendarView initialSubTab={announcementsSubTab} />
+          ) : (
+            <HomePageResolver
+              setActiveTab={handleSetTab}
+              onOpenAuth={() => setShowAuthModal(true)}
+              onNavigateToSubTab={handleNavigateToSubTab}
+            />
+          ))}
+
+        {activeTab === 'performance' &&
+          (canAccessAppTab(currentUser, 'performance') ? (
+            <PerformanceView />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}
