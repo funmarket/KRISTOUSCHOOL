@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CardAvailabilityState, HomePageKey } from '../../types';
 import { HomePageHeader } from './shared/HomePageHeader';
@@ -48,6 +48,18 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   } | null>(null);
 
   const [governanceRetrySeq, setGovernanceRetrySeq] = useState(0);
+  const governanceSurfaceRef = useRef<HTMLDivElement>(null);
+
+  const revealGovernanceSurface = () => {
+    const surface = governanceSurfaceRef.current;
+    if (!surface) return;
+    surface.focus({ preventScroll: true });
+    surface.scrollIntoView({ block: 'start' });
+  };
+
+  useEffect(() => {
+    if (activeGovernanceSection || governancePanel) revealGovernanceSurface();
+  }, [activeGovernanceSection, governancePanel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +88,8 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   const openGovernanceSection = (section: OwnerGovernanceSection) => {
     setGovernancePanel(null);
     setActiveGovernanceSection(section);
+    // Reopening the same section must reveal it even when React state is unchanged.
+    if (section === activeGovernanceSection) revealGovernanceSurface();
   };
 
   const openDirectorySubTab = (subTab: string) => {
@@ -147,15 +161,35 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
         )}
       </HomePageHeader>
 
-      {activeGovernanceSection && (
-        <OwnerGovernanceWorkspace
-          activeSection={activeGovernanceSection}
-          onSelectSection={(sec) => setActiveGovernanceSection(sec)}
-          onClose={() => setActiveGovernanceSection(null)}
-          onScopeVerified={(available) =>
-            setGovernanceBackendStatus(available ? 'READY' : 'BLOCKED_BACKEND')
-          }
-        />
+      {(activeGovernanceSection || governancePanel) && (
+        <div
+          ref={governanceSurfaceRef}
+          tabIndex={-1}
+          role="region"
+          aria-label={pickText({ ar: 'مساحة إدارة المدرسة', fr: 'Espace de gestion scolaire', en: 'School management workspace' }, language)}
+          className="scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-3xl"
+          data-testid="owner-governance-surface"
+        >
+          {activeGovernanceSection && (
+            <OwnerGovernanceWorkspace
+              activeSection={activeGovernanceSection}
+              onSelectSection={(sec) => setActiveGovernanceSection(sec)}
+              onClose={() => setActiveGovernanceSection(null)}
+              onScopeVerified={(available) =>
+                setGovernanceBackendStatus(available ? 'READY' : 'BLOCKED_BACKEND')
+              }
+            />
+          )}
+
+          {governancePanel && (
+            <EmptyFeatureState
+              state={governancePanel.state}
+              title={governancePanel.title}
+              description={governancePanel.description}
+              onClose={() => setGovernancePanel(null)}
+            />
+          )}
+        </div>
       )}
 
       {governanceBackendStatus === 'ERROR' && (
@@ -182,15 +216,6 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
           </button>
         </div>
-      )}
-
-      {governancePanel && (
-        <EmptyFeatureState
-          state={governancePanel.state}
-          title={governancePanel.title}
-          description={governancePanel.description}
-          onClose={() => setGovernancePanel(null)}
-        />
       )}
 
       {/* Group 1: School Operations — matching Screenshot 7 (ADMIN HOME / SCHOOL OWNER HOME) */}
