@@ -237,8 +237,18 @@ end;
 $$;
 
 -- =========================================================================
--- Defect C: Read-only CLASSES_ROSTER_VIEW cannot create classes (3 assertions: 28-30)
+-- Class creation: explicit Owner denial overrides Manager defaults without revoking roster access (3 assertions: 28-30)
 -- =========================================================================
+-- Owner decision: approved Managers now have a default creation right. Test the
+-- independent explicit denial, rather than treating an unrelated roster grant as a denial.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-9000-000000000201', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-9000-000000000201","role":"authenticated"}', true);
+set local role authenticated;
+select public.governance_set_class_creation_permission(
+  '00000000-0000-4000-9000-000000000202', false, 'Owner denies creation while retaining roster access', 0
+);
+reset role;
+
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-9000-000000000202', true);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-9000-000000000202","role":"authenticated"}', true);
 set local role authenticated;
@@ -247,7 +257,7 @@ select extensions.throws_ok(
   $$select public.create_school_class('2026-2027', 'CE1', 'CE1-Blocked', 25, 'R0')$$,
   'P0001',
   'insufficient_authority',
-  '28. Defect C: Manager with CLASSES_ROSTER_VIEW only cannot create school class'
+  '28. Owner-denied Manager cannot create a class despite roster authority'
 );
 
 select extensions.ok(

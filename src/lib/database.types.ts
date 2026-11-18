@@ -583,6 +583,48 @@ export type Database = {
           },
         ]
       }
+      class_creation_permissions: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          denied: boolean
+          reason: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          denied: boolean
+          reason: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          denied?: boolean
+          reason?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_creation_permissions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_creation_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_documents: {
         Row: {
           author_user_id: string
@@ -3086,6 +3128,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_my_class_creation_permission: { Args: never; Returns: Json }
       get_my_school_context: { Args: never; Returns: Json }
       governance_appoint_privileged_role: {
         Args: {
@@ -3113,6 +3156,10 @@ export type Database = {
         }
         Returns: Json
       }
+      governance_list_class_creation_permissions: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       governance_list_manager_grants: { Args: never; Returns: Json }
       governance_list_pending_accounts: {
         Args: {
@@ -3134,6 +3181,15 @@ export type Database = {
           p_expected_version?: number
           p_idempotency_key?: string
           p_reason?: string
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
+      governance_set_class_creation_permission: {
+        Args: {
+          p_allowed: boolean
+          p_expected_version: number
+          p_reason: string
           p_target_user_id: string
         }
         Returns: Json
@@ -3179,6 +3235,7 @@ export type Database = {
         }
         Returns: Json
       }
+      list_academic_years: { Args: never; Returns: Json }
       list_approved_message_recipients: { Args: never; Returns: Json }
       list_attendance_audit: {
         Args: { p_register_id: string }
