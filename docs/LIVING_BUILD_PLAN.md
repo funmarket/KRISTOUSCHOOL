@@ -3,6 +3,19 @@
 Status: **ACTIVE BUILD DISCIPLINE**
 Revision: **2026-11-14 — DOC-D6**
 
+### Current continuation — 2026-11-18
+
+The DOC-D6 pause/next-document wording below is retained as historical context;
+later explicit Owner instructions resumed implementation. For the Owner-authorized
+student/Teacher dossier, forms, relationships and notes continuation, read
+[Student and Teacher dossier reconciliation](STUDENT_TEACHER_DOSSIER_PLAN.md).
+It maps missing work to the approved master's existing F2/PRO/ATT/GRD/COM task IDs,
+records current Owner decisions and identifies the first bounded Students read packet.
+It does not replace the master or claim that a planned feature is implemented.
+PR #30 is merged at source baseline `2b943580e0a98ed5223b90c613d36f661928f42a`;
+its backend contract and still-needed frontend wiring are tracked separately.
+New hosted SQL still requires exact-SQL review and manual approval.
+
 This packet reconciles `docs/LIVING_BUILD_PLAN.md` only. Backend implementation remains **PAUSED**. The master and five accepted local document edits are protected; no code, Supabase, account, PR, commit, push, merge, configuration or deployment action is included. A document check establishes text consistency, never a working connection or production readiness.
 
 This document defines how work is performed; it is not a feature backlog, product-requirements file or independent execution queue. Read [AGENTS.md](../AGENTS.md), this document, the approved master and latest explicit Owner instruction before each task. A roadmap entry or successful prerequisite does not authorize the next action.
