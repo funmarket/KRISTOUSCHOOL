@@ -8,6 +8,8 @@ import {
   resolveTeacherAssignedClasses,
 } from '../homepages/homepageAccess';
 import { StudentOverviewPanel } from './Shared/StudentOverviewPanel';
+import { filterSchoolClasses, filterClassRoster } from '../../lib/classes/classFilters';
+import { ClassOperationGate, getClassCreationScope, classifyClassCreationResult, classifyClassRefreshResult, resolveClassReadback, type ClassCreationFeedback } from '../../lib/classes/classCreation';
 import { resolveStudentOverviewSelection } from '../../lib/classes/studentOverview';
 import { HomePageHeader } from '../homepages/shared/HomePageHeader';
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
@@ -54,38 +56,7 @@ export interface ClassesManagementViewProps {
 
 const ROSTER_PAGE_SIZE = 25;
 
-export function filterSchoolClasses(
-  classes: readonly SchoolClassSummary[],
-  query: string,
-  levelFilter: string,
-  yearFilter: string,
-): SchoolClassSummary[] {
-  const q = query.trim().toLowerCase();
-  return classes.filter((cls) => {
-    if (levelFilter !== 'ALL' && cls.level !== levelFilter && cls.levelCode !== levelFilter) return false;
-    if (yearFilter !== 'ALL' && cls.academicYear !== yearFilter) return false;
-    if (!q) return true;
-    return (
-      cls.name.toLowerCase().includes(q) ||
-      cls.level.toLowerCase().includes(q) ||
-      (cls.homeroomTeacherName?.toLowerCase().includes(q) ?? false)
-    );
-  });
-}
-
-export function filterClassRoster(
-  students: readonly ClassStudentRosterItem[],
-  query: string,
-): ClassStudentRosterItem[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [...students];
-  return students.filter(
-    (s) =>
-      s.fullName.toLowerCase().includes(q) ||
-      s.studentCode.toLowerCase().includes(q) ||
-      (s.primaryGuardianName?.toLowerCase().includes(q) ?? false),
-  );
-}
+export { filterSchoolClasses, filterClassRoster } from '../../lib/classes/classFilters';
 
 export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   initialClasses = [],
@@ -351,173 +322,93 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
     return filteredRoster.slice(start, start + ROSTER_PAGE_SIZE);
   }, [filteredRoster, safeRosterPage]);
 
-  const mountedRef = useRef(true);
+  const classGateRef = useRef(new ClassOperationGate());
+  const classGate = classGateRef.current;
+  const creationScope = getClassCreationScope(currentUser, canManage);
+  // Invalidate synchronously so even an A -> B -> A switch cannot revive an old completion.
+  classGate.configure(creationScope);
+  const creationGeneration = classGate.generation;
+  const [classCreation, setClassCreation] = useState<ClassCreationFeedback | null>(null);
+  const visibleCreation = classCreation?.generation === creationGeneration ? classCreation : null;
+  const creationPending = visibleCreation?.outcome === 'pending' || visibleCreation?.refresh === 'pending';
+  const classReadback = visibleCreation && resolveClassReadback(
+    visibleCreation.receipt, visibleCreation.refresh, backendStatus, initialClasses,
+  );
+
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+    classGate.resume();
+    return () => classGate.dispose();
+  }, [classGate]);
 
-  const currentActorKey = currentUser ? `${currentUser.id}::${currentUser.role}::${currentUser.accountStatus}` : null;
-  const actorKeyRef = useRef(currentActorKey);
-  actorKeyRef.current = currentActorKey;
-
-  const [needsRefreshRetry, setNeedsRefreshRetry] = useState(false);
-  const inFlightCreateRef = useRef(false);
+  useEffect(() => {
+    setClassCreation(null);
+    setOpFeedback(null);
+    setSubmitting(false);
+    setActiveForm('none');
+  }, [creationScope]);
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting || inFlightCreateRef.current || !canManage) return;
-    const initiatingActor = actorKeyRef.current;
-    inFlightCreateRef.current = true;
+    if (submitting || !canManage || backendStatus !== 'READY') return;
+    const token = classGate.begin();
+    if (!token) return;
     setOpFeedback(null);
+    setClassCreation({ generation: token.generation, outcome: 'pending', refresh: 'unverified' });
     setSubmitting(true);
-    setNeedsRefreshRetry(false);
-
-    let createRes;
     try {
-      createRes = await createSchoolClass({
-        academicYearCode,
-        levelCode,
-        name: className,
-        capacity,
-        roomLabel,
-      });
-    } catch (err) {
-      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) return;
-      setSubmitting(false);
-      inFlightCreateRef.current = false;
-      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
-      return;
-    }
-
-    if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
-      setSubmitting(false);
-      inFlightCreateRef.current = false;
-      return;
-    }
-
-    if (!createRes.ok || !createRes.data) {
-      setSubmitting(false);
-      inFlightCreateRef.current = false;
-      setOpFeedback({ type: 'error', text: createRes.errorMessage || createRes.errorCode || t('error') });
-      return;
-    }
-
-    setClassName('');
-    setRoomLabel('');
-    setActiveForm('none');
-    setOpFeedback({
-      type: 'success',
-      text: pickText(
-        { ar: 'تم إنشاء القسم بنجاح على الخادم.', fr: 'Classe créée sur le serveur avec succès.', en: 'Class created on server successfully.' },
-        language,
-      ),
-    });
-
-    let refreshSuccess = true;
-    let readbackConfirmed = false;
-    try {
-      if (onRefresh) {
-        const refreshRes = await onRefresh();
-        if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
-          setSubmitting(false);
-          inFlightCreateRef.current = false;
-          return;
-        }
-        if (refreshRes === false) {
-          refreshSuccess = false;
-        } else if (refreshRes === true) {
-          readbackConfirmed = true;
-        }
-      } else {
-        refreshSuccess = false;
+      let outcome: ReturnType<typeof classifyClassCreationResult>;
+      try {
+        const res = await createSchoolClass({ academicYearCode, levelCode, name: className, capacity, roomLabel });
+        if (!classGate.isCurrent(token)) return;
+        outcome = classifyClassCreationResult(res);
+      } catch {
+        if (!classGate.isCurrent(token)) return;
+        outcome = { outcome: 'unknown' };
       }
-    } catch (refreshErr) {
-      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
-        setSubmitting(false);
-        inFlightCreateRef.current = false;
+      if (outcome.outcome !== 'confirmed') {
+        setClassCreation({ generation: token.generation, ...outcome, refresh: 'unverified' });
         return;
       }
-      refreshSuccess = false;
-    }
-
-    setSubmitting(false);
-    inFlightCreateRef.current = false;
-
-    if (!refreshSuccess) {
-      setNeedsRefreshRetry(true);
-      setOpFeedback({
-        type: 'success',
-        text: pickText(
-          {
-            ar: 'تم إنشاء القسم على الخادم بنجاح، ولكن تعذر تحديث القائمة تلقائياً. انقر أدناه لإعادة تحديث القائمة وحدها.',
-            fr: 'Classe créée avec succès, mais le rafraîchissement a échoué. Cliquez ci-dessous pour rafraîchir.',
-            en: 'Class created successfully, but list refresh failed. Click below to retry refresh only.',
-          },
-          language,
-        ),
-      });
-    } else if (!readbackConfirmed) {
-      setOpFeedback({
-        type: 'success',
-        text: pickText(
-          {
-            ar: 'تم إنشاء القسم على الخادم بنجاح.',
-            fr: 'Classe créée avec succès sur le serveur.',
-            en: 'Class created on server successfully.',
-          },
-          language,
-        ),
-      });
+      setClassName('');
+      setRoomLabel('');
+      setActiveForm('none');
+      const confirmation: ClassCreationFeedback = {
+        generation: token.generation, outcome: 'confirmed', receipt: outcome.receipt, refresh: 'pending',
+      };
+      setClassCreation(confirmation);
+      // Refresh has a separate error boundary: it cannot change the committed creation outcome.
+      let refresh: ClassCreationFeedback['refresh'] = 'unverified';
+      try {
+        if (onRefresh) refresh = classifyClassRefreshResult(await onRefresh());
+      } catch {
+        refresh = 'failed';
+      }
+      if (!classGate.isCurrent(token)) return;
+      setClassCreation({ ...confirmation, refresh });
+    } finally {
+      // Never update an unmounted/other-actor view or unlock a newer operation.
+      if (classGate.release(token)) setSubmitting(false);
     }
   };
 
   const handleRetryRefreshOnly = async () => {
-    if (submitting || !onRefresh) return;
-    const initiatingActor = actorKeyRef.current;
+    if (submitting || !onRefresh || !canManage || visibleCreation?.outcome !== 'confirmed') return;
+    const token = classGate.begin();
+    if (!token) return;
+    const confirmation = visibleCreation;
     setSubmitting(true);
-    setOpFeedback(null);
+    setClassCreation({ ...confirmation, refresh: 'pending' });
     try {
-      const refreshRes = await onRefresh();
-      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
-        setSubmitting(false);
-        return;
+      let refresh: ClassCreationFeedback['refresh'];
+      try {
+        refresh = classifyClassRefreshResult(await onRefresh());
+      } catch {
+        refresh = 'failed';
       }
-      if (refreshRes === false) {
-        setNeedsRefreshRetry(true);
-        setOpFeedback({
-          type: 'error',
-          text: pickText(
-            { ar: 'تعذر تحديث القائمة. يرجى المحاولة لاحقاً.', fr: 'Échec du rafraîchissement de la liste.', en: 'Failed to refresh list.' },
-            language,
-          ),
-        });
-      } else {
-        setNeedsRefreshRetry(false);
-        setOpFeedback({
-          type: 'success',
-          text: pickText(
-            { ar: 'تم تحديث القائمة بنجاح.', fr: 'Liste actualisée avec succès.', en: 'List successfully refreshed.' },
-            language,
-          ),
-        });
-      }
-    } catch (err) {
-      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
-        setSubmitting(false);
-        return;
-      }
-      setNeedsRefreshRetry(true);
-      setOpFeedback({
-        type: 'error',
-        text: err instanceof Error ? err.message : t('error'),
-      });
+      if (!classGate.isCurrent(token)) return;
+      setClassCreation({ ...confirmation, refresh });
     } finally {
-      if (mountedRef.current && actorKeyRef.current === initiatingActor) {
-        setSubmitting(false);
-      }
+      if (classGate.release(token)) setSubmitting(false);
     }
   };
 
@@ -1077,16 +968,47 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             )}
             <span>{opFeedback.text}</span>
           </div>
-          {needsRefreshRetry && onRefresh && (
-            <button
-              type="button"
-              data-testid="retry-refresh-only-btn"
-              onClick={() => void handleRetryRefreshOnly()}
-              className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
-            >
-              {pickText({ ar: 'إعادة تحديث القائمة فقط', fr: 'Rafraîchir uniquement', en: 'Retry Refresh Only' }, language)}
-            </button>
-          )}
+
+        </div>
+      )}
+
+      {visibleCreation && (
+        <div data-testid="class-creation-feedback" role="status" aria-live="polite"
+          className="p-3.5 rounded-2xl text-xs font-semibold border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100 space-y-2">
+          {visibleCreation.outcome === 'pending' && <p>{t('loading')}</p>}
+          {visibleCreation.outcome === 'failed' && <p>{visibleCreation.error || t('error')}</p>}
+          {visibleCreation.outcome === 'unknown' && <p>{pickText({
+            ar: 'تعذر التأكد من إنشاء القسم. تحقق من قائمة الأقسام قبل المحاولة مجدداً لتجنب التكرار.',
+            fr: 'Création non confirmée. Vérifiez la liste des classes avant de réessayer pour éviter un doublon.',
+            en: 'Creation could not be confirmed. Check the class list before trying again to avoid a duplicate.',
+          }, language)}</p>}
+          {visibleCreation.outcome === 'confirmed' && <>
+            <p data-testid="class-creation-confirmed">{pickText({
+              ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created successfully.',
+            }, language)} {visibleCreation.receipt?.name}</p>
+            <p data-testid="class-creation-readback">{pickText(
+              classReadback === 'pending' ? {
+                ar: 'جارٍ تحديث قائمة الأقسام…', fr: 'Actualisation de la liste…', en: 'Refreshing the class list…',
+              } : classReadback === 'failed' ? {
+                ar: 'تعذر تحديث القائمة. القسم محفوظ؛ أعد تحديث القائمة فقط.',
+                fr: 'Actualisation impossible. La classe est enregistrée ; actualisez seulement la liste.',
+                en: 'List refresh failed. The class is saved; retry refreshing the list only.',
+              } : classReadback === 'confirmed' ? {
+                ar: 'القسم المحفوظ ظاهر الآن في القائمة.', fr: 'La classe enregistrée est maintenant dans la liste.',
+                en: 'The saved class is now visible in the list.',
+              } : {
+                ar: 'لم يتم التأكد بعد من ظهور القسم المحفوظ في القائمة.',
+                fr: 'La présence de la classe enregistrée dans la liste reste à vérifier.',
+                en: 'The saved class has not yet been confirmed in the list.',
+              }, language)}</p>
+            {onRefresh && classReadback !== 'confirmed' && (
+              <button type="button" data-testid="retry-refresh-only-btn" disabled={creationPending || submitting}
+                onClick={() => void handleRetryRefreshOnly()}
+                className="px-3 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold disabled:opacity-50">
+                {pickText({ ar: 'تحديث قائمة الأقسام فقط', fr: 'Actualiser seulement la liste', en: 'Refresh class list only' }, language)}
+              </button>
+            )}
+          </>}
         </div>
       )}
 
