@@ -11,7 +11,7 @@
     "lint": "tsc --noEmit",
     "test:auth": "node --test tests/auth-username.test.mjs tests/functions/telegram-init-data.test.mjs",
     "test:telegram-auth": "node --test tests/functions/telegram-init-data.test.mjs",
-    "test:classes": "tsx --test tests/class-management.test.mjs",
+    "test:classes": "node --test tests/class-management.test.mjs",
     "db:start": "npx --yes supabase@3.1.0 start",
     "db:stop": "npx --yes supabase@3.1.0 stop",
     "db:reset": "npx --yes supabase@3.1.0 db reset",
