@@ -100,7 +100,7 @@ const [
   { Navbar },
   { TeacherHomePage },
   { AdministrativePersonnelHomePage },
-  { ClassesManagementView },
+  { ClassesManagementView, filterSchoolClasses, filterClassRoster },
   { StudentOverviewPanel },
 ] = await Promise.all([
   bundleComponent('../src/components/views/AttendanceView.tsx', 'attendance-view.cjs'),
@@ -1832,5 +1832,7 @@ test('C3 regression: Real Office API & panel discover >200 historical registers 
     dom.document.body.removeChild(container);
   }
 });
+
+
 
 

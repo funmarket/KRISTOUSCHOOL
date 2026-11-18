@@ -1,0 +1,930 @@
+# KRISTOU SCHOOL
+## Class Creation, Student Placement, Class Transfers & Administrative Requests
+**Full Product and Implementation Plan — Revision 1**
+
+**Date:** 18 November 2026  
+**Repository:** `funmarket/KRISTOUSCHOOL`  
+**Verified source baseline:** `main@da01f72d54cf199e32f9e9b4b30e99e7decaf603`  
+**Supabase project:** `ofppapwofhovhroyjtkc`  
+**Execution status:** PLAN ONLY — NO IMPLEMENTATION AUTHORIZED
+
+---
+
+## 1. Purpose and scope
+
+Improve the existing Classes & Students experience into a complete, secure, school-year-aware administrative workflow.
+
+The system must support:
+
+1. Creating anticipated classes before school registration begins.
+2. Adding additional classes during registration or later in the school year.
+3. Custom class names and labels without imposed naming conventions.
+4. Owner-controlled class-creation privileges for Managers, Administrative Personnel and Teachers.
+5. Registering and placing new students without requiring app accounts.
+6. Assigning and removing responsible and additional Teachers.
+7. Reusing existing student identities for placement, transfer, renewal and promotion.
+8. Preserving academic and Attendance history when changing classes.
+9. Allowing Parents and Students to request class changes during the school year.
+10. Delivering requests to Manager and Administrative Personnel review workspaces.
+11. Recording authorized decisions and notifying requesters.
+12. Supporting individual entry and future CSV/XLSX imports using the same canonical operations.
+
+This is an enhancement of KRISTOU's existing single-school architecture, not a new school-management platform.
+
+## 2. Source-grounded implementation baseline
+
+The published application currently contains:
+
+| Existing source | Responsibility |
+|---|---|
+| `src/components/views/ClassesManagementView.tsx` | Class list, creation, student enrollment, Teacher assignment, roster display |
+| `src/lib/schoolOperations.ts` | Existing Supabase school-operation adapters |
+| `src/components/homepages/homepageAccess.ts` | Client-side approved-role/capability checks |
+| `src/context/AppContext.tsx` | Shared school data, actor and refresh state |
+| `src/App.tsx` | Application tabs and navigation |
+| `src/components/homepages/ParentHomePage.tsx` | Parent workspace and linked-child selection |
+| `src/components/homepages/StudentHomePage.tsx` | Student workspace and assigned-class context |
+| `src/components/homepages/ManagerHomePage.tsx` | Manager operational workspace |
+| `src/components/homepages/AdministrativePersonnelHomePage.tsx` | Office operational workspace |
+| `src/lib/notificationTargetNavigation.ts` | Existing scoped navigation to supported notification targets |
+| `src/components/views/AttendanceView.tsx` | Published Attendance consumer |
+
+Installed database foundations:
+
+- `academic_years`
+- `school_levels`
+- `school_classes`
+- `students`
+- `student_class_memberships`
+- `teacher_class_assignments`
+- `parent_child_links`
+- `manager_capability_grants`
+- `user_notifications`
+- `notification_outbox`
+
+Installed class RPCs:
+
+- `create_school_class`
+- `create_and_enroll_student`
+- `assign_teacher_to_class`
+- `list_school_classes_with_rosters`
+
+Verified live data state at planning time:
+
+- 1 academic year: `2026-2027`
+- 6 canonical school levels
+- 0 classes
+- 0 students
+- 0 class memberships
+- 0 Teacher assignments
+- 0 Attendance registers
+
+**Important limitations of the existing code:**
+
+- The current class-creation permission excludes ordinary Teachers.
+- Manager capability grants exist, but no general individual class-creation denial mechanism for all four eligible roles was verified.
+- The UI accepts free-text academic years even though the server only accepts configured years.
+- The current student creation operation creates a new student; it is not an existing-student transfer operation.
+- No installed canonical class-change-request operation was identified.
+- No installed general-purpose existing-student transfer RPC was identified.
+- The existing notification-target resolver explicitly supports `messages`, `notes` and `registration`; a class-change request destination requires an authorized extension.
+
+Do not describe these planned capabilities as already implemented.
+
+---
+
+## 3. Academic-year preparation
+
+### 3.1 School-year configuration
+
+Before creating classes, authorized school administration selects an existing academic year.
+
+Academic years must have:
+
+- Stable identity.
+- Year code, e.g. `2026-2027`.
+- Start and end dates.
+- Active/current-year information.
+- Separation from previous and future years.
+
+The Create Class form must display server-known academic years rather than accepting an arbitrary unsupported year code.
+
+For future years, use an explicitly authorized academic-year configuration operation owned by Academics.
+
+Do not silently create an academic year when someone enters an unknown code.
+
+### 3.2 Canonical levels
+
+Maintain the six existing levels:
+
+| Code | French display |
+|---|---|
+| `CP` | 1ère année |
+| `CE1` | 2ème année |
+| `CE2` | 3ème année |
+| `CM1` | 4ème année |
+| `CM2` | 5ème année |
+| `6EME` | 6ème année |
+
+Arabic and English labels must also be supported.
+
+The level identifies academic progression; it does not dictate the class's name.
+
+### 3.3 Pre-registration planning
+
+Authorized staff can create an empty class before students have registered.
+
+A valid new class can initially have:
+
+- Zero students.
+- No Teacher assignment.
+- A planned capacity.
+- An optional classroom.
+- A chosen academic year and level.
+
+Do not require student enrollment, parent links, or Teacher account creation before saving the class.
+
+---
+
+## 4. Flexible class creation
+
+### 4.1 Creation form
+
+Retain and improve the existing Classes & Students screen.
+
+Fields:
+
+| Field | Required | Policy |
+|---|---|---|
+| Academic year | Yes | Server-known year |
+| Academic level | Yes | Canonical level |
+| Class name | Yes | User-defined |
+| Planned capacity | Yes | Existing range 1–60 unless policy changes |
+| Room | No | Free text |
+| Assigned Teacher | No | Separate operation |
+| Initial roster | No | Separate operation |
+
+Supported naming examples:
+
+- `1ère A`
+- `1ère B`
+- `Classe 1`
+- `Les Étoiles`
+- `Les Papillons`
+- `الأولى أ`
+- `قسم الياسمين`
+
+No required letter or number suffix.
+
+The same class name must not be duplicated within the same academic year and level under the existing database uniqueness rule.
+
+### 4.2 Growth during registration
+
+The system must continue allowing additional class creation after registration opens.
+
+Example:
+
+- School prepares `1ère A` and `1ère B`.
+- Registration demand increases.
+- An authorized user creates `1ère C`.
+- The additional class initially has an empty roster.
+- Staff subsequently place eligible students into it.
+
+Creating `1ère C` must not automatically transfer students, modify another class's capacity, or assign a Teacher.
+
+### 4.3 Class lifecycle
+
+Recommended states, subject to final data-model review:
+
+- `PLANNED`: created ahead of operation.
+- `READY`: reviewed and prepared for normal school use.
+- `ACTIVE`: class operating during the school year.
+- `ARCHIVED`: retained as historical data.
+
+**Contract caveat:** `school_classes` currently contains `is_archived`, not this complete status vocabulary. These states are a proposed UX/lifecycle requirement, not permission to add database columns immediately.
+
+If existing fields can faithfully support an accepted behavior without inventing lifecycle state, reuse them. Otherwise, define the smallest necessary change in a separately approved Academics migration.
+
+Archiving must not delete students, memberships, Attendance or historical reports.
+
+---
+
+## 5. Owner-controlled class creation permissions
+
+### 5.1 Eligible roles
+
+| Role | Default product policy | Individually restrictable |
+|---|---|---|
+| `APP_ADMIN` | Allow | Owner authority retained |
+| `MANAGER` | Allow | Yes |
+| `ADMINISTRATIVE_PERSONNEL` | Allow | Yes |
+| `TEACHER` | Allow | Yes |
+| `PARENT` | Deny | Not eligible by default |
+| `STUDENT` | Deny | Not eligible by default |
+| `SCHOOL_STAFF` | Deny | Not eligible by default |
+| Anonymous | Deny | No account |
+
+All actions require an approved active account.
+
+### 5.2 Independent create permission
+
+Introduce a narrowly defined effective permission for creating classes.
+
+Conceptual name: `CLASS_CREATE`.
+
+**This is a proposed contract identifier, not an existing verified database capability.**
+
+The permission must support:
+
+- Role-default allowance for the four approved roles.
+- Individual Owner-controlled revocation.
+- Individual Owner-controlled reactivation.
+- Immediate server-side enforcement.
+- Audited changes.
+- A single authoritative decision mechanism.
+
+An explicit Owner denial must take precedence over broad legacy role allowances or unrelated capabilities such as `FULL_ACCESS`.
+
+**Do not expand this permission to edit rosters, transfer students, approve accounts or manage all class records.**
+
+### 5.3 Permission separation
+
+A Teacher denied class creation must still retain authorized access to:
+
+- Assigned classes.
+- Their student rosters.
+- Their independent Attendance registers.
+- Teacher-specific educational features.
+
+Similarly, denying an Administrative Personnel member class creation must not silently revoke account-approval, enrollment-review or unrelated authorized operations.
+
+### 5.4 Existing governance compatibility
+
+Current governance includes `manager_capability_grants` and Manager delegation mechanisms.
+
+Before implementation, Codex must inspect these authoritative rules, applicable triggers, role assignments and capability functions.
+
+Choose the minimum compatible server model. Avoid creating a competing authorization store.
+
+The Owner's permission panel must clearly show each person's effective class-creation access and the reason it is allowed or denied.
+
+---
+
+## 6. Student registration and initial placement
+
+### 6.1 Separate identities and processes
+
+Keep distinct:
+
+1. School admission application.
+2. Admission decision.
+3. Student record.
+4. Academic-year enrollment.
+5. Class placement.
+6. Parent-child verification.
+7. Optional Student app account and approval.
+
+A student can exist in the school records without having an app account.
+
+The app signup process does not automatically admit or place a child.
+
+### 6.2 Individual student entry
+
+Retain the existing administrative form, but integrate it into a more usable records workflow.
+
+Support:
+
+- Existing or new student selection.
+- School student code.
+- Full name.
+- Date of birth.
+- Academic year.
+- Target class.
+- Eligible enrollment status.
+- Optional verified Parent/Student account linkage.
+
+Do not create a new student when a stable student identity already exists.
+
+### 6.3 Initial placement
+
+For a new student:
+
+- Validate canonical identity and required admission conditions.
+- Check class and academic year.
+- Confirm eligibility.
+- Create the student record once.
+- Create the authorized active class membership.
+- Return durable readback.
+
+For an existing student:
+
+- Find the existing record through an authorized school lookup.
+- Validate eligibility.
+- Add a new relevant membership without duplicating the student.
+
+Do not create a second roster table.
+
+### 6.4 Import
+
+CSV/XLSX import remains an approved product requirement.
+
+Use this sequence:
+
+1. Upload.
+2. Validate file structure.
+3. Preview parsed rows.
+4. Identify existing students.
+5. Display duplicates and conflicts.
+6. Select eligible class placement.
+7. Confirm.
+8. Execute using the same domain writers as individual entry.
+9. Report exact committed, rejected and unresolved counts.
+
+Import must never implicitly create app credentials, grant roles, approve accounts or verify parent relationships.
+
+Official identifiers, conflict matching, file size, row limits and atomic-versus-partial commit policy remain governed by the existing `DG-02` decision gate.
+
+Do not invent those policy values.
+
+---
+
+## 7. Teacher assignments
+
+Preserve `teacher_class_assignments` as the canonical assignment owner.
+
+Supported operations:
+
+- Assign responsible/homeroom Teacher.
+- Assign additional Teachers.
+- Unassign Teacher.
+- View historical or inactive assignments where authorized.
+- Refresh affected Teacher workspaces and rosters.
+
+Class creation does not require an assignment.
+
+The Owner-controlled `CLASS_CREATE` permission does not itself grant Teacher-assignment rights.
+
+Existing authorized school-office operations should retain responsibility for staffing decisions unless the Owner explicitly delegates that separate permission.
+
+Attendance continues to distinguish each responsible Teacher's register.
+
+---
+
+## 8. Class capacity and growth management
+
+Class capacity is currently stored on `school_classes`, with an installed constraint permitting 1–60.
+
+It must be displayed as a planning and operational attribute.
+
+Proposed UI:
+
+- Class name.
+- Level/year.
+- Planned capacity.
+- Current active enrollment count.
+- Remaining planned places.
+- Assigned Teachers.
+- Room.
+
+When new registration would exceed planned capacity, the system must not silently increase capacity or create another class.
+
+Show an explicit capacity warning and the relevant administrative choices:
+
+- Consider a different class.
+- Review whether planned capacity can be adjusted.
+- Create another class.
+- Defer placement pending an authorized decision.
+
+**Open policy decision:** Is capacity a hard enrollment limit or an advisory planning threshold, and who may authorize an exception?
+
+Do not implement an invented automatic over-capacity exception.
+
+---
+
+## 9. Existing-student class transfer
+
+### 9.1 Transfer as a separate operation
+
+A transfer changes the student's effective academic membership, not the student's canonical identity.
+
+The existing `student_class_memberships` table already contains:
+
+- `student_id`
+- `class_id`
+- `academic_year_id`
+- `status`
+- `started_at`
+- `ended_at`
+- `assigned_by`
+
+Its installed statuses include:
+
+- `ACTIVE`
+- `TRANSFERRED`
+- `WITHDRAWN`
+- `COMPLETED`
+
+Reuse these structures wherever the verified contract permits.
+
+### 9.2 Authorized transfer transaction
+
+A future transfer operation must:
+
+1. Verify the authenticated actor.
+2. Verify specific transfer authority.
+3. Verify the student's existing membership.
+4. Verify the target class and academic year.
+5. Check applicable academic eligibility and capacity policy.
+6. Lock the relevant records consistently.
+7. Detect stale requests and competing transfers.
+8. End the previous effective membership.
+9. Create the new effective membership.
+10. Preserve the previous class identity and dates.
+11. Record actor, reason and approval reference.
+12. Return the canonical resulting membership.
+
+The membership change and transfer audit must succeed atomically.
+
+No operation should leave two active memberships for the same student in the same academic year.
+
+### 9.3 Historical preservation
+
+Never erase:
+
+- Previous class memberships.
+- Previous Teachers and teaching context.
+- Attendance recorded before transfer.
+- Prior academic results and reports.
+- Existing Parent Notes and permitted historical communication.
+- Class-change request and decision history.
+
+Past Attendance remains attributed to the relevant recorded register and class. Transferring a pupil does not rewrite old attendance entries.
+
+### 9.4 Effective date
+
+The transfer must have a server-validated effective school date using `Africa/Tunis`.
+
+**Open policy decision:** Whether administrators may approve past-dated or future-dated transfers, and how those dates interact with scheduled classes and existing Attendance.
+
+Until that policy is approved, do not introduce automatic backdating or retroactive editing.
+
+---
+
+## 10. Parent and Student class-change requests
+
+### 10.1 Feature identity
+
+Names:
+
+- French: `Demande de changement de classe`
+- Arabic: `طلب تغيير القسم`
+- English: `Class Change Request`
+
+This is a structured administrative request, not a normal chat message, Parent Note or Attendance justification.
+
+### 10.2 Student permissions
+
+An approved Student can submit a request only for their own server-verified student identity and active membership.
+
+No ability to select another student.
+
+### 10.3 Parent permissions
+
+An approved Parent may select only their verified linked children.
+
+One Parent may request a transfer for one child without affecting siblings.
+
+The relationship must be checked again by the backend at submission and read time.
+
+### 10.4 Request form
+
+Fields:
+
+| Field | Behavior |
+|---|---|
+| Student | Own student or verified linked child |
+| Current class | Server-derived, read-only |
+| Academic year | Server-derived |
+| Desired class | Authorized same-year eligible choices |
+| Reason category | Structured selection |
+| Explanation | Required, length-bounded |
+| Submission date | Server-generated |
+| Request reference | Server-generated |
+
+Suggested reason categories:
+
+- Pedagogical/academic.
+- Social integration.
+- Wellbeing.
+- Other.
+
+Sensitive explanations must not be exposed to classmates, unrelated Teachers or the public.
+
+A requester may indicate no specific desired class and ask the administration to propose one. This needs an explicit accepted product rule before enabling.
+
+### 10.5 Request states
+
+Proposed workflow:
+
+`SUBMITTED → UNDER_REVIEW → APPROVED / REJECTED`
+
+Also support `CANCELLED` when the requester is eligible to withdraw an undecided request.
+
+If approval of the request and actual transfer require separate administrative execution, distinguish:
+
+- Decision approved.
+- Transfer pending.
+- Transfer completed.
+- Transfer failed/conflicted.
+
+Do not label a student as transferred merely because a reviewer clicked Approve.
+
+### 10.6 Duplicate and stale requests
+
+The backend must enforce an explicit duplicate-request policy.
+
+Recommended initial behavior:
+
+- Allow at most one unresolved class-change request per student and effective current membership.
+- A terminal request remains in history.
+- A new request after a completed decision can be submitted subject to school policy.
+- If the student has moved since submission, the request becomes stale and cannot transfer the old membership blindly.
+
+This recommendation requires acceptance before enforcement.
+
+---
+
+## 11. Manager and Administration review workspaces
+
+### 11.1 Delivery
+
+On successful request submission:
+
+- Store the durable request.
+- Make it visible in the authorized administrative queue.
+- Produce an actionable notification for authorized Managers and Administrative Personnel.
+- Preserve Owner oversight.
+
+Notification delivery failure must not roll back a successfully stored request.
+
+### 11.2 Manager workspace
+
+Add a scoped `Class Change Requests` entry within the existing `ManagerHomePage.tsx` navigation structure.
+
+The Manager can:
+
+- View pending requests within approved authority.
+- Read essential student/class context and requester explanation.
+- Review available classes.
+- Request clarification where an approved communication mechanism exists.
+- Approve or reject only if the current delegated review permission allows it.
+
+The Owner may revoke a Manager's approval right separately from general read access.
+
+### 11.3 Administrative Personnel workspace
+
+Add the same request queue to the existing `AdministrativePersonnelHomePage.tsx`.
+
+Show:
+
+- Student name and school code.
+- Current class.
+- Desired class.
+- Requester type.
+- Submission date.
+- Reason.
+- State.
+- Review action.
+- Decision outcome.
+
+Approval must use the same server-side decision and transfer operation regardless of whether the reviewer is a Manager or Administrative Personnel member.
+
+### 11.4 Owner oversight
+
+`APP_ADMIN` can inspect and govern the process without impersonating another user.
+
+Preserve existing Owner/Manager oversight identity boundaries.
+
+### 11.5 Reviewer actions
+
+The reviewer can:
+
+- Open details.
+- Compare current and target classes.
+- Check class eligibility and capacity.
+- Approve.
+- Reject with an appropriate reason.
+- View the resulting transfer outcome.
+- Review prior request history.
+
+Approvals must be concurrency-safe, idempotent and audited.
+
+A rejection does not change enrollment or class membership.
+
+---
+
+## 12. Notification integration
+
+Reuse `user_notifications` and the existing `notification_outbox` architecture after checking the actual dispatch contract.
+
+The existing `notificationTargetNavigation.ts` permits only selected notification destinations. Expand it narrowly for class-change requests once the relevant view and route exist.
+
+Notifications:
+
+| Event | Recipient |
+|---|---|
+| New request | Authorized Manager/Administrative Personnel reviewers |
+| Request accepted for review | Requester |
+| Approved and transfer completed | Requester |
+| Rejected | Requester |
+| Cancelled | Relevant reviewers |
+| Transfer conflict/failure | Appropriate authorized reviewer |
+
+The notification should contain minimal metadata and an opaque request reference.
+
+Do not include private explanatory text in a broadly visible notification.
+
+All notification navigation must recheck the current actor and request visibility before opening private details.
+
+---
+
+## 13. Mobile-first interface plan
+
+Preserve the current application shell, dropdown navigation, trilingual design, RTL support and existing homepage cards.
+
+### Classes & Students
+
+Improve the existing view without replacing it:
+
+- Academic-year selector.
+- Level filter.
+- Searchable class cards.
+- Create Class action when permitted.
+- Capacity and roster summary.
+- Teacher assignment summary.
+- Class details.
+- Student roster.
+- Add existing/new student.
+- Historical placement and transfer controls where authorized.
+- Clear loading, empty, unauthorized, error, conflict and retry states.
+
+### Parent homepage
+
+Add `Class Change Request` to the existing linked-child workflow.
+
+Selecting a child should carry verified child context to the request form, not create a separate untrusted identity selection.
+
+Parents can see their own requests and outcomes.
+
+### Student homepage
+
+Add `Request Class Change` where the student has a verified active membership.
+
+If no active membership exists, show an explanatory unavailable state instead of inventing a class.
+
+Students can review their own request history.
+
+### Manager/Office homepages
+
+Add a request-review shortcut and pending count.
+
+Keep private records inside the existing authenticated application. Do not display them in the public directory or school website.
+
+### Localization
+
+All new UI text, error states, dates and validation messages must be available in:
+
+- Arabic — RTL.
+- French.
+- English.
+
+---
+
+## 14. Backend ownership and migration plan
+
+### Preserve existing owners
+
+| Domain | Canonical responsibility |
+|---|---|
+| Identity/Access | Approved accounts, roles, individual restrictions |
+| Academics | Academic years, classes, Teacher assignments, student memberships |
+| People | Canonical student identity |
+| Enrollment | Admission and eligibility |
+| Family | Verified Parent-child relationships |
+| Attendance | Independent daily registers and historical marks |
+| Notifications | Delivery and actionable navigation |
+| Audit | Durable administrative evidence |
+
+### Required backend preparation packets
+
+**DB-CM1 — Class-creation permission**
+
+Inspect existing capability grants and governance RPCs. Design an Owner-controlled create permission with explicit individual denial precedence. Add server-side authorization and denial tests.
+
+**DB-CM2 — Academic-year and class operations**
+
+Verify class-year lookup, planned capacity handling and the minimum required class metadata/updates. Do not invent lifecycle columns before confirming the necessary contracts.
+
+**DB-CM3 — Existing-student placement and transfer**
+
+Define transactional operations using the canonical student and membership records. Include effective dates, old/new class references, stale-state detection and audit.
+
+**DB-CM4 — Class-change request lifecycle**
+
+Add the smallest durable request contract, authorized reads, submit/cancel/review operations and atomic approval/transfer handling.
+
+**DB-CM5 — Notifications and revocation**
+
+Integrate actionable notifications and verify that role revocation immediately blocks further request reads and decisions.
+
+All SQL migrations, RPC grants, RLS, generated database types and schema verification remain under Codex ownership.
+
+**No hosted schema mutation is authorized by this plan.**
+
+---
+
+## 15. Application implementation packets for Gemini
+
+Gemini works in Google AI Studio, locally and unpublished until Product Owner GitHub Sync.
+
+Implement application changes only after their dependent verified backend contracts are available.
+
+| Packet | Application task | Prerequisite |
+|---|---|---|
+| UI-CM1 | Server-backed year selection and improved class creation | Academic-year/class contract |
+| UI-CM2 | Owner-controlled creation permission UX | DB-CM1 |
+| UI-CM3 | Improved roster, new/existing student placement | DB-CM3 |
+| UI-CM4 | Class adjustment and historical transfer UX | DB-CM3 |
+| UI-CM5 | Parent/Student request forms and history | DB-CM4 |
+| UI-CM6 | Manager/Office review queue and decisions | DB-CM4 |
+| UI-CM7 | Notifications, trilingual/RTL, cross-view integration | DB-CM5 and UI-CM5/6 |
+| UI-CM8 | CSV/XLSX reviewed import | DG-02 and approved import writers |
+
+These are logical packets, not instructions to implement everything in one Gemini response.
+
+Each packet must preserve unrelated application code and return its actual changed-file manifest and evidence.
+
+---
+
+## 16. Required acceptance tests
+
+### Class creation
+
+- Approved Owner creates a valid class.
+- Approved Manager/Administrative Personnel/Teacher creates a class according to their effective individual permission.
+- Owner denial blocks that person even when their role normally permits creation.
+- Removing the denial restores creation without changing unrelated permissions.
+- Unapproved accounts and unauthorized roles are rejected by the server.
+- Empty classes are valid.
+- Additional classes can be created after registration starts.
+- Duplicate class names within a year/level are rejected.
+- Arbitrary unsupported academic years are rejected.
+
+### Enrollment and placement
+
+- Student identity is created once.
+- Existing student can be placed without duplication.
+- Unrelated Parent cannot link to the child.
+- Ineligible academic year/class placement is rejected.
+- Enrollment and class placement remain distinct.
+- Class roster refresh shows committed server data.
+
+### Teacher assignment
+
+- Approved authorized staff can assign Teachers.
+- A Teacher denied creation still retains their own assigned-class capabilities.
+- Class creation alone does not grant Teacher-assignment rights.
+- Assignment revocation removes current class authority.
+- Independent Attendance register ownership remains intact.
+
+### Transfer
+
+- Same-year authorized transfer succeeds once.
+- Duplicate or simultaneous transfers cannot create two active memberships.
+- Stale source membership fails.
+- Old class history remains accessible to authorized historical readers.
+- New current roster reflects the student.
+- Prior Attendance is not rewritten.
+- Unauthorized actors cannot transfer students.
+- Effective-date rules follow the approved contract.
+
+### Class-change requests
+
+- Parent can request for verified linked child.
+- Parent cannot request for another family's child.
+- Student can request only for self.
+- Pending request appears in authorized Manager and Office queues.
+- Reviewer without current approval permission cannot decide.
+- Approving a request leads to exactly one valid transfer.
+- Rejecting a request leaves membership unchanged.
+- Conflicting decisions cannot both succeed.
+- Requester can read only authorized history.
+- Sensitive reasons do not appear in public or unrelated notifications.
+- Read access is denied after account or relevant relationship revocation.
+
+### End-to-end
+
+Run real authenticated allow/deny cases against an isolated Supabase database with representative synthetic records, not only mocked API calls.
+
+Confirm relevant browser/mobile behavior and Arabic/French/English presentation.
+
+Re-run existing Attendance, Teacher, Calendar, Directory, Parent Notes, governance and other protected regression suites.
+
+---
+
+## 17. Decisions that remain open
+
+These must not be silently invented during implementation.
+
+| Gate | Question |
+|---|---|
+| CM-D1 | Is planned class capacity a hard limit or advisory? Who may override it? |
+| CM-D2 | Can classes with active students be renamed, archived or have their level changed? |
+| CM-D3 | Are class creation and transfer-review permissions independently revocable for each Manager, Office user and Teacher? The creation rule is approved; precise governance implementation remains to be finalized. |
+| CM-D4 | May class transfers be backdated or scheduled for the future? |
+| CM-D5 | Are class-change requests limited to same-level classes? |
+| CM-D6 | May requesters submit without naming a destination class? |
+| CM-D7 | How many unresolved requests can exist for one student? |
+| CM-D8 | Who may override a rejected request or amend a completed transfer? |
+| DG-02 | Student identifiers, CSV/XLSX matching, row limits, conflict treatment and import atomicity |
+| DG-15 / YEAR-01/02 | Year rollover, renewal, retention, promotion and previous-year continuity |
+
+Decisions already approved by the Owner—such as advance class creation, flexible naming and Owner-controlled Teacher participation—must not be reopened without a genuine conflict.
+
+---
+
+## 18. Execution and publication rules
+
+### Codex responsibility
+
+- Verify current GitHub and hosted schema.
+- Design/review database contracts and migrations.
+- Own RLS, RPCs and generated types.
+- Test authorization, transactions and concurrency.
+- Make independently authorized source corrections through a focused branch/PR.
+
+### Gemini responsibility
+
+- Implement narrowly scoped React/TypeScript application packets in AI Studio.
+- Preserve existing components and workflows.
+- Run tests and produce actual source evidence.
+- Return export and exact file manifest.
+
+### Product Owner responsibility
+
+- Approve unresolved school-policy decisions.
+- Authorize consequential implementation/migration packets.
+- Publish reviewed Gemini workspace changes through GitHub Sync directly to `main`.
+
+Gemini is not expected to create a PR or access hosted Supabase.
+
+Before publication, review Gemini's actual exported source. After `PUSHED`, inspect the resulting GitHub commit and compare it to the approved candidate.
+
+### Forbidden without explicit authorization
+
+- Hosted SQL changes.
+- Production data creation/deletion.
+- New role systems competing with existing governance.
+- Duplicate student records or class rosters.
+- Unrelated application edits.
+- Automatic changes to Attendance history.
+- Silent account approvals or Parent-child linking.
+- Merging/deployment outside the approved workflow.
+
+---
+
+## 19. Recommended execution order
+
+1. **CM-0 — Contract reconciliation:** confirm precise current source, permissions, installed functions, governing decisions and open questions.
+2. **CM-1 — Owner-controlled class creation:** enable the four eligible roles with independently enforceable individual restrictions.
+3. **CM-2 — Advance planning:** server-backed years, flexible class creation and additional-class support.
+4. **CM-3 — Student identity and placement:** existing/new student workflow without duplicates.
+5. **CM-4 — Safe class transfers:** atomic dated membership changes and historical integrity.
+6. **CM-5 — Parent/Student requests:** secure submit, status and self/child history.
+7. **CM-6 — Manager/Administration decisions:** authorized review and transfer execution.
+8. **CM-7 — Notifications and integration:** actionable inbox, localization and regression acceptance.
+9. **CM-8 — CSV/XLSX import and school-year continuity:** only after relevant decision gates and dependencies are accepted.
+
+Do not advance a packet because its successor seems straightforward. Verify each dependency and acceptance gate.
+
+---
+
+## 20. Definition of completion
+
+The complete Class Management feature is accepted only when:
+
+- The intended four roles can create classes according to individually controlled Owner permissions.
+- Empty classes can be prepared before registration.
+- Additional classes can be added as registration changes.
+- School-selected class labels work without fixed naming.
+- Students are placed using stable canonical identities.
+- Teacher assignments remain independent of class-creation permissions.
+- Approved transfers preserve historic memberships and Attendance.
+- Student/Parent requests persist and reach authorized reviewers.
+- Review decisions are atomic, auditable and correctly notified.
+- Cross-family/class unauthorized access is denied by the server.
+- Existing application features and protected code remain intact.
+- Relevant local, database and browser checks are independently recorded.
+- Source publication, hosted migration installation and real application behavior are separately verified.
+
+**Final state of this document: PROPOSED IMPLEMENTATION PLAN — NOT IMPLEMENTED.**

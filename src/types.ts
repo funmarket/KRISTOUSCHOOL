@@ -153,6 +153,7 @@ export interface SchoolClassSummary {
   academicYear: string;
   homeroomTeacherName: string | null;
   activeStudentCount: number;
+  capacity?: number | null;
   roomLabel?: string | null;
 }
 

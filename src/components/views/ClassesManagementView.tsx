@@ -351,38 +351,173 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
     return filteredRoster.slice(start, start + ROSTER_PAGE_SIZE);
   }, [filteredRoster, safeRosterPage]);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const currentActorKey = currentUser ? `${currentUser.id}::${currentUser.role}::${currentUser.accountStatus}` : null;
+  const actorKeyRef = useRef(currentActorKey);
+  actorKeyRef.current = currentActorKey;
+
+  const [needsRefreshRetry, setNeedsRefreshRetry] = useState(false);
+  const inFlightCreateRef = useRef(false);
+
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting || !canManage) return;
+    if (submitting || inFlightCreateRef.current || !canManage) return;
+    const initiatingActor = actorKeyRef.current;
+    inFlightCreateRef.current = true;
     setOpFeedback(null);
     setSubmitting(true);
+    setNeedsRefreshRetry(false);
+
+    let createRes;
     try {
-      const res = await createSchoolClass({
+      createRes = await createSchoolClass({
         academicYearCode,
         levelCode,
         name: className,
         capacity,
         roomLabel,
       });
-      if (!res.ok) {
-        setOpFeedback({ type: 'error', text: res.errorMessage || res.errorCode || t('error') });
+    } catch (err) {
+      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) return;
+      setSubmitting(false);
+      inFlightCreateRef.current = false;
+      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+      return;
+    }
+
+    if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
+      setSubmitting(false);
+      inFlightCreateRef.current = false;
+      return;
+    }
+
+    if (!createRes.ok || !createRes.data) {
+      setSubmitting(false);
+      inFlightCreateRef.current = false;
+      setOpFeedback({ type: 'error', text: createRes.errorMessage || createRes.errorCode || t('error') });
+      return;
+    }
+
+    setClassName('');
+    setRoomLabel('');
+    setActiveForm('none');
+    setOpFeedback({
+      type: 'success',
+      text: pickText(
+        { ar: 'تم إنشاء القسم بنجاح على الخادم.', fr: 'Classe créée sur le serveur avec succès.', en: 'Class created on server successfully.' },
+        language,
+      ),
+    });
+
+    let refreshSuccess = true;
+    let readbackConfirmed = false;
+    try {
+      if (onRefresh) {
+        const refreshRes = await onRefresh();
+        if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
+          setSubmitting(false);
+          inFlightCreateRef.current = false;
+          return;
+        }
+        if (refreshRes === false) {
+          refreshSuccess = false;
+        } else if (refreshRes === true) {
+          readbackConfirmed = true;
+        }
+      } else {
+        refreshSuccess = false;
+      }
+    } catch (refreshErr) {
+      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
+        setSubmitting(false);
+        inFlightCreateRef.current = false;
         return;
       }
-      setClassName('');
-      setRoomLabel('');
-      setActiveForm('none');
+      refreshSuccess = false;
+    }
+
+    setSubmitting(false);
+    inFlightCreateRef.current = false;
+
+    if (!refreshSuccess) {
+      setNeedsRefreshRetry(true);
       setOpFeedback({
         type: 'success',
         text: pickText(
-          { ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created on server.' },
+          {
+            ar: 'تم إنشاء القسم على الخادم بنجاح، ولكن تعذر تحديث القائمة تلقائياً. انقر أدناه لإعادة تحديث القائمة وحدها.',
+            fr: 'Classe créée avec succès, mais le rafraîchissement a échoué. Cliquez ci-dessous pour rafraîchir.',
+            en: 'Class created successfully, but list refresh failed. Click below to retry refresh only.',
+          },
           language,
         ),
       });
-      await onRefresh?.();
+    } else if (!readbackConfirmed) {
+      setOpFeedback({
+        type: 'success',
+        text: pickText(
+          {
+            ar: 'تم إنشاء القسم على الخادم بنجاح.',
+            fr: 'Classe créée avec succès sur le serveur.',
+            en: 'Class created on server successfully.',
+          },
+          language,
+        ),
+      });
+    }
+  };
+
+  const handleRetryRefreshOnly = async () => {
+    if (submitting || !onRefresh) return;
+    const initiatingActor = actorKeyRef.current;
+    setSubmitting(true);
+    setOpFeedback(null);
+    try {
+      const refreshRes = await onRefresh();
+      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
+        setSubmitting(false);
+        return;
+      }
+      if (refreshRes === false) {
+        setNeedsRefreshRetry(true);
+        setOpFeedback({
+          type: 'error',
+          text: pickText(
+            { ar: 'تعذر تحديث القائمة. يرجى المحاولة لاحقاً.', fr: 'Échec du rafraîchissement de la liste.', en: 'Failed to refresh list.' },
+            language,
+          ),
+        });
+      } else {
+        setNeedsRefreshRetry(false);
+        setOpFeedback({
+          type: 'success',
+          text: pickText(
+            { ar: 'تم تحديث القائمة بنجاح.', fr: 'Liste actualisée avec succès.', en: 'List successfully refreshed.' },
+            language,
+          ),
+        });
+      }
     } catch (err) {
-      setOpFeedback({ type: 'error', text: err instanceof Error ? err.message : t('error') });
+      if (!mountedRef.current || actorKeyRef.current !== initiatingActor) {
+        setSubmitting(false);
+        return;
+      }
+      setNeedsRefreshRetry(true);
+      setOpFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : t('error'),
+      });
     } finally {
-      setSubmitting(false);
+      if (mountedRef.current && actorKeyRef.current === initiatingActor) {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -927,18 +1062,31 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
 
       {opFeedback && (
         <div
-          className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+          data-testid="classes-op-feedback"
+          className={`p-3.5 rounded-2xl text-xs font-semibold flex flex-wrap items-center justify-between gap-3 ${
             opFeedback.type === 'error'
               ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900'
               : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
           }`}
         >
-          {opFeedback.type === 'error' ? (
-            <AlertCircle className="w-4 h-4 shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div className="flex items-center gap-2">
+            {opFeedback.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            )}
+            <span>{opFeedback.text}</span>
+          </div>
+          {needsRefreshRetry && onRefresh && (
+            <button
+              type="button"
+              data-testid="retry-refresh-only-btn"
+              onClick={() => void handleRetryRefreshOnly()}
+              className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+            >
+              {pickText({ ar: 'إعادة تحديث القائمة فقط', fr: 'Rafraîchir uniquement', en: 'Retry Refresh Only' }, language)}
+            </button>
           )}
-          <span>{opFeedback.text}</span>
         </div>
       )}
 
@@ -952,14 +1100,19 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
             {pickText({ ar: 'قسم دراسي جديد', fr: 'Nouvelle classe scolaire', en: 'New School Class' }, language)}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <input
-              type="text"
-              required
+            <select
+              aria-label="Academic Year"
+              data-testid="create-class-year-select"
               value={academicYearCode}
               onChange={(e) => setAcademicYearCode(e.target.value)}
-              placeholder="2026-2027"
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-            />
+              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-semibold"
+            >
+              {yearOptions.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
+            </select>
             <select
               value={levelCode}
               onChange={(e) => setLevelCode(e.target.value)}
@@ -1564,9 +1717,9 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                       <span>
                         {pickText(
                           {
-                            ar: `التلاميذ المسجلون: ${cls.activeStudentCount}`,
-                            fr: `Élèves inscrits : ${cls.activeStudentCount}`,
-                            en: `Enrolled students: ${cls.activeStudentCount}`,
+                            ar: `التلاميذ المسجلون: ${cls.activeStudentCount}${cls.capacity ? ` / السعة: ${cls.capacity}` : ''}`,
+                            fr: `Élèves inscrits : ${cls.activeStudentCount}${cls.capacity ? ` / Capacité : ${cls.capacity}` : ''}`,
+                            en: `Enrolled students: ${cls.activeStudentCount}${cls.capacity ? ` / Capacity: ${cls.capacity}` : ''}`,
                           },
                           language,
                         )}
