@@ -1,9 +1,9 @@
 # Class Management backend contract — 18 November 2026
 
-Status: **TESTED LOCALLY — HOSTED INSTALLATION REQUIRES OWNER APPROVAL**.
+Status: **INSTALLED — CONTRACT READBACK VERIFIED**. Owner approved the exact SQL on 18 November 2026; hosted migration `20261118213709` was installed and verified. Application wiring and authenticated browser acceptance of the new controls remain separate.
 Source baseline: `005d51d4cc26f61c6bedbe8178f60f8ef29cc26b` (PR #29 merged).
 Target: existing KRISTOUSCHOOL / `ofppapwofhovhroyjtkc` only.
-Migration: `20261118210357_class_management_creation_permissions_and_years.sql`.
+Source migration: `20261118210357_class_management_creation_permissions_and_years.sql`. Hosted migration: `20261118213709` / `class_management_creation_permissions_and_years`. Exact SQL SHA-256: `e6513b778e9464cb56b7ecae88d3af5d42680582da4e9f692ca9b89c2075bdce`.
 
 ## Scope and authority
 
@@ -80,7 +80,7 @@ Candidate executed against a real disposable PostgreSQL 16.2 database using repl
 - 20 real database scenarios, including five two-session lock-contention cases.
 - Seven pgTAP suites: 261 assertions (237 existing, 24 new).
 - Eight real PostgREST 13 HTTP cases with ordinary authenticated/anonymous JWTs.
-- Generated schema types: postgres-meta 0.100.0, included/default schema public, one-to-one detection enabled, PostgREST type metadata 14.18. Generator formatting changes are generated output, not handwritten type patches.
+- Types were first generated from the isolated tested schema with postgres-meta 0.100.0. After installation, the canonical type file was replaced by fresh Supabase-hosted generated output from this exact project; no handwritten type patches.
 - Frozen Bun 1.4.4 install, 166 Node tests, TypeScript and production build passed.
 
 One former regression asserted that a roster-only Manager could never create. The approved new default supersedes that premise. The test now explicitly denies that Manager through the Owner writer, then still asserts denied creation and permitted roster reads. No denial assertion was removed.
@@ -99,6 +99,6 @@ The source migration inventory still predates the separately installed Calendar 
 
 ## Installation gate and recovery
 
-Do not install before Owner approval of the exact SQL/hash. Freshly recheck target, migration history and original function/constraint fingerprints. Apply once as a transaction. Verify migration/body fingerprints, grants/RLS, year read, capacity and preserved counts/checksums afterward. No production fixtures, class updates or test account creation are authorized by this packet.
+Installation completed after Owner approval. The stored SQL matches the approved SHA-256 exactly; all seven function bodies match the candidate. Hosted rollback-only role reads verified Owner creation authority, one configured year, one existing class with valid saved capacity, and denied direct override-table/internal-helper privileges. The existing class, profiles and role fingerprints are unchanged; protected Calendar, Attendance and capability-function hashes are unchanged. No permission overrides or production fixtures were created. Do not replay this installed migration. These role reads do not establish hosted sign-in or browser acceptance.
 
 The SQL is additive except compatible replacements of the existing create/list functions and extension of the audit action constraint. Any installation error rolls back the transaction. After activation, preserve permission/audit history and use a reviewed forward repair; do not restore legacy creation code in a way that bypasses recorded Owner denials. Emergency disabling of the create RPC requires a separate explicit instruction.
