@@ -3,6 +3,7 @@ import { ArrowLeft, User, Calendar, BookOpen, MapPin, ShieldCheck } from 'lucide
 import { ClassStudentRosterItem, SchoolClassSummary, Language } from '../../../types.ts';
 import { pickText } from '../../../i18n/homepages';
 import { formatSafeEnrollmentDate } from '../../../lib/classes/studentOverview.ts';
+import { StudentAttendanceHistoryPanel } from '../attendance/StudentAttendanceHistoryPanel';
 
 export interface StudentOverviewPanelProps {
   student: ClassStudentRosterItem;
@@ -139,6 +140,14 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
           )}
         </div>
       </div>
+
+      <StudentAttendanceHistoryPanel
+        studentId={student.studentId}
+        studentName={student.fullName}
+        scopeClassId={schoolClass.id}
+        language={language}
+        testId="student-overview-attendance-panel"
+      />
     </div>
   );
 };

@@ -31,6 +31,7 @@ import {
   CheckCircle2,
   Lock,
   MessageSquare,
+  ClipboardCheck,
 } from 'lucide-react';
 import '../homepages/shared/HomePageLayout.css';
 
@@ -48,6 +49,7 @@ export interface ClassesManagementViewProps {
   errorMessage?: string | null;
   onRefresh?: () => Promise<boolean | void> | void;
   onOpenClassCommunity?: (classId: string) => void;
+  onOpenAttendance?: (classId: string) => void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -92,6 +94,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   errorMessage = null,
   onRefresh,
   onOpenClassCommunity,
+  onOpenAttendance,
 }) => {
   const {
     currentUser,
@@ -571,6 +574,29 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                       ar: 'فتح فضاء القسم',
                       fr: 'Ouvrir l’espace classe',
                       en: 'Open Class Community',
+                    },
+                    language,
+                  )}
+                </span>
+              </button>
+            )}
+            {isTeacherView && onOpenAttendance && (
+              <button
+                type="button"
+                data-testid={`take-attendance-from-roster-${selectedClass.id}`}
+                onClick={() => {
+                  setSharedSelectedClassId?.(selectedClass.id);
+                  onOpenAttendance(selectedClass.id);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2.5 text-xs font-extrabold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/70 transition-colors"
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                <span>
+                  {pickText(
+                    {
+                      ar: 'تسجيل الحضور والغياب',
+                      fr: 'Faire l’appel',
+                      en: 'Take Attendance',
                     },
                     language,
                   )}
@@ -1603,6 +1629,29 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                             ar: 'فتح فضاء القسم',
                             fr: 'Ouvrir l’espace classe',
                             en: 'Open Class Community',
+                          },
+                          language,
+                        )}
+                      </span>
+                    </button>
+                  )}
+                  {isTeacherView && onOpenAttendance && (
+                    <button
+                      type="button"
+                      data-testid={`take-attendance-${cls.id}`}
+                      onClick={() => {
+                        setSharedSelectedClassId?.(cls.id);
+                        onOpenAttendance(cls.id);
+                      }}
+                      className="w-full rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs py-2.5 px-4 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ClipboardCheck className="w-4 h-4" />
+                      <span>
+                        {pickText(
+                          {
+                            ar: 'تسجيل الحضور والغياب',
+                            fr: 'Faire l’appel',
+                            en: 'Take Attendance',
                           },
                           language,
                         )}

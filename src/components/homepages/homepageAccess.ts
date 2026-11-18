@@ -261,6 +261,17 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
       return user.role === 'TEACHER' || user.role === 'PARENT';
     }
 
+    case 'attendance': {
+      // Daily Attendance tab: Teacher, Parent, Student, Owner (APP_ADMIN), Office (ADMINISTRATIVE_PERSONNEL) only
+      return (
+        user.role === 'TEACHER' ||
+        user.role === 'PARENT' ||
+        user.role === 'STUDENT' ||
+        user.role === 'APP_ADMIN' ||
+        user.role === 'ADMINISTRATIVE_PERSONNEL'
+      );
+    }
+
     case 'community': {
       if (
         user.role === 'APP_ADMIN' ||

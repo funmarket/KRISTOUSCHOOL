@@ -240,13 +240,13 @@ test('T1-1: TeacherHomePage My Classes card navigates to classes tab while prese
     });
     assert.deepEqual(visitedSubTabs, [['community', 'announcements']]);
 
-    // Attendance remains explicitly Coming Soon (not implemented in T1)
+    // Attendance shortcut now opens the real Attendance view
     const attendanceCard = container.querySelector('[data-testid="shortcut-card-teacher-attendance"]');
-    assert.ok(attendanceCard, 'Attendance card stays Coming Soon');
+    assert.ok(attendanceCard, 'TeacherHomePage must render shortcut-card-teacher-attendance');
     await act(async () => {
       attendanceCard.click();
     });
-    assert.match(container.innerHTML, /COMING_SOON|Registre|Attendance/i);
+    assert.deepEqual(visitedTabs, ['classes', 'attendance'], 'Clicking Attendance must navigate to attendance tab');
   } finally {
     await act(async () => root.unmount());
     dom.document.body.removeChild(container);

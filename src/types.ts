@@ -58,6 +58,7 @@ export type AppTab =
   | 'community'
   | 'announcements'
   | 'performance'
+  | 'attendance'
   | 'notes'
   | 'messages'
   | 'pickup'
@@ -466,3 +467,121 @@ export interface PublicContentEntry {
   updatedAt?: string;
 }
 
+export type AttendanceMark = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+export type AttendanceRegisterStatus = 'DRAFT' | 'SUBMITTED';
+
+export interface AttendanceRegisterEntry {
+  studentId: string;
+  membershipId: string | null;
+  fullName: string;
+  studentCode: string;
+  mark: AttendanceMark | null;
+  internalComment: string;
+}
+
+export interface AttendanceRegisterData {
+  registerId: string | null;
+  academicYearId: string;
+  classId: string;
+  teacherUserId: string;
+  schoolDate: string;
+  status: AttendanceRegisterStatus;
+  version: number;
+  rosterFingerprint: string;
+  submittedAt: string | null;
+  entries: AttendanceRegisterEntry[];
+}
+
+export interface AttendanceEntryDraft {
+  mark: AttendanceMark | null;
+  internalComment: string;
+}
+
+export interface AttendanceSaveEntryPatch {
+  studentId: string;
+  mark: AttendanceMark | null;
+  internalComment?: string;
+}
+
+export interface AttendanceSaveReceipt {
+  registerId: string;
+  version: number;
+  status: AttendanceRegisterStatus;
+  requestId: string;
+}
+
+export interface AttendanceSaveIntent {
+  requestId: string;
+  payloadSignature: string;
+  classId: string;
+  schoolDate: string;
+  teacherUserId: string | null;
+  expectedVersion: number;
+  rosterFingerprint: string;
+  submit: boolean;
+  reason: string | null;
+  entries: AttendanceSaveEntryPatch[];
+  confirmedSavePendingRefresh: boolean;
+}
+
+export interface StudentAttendanceRecord {
+  registerId: string;
+  classId: string;
+  teacherUserId: string;
+  schoolDate: string;
+  mark: AttendanceMark;
+}
+
+export interface AttendanceAuditEvent {
+  id: number;
+  registerId: string;
+  registerVersion: number;
+  responsibleTeacherUserId: string;
+  actorUserId: string;
+  eventType: string;
+  reason: string | null;
+  beforeState: unknown;
+  afterState: unknown;
+  recordedAt: string;
+}
+
+export interface StudentSelfRecord {
+  id: string;
+  studentCode: string;
+  fullName: string;
+}
+
+export interface OfficeAttendanceClassOption {
+  id: string;
+  name: string;
+  levelLabel: string;
+  academicYear: string;
+  isArchived: boolean;
+}
+
+export interface OfficeAttendanceTeacherOption {
+  userId: string;
+  fullName: string;
+  username: string;
+  accountStatus: AccountApprovalStatus | null;
+  hasActiveAssignmentInClass: Record<string, boolean>;
+  hasSavedRegisterInClass: Record<string, boolean>;
+  isHomeroomInClass: Record<string, boolean>;
+}
+
+export interface OfficeAttendanceRegisterSummary {
+  registerId: string;
+  classId: string;
+  teacherUserId: string;
+  schoolDate: string;
+  status: AttendanceRegisterStatus;
+  version: number;
+  submittedAt: string | null;
+}
+
+export interface OfficeAttendanceContext {
+  classes: OfficeAttendanceClassOption[];
+  teachers: OfficeAttendanceTeacherOption[];
+  savedRegisters: OfficeAttendanceRegisterSummary[];
+  accountNamesById: Record<string, string>;
+}

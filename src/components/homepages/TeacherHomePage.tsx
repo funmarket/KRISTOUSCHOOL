@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
 import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
-import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
 import { countUnreadThreads } from '../../lib/schoolContent';
 
@@ -47,8 +46,6 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
       setSelectedClassId(teacherClasses[0].id);
     }
   }, [teacherClasses, selectedClassId, setSelectedClassId]);
-
-  const [selectedUpcomingFeature, setSelectedUpcomingFeature] = useState<string | null>(null);
 
   const openCommunitySubTab = (subTab: string) => {
     if (onNavigateToSubTab) {
@@ -106,22 +103,6 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           </div>
         )}
       </HomePageHeader>
-
-      {selectedUpcomingFeature && (
-        <EmptyFeatureState
-          state="COMING_SOON"
-          title={selectedUpcomingFeature}
-          description={pickText(
-            {
-              ar: 'سيتم تفعيل وحدة تسجيل الغيابات المعتمدة على الخادم بمجرد ربط جدول الحضور في قاعدة البيانات.',
-              fr: 'Le module de présence enseignant sera activé dès que le contrat serveur de présence sera déployé.',
-              en: 'The teacher attendance roster write workflow is marked Coming Soon until the backend attendance contract is verified.',
-            },
-            language,
-          )}
-          onClose={() => setSelectedUpcomingFeature(null)}
-        />
-      )}
 
       {/* Group 1: My Teaching (matching Screenshot 6 primary cards + Section 8.2) */}
       <HomeSection
@@ -248,19 +229,10 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
               { ar: 'الحضور والغياب', fr: 'Présences & Absences', en: 'Attendance / Absence' },
               language,
             )}
-            actionLabel={pickText(HOMEPAGE_COMMON_TEXT.comingSoonBadge, language)}
-            statusBadge={pickText(HOMEPAGE_COMMON_TEXT.comingSoonBadge, language)}
-            state="COMING_SOON"
+            actionLabel={openActionLabel}
             icon="📋"
             tone="purple"
-            onClick={() =>
-              setSelectedUpcomingFeature(
-                pickText(
-                  { ar: 'سجل الحضور والغياب', fr: 'Registre de présence', en: 'Attendance / Absence Roster' },
-                  language,
-                ),
-              )
-            }
+            onClick={() => setActiveTab('attendance')}
           />
         </HomeCardGrid>
       </HomeSection>

@@ -325,27 +325,10 @@ export const AdministrativePersonnelHomePage: React.FC<
             { ar: 'متابعة الحضور', fr: 'Suivi des présences', en: 'Attendance' },
             language,
           )}
-          actionLabel={comingSoonLabel}
-          statusBadge={comingSoonLabel}
-          state="COMING_SOON"
+          actionLabel={openActionLabel}
           icon="📅"
           tone="green"
-          onClick={() =>
-            setSelectedOfficeFeature({
-              title: pickText(
-                { ar: 'سجل الحضور الإداري', fr: 'Registre administratif des présences', en: 'Administrative Attendance Log' },
-                language,
-              ),
-              description: pickText(
-                {
-                  ar: 'وحدة المتابعة الإدارية للغيابات والتأخير ستتوفر عند ربط جدول الحضور في الخادم.',
-                  fr: 'Le suivi administratif des absences sera activé avec le contrat serveur correspondant.',
-                  en: 'Administrative attendance tracking is marked Coming Soon pending backend attendance persistence.',
-                },
-                language,
-              ),
-            })
-          }
+          onClick={() => setActiveTab('attendance')}
         />
 
         <HomeShortcutCard
