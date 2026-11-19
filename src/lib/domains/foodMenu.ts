@@ -1,5 +1,6 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { BackendOpResult, FoodMenuWeek } from '../../types.ts';
+
+import type { BackendOpResult, FoodMenuItem, FoodMenuWeek } from '../../types.ts';
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {
@@ -73,52 +74,75 @@ export async function fetchActiveFoodMenu(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<FoodMenuWeek | null>> {
-  const res = await listFoodMenus(client);
-  if (!res.ok) return { ok: false, status: res.status, errorCode: res.errorCode, errorMessage: res.errorMessage };
-  const current = (res.data ?? []).find((m) => m.published) || (res.data ?? [])[0] || null;
-  return { ok: true, status: 'READY', data: current };
-}
-
-export async function saveFoodMenuWeek(
-  weekRangeOrInput: string | { weekRange: string; days?: any[]; items?: any[]; publish?: boolean },
-  daysOrClient?: any[] | any,
-  publishOrClient?: boolean | any,
-  maybeClient?: any,
-): Promise<BackendOpResult<FoodMenuWeek>> {
-  const weekRange = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
-    ? String(weekRangeOrInput.weekRange || '')
-    : String(weekRangeOrInput || '');
-  const days = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
-    ? (weekRangeOrInput.days || weekRangeOrInput.items || [])
-    : (Array.isArray(daysOrClient) ? daysOrClient : []);
-  const publish = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
-    ? (weekRangeOrInput.publish ?? true)
-    : (typeof publishOrClient === 'boolean' ? publishOrClient : true);
-  const client = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null ? daysOrClient : maybeClient;
-  const activeClient = client || supabase;
-
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('save_food_menu_week', {
-      p_week_range: weekRange,
-      p_days: days,
-      p_publish: publish,
-    });
+    const { data: weeks, error } = await client
+      .from('food_menu_weeks')
+      .select('id, week_range, provider_name, status, created_at')
+      .eq('status', 'PUBLISHED')
+      .order('created_at', { ascending: false })
+      .limit(1);
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
+    const week = Array.isArray(weeks) && weeks.length > 0 ? (weeks[0] as Record<string, unknown>) : null;
+    if (!week) return { ok: true, status: 'READY', data: null };
+
+    const { data: days, error: daysErr } = await client
+      .from('food_menu_days')
+      .select('day_order, day_label, starter, main_dish, side_dish, dessert, notes')
+      .eq('menu_week_id', String(week.id))
+      .order('day_order', { ascending: true });
+    if (daysErr) return { ok: false, ...classifySupabaseError(daysErr) };
+
+    const items: FoodMenuItem[] = Array.isArray(days)
+      ? days.map((d: Record<string, unknown>) => ({
+          day: String(d.day_label),
+          starter: String(d.starter ?? ''),
+          main: String(d.main_dish ?? ''),
+          side: String(d.side_dish ?? ''),
+          dessert: String(d.dessert ?? ''),
+          notes: d.notes ? String(d.notes) : undefined,
+        }))
+      : [];
+
     return {
       ok: true,
       status: 'READY',
       data: {
-        id: String(r.id || ''),
-        weekRange: String(r.week_range || weekRange),
-        published: publish,
-        status: publish ? 'PUBLISHED' : 'DRAFT',
-        providerName: String(r.provider_name || 'La Toque Gourmande'),
-        items: days,
+        id: String(week.id),
+        weekRange: String(week.week_range),
+        providerName: String(week.provider_name ?? 'La Toque Gourmande'),
+        published: String(week.status) === 'PUBLISHED',
+        status: String(week.status) as FoodMenuWeek['status'],
+        items,
       },
     };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
+
+export async function saveFoodMenuWeek(
+  weekRange: string,
+  days: FoodMenuItem[],
+  publish = true,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<{ id: string }>> {
+  if (weekRange.trim().length < 3 || days.length === 0) {
+    return { ok: false, status: 'ERROR', errorCode: 'invalid_menu_input', errorMessage: 'Week range and at least one day are required.' };
+  }
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client.rpc('save_food_menu_week', {
+      p_week_range: weekRange.trim(),
+      p_days: days,
+      p_publish: publish,
+    });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    const row = (data ?? {}) as { id?: string };
+    return { ok: true, status: 'READY', data: { id: String(row.id ?? '') } };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
