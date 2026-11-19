@@ -80,7 +80,20 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('ALL');
   const [selectedYear, setSelectedYear] = useState('ALL');
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedClassId, setLocalSelectedClassId] = useState<string | null>(sharedSelectedClassId || null);
+
+  const setSelectedClassId = (id: string | null) => {
+    setLocalSelectedClassId(id);
+    if (id) {
+      setSharedSelectedClassId?.(id);
+    }
+  };
+
+  useEffect(() => {
+    if (sharedSelectedClassId !== undefined && sharedSelectedClassId !== selectedClassId) {
+      setLocalSelectedClassId(sharedSelectedClassId);
+    }
+  }, [sharedSelectedClassId]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectionActorId, setSelectionActorId] = useState<string | null>(null);
   const rosterContainerRef = useRef<HTMLDivElement | null>(null);
@@ -820,7 +833,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                           data-testid={`view-student-${student.studentId}`}
                           onClick={() => {
                             lastClickedStudentIdRef.current = student.studentId;
-                            if (onOpenStudentDetail) {
+                            if (onOpenStudentDetail && !isTeacherView && canAccessAppTab(currentUser, 'students')) {
                               onOpenStudentDetail(student.studentId);
                             } else {
                               setSelectedStudentId(student.studentId);

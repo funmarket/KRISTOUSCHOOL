@@ -1,0 +1,967 @@
+# KRISTOU SCHOOL — S2 STUDENTS MANAGEMENT
+## COMPLETE IMPLEMENTATION & REGRESSION RECOVERY COMMAND
+
+**EXECUTION TYPE:** ACTUAL SOURCE IMPLEMENTATION  
+**CURRENT TASK:** S2 — Students directory, navigation, administrative dossier and behavioral acceptance  
+**TRACKER:** `checklist.md` — `FIX-001` through `FIX-005`; `STU-001` through `STU-006`  
+**PRIORITY:** P0 — Repair broken navigation and complete Students functionality  
+**MODE:** STRICT NO DRIFT · EVIDENCE FIRST · NO FAKE IMPLEMENTATION
+
+---
+
+# 1. CURRENT COMMAND — IMPLEMENT, DO NOT RE-PLAN
+
+You must inspect, correct, complete and test the existing KRISTOU SCHOOL Students Management implementation directly inside the current Google AI Studio application files.
+
+This task is **not** a request to create another implementation plan, produce a source export, audit an old version, or repeat a previous completion report.
+
+The Students interface already exists. Its server-backed search and identity-detail operations have already been implemented and installed.
+
+Your task is to **finish the existing implementation**, preserving its architecture and correcting the confirmed defects.
+
+Required deliverables:
+
+1. Restore existing Teacher Student Overview functionality.
+2. Correct administrative navigation to the exact selected student.
+3. Complete administrative Students search, filters, class organization and pagination.
+4. Make dossier opening, Back navigation, focus and refresh reliable.
+5. Protect student information when accounts, roles or permissions change.
+6. Verify access for every relevant school role.
+7. Add meaningful behavioral regression tests.
+8. Run the existing relevant regression suites and application build.
+9. Report the actual changed source and test evidence.
+
+**You are authorized to perform these application-source changes now. Do not stop at inspection or ask for another implementation prompt.**
+
+---
+
+# 2. CRITICAL BACKGROUND — DO NOT IGNORE
+
+The current application has the following established architecture:
+
+- React and TypeScript frontend.
+- Canonical Supabase backend.
+- Eight application roles.
+- Existing approved account and delegated-capability authorization.
+- Separate People, Academics, Enrollment, Family, Attendance and Identity ownership.
+- Existing Teacher T1/T2 functionality.
+- Existing administrative Students Management screen.
+- Existing school-wide Students search and identity RPCs.
+
+The current Students implementation is not starting from zero.
+
+Existing source includes:
+
+- `src/components/views/StudentsManagementView.tsx`
+- `src/components/views/ClassesManagementView.tsx`
+- `src/components/views/Shared/StudentOverviewPanel.tsx`
+- `src/lib/classes/studentOverview.ts`
+- `src/lib/schoolOperations.ts`
+- `src/components/homepages/homepageAccess.ts`
+- `src/App.tsx`
+
+The relevant installed server operations are:
+
+`list_school_students(p_search, p_academic_year_id, p_class_id, p_status, p_limit, p_offset)`
+
+`get_school_student_identity(p_student_id)`
+
+`list_academic_years()`
+
+`list_school_classes_with_rosters()`
+
+These are existing contracts.
+
+**Do not create replacement RPCs, tables, mock student data, an alternative roster service or a new authorization system.**
+
+---
+
+# 3. MANDATORY SOURCE INSPECTION
+
+Before editing, inspect the actual current workspace version of:
+
+### Composition and navigation
+
+- `src/App.tsx`
+- `src/types.ts`
+- `src/context/AppContext.tsx`
+- `src/components/homepages/homepageAccess.ts`
+- Relevant navigation component and current tab state handling
+
+### Students
+
+- `src/components/views/StudentsManagementView.tsx`
+- `src/lib/schoolOperations.ts`
+
+### Classes and Teacher Overview
+
+- `src/components/views/ClassesManagementView.tsx`
+- `src/components/views/Shared/StudentOverviewPanel.tsx`
+- `src/lib/classes/studentOverview.ts`
+- Existing Teacher assignment/scope logic
+
+### Role-specific entry points
+
+- `src/components/homepages/OwnerHomePage.tsx`
+- `src/components/homepages/ManagerHomePage.tsx`
+- `src/components/homepages/AdministrativePersonnelHomePage.tsx`
+- `src/components/homepages/TeacherHomePage.tsx`
+
+### Tests
+
+- `tests/class-management.test.mjs`
+- `tests/teacher-my-classes-t1.test.mjs`
+- `tests/teacher-student-overview-t2.test.mjs`
+- `tests/office-classes-access.test.mjs`
+- Relevant role, navigation and authentication tests
+- Existing test harness and component-testing utilities
+
+### Governing documentation
+
+- `AGENTS.md`
+- `requirements.md`
+- `structure.md`
+- `docs/CANONICAL_MODEL.md`
+- `docs/STUDENT_TEACHER_DOSSIER_PLAN.md`
+- The approved `checklist.md` if available in the workspace
+
+Inspect the real source before deciding how to modify it.
+
+The historical reference implementation was `main@8d38f7cfc26fdb9e744047917e9a6f9336aa86c3`, but the current AI Studio workspace is authoritative for its existing unpublished modifications.
+
+Do not overwrite newer working code with historical source.
+
+---
+
+# 4. FIX-001 — RESTORE TEACHER STUDENT OVERVIEW
+
+## Confirmed defect
+
+The existing Classes Management View invokes `onOpenStudentDetail(studentId)` when that callback is supplied.
+
+The application-level callback currently navigates to the administrative Students tab.
+
+However, Teachers are not authorized to use the school-wide administrative Students directory.
+
+As a result, a Teacher attempting to open a student from an assigned class may be redirected away from the existing Teacher-specific Student Overview.
+
+### Required behavior
+
+**For an approved Teacher:**
+
+1. Open My Classes.
+2. Select a currently assigned class.
+3. Open the class roster.
+4. Click View on a student.
+5. Display the existing Teacher-scoped `StudentOverviewPanel`.
+6. Display only information that Teacher is authorized to access.
+7. Preserve current class context.
+8. Provide working Back navigation.
+9. Restore focus appropriately.
+10. Deny access when the Teacher is no longer assigned.
+
+The existing Teacher T2 student-access resolver must remain canonical.
+
+Do not bypass it.
+
+Do not replace it with the administrative Students API.
+
+Do not grant Teachers school-wide Students access.
+
+Do not create another Student Overview implementation.
+
+### Important
+
+The administrative dossier callback must not intercept Teacher navigation.
+
+Determine the correct route based on the existing authorization and component ownership.
+
+**A Teacher must continue using the existing Teacher Student Overview, not the school-wide administrative Students directory.**
+
+---
+
+# 5. FIX-002 — ADMINISTRATIVE STUDENT DEEP LINK
+
+## Confirmed defect
+
+The existing `App.tsx` receives the selected student identifier but discards it.
+
+The previous source contained:
+
+```tsx
+onOpenStudentDetail={(studentId) => {
+  handleSetTab('students');
+}}
+```
+
+The Students screen is then mounted without the selected student:
+
+```tsx
+<StudentsManagementView />
+```
+
+Consequently, administrative users are taken to the Students directory instead of the exact student they clicked.
+
+### Required behavior
+
+For authorized administrative users:
+
+1. Open Classes Management.
+2. Select a class.
+3. Open the class roster.
+4. Click View on a specific student.
+5. Navigate to the Students area.
+6. Automatically open that exact student's dossier.
+7. Fetch the student's information using the canonical student UUID.
+8. Verify the returned student identity matches the requested UUID.
+9. Show loading, denied, missing and error states accurately.
+10. Provide usable Back navigation.
+
+### Navigation-state requirements
+
+The application must preserve enough navigation context to distinguish:
+
+- Students opened from the main navigation.
+- Students opened from a dashboard shortcut.
+- Students opened from a class roster.
+- A dossier opened from a Students search result.
+
+Back must return to the appropriate previous context.
+
+When returning to a Students search, preserve the user's search and filter state where feasible within the existing architecture.
+
+When returning to a class roster, preserve the selected class.
+
+Do not invent a new global router if the existing navigation system can support the required behavior.
+
+Do not discard the student ID.
+
+Do not navigate to an unauthorized destination.
+
+Do not reuse stale student navigation context after sign-out or account switching.
+
+---
+
+# 6. STU-001 — COMPLETE STUDENTS NAVIGATION AND ACCESS
+
+The Students area is for school-wide administrative pupil records.
+
+### Authorized audiences
+
+- `APP_ADMIN`: Approved School Owner.
+- `ADMINISTRATIVE_PERSONNEL`: Approved authorized school office personnel.
+- `MANAGER`: Only with the required existing delegated roster authority.
+
+### Unauthorized audiences
+
+- `TEACHER` acting only as a Teacher.
+- `PARENT`.
+- `STUDENT`.
+- `SCHOOL_STAFF` without the corresponding school-wide record authority.
+- `GENERAL_USER`.
+- Anonymous visitors.
+- Pending or suspended accounts.
+
+The Manager role label alone must not grant access.
+
+Class creation permission alone must not grant school-wide student access.
+
+### Required checks
+
+Verify the Students destination from:
+
+- Main navigation/dropdown.
+- Owner homepage shortcut.
+- Manager homepage shortcut.
+- Administrative Personnel homepage shortcut.
+- Class roster.
+- Direct detail entry state.
+
+When a user loses permission, protected student data must disappear from the current view.
+
+An unauthorized user must never see previously cached private student records from another account.
+
+The backend remains the final authorization authority.
+
+---
+
+# 7. STU-002 — COMPLETE SCHOOL-WIDE STUDENT SEARCH
+
+The existing `listSchoolStudents()` adapter must remain the canonical frontend reader.
+
+Required search capabilities:
+
+- Student full name.
+- Partial name.
+- Internal school student code.
+- Partial code.
+- Exact student UUID when provided.
+- Arabic names.
+- French names.
+- Latin-script names.
+- Case-insensitive matching according to the existing server contract.
+
+Search must not create duplicate pupil identities.
+
+Search must not match an application account to a pupil using email or display name.
+
+### Search behavior
+
+- Debounce user input appropriately.
+- Honor the server's 100-character search limit.
+- Reset pagination when the search changes.
+- Do not apply an incorrect local filter over only one server page.
+- Do not display stale results from an earlier query.
+- Do not interpret a pending search as an empty result.
+- Distinguish zero matches from backend failure.
+- Preserve user input during recoverable errors.
+
+### Server contract
+
+Use the installed `list_school_students` RPC.
+
+Do not replace it with direct, broadly accessible browser queries to the `students` table.
+
+Do not fabricate results using existing class rosters.
+
+Class rosters represent class membership, not the complete People student directory.
+
+---
+
+# 8. STU-003 — FILTERING AND PAGINATION
+
+The Students area must support:
+
+- All configured academic years.
+- A selected academic year.
+- All classes.
+- A selected class.
+- Active students.
+- Archived students.
+- All statuses.
+- Server paging.
+- Correct total student count.
+
+### Rules
+
+One student must count as one student, even when multiple membership records exist.
+
+A student with no current class must still be visible when using an unrestricted school-wide search.
+
+Class filtering must use actual active membership, according to the installed RPC.
+
+Do not infer membership from login role.
+
+Do not invent a current class for an unassigned student.
+
+Do not confuse archived student status with archived class status.
+
+### Pagination
+
+Use the existing server limit of 25 pupils per page unless the current approved implementation specifies otherwise.
+
+Required behavior:
+
+- Correct page count.
+- Previous and Next work.
+- Cannot navigate below page 1.
+- Cannot navigate beyond available results.
+- Reset to page 1 when filters change.
+- Handle a page becoming empty after records or filters change.
+- Avoid stale data during rapid pagination changes.
+- Show accurate total results.
+
+The total must count students, not class memberships.
+
+---
+
+# 9. STU-004 — CLASS-ORGANIZED STUDENT LIST
+
+The school needs students organized by their classes without losing the ability to search school-wide.
+
+Implement a clear class-aware presentation within the existing Students interface.
+
+The approved requirement is:
+
+**Students must be searchable school-wide and organized or filtered by academic year and class.**
+
+### Required content
+
+Show:
+
+- Student name.
+- Student code.
+- Current student status.
+- Associated class or classes where returned.
+- Academic-year context.
+- Explicit unassigned status.
+- View Student action.
+
+Use the installed server response.
+
+### Critical grouping requirement
+
+If using class grouping, understand that the server returns a paginated list of students.
+
+A class section on one page is not necessarily the complete class roster.
+
+Never label a page-limited group count as the total number of students in that class.
+
+Never duplicate a pupil's identity merely because they have multiple membership records.
+
+Use stable canonical IDs as rendering keys.
+
+On mobile, preserve readable names, codes and navigation without forcing an unusable wide table.
+
+Support Arabic, French and English.
+
+---
+
+# 10. STU-005 — OPENING AND RETURNING FROM STUDENT DOSSIERS
+
+A student dossier must be reachable from:
+
+1. Student name in Students.
+2. Explicit View button in Students.
+3. An authorized administrative class roster.
+
+Both list entry points must open the same canonical student.
+
+### Required detail states
+
+- Loading.
+- Success.
+- Not found.
+- Unauthorized.
+- Backend unavailable.
+- Network error.
+- Retry.
+- Actor or permission changed.
+
+### Identity integrity
+
+Use `get_school_student_identity(p_student_id)`.
+
+Verify the returned `studentId` matches the requested student.
+
+Never display a different student after asynchronous state changes.
+
+Never rely on name matching.
+
+Never infer an account association from email, telephone or name.
+
+### Back navigation
+
+Back must:
+
+- Return to the correct previous context.
+- Preserve the relevant filters and page.
+- Preserve the selected class when returning to a roster.
+- Restore focus to the originating action when feasible.
+- Avoid opening a stale dossier after an account change.
+
+---
+
+# 11. STU-006 — CURRENT AUTHORIZED STUDENT DOSSIER
+
+Complete and stabilize the current administrative identity/enrollment projection.
+
+The existing server contract supports:
+
+- Canonical student ID.
+- Internal school student code.
+- Full name.
+- Birth date.
+- Active/archived status.
+- Whether an explicitly linked Student account exists.
+- Class-membership history.
+- Academic-year labels.
+- Class names and levels.
+- Enrollment statuses.
+- Membership start and end dates.
+- Archived class indicators.
+
+Render actual returned values.
+
+Do not invent missing information.
+
+### Privacy
+
+The current narrow identity RPC intentionally does not provide:
+
+- Private guardian identification documents.
+- Account credentials.
+- Restricted safety notes.
+- Unpublished grades.
+- Internal disciplinary information.
+- Private medical information.
+- Other unrestricted personal records.
+
+Do not bypass that boundary.
+
+The future full dossier remains a separate implementation packet.
+
+**Do not fabricate grades, documents or guardian information to make the current dossier appear complete.**
+
+---
+
+# 12. FIX-003 — REPLACE TIMER-BASED DETAIL RETRY
+
+## Known defect
+
+The previous implementation retried student detail loading by:
+
+1. Clearing `selectedStudentId`.
+2. Waiting 50 milliseconds using `setTimeout`.
+3. Restoring the same student ID.
+
+This is an unreliable retry mechanism.
+
+### Required correction
+
+Use explicit refresh/retry state or a controlled reload function.
+
+Retry must:
+
+- Keep the selected student ID.
+- Retry only the authorized read.
+- Avoid remounting unrelated application state.
+- Avoid creating another student.
+- Ignore older responses.
+- Preserve accurate loading/error feedback.
+- Respect the current user and permission state.
+- Work after an ordinary transport failure.
+- Never expose another actor's cached information.
+
+Remove the timer workaround when replaced by the verified retry behavior.
+
+---
+
+# 13. FIX-004 — ASYNCHRONOUS IDENTITY AND PERMISSION SAFETY
+
+Test and correct the Students component's asynchronous state handling.
+
+### Required scenarios
+
+**A. Rapid searches**
+
+User enters multiple queries quickly.
+
+Only the latest applicable response may update the visible list.
+
+**B. Filter changes**
+
+An earlier response must not replace results for newer filters.
+
+**C. Pagination**
+
+Page 1 response must not overwrite page 2 when page 2 is current.
+
+**D. Account switching**
+
+A Student detail or list response from User A must never become visible to User B.
+
+**E. Sign-out**
+
+Clear protected data and invalidate pending results.
+
+**F. Account suspension**
+
+A suspended actor must lose access to protected content.
+
+**G. Manager delegation revoked**
+
+An actor whose school-wide roster capability is revoked must no longer receive or retain unauthorized Students data.
+
+**H. Detail switch**
+
+A response for Student A must never overwrite the dossier for Student B.
+
+**I. Component unmount**
+
+A late response must not reinstate stale private data.
+
+**J. Failed metadata request**
+
+A failed year/class metadata request must not make the application silently fabricate filter options.
+
+### Critical implementation rule
+
+Use the established React state and request-generation/cancellation approach.
+
+Do not install a competing state manager or authorization cache.
+
+Do not change global authentication logic merely to repair local Students state.
+
+If a scenario reveals an actual server authorization defect, report the exact evidence and stop that dependent operation rather than implementing a client-only security workaround.
+
+---
+
+# 14. FIX-005 — REAL BEHAVIORAL TESTING
+
+You must add meaningful tests for the actual Students workflow.
+
+**Do not repeat the previous mistake of giving a trivial test an impressive name.**
+
+A test titled "Students navigation and dossier" must actually perform navigation and open a dossier.
+
+A test titled "Teacher Student Overview" must actually exercise the Teacher-scoped path.
+
+A test titled "Student search and pagination" must actually change search/filter/page state and verify the resulting requests and rendering.
+
+### Mandatory test matrix
+
+#### Teacher regression
+
+- Approved assigned Teacher can open a student from an assigned class.
+- Student Overview is displayed.
+- Teacher is not redirected to the administrative Students directory.
+- Unassigned-class student access is denied.
+- Revoked Teacher assignment loses access.
+- Back/focus behavior is preserved.
+
+#### Administrator navigation
+
+- Owner opens Students.
+- Office opens Students.
+- Delegated Manager opens Students.
+- Unauthorized Manager cannot open school-wide Students.
+- Selecting a student from a roster opens the correct UUID.
+- Selecting a student from Students opens the same UUID.
+- Back returns to the correct context.
+
+#### Search
+
+- Full name.
+- Partial name.
+- Student code.
+- Arabic query.
+- Empty query.
+- No results.
+- Backend failure.
+- Rapid-query race.
+
+#### Filters and pagination
+
+- Academic-year filter.
+- Class filter.
+- Status filter.
+- Combined filters.
+- Page reset after filter change.
+- Previous/Next.
+- Correct total.
+- Unassigned pupil.
+- Multiple membership records without duplicated student identity.
+- Stale-page rejection.
+
+#### Student detail
+
+- Correct identity.
+- Membership history.
+- Empty membership history.
+- Backend error.
+- Not found.
+- Retry after failure.
+- Stale detail response.
+- Actor change while loading.
+- Revocation.
+- Sign-out.
+- Unmount.
+
+#### Languages and accessibility
+
+- English.
+- French.
+- Arabic RTL content.
+- Stable application shell.
+- Keyboard activation.
+- Visible focus.
+- Accessible names.
+- Desktop and mobile layouts.
+
+### Test quality
+
+Use actual rendered React component behavior or the project's established equivalent behavioral test infrastructure.
+
+Service boundaries may be controlled in focused component tests, but do not describe controlled responses as proof of real database persistence or server authorization.
+
+Where genuine database integration is necessary, use existing approved database/API tests.
+
+Do not modify production data merely to make a test pass.
+
+Do not weaken existing tests.
+
+Do not hide skipped tests.
+
+Do not claim browser testing unless a real browser interaction was performed.
+
+---
+
+# 15. REGRESSION PROTECTION
+
+You must preserve:
+
+- Teacher T1 My Classes.
+- Teacher T2 Student Overview.
+- Attendance C1–C3.
+- Attendance history and daily register.
+- Existing class creation and class rosters.
+- Calendar audience and RSVP safeguards.
+- Directory public and private profile boundaries.
+- Owner Governance focus behavior.
+- Account approvals and delegation.
+- Signup/Login.
+- Telegram account linking.
+- Parent Notes.
+- Class Community.
+- Notifications and exact destinations.
+- Current Parent and Student homepages.
+- Existing AR/FR/EN application support.
+- Mobile-first presentation.
+- Current light/dark theme behavior.
+
+Do not implement unrelated features from the larger backlog.
+
+In particular, **do not implement Teacher-directory account linking, complete Registration, full student documents, grades or Class Management transfers in this S2 packet**.
+
+Those are explicitly separate future tasks.
+
+---
+
+# 16. ALLOWED FILE OWNERSHIP
+
+Primary production targets:
+
+- `src/App.tsx`
+- `src/components/views/ClassesManagementView.tsx`
+- `src/components/views/StudentsManagementView.tsx`
+
+Conditional target, only when the actual implementation requires it:
+
+- `src/components/homepages/homepageAccess.ts`
+- `src/lib/schoolOperations.ts`
+- Existing application navigation/state owner
+- Existing shared Student Overview owner
+
+Read and preserve:
+
+- `src/components/views/Shared/StudentOverviewPanel.tsx`
+- `src/lib/classes/studentOverview.ts`
+- `src/context/AppContext.tsx`
+- Existing role-specific homepages
+- Existing database-generated types
+- Existing relevant tests
+
+Create or extend focused test files according to the established test architecture.
+
+Every additional production-file modification must be justified by a direct dependency on the current S2 acceptance requirements.
+
+### Forbidden mutations
+
+Do not modify:
+
+- Database migrations.
+- Supabase RLS.
+- Hosted database configuration.
+- Account approval mechanics.
+- Telegram authentication.
+- Attendance implementation.
+- Calendar implementation.
+- Parent Notes mechanics.
+- Pickup release behavior.
+- Assessment or grade schema.
+- Public Directory records.
+- Unrelated package dependencies.
+
+Do not perform unrelated formatting or cleanup.
+
+Do not duplicate existing domain code.
+
+---
+
+# 17. REQUIRED EXECUTION ORDER
+
+Execute the following in order.
+
+**GATE 1 — Baseline**
+
+Inspect current source, inventory existing changes, read the S2 requirements and verify exact file ownership.
+
+**GATE 2 — Existing behavior**
+
+Confirm what already works, reproduce the known Teacher and administrative navigation failures, and identify any overlapping changes.
+
+**GATE 3 — Regression tests**
+
+Add meaningful failing tests for the confirmed bugs.
+
+The tests must fail for the correct reason against the defective behavior.
+
+**GATE 4 — Implementation**
+
+Repair Teacher navigation and administrative student-ID handoff.
+
+**GATE 5 — Complete Students**
+
+Finish search/filter/grouping/detail/Back/retry integration within the approved scope.
+
+**GATE 6 — Safety**
+
+Verify account changes, delegated access, stale responses, and unauthorized access.
+
+**GATE 7 — Focused verification**
+
+Run all new S2 tests and relevant existing Teacher/Classes tests.
+
+**GATE 8 — Full regression**
+
+Run TypeScript validation, the application build and existing relevant suites.
+
+**GATE 9 — Final source review**
+
+Inspect all actual modified files and ensure every source change is necessary and accurate.
+
+**GATE 10 — Final report**
+
+Return one comprehensive evidence-based implementation report.
+
+Do not declare a gate complete without matching evidence.
+
+Do not repeatedly respond with plans or partial implementation summaries.
+
+---
+
+# 18. HARD ACCEPTANCE CRITERIA
+
+The S2 packet is complete only when:
+
+- [ ] Teacher View Student opens the established Teacher Overview.
+- [ ] Teacher cannot access unauthorized school-wide student data.
+- [ ] Administrative roster View opens the exact selected pupil.
+- [ ] Students list navigation works for approved Owner and Office.
+- [ ] Delegated Managers are correctly allowed or denied.
+- [ ] Students search uses the installed RPC.
+- [ ] Year/class/status filters work.
+- [ ] Pagination uses actual server counts.
+- [ ] Class organization does not invent full roster counts.
+- [ ] Student names and View actions open the correct dossier.
+- [ ] The dossier uses actual identity and membership data.
+- [ ] Back navigation preserves the relevant context.
+- [ ] Detail retry works without timer-based selection reset.
+- [ ] Stale list and detail results are rejected.
+- [ ] Account and authority changes remove unauthorized private state.
+- [ ] English, French and Arabic function appropriately.
+- [ ] Focus and keyboard navigation work.
+- [ ] Focused behavioral tests pass.
+- [ ] Existing Teacher T1/T2 tests pass.
+- [ ] Relevant authorization and Classes regressions pass.
+- [ ] TypeScript checks pass.
+- [ ] Production build passes.
+- [ ] Final source diff contains no unrelated mutations.
+
+An unchecked criterion is not completed.
+
+If environmental constraints prevent a particular real-browser or backend check, identify the exact unexecuted check and its limitation.
+
+Do not manufacture a PASS.
+
+---
+
+# 19. FINAL RESPONSE FORMAT
+
+Return exactly one final implementation report with these sections:
+
+### A. Starting State
+
+Actual workspace source fingerprint and relevant existing behavior.
+
+### B. Corrected Defects
+
+For FIX-001 through FIX-005:
+
+- Original behavior.
+- Actual cause.
+- Changed source.
+- Corrected behavior.
+- Test evidence.
+
+### C. Students Feature Acceptance
+
+For STU-001 through STU-006:
+
+- Implemented functionality.
+- Exact associated production files.
+- Actual acceptance result.
+- Remaining limitation, if any.
+
+### D. Tests Executed
+
+For each:
+
+- Command.
+- Environment.
+- Exit code.
+- Pass/fail/skip count.
+- What the test actually proves.
+
+### E. Protected Regression Results
+
+Teacher T1/T2, Classes, roles, Attendance and other affected navigation.
+
+### F. Changed Files
+
+Exact file list, actual diffs and final source fingerprints.
+
+### G. Remaining Unverified Items
+
+Any acceptance check not genuinely executed.
+
+### H. Final Status
+
+Use:
+
+- `COMPLETE — VERIFIED`
+- `PARTIALLY IMPLEMENTED`
+- `BLOCKED`
+- `FAILED`
+
+Do not claim `COMPLETE — VERIFIED` when a required acceptance gate is missing.
+
+---
+
+# 20. FINAL NON-NEGOTIABLE DIRECTIVE
+
+**IMPLEMENT THE CURRENT S2 STUDENTS TASK IN THE REAL EXISTING AI STUDIO SOURCE.**
+
+No fake implementations.
+
+No fake data.
+
+No duplicate Student identities.
+
+No replacement backend.
+
+No invented authorization.
+
+No misleading test names.
+
+No fabricated test output.
+
+No source-string checks presented as behavioral tests.
+
+No partial UI-only completion masquerading as working functionality.
+
+No unnecessary redesign.
+
+No unrelated feature changes.
+
+No destruction of working Teacher T1/T2 or Attendance behavior.
+
+No repeated inspection-only reports.
+
+**Finish FIX-001 through FIX-005 and STU-001 through STU-006 as one integrated Students implementation packet.**
+
+Preserve all future tasks in the checklist without implementing them in this packet.
+
+**THE DELIVERABLE IS WORKING APPLICATION CODE, VERIFIED BEHAVIOR AND A COMPLETE HONEST EXECUTION REPORT — NOT ANOTHER PLAN.**
+

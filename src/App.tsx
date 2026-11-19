@@ -57,6 +57,8 @@ function MainLayout() {
   const [oversightHomePage, setOversightHomePage] = useState<HomePageKey | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [notificationTarget, setNotificationTarget] = useState<NotificationTargetIntent | null>(null);
+  const [selectedStudentDetailId, setSelectedStudentDetailId] = useState<string | null>(null);
+  const [studentNavOrigin, setStudentNavOrigin] = useState<'students' | 'roster'>('students');
   const [isAttendanceDirty, setIsAttendanceDirty] = useState<boolean>(false);
   const [pendingAttendanceLeave, setPendingAttendanceLeave] = useState<PendingAttendanceLeaveNav | null>(null);
   const notificationRequestSeq = useRef(0);
@@ -65,6 +67,8 @@ function MainLayout() {
     setNotificationTarget(null);
     setIsAttendanceDirty(false);
     setPendingAttendanceLeave(null);
+    setSelectedStudentDetailId(null);
+    setStudentNavOrigin('students');
   }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
 
   const applyNotificationTarget = (notification: NotificationItem): boolean => {
@@ -108,6 +112,10 @@ function MainLayout() {
     if (activeTab === 'attendance' && isAttendanceDirty && nextTab !== 'attendance') {
       setPendingAttendanceLeave({ kind: 'tab', tab: nextTab });
       return;
+    }
+    if (nextTab === 'students') {
+      setSelectedStudentDetailId(null);
+      setStudentNavOrigin('students');
     }
     applySetTab(nextTab);
   };
@@ -308,7 +316,9 @@ function MainLayout() {
                 handleSetTab('attendance');
               }}
               onOpenStudentDetail={(studentId) => {
-                handleSetTab('students');
+                setSelectedStudentDetailId(studentId);
+                setStudentNavOrigin('roster');
+                applySetTab('students');
               }}
             />
           ) : (
@@ -324,7 +334,17 @@ function MainLayout() {
         {activeTab === 'registration' && <RegistrationView notificationTarget={notificationTarget} />}
         {activeTab === 'students' &&
           (canAccessAppTab(currentUser, 'students') ? (
-            <StudentsManagementView />
+            <StudentsManagementView
+              initialSelectedStudentId={selectedStudentDetailId}
+              navOrigin={studentNavOrigin}
+              onBackToOrigin={() => {
+                if (studentNavOrigin === 'roster') {
+                  applySetTab('classes');
+                } else {
+                  setSelectedStudentDetailId(null);
+                }
+              }}
+            />
           ) : (
             <HomePageResolver
               setActiveTab={handleSetTab}

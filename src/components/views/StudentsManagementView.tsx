@@ -22,17 +22,22 @@ import {
   Eye,
   AlertCircle,
   Building2,
+  TrendingUp,
 } from 'lucide-react';
 import '../homepages/shared/HomePageLayout.css';
 
 export interface StudentsManagementViewProps {
   onOpenClass?: (classId: string) => void;
   initialSelectedStudentId?: string | null;
+  navOrigin?: 'students' | 'roster';
+  onBackToOrigin?: () => void;
 }
 
 export function StudentsManagementView({
   onOpenClass: _onOpenClass,
   initialSelectedStudentId,
+  navOrigin = 'students',
+  onBackToOrigin,
 }: StudentsManagementViewProps) {
   const { currentUser, language } = useApp();
   const isAuthorized = canAccessAppTab(currentUser, 'students');
@@ -58,10 +63,18 @@ export function StudentsManagementView({
   const [studentDetail, setStudentDetail] = useState<SchoolStudentIdentityDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailRetrySeq, setDetailRetrySeq] = useState<number>(0);
 
   const actorKeyRef = useRef(currentUser?.id || 'anonymous');
   const requestSeqRef = useRef(0);
+  const detailSeqRef = useRef(0);
   const listViewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (initialSelectedStudentId !== undefined) {
+      setSelectedStudentId(initialSelectedStudentId || null);
+    }
+  }, [initialSelectedStudentId]);
 
   // Debounce search query
   useEffect(() => {
@@ -158,12 +171,17 @@ export function StudentsManagementView({
       setDetailError(null);
       return;
     }
+    const currentActor = currentUser?.id || 'anonymous';
+    const reqId = ++detailSeqRef.current;
     let active = true;
+
     async function loadDetail() {
       setLoadingDetail(true);
       setDetailError(null);
       const res = await getSchoolStudentIdentity(selectedStudentId!);
-      if (!active) return;
+      if (!active || reqId !== detailSeqRef.current || actorKeyRef.current !== currentActor) {
+        return;
+      }
       setLoadingDetail(false);
       if (!res.ok || !res.data) {
         setDetailError(res.errorMessage || 'Failed to load student identity details.');
@@ -181,17 +199,24 @@ export function StudentsManagementView({
     return () => {
       active = false;
     };
-  }, [selectedStudentId, currentUser?.id]);
+  }, [selectedStudentId, currentUser?.id, detailRetrySeq]);
 
   // Handle actor change cleanup
   useEffect(() => {
     actorKeyRef.current = currentUser?.id || 'anonymous';
-    if (!isAuthorized) {
-      setSelectedStudentId(null);
-      setStudentDetail(null);
-      setStudentsData([]);
-    }
-  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus, isAuthorized]);
+    requestSeqRef.current++;
+    detailSeqRef.current++;
+    setSelectedStudentId(null);
+    setStudentDetail(null);
+    setStudentsData([]);
+    setTotalCount(0);
+    setSearchQuery('');
+    setDebouncedQuery('');
+    setListError(null);
+    setDetailError(null);
+    setLoadingList(false);
+    setLoadingDetail(false);
+  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
 
   if (!isAuthorized) {
     return (
@@ -229,12 +254,17 @@ export function StudentsManagementView({
             onClick={() => {
               setSelectedStudentId(null);
               setStudentDetail(null);
+              if (onBackToOrigin) {
+                onBackToOrigin();
+              }
             }}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-xs"
           >
             <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
             <span>
-              {language === 'ar' ? 'العودة إلى قائمة التلاميذ' : language === 'fr' ? 'Retour aux élèves' : 'Back to Students List'}
+              {navOrigin === 'roster'
+                ? (language === 'ar' ? 'العودة إلى القسم' : language === 'fr' ? 'Retour à la classe' : 'Back to Class Roster')
+                : (language === 'ar' ? 'العودة إلى قائمة التلاميذ' : language === 'fr' ? 'Retour aux élèves' : 'Back to Students List')}
             </span>
           </button>
         </div>
@@ -254,11 +284,7 @@ export function StudentsManagementView({
             </div>
             <button
               type="button"
-              onClick={() => {
-                const id = selectedStudentId;
-                setSelectedStudentId(null);
-                setTimeout(() => setSelectedStudentId(id), 50);
-              }}
+              onClick={() => setDetailRetrySeq((s) => s + 1)}
               className="px-4 py-2 text-xs font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
             >
               {language === 'ar' ? 'إعادة المحاولة' : language === 'fr' ? 'Réessayer' : 'Retry'}
@@ -368,6 +394,27 @@ export function StudentsManagementView({
                   </table>
                 </div>
               )}
+
+              {/* Academic Performance & Progress Summary (Honest Empty State) */}
+              <div className="pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-k-brand" />
+                  <span>
+                    {language === 'ar'
+                      ? 'ملخص الأداء الأكاديمي والنتائج'
+                      : language === 'fr'
+                      ? 'Résumé des performances et résultats'
+                      : 'Academic Performance & Results Summary'}
+                  </span>
+                </h3>
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                  {language === 'ar'
+                    ? 'النتائج الدراسية غير متاحة حاليًا. ستظهر الأعداد وتطور مستوى التلميذ هنا بعد تفعيل نظام التقييم المدرسي والتحقق منه.'
+                    : language === 'fr'
+                    ? 'Les résultats scolaires ne sont pas encore disponibles. Les notes et la progression apparaîtront ici après la mise en place et la vérification du système d’évaluation.'
+                    : 'Academic performance records are not available yet. Grades and progress will appear here when the school\'s assessment system is configured and verified.'}
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
