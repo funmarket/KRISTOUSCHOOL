@@ -91,16 +91,17 @@ export async function listParentNotes(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<ParentNote[]>> {
-  if (!client) return unavailableResult();
+  const activeClient = client || supabase;
+  if (!activeClient) return unavailableResult();
   try {
-    const { data, error } = await client.from('parent_notes').select('*').order('created_at', { ascending: false });
+    const { data, error } = await activeClient.from('parent_notes').select('*').order('created_at', { ascending: false });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const mapped: ParentNote[] = Array.isArray(data)
       ? data.map((row: Record<string, unknown>) => ({
           id: String(row.id),
-          parentId: String(row.parent_id || ''),
+          parentId: String(row.parent_user_id || row.parent_id || ''),
           parentName: String(row.parent_name || 'Parent'),
-          childId: String(row.child_id || ''),
+          childId: String(row.student_id || row.child_id || ''),
           childName: String(row.child_name || 'Student'),
           classId: row.class_id ? String(row.class_id) : undefined,
           teacherId: row.teacher_id ? String(row.teacher_id) : undefined,
@@ -121,40 +122,51 @@ export async function listParentNotes(
 }
 
 export async function sendParentNote(
-  childIdOrInput: string | { childId: string; topic: ParentNote['topic']; content: string; classId?: string },
+  studentIdOrInput: string | { studentId?: string; childId?: string; topic: ParentNote['topic']; content: string; classId?: string },
   topicOrClient?: ParentNote['topic'] | any,
   contentOrClient?: string | any,
   maybeClient?: any,
 ): Promise<BackendOpResult<ParentNote & { note: ParentNote }>> {
-  const input = typeof childIdOrInput === 'object'
-    ? childIdOrInput
-    : { childId: childIdOrInput, topic: topicOrClient as ParentNote['topic'], content: String(contentOrClient || '') };
-  const client = typeof childIdOrInput === 'object' ? topicOrClient : maybeClient;
-  const activeClient = client || supabase;
+  let studentId = '';
+  let topic: ParentNote['topic'] = 'OTHER';
+  let content = '';
+  let client: any = supabase;
 
-  const check = validateParentNoteSubmission(input.content);
+  if (typeof studentIdOrInput === 'object' && studentIdOrInput !== null) {
+    studentId = String(studentIdOrInput.studentId || studentIdOrInput.childId || '');
+    topic = studentIdOrInput.topic;
+    content = studentIdOrInput.content;
+    client = topicOrClient || supabase;
+  } else {
+    studentId = String(studentIdOrInput || '');
+    topic = topicOrClient as ParentNote['topic'];
+    content = String(contentOrClient || '');
+    client = maybeClient || supabase;
+  }
+
+  const activeClient = client || supabase;
+  const check = validateParentNoteSubmission(content);
   if (!check.valid) {
     return { ok: false, status: 'ERROR', errorCode: check.errorCode, errorMessage: 'Parent note validation failed.' };
   }
   if (!activeClient) return unavailableResult();
   try {
     const { data, error } = await activeClient.rpc('send_parent_note', {
-      p_child_id: input.childId,
-      p_topic: input.topic,
-      p_content: input.content.trim(),
-      p_class_id: input.classId || null,
+      p_student_id: studentId,
+      p_topic: topic,
+      p_content: content.trim(),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const r = (data ?? {}) as Record<string, unknown>;
     const createdNote: ParentNote = {
       id: String(r.id || ''),
-      parentId: String(r.parent_id || ''),
+      parentId: String(r.parent_user_id || r.parent_id || ''),
       parentName: String(r.parent_name || 'Parent'),
-      childId: input.childId,
+      childId: studentId,
       childName: String(r.child_name || 'Student'),
-      topic: input.topic,
-      content: input.content.trim(),
-      createdAt: new Date().toISOString(),
+      topic,
+      content: content.trim(),
+      createdAt: String(r.created_at || new Date().toISOString()),
       status: 'SENT',
     };
     return {
@@ -172,9 +184,9 @@ export async function replyParentNote(
   contentOrClient?: string | any,
   maybeClient?: any,
 ): Promise<BackendOpResult<ParentNote>> {
-  const noteId = typeof noteIdOrInput === 'object' ? noteIdOrInput.noteId : noteIdOrInput;
-  const replyContent = typeof noteIdOrInput === 'object' ? noteIdOrInput.replyContent : String(contentOrClient || '');
-  const client = typeof noteIdOrInput === 'object' ? contentOrClient : maybeClient;
+  const noteId = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? noteIdOrInput.noteId : String(noteIdOrInput || '');
+  const replyContent = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? noteIdOrInput.replyContent : String(contentOrClient || '');
+  const client = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? contentOrClient : maybeClient;
   const activeClient = client || supabase;
 
   if (!activeClient) return unavailableResult();
@@ -187,17 +199,17 @@ export async function replyParentNote(
     const r = (data ?? {}) as Record<string, unknown>;
     const updatedNote: ParentNote = {
       id: noteId,
-      parentId: String(r.parent_id || ''),
+      parentId: String(r.parent_user_id || r.parent_id || ''),
       parentName: String(r.parent_name || 'Parent'),
-      childId: String(r.child_id || ''),
+      childId: String(r.student_id || r.child_id || ''),
       childName: String(r.child_name || 'Student'),
-      topic: 'OTHER',
+      topic: (String(r.topic || 'OTHER') as ParentNote['topic']),
       content: String(r.content || ''),
       createdAt: String(r.created_at || new Date().toISOString()),
       status: 'REPLIED',
       replyContent: replyContent.trim(),
       repliedByName: String(r.replied_by_name || 'Teacher'),
-      repliedAt: new Date().toISOString(),
+      repliedAt: String(r.replied_at || new Date().toISOString()),
     };
     return { ok: true, status: 'READY', data: updatedNote };
   } catch (err) {

@@ -14,10 +14,11 @@ export async function listPublicContent(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<Record<string, PublicContentEntry>>> {
-  if (!client) return unavailableResult();
+  const activeClient = client || supabase;
+  if (!activeClient) return unavailableResult();
   try {
-    const { data, error } = await client
-      .from('public_content_entries')
+    const { data, error } = await activeClient
+      .from('school_public_content')
       .select('slug, title_ar, title_fr, title_en, body_ar, body_fr, body_en, is_published, updated_at')
       .order('slug', { ascending: true });
     if (error) return { ok: false, ...classifySupabaseError(error) };
@@ -27,12 +28,12 @@ export async function listPublicContent(
         const slug = String(row.slug || 'home');
         map[slug] = {
           slug,
-          titleAr: String(row.title_ar || row.title || ''),
-          titleFr: String(row.title_fr || row.title || ''),
-          titleEn: String(row.title_en || row.title || ''),
-          bodyAr: String(row.body_ar || row.content_body || ''),
-          bodyFr: String(row.body_fr || row.content_body || ''),
-          bodyEn: String(row.body_en || row.content_body || ''),
+          titleAr: String(row.title_ar || ''),
+          titleFr: String(row.title_fr || ''),
+          titleEn: String(row.title_en || ''),
+          bodyAr: String(row.body_ar || ''),
+          bodyFr: String(row.body_fr || ''),
+          bodyEn: String(row.body_en || ''),
           isPublished: Boolean(row.is_published ?? true),
           updatedAt: row.updated_at ? String(row.updated_at) : undefined,
         };

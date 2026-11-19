@@ -18,7 +18,7 @@ export async function listNotifications(
   try {
     const { data, error } = await client
       .from('user_notifications')
-      .select('id, title, body, message, notification_type, type, target_view, target_tab, target_id, target_ref_id, is_read, read, created_at, time')
+      .select('id, title, message, is_read, notification_type, target_view, target_id, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) return { ok: false, ...classifySupabaseError(error) };
@@ -27,11 +27,11 @@ export async function listNotifications(
           id: String(row.id),
           title: String(row.title || ''),
           message: String(row.message || row.body || ''),
-          time: String(row.time || row.created_at || new Date().toISOString()),
-          read: Boolean(row.read ?? row.is_read),
-          type: (String(row.type || row.notification_type || 'announcement') as NotificationItem['type']),
-          targetTab: row.target_tab ? String(row.target_tab) : (row.target_view ? String(row.target_view) : undefined),
-          targetRefId: row.target_ref_id ? String(row.target_ref_id) : (row.target_id ? String(row.target_id) : undefined),
+          time: String(row.created_at || new Date().toISOString()),
+          read: Boolean(row.is_read || row.read),
+          type: (String(row.notification_type || row.type || 'announcement') as NotificationItem['type']),
+          targetTab: row.target_view ? String(row.target_view) : undefined,
+          targetRefId: row.target_id ? String(row.target_id) : undefined,
         }))
       : [];
     return { ok: true, status: 'READY', data: mapped };
@@ -55,7 +55,9 @@ export async function markNotificationReadOnServer(
   const activeClient = client || supabase;
   if (!activeClient) return unavailableResult();
   try {
-    const { error } = await activeClient.rpc('mark_notification_read', { p_notification_id: notificationId });
+    const { data, error } = await activeClient.rpc('mark_user_notification_read', {
+      p_notification_id: notificationId,
+    });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     return { ok: true, status: 'READY', data: true };
   } catch (err) {
@@ -70,9 +72,10 @@ export async function markAllNotificationsReadOnServer(
   const activeClient = client || supabase;
   if (!activeClient) return unavailableResult();
   try {
-    const { error } = await activeClient.rpc('mark_all_notifications_read');
+    const { data, error } = await activeClient.rpc('mark_all_user_notifications_read');
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    return { ok: true, status: 'READY', data: 1 };
+    const count = typeof data === 'number' ? data : 1;
+    return { ok: true, status: 'READY', data: count };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }

@@ -14,9 +14,10 @@ export async function fetchUserPreferences(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<UserPreferencesState>> {
-  if (!client) return unavailableResult();
+  const activeClient = client || supabase;
+  if (!activeClient) return unavailableResult();
   try {
-    const { data, error } = await client.from('user_preferences').select('*').maybeSingle();
+    const { data, error } = await activeClient.from('user_preferences').select('*').maybeSingle();
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (!data) {
       return {
@@ -38,8 +39,8 @@ export async function fetchUserPreferences(
       data: {
         language: (String(row.language || 'ar') as UserPreferencesState['language']),
         theme: (String(row.theme || 'light') as UserPreferencesState['theme']),
-        notificationSound: (String(row.notification_sound || row.sound_option || 'Kristou Bell') as UserPreferencesState['notificationSound']),
-        soundMuted: row.sound_muted !== undefined ? Boolean(row.sound_muted) : (row.sound_enabled === false),
+        notificationSound: (String(row.notification_sound || 'Kristou Bell') as UserPreferencesState['notificationSound']),
+        soundMuted: Boolean(row.sound_muted),
         vibrationEnabled: row.vibration_enabled !== false,
       },
     };
@@ -49,9 +50,10 @@ export async function fetchUserPreferences(
 }
 
 export async function loadMyPreferences(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any = supabase,
+  userIdOrClient?: string | any,
+  maybeClient?: any,
 ): Promise<BackendOpResult<UserPreferencesState>> {
+  const client = typeof userIdOrClient === 'string' ? maybeClient : userIdOrClient;
   return fetchUserPreferences(client);
 }
 
@@ -70,13 +72,14 @@ export async function updateUserPreferences(
   const activeClient = client || supabase;
   if (!activeClient) return unavailableResult();
   try {
-    await activeClient.rpc('upsert_user_preferences', {
+    const { error } = await activeClient.rpc('upsert_my_preferences', {
       p_language: fullPrefs.language,
       p_theme: fullPrefs.theme,
-      p_sound_enabled: !fullPrefs.soundMuted,
-      p_sound_option: fullPrefs.notificationSound,
+      p_notification_sound: fullPrefs.notificationSound,
+      p_sound_muted: fullPrefs.soundMuted,
       p_vibration_enabled: fullPrefs.vibrationEnabled,
     });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
     return { ok: true, status: 'READY', data: fullPrefs };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };

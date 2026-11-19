@@ -16,22 +16,53 @@ export async function listFoodMenus(
 ): Promise<BackendOpResult<FoodMenuWeek[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client
-      .from('school_food_menus')
-      .select('id, week_range, published, status, provider_name, is_current, menu_data, created_at')
+    const { data: weekRows, error: weekErr } = await client
+      .from('food_menu_weeks')
+      .select('id, week_range, status, provider_name, created_at')
       .order('created_at', { ascending: false });
-    if (error) return { ok: false, ...classifySupabaseError(error) };
-    const mapped: FoodMenuWeek[] = Array.isArray(data)
-      ? data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          weekRange: String(row.week_range || row.week_label || ''),
-          published: Boolean(row.published ?? true),
-          status: (String(row.status || 'PUBLISHED') as FoodMenuWeek['status']),
-          providerName: String(row.provider_name || 'La Toque Gourmande'),
-          isDemoPreview: Boolean(row.is_current),
-          items: Array.isArray(row.menu_data) ? (row.menu_data as FoodMenuWeek['items']) : [],
-        }))
-      : [];
+    if (weekErr) return { ok: false, ...classifySupabaseError(weekErr) };
+
+    const weeks = Array.isArray(weekRows) ? weekRows : [];
+    const weekIds = weeks.map((w: Record<string, unknown>) => String(w.id));
+    const daysMap = new Map<string, any[]>();
+
+    if (weekIds.length > 0) {
+      const { data: dayRows, error: dayErr } = await client
+        .from('food_menu_days')
+        .select('*')
+        .in('menu_week_id', weekIds)
+        .order('day_order', { ascending: true });
+      if (!dayErr && Array.isArray(dayRows)) {
+        for (const d of dayRows as Record<string, unknown>[]) {
+          const wid = String(d.menu_week_id);
+          const list = daysMap.get(wid) ?? [];
+          list.push({
+            day: String(d.day_label || `Day ${d.day_order}`),
+            starter: String(d.starter || ''),
+            main: String(d.main_dish || ''),
+            side: String(d.side_dish || ''),
+            dessert: String(d.dessert || ''),
+            notes: d.notes ? String(d.notes) : undefined,
+          });
+          daysMap.set(wid, list);
+        }
+      }
+    }
+
+    const mapped: FoodMenuWeek[] = weeks.map((w: Record<string, unknown>) => {
+      const wid = String(w.id);
+      const st = String(w.status || 'PUBLISHED');
+      return {
+        id: wid,
+        weekRange: String(w.week_range || ''),
+        published: st === 'PUBLISHED',
+        status: (st as FoodMenuWeek['status']),
+        providerName: String(w.provider_name || 'La Toque Gourmande'),
+        isDemoPreview: st === 'PUBLISHED',
+        items: daysMap.get(wid) ?? [],
+      };
+    });
+
     return { ok: true, status: 'READY', data: mapped };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -44,27 +75,34 @@ export async function fetchActiveFoodMenu(
 ): Promise<BackendOpResult<FoodMenuWeek | null>> {
   const res = await listFoodMenus(client);
   if (!res.ok) return { ok: false, status: res.status, errorCode: res.errorCode, errorMessage: res.errorMessage };
-  const current = (res.data ?? []).find((m) => m.isDemoPreview || m.published) || (res.data ?? [])[0] || null;
+  const current = (res.data ?? []).find((m) => m.published) || (res.data ?? [])[0] || null;
   return { ok: true, status: 'READY', data: current };
 }
 
 export async function saveFoodMenuWeek(
-  rangeOrInput: string | { weekRange: string; items: any[]; published?: boolean },
-  itemsOrClient?: any[] | any,
+  weekRangeOrInput: string | { weekRange: string; days?: any[]; items?: any[]; publish?: boolean },
+  daysOrClient?: any[] | any,
+  publishOrClient?: boolean | any,
   maybeClient?: any,
 ): Promise<BackendOpResult<FoodMenuWeek>> {
-  const input = typeof rangeOrInput === 'object' && rangeOrInput !== null
-    ? rangeOrInput
-    : { weekRange: String(rangeOrInput || ''), items: Array.isArray(itemsOrClient) ? itemsOrClient : [], published: true };
-  const client = typeof rangeOrInput === 'object' && rangeOrInput !== null ? itemsOrClient : maybeClient;
+  const weekRange = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
+    ? String(weekRangeOrInput.weekRange || '')
+    : String(weekRangeOrInput || '');
+  const days = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
+    ? (weekRangeOrInput.days || weekRangeOrInput.items || [])
+    : (Array.isArray(daysOrClient) ? daysOrClient : []);
+  const publish = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null
+    ? (weekRangeOrInput.publish ?? true)
+    : (typeof publishOrClient === 'boolean' ? publishOrClient : true);
+  const client = typeof weekRangeOrInput === 'object' && weekRangeOrInput !== null ? daysOrClient : maybeClient;
   const activeClient = client || supabase;
 
   if (!activeClient) return unavailableResult();
   try {
     const { data, error } = await activeClient.rpc('save_food_menu_week', {
-      p_week_range: input.weekRange,
-      p_menu_data: input.items,
-      p_published: input.published ?? true,
+      p_week_range: weekRange,
+      p_days: days,
+      p_publish: publish,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const r = (data ?? {}) as Record<string, unknown>;
@@ -73,9 +111,11 @@ export async function saveFoodMenuWeek(
       status: 'READY',
       data: {
         id: String(r.id || ''),
-        weekRange: String(r.week_range || input.weekRange),
-        published: Boolean(r.published ?? input.published ?? true),
-        items: Array.isArray(r.menu_data) ? (r.menu_data as FoodMenuWeek['items']) : input.items,
+        weekRange: String(r.week_range || weekRange),
+        published: publish,
+        status: publish ? 'PUBLISHED' : 'DRAFT',
+        providerName: String(r.provider_name || 'La Toque Gourmande'),
+        items: days,
       },
     };
   } catch (err) {
