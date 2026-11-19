@@ -61,6 +61,9 @@ function MainLayout() {
   const [studentNavOrigin, setStudentNavOrigin] = useState<'students' | 'roster'>('students');
   const [rosterReturnContext, setRosterReturnContext] = useState<ClassRosterReturnContext | null>(null);
   const studentActorScopeKey = `${currentUser?.id ?? 'anonymous'}:${currentUser?.role ?? ''}:${currentUser?.accountStatus ?? ''}:${(currentUser?.capabilities ?? []).slice().sort().join(',')}`;
+  const [studentNavOwnerKey, setStudentNavOwnerKey] = useState<string | null>(null);
+  const activeRosterReturnContext = studentNavOwnerKey === studentActorScopeKey ? rosterReturnContext : null;
+  const activeStudentDetailId = studentNavOwnerKey === studentActorScopeKey ? selectedStudentDetailId : null;
   const [isAttendanceDirty, setIsAttendanceDirty] = useState<boolean>(false);
   const [pendingAttendanceLeave, setPendingAttendanceLeave] = useState<PendingAttendanceLeaveNav | null>(null);
   const notificationRequestSeq = useRef(0);
@@ -72,6 +75,7 @@ function MainLayout() {
     setSelectedStudentDetailId(null);
     setStudentNavOrigin('students');
     setRosterReturnContext(null);
+    setStudentNavOwnerKey(null);
   }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus, studentActorScopeKey]);
 
   const applyNotificationTarget = (notification: NotificationItem): boolean => {
@@ -117,6 +121,7 @@ function MainLayout() {
       return;
     }
     if (nextTab === 'students') {
+      setStudentNavOwnerKey(null);
       setSelectedStudentDetailId(null);
       setStudentNavOrigin('students');
     }
@@ -307,7 +312,7 @@ function MainLayout() {
           (canAccessAppTab(currentUser, 'classes') ? (
             <ClassesManagementView
               key={studentActorScopeKey}
-              rosterReturnContext={rosterReturnContext}
+              rosterReturnContext={activeRosterReturnContext}
               initialClasses={classRosters}
               initialRosters={rostersRecord}
               backendStatus={mappedClassesStatus}
@@ -322,6 +327,7 @@ function MainLayout() {
                 handleSetTab('attendance');
               }}
               onOpenStudentDetail={(studentId, context) => {
+                setStudentNavOwnerKey(studentActorScopeKey);
                 setRosterReturnContext(context);
                 setSelectedClassId(context.classId);
                 setSelectedStudentDetailId(studentId);
@@ -344,7 +350,7 @@ function MainLayout() {
           (canAccessAppTab(currentUser, 'students') ? (
             <StudentsManagementView
               key={studentActorScopeKey}
-              initialSelectedStudentId={selectedStudentDetailId}
+              initialSelectedStudentId={activeStudentDetailId}
               navOrigin={studentNavOrigin}
               onBackToOrigin={() => {
                 setSelectedStudentDetailId(null);
