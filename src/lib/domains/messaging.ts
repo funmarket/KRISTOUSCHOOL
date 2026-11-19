@@ -17,6 +17,32 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid messaging response.',
+  };
+}
+
+function parseMessageRecipients(data: unknown): MessageRecipientOption[] | null {
+  if (!Array.isArray(data)) return null;
+
+  const recipients: MessageRecipientOption[] = [];
+  for (const item of data) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    const fullName = typeof row.fullName === 'string' ? row.fullName.trim() : '';
+    const role = typeof row.role === 'string' ? row.role.trim() : '';
+    if (!id || !fullName || !role) return null;
+    recipients.push({ id, fullName, role: role as AccountRole });
+  }
+
+  return recipients;
+}
+
 export function countUnreadThreads(
   threads: readonly MessageThread[] | null | undefined,
   status?: BackendOpStatus,
@@ -78,6 +104,12 @@ export async function listMessageThreads(
     if (partErr) return { ok: false, ...classifySupabaseError(partErr) };
     if (msgErr) return { ok: false, ...classifySupabaseError(msgErr) };
 
+    const { data: recipientData, error: recipientErr } = await client.rpc('list_approved_message_recipients');
+    if (recipientErr) return { ok: false, ...classifySupabaseError(recipientErr) };
+    const recipientOptions = parseMessageRecipients(recipientData);
+    if (!recipientOptions) return invalidResponseResult();
+    const recipientById = new Map(recipientOptions.map((recipient) => [recipient.id, recipient]));
+
     const partByThread = new Map<string, { userId: string; unread: boolean }[]>();
     if (Array.isArray(participants)) {
       for (const p of participants as Record<string, unknown>[]) {
@@ -104,25 +136,28 @@ export async function listMessageThreads(
       }
     }
 
-    const mapped: MessageThread[] = threadRows.map((t) => {
+    const mapped: MessageThread[] = [];
+    for (const t of threadRows) {
       const tid = String(t.id);
       const parts = partByThread.get(tid) ?? [];
       const selfPart = parts.find((p) => p.userId === userId);
       const otherPart = parts.find((p) => p.userId !== userId);
+      if (!selfPart || !otherPart) return invalidResponseResult();
+      const recipient = recipientById.get(otherPart.userId);
+      if (!recipient) return invalidResponseResult();
       const threadMsgs = msgByThread.get(tid) ?? [];
-      const otherMsg = threadMsgs.find((m) => m.senderId !== userId);
-      return {
+      mapped.push({
         id: tid,
         subject: t.subject ? String(t.subject) : undefined,
-        recipientId: otherPart?.userId ?? '',
-        recipientName: otherMsg?.senderName || (t.subject ? String(t.subject) : 'School Thread'),
-        recipientRole: 'SCHOOL',
+        recipientId: recipient.id,
+        recipientName: recipient.fullName,
+        recipientRole: recipient.role,
         lastMessage: String(t.last_message_preview ?? ''),
         updatedAt: String(t.updated_at),
-        unread: Boolean(selfPart?.unread),
+        unread: Boolean(selfPart.unread),
         messages: threadMsgs,
-      };
-    });
+      });
+    }
 
     return { ok: true, status: 'READY', data: mapped };
   } catch (err) {
@@ -138,10 +173,12 @@ export async function listApprovedMessageRecipients(
   try {
     const { data, error } = await client.rpc('list_approved_message_recipients');
     if (error) return { ok: false, ...classifySupabaseError(error) };
+    const recipients = parseMessageRecipients(data);
+    if (!recipients) return invalidResponseResult();
     return {
       ok: true,
       status: 'READY',
-      data: Array.isArray(data) ? (data as MessageRecipientOption[]) : [],
+      data: recipients,
     };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -171,7 +208,9 @@ export async function sendOperationalMessage(
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const row = (data ?? {}) as { threadId?: string };
-    return { ok: true, status: 'READY', data: { threadId: String(row.threadId ?? '') } };
+    const threadId = typeof row.threadId === 'string' ? row.threadId.trim() : '';
+    if (!threadId) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: { threadId } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
@@ -195,7 +234,9 @@ export async function replyOperationalThread(
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const row = (data ?? {}) as { id?: string };
-    return { ok: true, status: 'READY', data: { id: String(row.id ?? '') } };
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: { id } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
