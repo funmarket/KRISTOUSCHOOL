@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+
 import type { BackendOpResult, NotificationItem } from '../../types.ts';
 
 function unavailableResult<T>(): BackendOpResult<T> {
@@ -10,7 +11,7 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
-export async function listNotifications(
+export async function listMyNotifications(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<NotificationItem[]>> {
@@ -18,20 +19,20 @@ export async function listNotifications(
   try {
     const { data, error } = await client
       .from('user_notifications')
-      .select('id, title, message, is_read, notification_type, target_view, target_id, created_at')
+      .select('id, category, title, body, target_tab, target_ref_id, is_read, created_at')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(40);
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const mapped: NotificationItem[] = Array.isArray(data)
-      ? data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          title: String(row.title || ''),
-          message: String(row.message || row.body || ''),
-          time: String(row.created_at || new Date().toISOString()),
-          read: Boolean(row.is_read || row.read),
-          type: (String(row.notification_type || row.type || 'announcement') as NotificationItem['type']),
-          targetTab: row.target_view ? String(row.target_view) : undefined,
-          targetRefId: row.target_id ? String(row.target_id) : undefined,
+      ? data.map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          title: String(r.title),
+          message: String(r.body),
+          time: String(r.created_at).slice(0, 16).replace('T', ' '),
+          read: Boolean(r.is_read),
+          type: (String(r.category) as NotificationItem['type']) || 'system',
+          targetTab: r.target_tab ? String(r.target_tab) : null,
+          targetRefId: r.target_ref_id ? String(r.target_ref_id) : null,
         }))
       : [];
     return { ok: true, status: 'READY', data: mapped };
@@ -40,26 +41,18 @@ export async function listNotifications(
   }
 }
 
-export async function listMyNotifications(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any = supabase,
-): Promise<BackendOpResult<NotificationItem[]>> {
-  return listNotifications(client);
-}
-
 export async function markNotificationReadOnServer(
   notificationId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<boolean>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('mark_user_notification_read', {
+    const { data, error } = await client.rpc('mark_user_notification_read', {
       p_notification_id: notificationId,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    return { ok: true, status: 'READY', data: true };
+    return { ok: true, status: 'READY', data: Boolean(data) };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
@@ -69,14 +62,15 @@ export async function markAllNotificationsReadOnServer(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<number>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('mark_all_user_notifications_read');
+    const { data, error } = await client.rpc('mark_all_user_notifications_read');
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const count = typeof data === 'number' ? data : 1;
-    return { ok: true, status: 'READY', data: count };
+    return { ok: true, status: 'READY', data: Number(data ?? 0) };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
+
+export const listNotifications = listMyNotifications;
+
