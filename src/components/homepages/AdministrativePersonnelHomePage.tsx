@@ -7,6 +7,7 @@ import { HomeCardGrid } from './shared/HomeCardGrid';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
 import { countUnreadThreads } from '../../lib/schoolContent';
+import { canAccessAppTab } from './homepageAccess';
 
 export interface AdministrativePersonnelHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -330,6 +331,20 @@ export const AdministrativePersonnelHomePage: React.FC<
           tone="green"
           onClick={() => setActiveTab('attendance')}
         />
+
+        {canAccessAppTab(currentUser, 'students') && (
+          <HomeShortcutCard
+            id="admin-personnel-students"
+            title={pickText(
+              { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
+              language,
+            )}
+            actionLabel={openActionLabel}
+            icon="🎓"
+            tone="blue"
+            onClick={() => setActiveTab('students')}
+          />
+        )}
 
         <HomeShortcutCard
           id="admin-personnel-forms-documents"

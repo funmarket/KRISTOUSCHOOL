@@ -211,6 +211,20 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           onClick={() => setActiveTab('registration')}
         />
 
+        {canAccessAppTab(currentUser, 'students') && (
+          <HomeShortcutCard
+            id="manager-students"
+            title={pickText(
+              { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
+              language,
+            )}
+            actionLabel={openActionLabel}
+            icon="🎓"
+            tone="blue"
+            onClick={() => setActiveTab('students')}
+          />
+        )}
+
         <HomeShortcutCard
           id="manager-broadcasts"
           title={pickText({ ar: 'البلاغات العامة', fr: 'Diffusions & Annonces', en: 'Broadcasts' }, language)}

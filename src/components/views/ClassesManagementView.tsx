@@ -52,6 +52,7 @@ export interface ClassesManagementViewProps {
   onRefresh?: () => Promise<boolean | void> | void;
   onOpenClassCommunity?: (classId: string) => void;
   onOpenAttendance?: (classId: string) => void;
+  onOpenStudentDetail?: (studentId: string) => void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -66,6 +67,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   onRefresh,
   onOpenClassCommunity,
   onOpenAttendance,
+  onOpenStudentDetail,
 }) => {
   const {
     currentUser,
@@ -812,30 +814,32 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                           {student.enrollmentStatus}
                         </span>
                       </td>
-                      {isTeacherView && (
-                        <td className="py-3 px-4 text-end">
-                          <button
-                            type="button"
-                            data-testid={`view-student-${student.studentId}`}
-                            onClick={() => {
-                              lastClickedStudentIdRef.current = student.studentId;
+                      <td className="py-3 px-4 text-end">
+                        <button
+                          type="button"
+                          data-testid={`view-student-${student.studentId}`}
+                          onClick={() => {
+                            lastClickedStudentIdRef.current = student.studentId;
+                            if (onOpenStudentDetail) {
+                              onOpenStudentDetail(student.studentId);
+                            } else {
                               setSelectedStudentId(student.studentId);
                               setSelectionActorId(currentUser?.id ?? null);
-                            }}
-                            aria-label={pickText(
-                              {
-                                ar: `عرض ملف التلميذ ${student.fullName}`,
-                                fr: `Afficher le profil de l’élève ${student.fullName}`,
-                                en: `View student profile for ${student.fullName}`,
-                              },
-                              language,
-                            )}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-[#1E3A6D] dark:text-blue-300 font-extrabold text-[11px] transition-colors"
-                          >
-                            <span>{pickText({ ar: 'عرض', fr: 'Voir', en: 'View' }, language)}</span>
-                          </button>
-                        </td>
-                      )}
+                            }
+                          }}
+                          aria-label={pickText(
+                            {
+                              ar: `عرض ملف التلميذ ${student.fullName}`,
+                              fr: `Afficher le profil de l’élève ${student.fullName}`,
+                              en: `View student profile for ${student.fullName}`,
+                            },
+                            language,
+                          )}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-[#1E3A6D] dark:text-blue-300 font-extrabold text-[11px] transition-colors"
+                        >
+                          <span>{pickText({ ar: 'عرض', fr: 'Voir', en: 'View' }, language)}</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -30,6 +30,7 @@ import { FoodMenuView } from './components/views/FoodMenuView';
 import { DirectoryView } from './components/views/DirectoryView';
 import { ClassesManagementView } from './components/views/ClassesManagementView';
 import { RegistrationView } from './components/views/RegistrationView';
+import { StudentsManagementView } from './components/views/StudentsManagementView';
 import { AttendanceView } from './components/views/AttendanceView';
 import { pickText } from './i18n/homepages';
 
@@ -306,6 +307,9 @@ function MainLayout() {
                 setSelectedClassId(classId);
                 handleSetTab('attendance');
               }}
+              onOpenStudentDetail={(studentId) => {
+                handleSetTab('students');
+              }}
             />
           ) : (
             <HomePageResolver
@@ -318,6 +322,16 @@ function MainLayout() {
         {activeTab === 'foodMenu' && <FoodMenuView />}
         {activeTab === 'directory' && <DirectoryView initialSubTab={directorySubTab} />}
         {activeTab === 'registration' && <RegistrationView notificationTarget={notificationTarget} />}
+        {activeTab === 'students' &&
+          (canAccessAppTab(currentUser, 'students') ? (
+            <StudentsManagementView />
+          ) : (
+            <HomePageResolver
+              setActiveTab={handleSetTab}
+              onOpenAuth={() => setShowAuthModal(true)}
+              onNavigateToSubTab={handleNavigateToSubTab}
+            />
+          ))}
       </main>
 
       {pendingAttendanceLeave && (

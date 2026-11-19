@@ -65,7 +65,8 @@ export type AppTab =
   | 'foodMenu'
   | 'directory'
   | 'classes'
-  | 'registration';
+  | 'registration'
+  | 'students';
 
 export interface TeacherSubjectComponentSummary {
   id: string;

@@ -251,6 +251,20 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
       return false;
     }
 
+    case 'students': {
+      if (user.role === 'APP_ADMIN' || user.role === 'ADMINISTRATIVE_PERSONNEL') {
+        return true;
+      }
+      if (user.role === 'MANAGER') {
+        return (
+          caps.includes('CLASSES_ROSTER_VIEW') ||
+          caps.includes('CLASSES_MANAGE') ||
+          caps.includes('FULL_ACCESS')
+        );
+      }
+      return false;
+    }
+
     case 'announcements': {
       // School-wide broadcasts and campus calendar are visible to all 7 approved roles
       return true;

@@ -13,6 +13,7 @@ import {
 } from './OwnerGovernanceWorkspace';
 import { fetchGovernanceActorScope } from '../../lib/accountGovernance';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { canAccessAppTab } from './homepageAccess';
 
 export interface OwnerHomePageProps {
   setActiveTab: (tab: string) => void;
@@ -35,7 +36,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   onNavigateToSubTab,
   onInspectRoleHome,
 }) => {
-  const { language } = useApp();
+  const { currentUser, language } = useApp();
   const [activeGovernanceSection, setActiveGovernanceSection] =
     useState<OwnerGovernanceSection | null>(null);
   const [governanceBackendStatus, setGovernanceBackendStatus] = useState<
@@ -278,6 +279,20 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
             tone="orange"
             onClick={() => setActiveTab('registration')}
           />
+
+          {canAccessAppTab(currentUser, 'students') && (
+            <HomeShortcutCard
+              id="owner-students"
+              title={pickText(
+                { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
+                language,
+              )}
+              actionLabel={openActionLabel}
+              icon="🎓"
+              tone="blue"
+              onClick={() => setActiveTab('students')}
+            />
+          )}
 
           <HomeShortcutCard
             id="owner-broadcasts"

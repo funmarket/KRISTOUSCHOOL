@@ -556,6 +556,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span>📝 {t('registration')}</span>
                     </button>
+                    {canAccessAppTab(currentUser, 'students') && (
+                      <button
+                        type="button"
+                        data-testid="navbar-menu-students"
+                        onClick={() => {
+                          setActiveTab('students');
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                      >
+                        <span>🎓 {language === 'ar' ? 'التلاميذ' : language === 'fr' ? 'Élèves' : 'Students'}</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Preferences: Appearance & Notification Sound */}
