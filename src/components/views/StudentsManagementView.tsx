@@ -57,6 +57,7 @@ export function StudentsManagementView({
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loadingList, setLoadingList] = useState<boolean>(true);
   const [listError, setListError] = useState<string | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   // Detail view state
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(initialSelectedStudentId || null);
@@ -65,10 +66,13 @@ export function StudentsManagementView({
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailRetrySeq, setDetailRetrySeq] = useState<number>(0);
 
+  const actorScopeKey = `${currentUser?.id ?? 'anonymous'}:${currentUser?.role ?? ''}:${currentUser?.accountStatus ?? ''}:${(currentUser?.capabilities ?? []).slice().sort().join(',')}`;
+  const previousActorScopeRef = useRef(actorScopeKey);
   const actorKeyRef = useRef(currentUser?.id || 'anonymous');
   const requestSeqRef = useRef(0);
   const detailSeqRef = useRef(0);
   const listViewRef = useRef<HTMLDivElement>(null);
+  const listFocusStudentRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (initialSelectedStudentId !== undefined) {
@@ -90,79 +94,80 @@ export function StudentsManagementView({
     setPage(1);
   }, [selectedYearId, selectedClassId, statusFilter]);
 
-  // Load academic years and classes on mount
+  // Load metadata under the current authorized actor; never invent filter options on error.
   useEffect(() => {
     if (!isAuthorized) return;
     let active = true;
     async function loadMetadata() {
-      const [yearsRes, classesRes] = await Promise.all([
-        listAcademicYears(),
-        fetchSchoolClassesWithRosters(),
-      ]);
-      if (!active) return;
-      if (yearsRes.ok && yearsRes.data) {
-        setAcademicYears(yearsRes.data);
-      }
-      if (classesRes.ok && classesRes.data) {
-        setAvailableClasses(
-          classesRes.data.map((c) => ({
-            id: c.id,
-            name: c.name,
-            levelCode: c.levelCode || 'CP',
-            academicYear: c.academicYear,
-          })),
-        );
+      setMetadataError(null);
+      try {
+        const [yearsRes, classesRes] = await Promise.all([
+          listAcademicYears(),
+          fetchSchoolClassesWithRosters(),
+        ]);
+        if (!active) return;
+        if (!yearsRes.ok || !yearsRes.data || !classesRes.ok || !classesRes.data) {
+          setMetadataError(yearsRes.errorMessage || classesRes.errorMessage || 'Unable to load academic filter options.');
+        }
+        setAcademicYears(yearsRes.ok && yearsRes.data ? yearsRes.data : []);
+        setAvailableClasses(classesRes.ok && classesRes.data
+          ? classesRes.data.map((c) => ({
+              id: c.id,
+              name: c.name,
+              levelCode: c.levelCode || 'CP',
+              academicYear: c.academicYear,
+            }))
+          : []);
+      } catch (error) {
+        if (!active) return;
+        setAcademicYears([]);
+        setAvailableClasses([]);
+        setMetadataError(error instanceof Error ? error.message : 'Unable to load academic filter options.');
       }
     }
     void loadMetadata();
-    return () => {
-      active = false;
-    };
-  }, [isAuthorized, currentUser?.id]);
+    return () => { active = false; };
+  }, [isAuthorized, actorScopeKey]);
 
-  // Fetch student list from server
+  // Server-owned search; response generation prevents stale search/page writes.
   const loadStudents = async () => {
     if (!isAuthorized) return;
     const currentActor = currentUser?.id || 'anonymous';
-    if (actorKeyRef.current !== currentActor) {
-      actorKeyRef.current = currentActor;
-    }
     const reqId = ++requestSeqRef.current;
-
     setLoadingList(true);
     setListError(null);
-
-    const offset = (page - 1) * pageSize;
-    const res = await listSchoolStudents({
-      p_search: debouncedQuery || null,
-      p_academic_year_id: selectedYearId === 'ALL' ? null : selectedYearId,
-      p_class_id: selectedClassId === 'ALL' ? null : selectedClassId,
-      p_status: statusFilter,
-      p_limit: pageSize,
-      p_offset: offset,
-    });
-
-    if (reqId !== requestSeqRef.current || actorKeyRef.current !== (currentUser?.id || 'anonymous')) {
-      return; // superseded or actor changed
-    }
-
-    setLoadingList(false);
-    if (!res.ok) {
-      setListError(res.errorMessage || 'Failed to load school students.');
-      setStudentsData([]);
-      setTotalCount(0);
-      return;
-    }
-
-    if (res.data) {
+    try {
+      const res = await listSchoolStudents({
+        p_search: debouncedQuery || null,
+        p_academic_year_id: selectedYearId === 'ALL' ? null : selectedYearId,
+        p_class_id: selectedClassId === 'ALL' ? null : selectedClassId,
+        p_status: statusFilter,
+        p_limit: pageSize,
+        p_offset: (page - 1) * pageSize,
+      });
+      if (reqId !== requestSeqRef.current || actorKeyRef.current !== currentActor) return;
+      setLoadingList(false);
+      if (!res.ok || !res.data) {
+        setListError(res.errorMessage || 'Failed to load school students.');
+        setStudentsData([]);
+        setTotalCount(0);
+        return;
+      }
       setStudentsData(res.data.items || []);
       setTotalCount(res.data.total ?? 0);
+    } catch (error) {
+      if (reqId !== requestSeqRef.current || actorKeyRef.current !== currentActor) return;
+      setLoadingList(false);
+      setStudentsData([]);
+      setTotalCount(0);
+      setListError(error instanceof Error ? error.message : 'Failed to load school students.');
     }
   };
 
   useEffect(() => {
     void loadStudents();
-  }, [debouncedQuery, selectedYearId, selectedClassId, statusFilter, page, currentUser?.id]);
+    return () => { requestSeqRef.current++; };
+  }, [debouncedQuery, selectedYearId, selectedClassId, statusFilter, page, actorScopeKey, isAuthorized]);
 
   // Fetch student detail when selectedStudentId changes
   useEffect(() => {
@@ -178,31 +183,36 @@ export function StudentsManagementView({
     async function loadDetail() {
       setLoadingDetail(true);
       setDetailError(null);
-      const res = await getSchoolStudentIdentity(selectedStudentId!);
-      if (!active || reqId !== detailSeqRef.current || actorKeyRef.current !== currentActor) {
-        return;
+      setStudentDetail(null);
+      try {
+        const res = await getSchoolStudentIdentity(selectedStudentId!);
+        if (!active || reqId !== detailSeqRef.current || actorKeyRef.current !== currentActor) return;
+        setLoadingDetail(false);
+        if (!res.ok || !res.data) {
+          setDetailError(res.errorMessage || 'Failed to load student identity details.');
+          return;
+        }
+        if (res.data.studentId !== selectedStudentId) {
+          setDetailError('Student identity mismatch detected.');
+          return;
+        }
+        setStudentDetail(res.data);
+      } catch (error) {
+        if (!active || reqId !== detailSeqRef.current || actorKeyRef.current !== currentActor) return;
+        setLoadingDetail(false);
+        setDetailError(error instanceof Error ? error.message : 'Failed to load student identity details.');
       }
-      setLoadingDetail(false);
-      if (!res.ok || !res.data) {
-        setDetailError(res.errorMessage || 'Failed to load student identity details.');
-        setStudentDetail(null);
-        return;
-      }
-      if (res.data.studentId !== selectedStudentId) {
-        setDetailError('Student identity mismatch detected.');
-        setStudentDetail(null);
-        return;
-      }
-      setStudentDetail(res.data);
     }
     void loadDetail();
     return () => {
       active = false;
     };
-  }, [selectedStudentId, currentUser?.id, detailRetrySeq]);
+  }, [selectedStudentId, actorScopeKey, detailRetrySeq]);
 
-  // Handle actor change cleanup
+  // Reset only on an actual actor/authority change. Initial mount must preserve a deep link.
   useEffect(() => {
+    if (previousActorScopeRef.current === actorScopeKey) return;
+    previousActorScopeRef.current = actorScopeKey;
     actorKeyRef.current = currentUser?.id || 'anonymous';
     requestSeqRef.current++;
     detailSeqRef.current++;
@@ -212,11 +222,19 @@ export function StudentsManagementView({
     setTotalCount(0);
     setSearchQuery('');
     setDebouncedQuery('');
+    setAcademicYears([]);
+    setAvailableClasses([]);
+    setMetadataError(null);
+    setSelectedYearId('ALL');
+    setSelectedClassId('ALL');
+    setStatusFilter('ALL');
+    setPage(1);
+    listFocusStudentRef.current = null;
     setListError(null);
     setDetailError(null);
     setLoadingList(false);
     setLoadingDetail(false);
-  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
+  }, [actorScopeKey]);
 
   if (!isAuthorized) {
     return (
@@ -243,6 +261,15 @@ export function StudentsManagementView({
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  // Restore list keyboard focus after returning from a locally opened dossier.
+  useEffect(() => {
+    if (selectedStudentId || loadingList || !listFocusStudentRef.current) return;
+    const id = listFocusStudentRef.current;
+    const target = listViewRef.current?.querySelector<HTMLElement>(`[data-testid="students-view-${id}"]`);
+    (target ?? listViewRef.current?.querySelector<HTMLElement>('input[type="text"]'))?.focus();
+    listFocusStudentRef.current = null;
+  }, [selectedStudentId, loadingList]);
 
   // If a student is selected, render the administrative student overview panel
   if (selectedStudentId) {
@@ -442,6 +469,8 @@ export function StudentsManagementView({
         }
       />
 
+      {metadataError && <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">{metadataError}</p>}
+
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-[#111] p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -596,7 +625,8 @@ export function StudentsManagementView({
                       <td className="py-3.5 px-4">
                         <button
                           type="button"
-                          onClick={() => setSelectedStudentId(stu.studentId)}
+                          data-testid={`students-view-${stu.studentId}`}
+                          onClick={() => { listFocusStudentRef.current = stu.studentId; setSelectedStudentId(stu.studentId); }}
                           className="font-bold text-gray-900 dark:text-white hover:text-k-brand text-start transition-colors block"
                         >
                           {stu.fullName}
@@ -631,7 +661,7 @@ export function StudentsManagementView({
                       <td className="py-3.5 px-4 text-end">
                         <button
                           type="button"
-                          onClick={() => setSelectedStudentId(stu.studentId)}
+                          onClick={() => { listFocusStudentRef.current = stu.studentId; setSelectedStudentId(stu.studentId); }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-k-brand/10 hover:bg-k-brand/20 text-k-brand rounded-xl font-bold text-xs transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
