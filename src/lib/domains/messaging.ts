@@ -35,8 +35,6 @@ export function validateShortMessageContent(
   return { valid: true, clean };
 }
 
-const CANONICAL_LEVEL_CODES = new Set(CANONICAL_SCHOOL_LEVELS.map((lvl) => lvl.code));
-
 /**
  * UI-level role pair pre-check matching public.can_users_direct_message().
  * Server RPCs/RLS additionally verify active linked-child class assignments for PARENT <-> TEACHER.
@@ -55,15 +53,6 @@ export function canParticipantMessage(
     return false;
   }
   return true;
-}
-
-function unavailableResult<T>(): BackendOpResult<T> {
-  return {
-    ok: false,
-    status: 'BLOCKED_BACKEND',
-    errorCode: 'backend_unavailable',
-    errorMessage: 'This workflow is awaiting verified Supabase backend deployment.',
-  };
 }
 
 export async function listMessageThreads(
