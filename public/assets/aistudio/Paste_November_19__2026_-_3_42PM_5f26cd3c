@@ -1,0 +1,1361 @@
+# KRISTOU SCHOOL — MANDATORY DOMAIN ARCHITECTURE RECOVERY
+## Complete Modularization, Domain Ownership Enforcement and Monolithic Code Elimination
+
+**EXECUTION CLASS:** Architectural remediation of the existing application.
+
+**PRIORITY:** P0 — Architectural integrity before additional feature development.
+
+**TARGET:** Existing KRISTOU SCHOOL React 19 / TypeScript application.
+
+**BACKEND:** Existing Supabase project `ofppapwofhovhroyjtkc`.
+
+**MODE:** Evidence-first, contract-preserving, test-first, deny-by-default.
+
+**CURRENT OBJECTIVE:** Restore the already-approved domain architecture, eliminate confirmed cross-domain monolithic modules, and decompose oversized components according to their actual responsibilities without changing approved application behavior.
+
+**ABSOLUTE RULE:** Do not substitute a new architecture for the one the Product Owner already approved.
+
+---
+
+# 1. FORMAL ARCHITECTURAL NONCONFORMANCE
+
+The application has accumulated monolithic modules that violate the approved architecture documented in:
+
+- `AGENTS.md`
+- `structure.md`
+- `requirements.md`
+- `docs/CANONICAL_MODEL.md`
+- `docs/DECISIONS.md`
+- `docs/LIVING_BUILD_PLAN.md`
+- `docs/STUDENT_TEACHER_DOSSIER_PLAN.md`
+- The approved KRISTOU SCHOOL Master Execution Plan, revision 3
+
+The project is a multi-role school management application.
+
+It has separate logical domain owners.
+
+Those domains were never intended to become one generic School Operations or School Content service.
+
+The existing implementation has combined unrelated domain responsibilities in large modules and concentrated multiple workflows inside individual React components.
+
+This must be corrected.
+
+## Confirmed architectural violations
+
+### `src/lib/schoolContent.ts`
+
+Approximately 1,467 lines.
+
+Currently contains operations belonging to:
+
+1. Calendar.
+2. Class Community.
+3. Parent Notes.
+4. Messaging.
+5. Directory.
+6. Food Menu.
+7. Preferences.
+8. Notifications.
+9. Public Content.
+
+This is a confirmed cross-domain responsibility violation.
+
+### `src/lib/schoolOperations.ts`
+
+Approximately 647 lines.
+
+Currently combines:
+
+1. Academics.
+2. People.
+3. Enrollment.
+4. Public Inquiry.
+5. Students search and identity readers.
+
+This is a confirmed cross-domain responsibility violation.
+
+### `src/context/AppContext.tsx`
+
+Approximately 1,814 lines.
+
+Combines shared application state with hydration and operations from multiple school domains.
+
+The architecture specifically warns against turning AppContext into a permanent global business-data owner.
+
+## Oversized React implementations requiring decomposition
+
+| Existing source | Inspected size | Responsibilities requiring separation |
+|---|---:|---|
+| `src/components/views/attendance/StaffAttendanceRegisterPanel.tsx` | 2,573 lines | Attendance context, registers, drafts, submissions, conflict handling, historical queries, audit and rendering |
+| `src/components/views/Shared/SchoolCalendarPanel.tsx` | 1,914 lines | Calendar display, audience selection, event creation, RSVP, cancellation and request lifecycle |
+| `src/components/views/ClassesManagementView.tsx` | 1,789 lines | Class management, roster display, student selection, Teacher assignments and navigation |
+| `src/components/homepages/OwnerGovernanceWorkspace.tsx` | 1,687 lines | Account review, Manager delegation, privileged appointments, audit and governance UI |
+| `src/components/views/PerformanceView.tsx` | 1,395 lines | Teacher allocation presentation, Parent academic views and performance-state management |
+| `src/components/views/StudentsManagementView.tsx` | 707 lines | Search, filtering, pagination, dossier, navigation, actor isolation and network lifecycle |
+
+These are the inspected reference sizes, not required future line counts.
+
+**Size alone is not proof of cross-domain ownership. The requirement is to establish cohesive, independently testable responsibilities, not to satisfy an arbitrary line-count target.**
+
+Also inspect:
+
+- `src/App.tsx`
+- `src/components/Navbar.tsx`
+- `src/components/views/ClassCommunityView.tsx`
+- `src/components/views/Shared/ParentNotesPanel.tsx`
+- `src/components/views/GlobalAnnouncementsCalendarView.tsx`
+- `src/components/views/RegistrationView.tsx`
+- `src/components/views/DirectoryView.tsx`
+- `src/components/views/MessagesView.tsx`
+- `src/components/views/attendance/StudentAttendanceHistoryPanel.tsx`
+- `src/lib/accountGovernance.ts`
+- `src/lib/attendance/api.ts`
+- `src/lib/performance.ts`
+
+Do not automatically refactor every inspected file. Document its actual responsibility and change it only within the authorized, independently verifiable packet.
+
+---
+
+# 2. FIRST COMMAND — VERIFY CURRENT SOURCE AND RULES
+
+Before any mutation:
+
+1. Inspect all governing documents listed above.
+2. Inspect the actual current AI Studio workspace.
+3. Record the complete current source-file inventory.
+4. Record the exact starting source fingerprints.
+5. Identify published and unpublished modifications.
+6. Determine whether GitHub PR #33 changes already exist in this workspace.
+7. Identify current imports and exports for the affected modules.
+8. Identify every consumer of those exports.
+9. Identify existing tests for each affected feature.
+10. Identify actual installed Supabase contracts referenced by the frontend.
+
+The historical GitHub review inspected:
+
+`main@744fe97eb1fc55166f10b033c114cbd1a122e703`
+
+and the draft candidate:
+
+`fix/s2-student-navigation-20261119@6dfa1aac7e5f740bd9240f950b33778451774fb6`
+
+These are reference checkpoints, not instructions to overwrite current AI Studio source.
+
+If your current workspace differs, document the difference and preserve legitimate existing work.
+
+Do not delete newer code because it is absent from the historical audit.
+
+Do not use the attached Gemini audit as proof that a feature is complete.
+
+Do not claim a backend table, RPC, Storage bucket or grading policy exists without inspecting the authoritative contract.
+
+---
+
+# 3. NON-NEGOTIABLE DOMAIN OWNERSHIP MODEL
+
+Every domain must have a distinct logical responsibility, explicit public interfaces, permitted dependencies and test ownership.
+
+The domains must remain separate even though the frontend is a single React application and Supabase is the shared backend.
+
+**Separate logical domains do not mean separate databases, separate deployments or separate authentication systems.**
+
+Maintain:
+
+- One application.
+- One canonical identity system.
+- One established Supabase backend.
+- One authorized shared data authority.
+- Existing Browser and Telegram integration.
+- Existing account and approval policies.
+
+## Required domain mapping
+
+| Domain | Canonical responsibility | May consume | Must not own |
+|---|---|---|---|
+| **Calendar** | School events, audiences, responses, cancellation and event lifecycle | Academics assignment scope, Identity, Access Control | Attendance marks, class membership mutations, Parent Notes |
+| **Class Community** | Class announcements, homework, questions, replies, moderation and class media references | Academics scope, Media interfaces, Access Control | Independent roster authority, Calendar lifecycle, private messaging |
+| **Parent Notes** | Parent-originated notes, Teacher recipient selection, replies, quota and sending-window workflow | Family verified links, Academics Teacher assignments, Identity | Academic remarks, Attendance corrections, Messaging threads |
+| **Messaging** | Authorized operational threads, participants, replies and read acknowledgements | Identity, approved recipient/scope interfaces | Parent Notes quota or academic grading |
+| **Directory** | Explicitly approved public Teacher/Administration card publication | People verified presentation projection | Account approval, private personnel identity mutation |
+| **Food Menu** | School meal content, weekly menus and approved publication lifecycle | School staff permissions, Media where approved | Attendance, Family relationships, student health records |
+| **Preferences** | Authorized user/application preference settings | Identity account reference | School policy, account approval, domain business rules |
+| **Notifications** | Notification projection, destinations, read state and delivery integration | Approved domain event references | Underlying Enrollment, Attendance, Calendar or Governance decisions |
+| **Public Content** | Approved public information and public inquiry entry points | Directory, Food Menu and other public read projections | Private school/student records |
+| **Academics** | Academic years, levels, classes, subjects, class membership and Teacher assignments | People identity references, Identity and Access Control | Assessment marks, Attendance registers, Enrollment decisions |
+| **People** | Canonical student/staff identity and permitted identity details | Explicit Identity account association, approved academic references | Account credentials, implicit guardian authority, class assignment ownership |
+| **Enrollment** | Applications, admission review, document requirements and authorized enrollment operations | People, Family, Academics and Media contracts | Account approval, invented pupil identities, unauthorized class placement |
+| **Public Inquiry** | Public inquiry submission, staff review and response lifecycle | Public context, authorized staff identity | Enrollment applications, internal messaging, school account creation |
+| **Students search and identity readers** | Authorized People-owned student directory and identity projections | Academics membership read projection, approved Access Control | Duplicated student records, independent roster storage, grades and guardian mutation |
+
+### Important distinction
+
+**Students search is not a new competing student-identity domain.**
+
+Students search and identity readers belong to the People domain as a dedicated read capability.
+
+They may consume authorized Academics membership projections to display class/year history.
+
+They must not introduce a second `students` authority.
+
+Similarly:
+
+- Notification delivery is not a new authority for the underlying event.
+- Public Directory is not the private staff-personnel record.
+- Academic Performance is not an independent grading authority.
+- Attendance may reference class membership but does not own it.
+- Enrollment may coordinate approved domain operations but must not create competing canonical records.
+
+These distinctions must be visible in the code structure and interfaces.
+
+---
+
+# 4. REQUIRED CLEAN MODULE STRUCTURE
+
+Follow the established `src/lib` feature-adapter convention and existing component organization.
+
+Do not create a second application architecture.
+
+Do not introduce a large generalized `services/`, `managers/`, `utils/` or `schoolCore/` layer.
+
+A permissible organizational pattern is illustrated below.
+
+**The paths below are candidate organization targets, not verified existing directories or authorization to create every file.**
+
+Before creating a file, verify that an appropriate owner does not already exist.
+
+```text
+src/
+├── app/
+│   └── [small navigation intent contracts if required]
+│
+├── context/
+│   └── AppContext.tsx
+│       [shared app/session/presentation composition only]
+│
+├── lib/
+│   ├── calendar/
+│   │   ├── existing calendarAudience.ts
+│   │   ├── existing calendarModel.ts
+│   │   ├── existing calendarQueries.ts
+│   │   └── [calendar RPC adapters as required]
+│   │
+│   ├── class-community/
+│   │   └── [announcements, homework, questions and media readers]
+│   │
+│   ├── parent-notes/
+│   │   └── [note transport and scoped projections]
+│   │
+│   ├── messaging/
+│   │   └── [threads, recipients and message operations]
+│   │
+│   ├── directory/
+│   │   └── [public card readers and publication commands]
+│   │
+│   ├── food-menu/
+│   │   └── [menu readers and publication operations]
+│   │
+│   ├── preferences/
+│   │   └── [per-user preferences transport]
+│   │
+│   ├── notifications/
+│   │   └── [notifications readers and read acknowledgements]
+│   │
+│   ├── public-content/
+│   │   └── [public content projections]
+│   │
+│   ├── academics/
+│   │   └── [years, classes, memberships and assignments]
+│   │
+│   ├── people/
+│   │   └── [student identity and school-wide student readers]
+│   │
+│   ├── enrollment/
+│   │   └── [applications and approved admission operations]
+│   │
+│   └── public-inquiry/
+│       └── [inquiry operations]
+│
+├── components/
+│   ├── views/
+│   │   ├── attendance/
+│   │   ├── calendar/
+│   │   ├── classes/
+│   │   ├── students/
+│   │   ├── performance/
+│   │   └── [existing domain-related view locations]
+│   │
+│   └── homepages/
+│       └── [existing role homepages and governance surfaces]
+│
+└── App.tsx
+    [application composition and navigation only]
+```
+
+This example demonstrates responsibility boundaries, not mandatory names.
+
+### Rules for module creation
+
+1. Search for an existing canonical owner before adding a module.
+2. Preserve existing tested modules when they already provide the correct boundary.
+3. One feature module must have one coherent responsibility.
+4. A module may contain several related functions when they implement the same contract.
+5. Do not create one file per trivial helper merely to reduce line counts.
+6. Do not create an empty directory or placeholder module.
+7. Do not create a generic domain manager that imports all other domains.
+8. Do not use deep relative imports to bypass public interfaces.
+9. Avoid circular domain dependencies.
+10. Do not move server authorization policy into frontend modules.
+11. Do not introduce another Supabase client instance.
+12. Preserve existing typed RPC contracts.
+13. Use explicit module interfaces.
+14. Preserve actual error semantics and result shapes.
+15. Do not change business behavior during a pure structural extraction.
+
+A domain boundary is valid only if its implementation and consumers obey the intended ownership.
+
+---
+
+# 5. DECOMPOSE `schoolContent.ts` — NINE SEPARATE OWNERS
+
+This is a mandatory remediation group.
+
+The existing source contains these inspected operations:
+
+### Calendar
+
+- `upsertSchoolCalendarEvent`
+- `cancelSchoolCalendarEvent`
+- `respondToCalendarEvent`
+- Calendar-related audience and date helpers
+
+Move the transport and behavior to the existing Calendar feature ownership.
+
+Preserve:
+
+- Audience snapshots.
+- Existing event validation.
+- RSVP authorization.
+- Cancellation behavior.
+- Current school-wide and class-scoped Calendar readers.
+- Existing installed RPCs.
+- Existing lifecycle and race-condition safeguards.
+
+Do not combine Calendar with Class Community merely because both appear on the same screen.
+
+### Class Community
+
+- `listClassCommunityContent`
+- `createClassAnnouncement`
+- `createClassHomework`
+- `postClassQuestion`
+- `replyClassQuestion`
+- `moderateClassQuestion`
+
+Use a coherent Class Community owner.
+
+Keep distinct operations for announcements, homework and questions while sharing only genuinely reusable class-scope interfaces.
+
+Do not duplicate Academics class membership.
+
+### Parent Notes
+
+- `listParentNotes`
+- `sendParentNote`
+- `replyParentNote`
+- Existing Notes quota/date helpers
+
+Preserve the existing installed sending-window and quota behavior during extraction.
+
+The known 08:00 quota-reset and explicit Teacher selection questions remain a separate corrective contract packet.
+
+Do not silently change those policies as part of modularization.
+
+### Messaging
+
+- `listMessageThreads`
+- `listApprovedMessageRecipients`
+- `sendOperationalMessage`
+- `replyOperationalThread`
+- Related recipient, participant and unread helpers
+
+Messaging must not import Parent Notes business logic.
+
+The two domains may use the same approved Identity/Access Control information but own different transactions and policies.
+
+### Directory
+
+- `listPublicDirectory`
+- `upsertDirectoryEntry`
+
+Directory publication must remain explicitly controlled by school authorization.
+
+Do not turn account approval into automatic public Directory publication during this extraction.
+
+### Food Menu
+
+- `fetchActiveFoodMenu`
+- `saveFoodMenuWeek`
+
+Keep food content and publishing operations separate from Directory and Public Content.
+
+Do not invent meal orders, payments, medical-diet policy or additional lifecycle persistence.
+
+### Preferences
+
+- `loadMyPreferences`
+- `saveMyPreferences`
+
+Preferences may consume the verified current account identity.
+
+Do not allow preferences to mutate school policy or grant permissions.
+
+### Notifications
+
+- `listMyNotifications`
+- `markNotificationReadOnServer`
+- `markAllNotificationsReadOnServer`
+
+Preserve:
+
+- Correct destinations.
+- User-specific read state.
+- Refresh reconciliation.
+- Existing optimistic read safeguards.
+- Current notification filtering behavior.
+
+Do not change notification delivery contracts during extraction.
+
+### Public Content
+
+- `fetchPublicContent`
+- `listSchoolBroadcasts`
+- `publishSchoolBroadcast`
+- Existing public-safe content helpers
+
+Preserve the distinct ownership of public content versus school broadcasts.
+
+Public Content may compose public projections, but must not acquire the write authority of all sources.
+
+If Broadcasts already have a separate canonical owner, retain that ownership rather than treating every public announcement as generic Public Content.
+
+## Required outcome
+
+`schoolContent.ts` must no longer own these nine unrelated feature APIs.
+
+For every moved export:
+
+- Identify original signature.
+- Identify actual destination module.
+- Identify every existing importer.
+- Preserve argument and result contracts.
+- Update consumers.
+- Remove old duplicate implementation.
+- Confirm the original API is not secretly maintained as another generic owner.
+- Execute focused regression tests.
+
+A temporary compatibility re-export may be used only where a verified migration sequence requires it.
+
+It must not contain business logic and must have a recorded removal gate.
+
+**Do not declare this packet complete while the monolithic service remains the actual implementation owner.**
+
+---
+
+# 6. DECOMPOSE `schoolOperations.ts` — DOMAIN OWNERSHIP
+
+This is the second mandatory remediation group.
+
+### Academics
+
+Move responsibility for existing operations such as:
+
+- `fetchSchoolClassesWithRosters`
+- `createSchoolClass`
+- `assignTeacherToClass`
+- `listAcademicYears`
+
+Also determine the correct owner for class placement and Academic membership operations using existing contracts.
+
+Preserve Class Management backend PR #30 contracts, saved capacity, years and creation permissions.
+
+### People / Students
+
+Move:
+
+- `listSchoolStudents`
+- `getSchoolStudentIdentity`
+
+Preserve the exact installed RPC contracts:
+
+`list_school_students`
+
+`get_school_student_identity`
+
+The People student-directory reader may consume Academics membership history but must not create another student table, roster index or relationship authority.
+
+### Enrollment
+
+Move:
+
+- `submitEnrollmentApplication`
+- `listEnrollmentApplications`
+- `reviewEnrollmentApplication`
+
+Preserve the current admission decision and review rules.
+
+Do not make approval automatically create an application account.
+
+### Public Inquiry
+
+Move:
+
+- `submitPublicInquiry`
+- `listPublicInquiries`
+- `respondPublicInquiry`
+
+Public inquiries must remain separate from admission applications and operational Messaging.
+
+### School context composition
+
+Inspect:
+
+- `fetchMySchoolContext`
+- Any existing aggregated school context operation
+
+Determine whether it is a narrow authenticated composition reader rather than a domain writer.
+
+Retain legitimate orchestration only at the appropriate composition boundary, without moving each underlying domain's rules into that orchestrator.
+
+## Important mixed-domain operation
+
+`createAndEnrollStudent` requires special treatment.
+
+It may legitimately coordinate more than one domain because school enrollment involves student identity, membership and admission.
+
+**Do not split a transactional operation into multiple uncoordinated frontend writes.**
+
+Preserve the existing server-owned atomic operation.
+
+Determine its approved primary operation owner and represent other domains through typed input/reference contracts.
+
+Do not invent a new transaction mechanism.
+
+Do not split the existing RPC into browser-side sequential calls.
+
+---
+
+# 7. DECOMPOSE THE SIX OVERSIZED REACT COMPONENTS
+
+The objective is to separate independently testable presentation and workflow responsibilities without changing the existing visual design.
+
+## 7.1 Attendance — `StaffAttendanceRegisterPanel.tsx`
+
+Current size: approximately 2,573 lines.
+
+Maintain Attendance as its own domain.
+
+Identify and separate the existing responsibilities:
+
+- Current actor/Teacher/Office context.
+- Assigned class selection.
+- Academic-year and school-date context.
+- Register selection.
+- Register draft state.
+- Mark entry and bulk marking.
+- Save/submit flow.
+- Post-submit readback.
+- Conflict and retry state.
+- Historical register pagination.
+- Audit history.
+- Correction workflow.
+- Rendering of register tables.
+- Loading and error states.
+
+### Preserve exactly
+
+- One Teacher, one class and one school date per approved register.
+- Independent Teacher registers.
+- Draft persistence semantics.
+- Explicit marks.
+- Complete-roster submission rules.
+- Africa/Tunis school-date behavior.
+- Teacher cutoff.
+- Office/Owner corrections.
+- Audit history.
+- Existing authorization and revocation behavior.
+- Pending conflict recovery and operation locks.
+
+The final top-level Attendance component must orchestrate domain-owned hooks and focused presentation components instead of implementing the complete Attendance state machine inline.
+
+Do not move Attendance policy into Classes or Students.
+
+Do not rewrite the registered SQL/RPC layer.
+
+## 7.2 Calendar — `SchoolCalendarPanel.tsx`
+
+Current size: approximately 1,914 lines.
+
+Separate:
+
+- Calendar month/agenda rendering.
+- Selected date and displayed date ranges.
+- Event creation form.
+- Audience selection.
+- RSVP interaction.
+- Cancellation workflow.
+- Event detail display.
+- Request freshness, loading and error handling.
+- Language and accessible presentation.
+
+Reuse the existing:
+
+- `calendarAudience.ts`
+- `calendarModel.ts`
+- `calendarQueries.ts`
+- `calendarReadOwner.ts`
+- `useCalendarMonth.ts`
+
+Do not duplicate what these modules already provide.
+
+### Preserve exactly
+
+- Calendar snapshot audiences.
+- Whole-school and class event behavior.
+- Teacher assignment audience rules.
+- Existing event types.
+- RSVP and cancellation contracts.
+- Current Calendar UI behavior.
+- Protected Calendar tests and previous PR safeguards.
+
+Do not create another Calendar database, local event store or generic event manager.
+
+## 7.3 Classes — `ClassesManagementView.tsx`
+
+Current size: approximately 1,789 lines.
+
+Separate:
+
+- Class directory/filter view.
+- Authorized class creation.
+- Class roster rendering.
+- Student roster search and pagination.
+- Teacher assignment interface.
+- Student placement/enrollment interface.
+- Administrative student dossier navigation intent.
+- Teacher-specific Student Overview invocation.
+- Backend operation status and readback presentation.
+
+Reuse existing:
+
+- `src/lib/classes/classCreation.ts`
+- `src/lib/classes/classFilters.ts`
+- `src/lib/classes/studentOverview.ts`
+- Existing `StudentOverviewPanel`
+
+### Specific known defect
+
+The current implementation locally uses `string | null` for selected class IDs while the shared context setter expects a `string`.
+
+It also mixes shared class selection with roster-return navigation state.
+
+These contracts must be reconciled according to existing authority.
+
+No silent type weakening.
+
+No conversion of global school-class selection into an arbitrary navigation store.
+
+Preserve the PR #33 corrections where they are valid, but do not treat PR #33 as accepted.
+
+### Critical outcome
+
+Classes must own class/roster presentation state.
+
+Students must own student-directory/dossier presentation state.
+
+Academics must own actual class membership.
+
+People must own student identity.
+
+The application composition layer only coordinates navigation intent.
+
+## 7.4 Governance — `OwnerGovernanceWorkspace.tsx`
+
+Current size: approximately 1,687 lines.
+
+Separate presentation/workflow modules for:
+
+- Pending account review.
+- Account directory search.
+- Account detail and audit history.
+- Account approval/rejection/suspension/reactivation.
+- Manager delegation.
+- Privileged role appointments.
+- Governance preferences where actually owned.
+- Permission feedback and errors.
+
+Reuse the installed `accountGovernance.ts` contracts.
+
+If appropriate, split its production RPC adapters from its in-memory test harness, but do not change the tested governance rules.
+
+### Preserve
+
+- Current actor.
+- Owner privilege restrictions.
+- Manager delegation.
+- Administrative Personnel account-review boundaries.
+- No self-approval or unauthorized privileged appointments.
+- Existing versioning, operation locks and audit semantics.
+- Governance workspace scroll/focus correction from PR #32.
+
+Do not create a generic admin service that owns all school domains.
+
+## 7.5 Performance — `PerformanceView.tsx`
+
+Current size: approximately 1,395 lines.
+
+Distinguish actual implemented Teacher subject allocation and Parent academic presentation from planned Assessment functionality.
+
+Separate:
+
+- Teacher allocation presentation.
+- Authorized class/subject selection.
+- Parent child-selection projection.
+- Existing allocation reader state.
+- Refresh/retry lifecycle.
+- Loading, empty and error views.
+- Future Assessment presentation boundaries.
+
+Use the existing `src/lib/performance.ts` helpers where appropriate.
+
+### Forbidden
+
+Do not invent:
+
+- Grades.
+- Assessment records.
+- Term averages.
+- School targets.
+- Coefficients.
+- Report cards.
+- Parent-visible results not authorized by real contracts.
+
+Assessment remains a separate canonical domain.
+
+The architectural extraction must preserve the honest unavailable state where data is missing.
+
+## 7.6 Students — `StudentsManagementView.tsx`
+
+Current size: approximately 707 lines.
+
+Separate:
+
+- Students directory presentation.
+- Server-backed search.
+- Class/year/status filters.
+- Pagination.
+- Student dossier presentation.
+- Student membership history.
+- Student selection.
+- Detail retry.
+- Actor-scope isolation.
+- Request freshness and exception handling.
+- Navigation origin and focus restoration.
+
+### Required responsibility boundaries
+
+**People reader:** Student identity/search API.
+
+**Academics projection:** Class/year membership context.
+
+**Students UI:** Directory and dossier presentation.
+
+**Navigation composition:** Opening and returning from the dossier.
+
+**Authorization owner:** Existing UI capability checks and backend access enforcement.
+
+### Preserve
+
+- The real Students RPCs.
+- Exact student UUID.
+- Existing Teacher T1/T2 scoped Student Overview.
+- School-wide Owner/Office/delegated Manager access boundaries.
+- Directory search state.
+- Roster return context.
+- No fabricated academic results.
+- Correct private-state invalidation.
+- Honest failures and retries.
+- AR/FR/EN behavior.
+
+Do not introduce a new Student identity database or a second roster owner.
+
+---
+
+# 8. RECONCILE `AppContext.tsx` AND `App.tsx`
+
+These must be addressed as part of the architecture recovery because they currently connect the affected modules.
+
+## AppContext
+
+Inspect every state field, action and asynchronous loader.
+
+Classify each as:
+
+1. Shared application/session/presentation context.
+2. Domain-owned data.
+3. Domain-owned command.
+4. Read-only projection consumed across domains.
+5. Legacy or duplicated state.
+6. Protected behavior requiring an explicit separate authorization.
+
+Domain-owned data and commands must be transferred to their approved owners through focused tested changes.
+
+Do not simply create another huge `SchoolProvider` or `DomainManager`.
+
+Do not eliminate useful shared context just to reduce the file size.
+
+Do not move authorization enforcement into the browser.
+
+Preserve existing shared application composition and context contracts until their actual consumers have been migrated and verified.
+
+## App.tsx
+
+Keep it responsible for:
+
+- Main application composition.
+- Existing tab/subtab routing.
+- Authorized feature mounting.
+- Cross-screen navigation intent.
+- Shell-level dialogs.
+
+Do not let it own:
+
+- Student data fetching.
+- Class roster filtering.
+- Attendance state machines.
+- Calendar event operations.
+- Governance business rules.
+- Assessment calculations.
+- Enrollment mutations.
+
+Navigation state should be a small typed contract, not arbitrary cross-domain business state.
+
+Do not add another router unless the existing architecture and approved requirements explicitly authorize it.
+
+---
+
+# 9. MIGRATION METHOD — SAFE EXTRACTION, NOT A BIG-BANG REWRITE
+
+**DO NOT MODIFY EVERY DOMAIN AT ONCE.**
+
+The scope of this command covers all listed domains, but implementation must be divided into independently reviewable and verifiable packets.
+
+A large number of files changing simultaneously is not evidence of progress.
+
+Follow this sequence:
+
+### Gate 0 — Baseline and dependency graph
+
+Produce a source-grounded graph of every current export and consumer from:
+
+- `schoolContent.ts`
+- `schoolOperations.ts`
+- The six oversized components
+- `AppContext.tsx`
+- `App.tsx`
+
+Record exact module ownership and protected dependencies.
+
+No source mutation before this gate.
+
+### Gate 1 — Pure extraction of school-content domains
+
+Extract the nine distinct responsibilities without changing runtime behavior.
+
+Use small independently verifiable groups, beginning with the least-coupled operations as established by the real import graph.
+
+Each domain group must pass its focused tests before proceeding.
+
+### Gate 2 — School Operations extraction
+
+Separate Academics, People, Enrollment and Public Inquiry transport.
+
+Keep cross-domain atomic operations server-owned.
+
+Verify existing Students and Classes consumers.
+
+### Gate 3 — Shared context reconciliation
+
+Migrate existing consumer dependencies to their owning modules.
+
+Eliminate duplicated mutable business state only where safe and proven.
+
+Preserve AppContext's real shared application responsibilities.
+
+### Gate 4 — Attendance UI decomposition
+
+Move internally cohesive responsibilities into Attendance-owned modules.
+
+Run Attendance regression and state-machine tests.
+
+### Gate 5 — Calendar UI decomposition
+
+Reuse existing Calendar modules.
+
+Run Calendar audience, creation, RSVP and cancellation regressions.
+
+### Gate 6 — Classes and Students UI decomposition
+
+Resolve navigation and selection ownership.
+
+Preserve Teacher T1/T2.
+
+Verify roster, dossier, search, Back navigation and actor isolation.
+
+### Gate 7 — Governance UI decomposition
+
+Separate governance surfaces while preserving operation locks, permissions and audits.
+
+Run existing Governance regression suites.
+
+### Gate 8 — Performance UI decomposition
+
+Separate current Teacher/Parent presentation responsibilities without inventing Assessment functionality.
+
+### Gate 9 — Global regression and import closure
+
+Verify that every consumer imports the correct owner.
+
+Ensure old generic modules no longer retain the implementations of unrelated domains.
+
+### Gate 10 — Final artifact and evidence
+
+Provide a complete reviewable implementation record.
+
+**Each gate is a separate testable checkpoint.**
+
+Do not proceed to the next gate when the current gate is failing, blocked or has unresolved ownership contradictions.
+
+Do not report all gates complete because the first few compiled.
+
+---
+
+# 10. NON-NEGOTIABLE TEST STRATEGY
+
+A domain extraction is complete only when the system behaves the same before and after the structural change, except for a separately approved correction.
+
+### Contract verification
+
+For each moved operation, test:
+
+- Public function signature.
+- Typed inputs.
+- Typed outputs.
+- Error mapping.
+- Actual Supabase RPC name and arguments.
+- Authorization boundaries.
+- Existing consumer behavior.
+- Request cancellation and stale-response behavior where applicable.
+
+### UI regression
+
+Test actual rendered React components and user actions.
+
+Cover:
+
+- School Owner.
+- Administrative Personnel.
+- Delegated Manager.
+- Teacher.
+- Parent.
+- Student.
+- School Staff.
+- Public visitor.
+
+Use the expected access of each role rather than inventing a universal role-access matrix.
+
+### Domain regression
+
+Verify at least:
+
+**Attendance:** Register creation, draft, marks, submission, correction, history, audit, cutoff, actor change.
+
+**Calendar:** Event creation, snapshot audience, RSVP, cancellation, class/whole-school visibility.
+
+**Classes:** Class selection, roster, creation, assignment, Teacher Overview, administrative student opening and Back.
+
+**Students:** Search, filters, paging, dossier, retry, privacy and navigation.
+
+**Governance:** Account review, Manager delegation, privileged appointment, denied actions, audit and focus behavior.
+
+**Parent Notes:** Quota boundary, sending window, verified child and Teacher scope, reply rules.
+
+**Messaging:** Authorized participants, messages, replies and read projections.
+
+**Directory:** Public versus private fields and publication authority.
+
+**Food Menu:** Existing real reads and permitted writes.
+
+**Registration:** Existing application/review workflow and role restrictions.
+
+**Performance:** Real allocation readers, authorized Parent projections and honest unavailable states.
+
+**Notifications:** Filtering, exact destinations, read acknowledgements and actor scope.
+
+### Test credibility
+
+Do not claim:
+
+- A build proves UI behavior.
+- A controlled stub proves hosted Supabase policy.
+- Source-string assertions prove component navigation.
+- A mocked register proves real Attendance persistence.
+- A passing TypeScript check proves correct domain ownership.
+
+For every critical behavior, include a test exercising the real owning module or rendered component.
+
+For real backend authorization, require separate authorized and denied integration evidence.
+
+---
+
+# 11. CODE QUALITY AND MODULE RULES
+
+A module is unacceptable when it becomes a new catch-all owner.
+
+### Required
+
+- Explicit responsibility.
+- Cohesive functions.
+- Typed public interfaces.
+- Limited dependencies.
+- No cyclic domain imports.
+- No duplicated authoritative policy.
+- No unrelated RPC collections.
+- No hidden global mutable business store.
+- No new feature-specific credentials.
+- No new generic server-side authorization logic in React.
+- No fabricated responses.
+- No unnecessary dependencies.
+- No wholesale formatting passes.
+
+### Size discipline
+
+Prefer small files that can be reviewed and tested independently.
+
+A target of roughly 100–300 lines for focused presentation modules may be used as a review heuristic, **not as a hard product requirement**.
+
+Larger modules must have an explicit cohesion justification.
+
+A split is not accepted merely because an oversized file becomes shorter.
+
+The actual test is whether the new boundary reflects one coherent responsibility with correct imports and consumers.
+
+### Static dependency check
+
+Create or use the existing appropriate dependency-boundary tests to reject:
+
+- A domain importing another domain's private implementation.
+- A UI module importing a server-only module.
+- Parent Notes depending on Messaging's internal policy.
+- Calendar owning class membership mutation.
+- Attendance owning Academics membership mutation.
+- Directory mutating private Teacher school records.
+- Students creating a second pupil identity.
+- Generic school modules collecting unrelated RPCs again.
+
+Do not invent rules inconsistent with the approved architecture.
+
+Record every boundary rule and its source-document authority.
+
+---
+
+# 12. PROTECTED APPLICATION BEHAVIOR
+
+Do not modify, weaken, remove or duplicate:
+
+- Current Supabase authentication.
+- Account approvals.
+- Telegram linking and re-entry.
+- Manager delegated permissions.
+- Existing Teacher T1/T2.
+- Attendance C1–C3.
+- Calendar audience snapshots.
+- Governance PR #32 behavior.
+- Class Management PR #30 backend contract.
+- Students S1 read contracts.
+- Parent Notes existing installed quota and sending window.
+- Notifications and read-state safeguards.
+- Pickup release safety lock.
+- Public/private Directory separation.
+- Existing AR/FR/EN localization.
+- RTL Arabic content within the accepted navigation shell.
+- Current mobile-first design.
+- Existing light and Pitch Black themes.
+- Current Vite and deployment configuration.
+
+No database migration is authorized.
+
+No hosted SQL mutation is authorized.
+
+No new grading policy is authorized.
+
+No new assessment records are authorized.
+
+No account data cleanup is authorized.
+
+No production deployment, PR merge or publication is authorized.
+
+**This is an architectural source recovery, not a feature expansion.**
+
+---
+
+# 13. STRICT EVIDENCE AND REPORTING REQUIREMENTS
+
+Every extraction gate must provide:
+
+1. Exact starting source fingerprint.
+2. Exact current file and exported symbol inventory.
+3. Current import/caller graph.
+4. Approved canonical owner.
+5. Files moved or created.
+6. Original versus final operation signatures.
+7. Changes to callers.
+8. Existing behavior preserved.
+9. Tests added or modified.
+10. Raw executed test output.
+11. TypeScript check results.
+12. Production build results.
+13. Exact final changed-file inventory.
+14. Complete reviewable diff.
+15. Remaining violations.
+16. Protected file/contract changes, if any, with their authorization.
+17. Actual final SHA-256 file hashes.
+
+### Mandatory boundary report
+
+For every domain, report:
+
+| Field | Required evidence |
+|---|---|
+| Domain | Exact logical owner |
+| Before | Source functions and old module |
+| After | Actual owning module |
+| Interface | Exported typed API |
+| Consumers | Actual updated importers |
+| Backend | Unchanged verified contract |
+| Tests | Commands and results |
+| Duplicates | Any remaining implementation copies |
+| Status | PASS / FAIL / NOT VERIFIED / BLOCKED |
+
+### Monolith report
+
+For each oversized component:
+
+| Field | Required evidence |
+|---|---|
+| Existing responsibility | Exact inspected responsibilities |
+| Extracted responsibility | What was separated and why |
+| New owner | Existing or newly justified module |
+| Final root component | Remaining orchestration responsibility |
+| Tests | Behavioral regression results |
+| Risk | Any contract, state or ownership mismatch |
+| Status | PASS / FAIL / NOT VERIFIED / BLOCKED |
+
+Do not declare a file architecturally compliant solely because its line count decreased.
+
+---
+
+# 14. FINAL DELIVERABLE — ONE COMPLETE EVIDENCE ZIP
+
+When the authorized, executable gates have been completed, export a genuine downloadable ZIP:
+
+`KRISTOU_DOMAIN_ARCHITECTURE_RECOVERY_EVIDENCE.zip`
+
+It must contain actual final workspace artifacts:
+
+```text
+KRISTOU_DOMAIN_ARCHITECTURE_RECOVERY_EVIDENCE/
+├── README.md
+├── manifest.json
+├── baseline/
+│   ├── file-inventory.txt
+│   ├── source-fingerprints.txt
+│   └── import-dependency-map.md
+├── architecture/
+│   ├── domain-ownership-before.md
+│   ├── domain-ownership-after.md
+│   ├── public-interfaces.md
+│   └── cross-domain-dependencies.md
+├── source/
+│   └── [actual changed source files preserving relative paths]
+├── tests/
+│   └── [actual new and modified tests]
+├── diffs/
+│   ├── complete.patch
+│   └── changed-files.txt
+├── evidence/
+│   ├── extraction-gates.md
+│   ├── raw-test-logs/
+│   ├── typecheck.log
+│   ├── build.log
+│   ├── hashes.sha256
+│   └── protected-regressions.md
+└── acceptance/
+    ├── domain-boundaries.md
+    ├── monolith-remediation.md
+    └── unresolved-items.md
+```
+
+Only include genuine files and genuinely executed evidence.
+
+Do not fabricate a ZIP, logs, diff or SHA.
+
+If your environment cannot create an actual downloadable ZIP, explicitly state that limitation and provide the changed source through the available supported mechanism.
+
+Do not describe an inaccessible workspace as a delivered artifact.
+
+---
+
+# 15. STOP CONDITIONS
+
+Stop the affected gate and report `BLOCKED` when:
+
+- Required governing source is unavailable.
+- Current source conflicts with an unresolved architectural authority.
+- An operation's canonical owner cannot be determined without a Product Owner decision.
+- An extraction would change a server transaction or security contract.
+- A protected regression fails.
+- A proposed module introduces circular dependencies.
+- Current and target workspaces cannot be reconciled.
+- Existing work would be overwritten.
+- A dependent change requires unauthorized schema modification.
+- A required test cannot establish the behavior claimed.
+- The implementation starts recreating another monolithic generic service.
+
+Stop only the affected dependent work. Independently safe inspection and verification may continue.
+
+Do not guess an answer to bypass a stop condition.
+
+---
+
+# 16. REQUIRED EXECUTION GATES
+
+- [ ] Current workspace baseline recorded.
+- [ ] Governing architecture inspected.
+- [ ] Source ownership graph recorded.
+- [ ] Existing imports and consumers inventoried.
+- [ ] Nine `schoolContent` responsibilities assigned to their actual owners.
+- [ ] `schoolContent.ts` no longer implements unrelated domain operations.
+- [ ] Academics operations separated.
+- [ ] People/Students readers separated.
+- [ ] Enrollment operations separated.
+- [ ] Public Inquiry operations separated.
+- [ ] `schoolOperations.ts` no longer implements unrelated domain operations.
+- [ ] Shared AppContext responsibilities reconciled.
+- [ ] App navigation responsibilities reconciled.
+- [ ] Attendance oversized component decomposed.
+- [ ] Calendar oversized component decomposed.
+- [ ] Classes oversized component decomposed.
+- [ ] Governance oversized component decomposed.
+- [ ] Performance oversized component decomposed.
+- [ ] Students oversized component decomposed.
+- [ ] Every migrated caller uses its correct owner.
+- [ ] No duplicate authoritative implementation remains.
+- [ ] No circular domain dependency introduced.
+- [ ] No new generic monolithic service introduced.
+- [ ] Existing Supabase contracts preserved.
+- [ ] Existing Teacher/Attendance/Calendar/Governance behaviors protected.
+- [ ] Real tests executed for each completed gate.
+- [ ] Separate TypeScript validation completed.
+- [ ] Production build completed.
+- [ ] Responsive and language regressions checked.
+- [ ] Complete diff reviewed.
+- [ ] Evidence ZIP generated and integrity checked.
+- [ ] Remaining architectural debt explicitly recorded.
+
+An unverified item remains unchecked.
+
+Do not rename an incomplete gate to `COMPLETE`.
+
+---
+
+# 17. FINAL RESPONSE CONTRACT
+
+When execution stops or all gates are complete, return:
+
+**A. BASELINE**
+
+Actual source and workspace state.
+
+**B. DOMAIN EXTRACTION RESULTS**
+
+Every domain, old owner, actual new owner, migrated consumers and tests.
+
+**C. MONOLITH REMEDIATION RESULTS**
+
+Every oversized component, extracted responsibilities, final structure and regression evidence.
+
+**D. ARCHITECTURE COMPLIANCE**
+
+Confirmed boundaries, imports, duplicate owners and unresolved contradictions.
+
+**E. VERIFICATION**
+
+Raw results and exact commands.
+
+**F. SOURCE DIFF**
+
+Actual changed files and final hashes.
+
+**G. REMAINING WORK**
+
+Every incomplete or blocked gate with its reason.
+
+**H. EVIDENCE ZIP**
+
+Provide `KRISTOU_DOMAIN_ARCHITECTURE_RECOVERY_EVIDENCE.zip` if actually generated.
+
+**I. FINAL STATUS**
+
+Choose accurately:
+
+- `COMPLETE — VERIFIED`
+- `PARTIALLY IMPLEMENTED`
+- `BLOCKED`
+- `FAILED`
+
+No fabricated completion claims.
+
+---
+
+# 18. FINAL NON-NEGOTIABLE INSTRUCTION
+
+**RESTORE THE APPROVED ARCHITECTURE. DO NOT INVENT ANOTHER ONE.**
+
+Each domain must own its own behavior.
+
+Each domain must have its own coherent interfaces.
+
+The React components must present and coordinate domain behavior without becoming gigantic application services.
+
+AppContext must not become the owner of every school operation.
+
+No generic school-content or school-operations service may remain as the implementation owner of unrelated domains.
+
+No duplicate backend, account model, authorization policy or student database.
+
+No new monolithic files created under different names.
+
+No visual redesign.
+
+No invented features.
+
+No speculative grades.
+
+No weakening of existing tests.
+
+No unauthorized Supabase changes.
+
+**Implement each independently testable extraction gate against the actual source, verify it, then continue only when the next gate's prerequisites are satisfied.**
+
+**THE REQUIRED RESULT IS A MODULAR, DOMAIN-OWNED KRISTOU SCHOOL APPLICATION THAT PRESERVES EXISTING FUNCTIONALITY — WITH REAL SOURCE, REAL TESTS AND REAL EVIDENCE.**
+

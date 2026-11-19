@@ -1,0 +1,79 @@
+import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult, NotificationItem } from '../../types.ts';
+
+function unavailableResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'BLOCKED_BACKEND',
+    errorCode: 'backend_unavailable',
+    errorMessage: 'This workflow is awaiting verified Supabase backend deployment.',
+  };
+}
+
+export async function listNotifications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<NotificationItem[]>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client
+      .from('user_notifications')
+      .select('id, title, body, message, notification_type, type, target_view, target_tab, target_id, target_ref_id, is_read, read, created_at, time')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    const mapped: NotificationItem[] = Array.isArray(data)
+      ? data.map((row: Record<string, unknown>) => ({
+          id: String(row.id),
+          title: String(row.title || ''),
+          message: String(row.message || row.body || ''),
+          time: String(row.time || row.created_at || new Date().toISOString()),
+          read: Boolean(row.read ?? row.is_read),
+          type: (String(row.type || row.notification_type || 'announcement') as NotificationItem['type']),
+          targetTab: row.target_tab ? String(row.target_tab) : (row.target_view ? String(row.target_view) : undefined),
+          targetRefId: row.target_ref_id ? String(row.target_ref_id) : (row.target_id ? String(row.target_id) : undefined),
+        }))
+      : [];
+    return { ok: true, status: 'READY', data: mapped };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
+export async function listMyNotifications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<NotificationItem[]>> {
+  return listNotifications(client);
+}
+
+export async function markNotificationReadOnServer(
+  notificationId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<boolean>> {
+  const activeClient = client || supabase;
+  if (!activeClient) return unavailableResult();
+  try {
+    const { error } = await activeClient.rpc('mark_notification_read', { p_notification_id: notificationId });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    return { ok: true, status: 'READY', data: true };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
+export async function markAllNotificationsReadOnServer(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<number>> {
+  const activeClient = client || supabase;
+  if (!activeClient) return unavailableResult();
+  try {
+    const { error } = await activeClient.rpc('mark_all_notifications_read');
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    return { ok: true, status: 'READY', data: 1 };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}

@@ -1,0 +1,184 @@
+import { supabase, classifySupabaseError } from '../supabase.ts';
+import { CANONICAL_SCHOOL_LEVELS } from './academics.ts';
+import type {
+  BackendOpResult,
+  EnrollmentApplication,
+  EnrollmentApplicationStatus,
+} from '../../types.ts';
+
+export interface SubmitEnrollmentInput {
+  studentFullName: string;
+  birthDate: string;
+  desiredLevelCode: string;
+  parentFullName: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+}
+
+export interface SubmitEnrollmentReceipt {
+  id: string;
+  referenceCode: string;
+  status: EnrollmentApplicationStatus;
+  createdAt: string;
+}
+
+export interface ReviewEnrollmentInput {
+  applicationId: string;
+  decision: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'>;
+  reviewNote?: string;
+  expectedVersion: number;
+}
+
+function unavailableResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'BLOCKED_BACKEND',
+    errorCode: 'backend_unavailable',
+    errorMessage: 'This workflow is awaiting verified Supabase backend deployment.',
+  };
+}
+
+export function validateEnrollmentInput(
+  input: SubmitEnrollmentInput,
+): { valid: true } | { valid: false; errorCode: string } {
+  if (!input.studentFullName || input.studentFullName.trim().length < 2) {
+    return { valid: false, errorCode: 'invalid_student_name' };
+  }
+  if (!input.birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate.trim())) {
+    return { valid: false, errorCode: 'invalid_birth_date' };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (input.birthDate.trim() > today) {
+    return { valid: false, errorCode: 'invalid_birth_date' };
+  }
+  const level = (input.desiredLevelCode || '').trim().toUpperCase();
+  if (!CANONICAL_SCHOOL_LEVELS.some((l) => l.code === level)) {
+    return { valid: false, errorCode: 'invalid_level' };
+  }
+  if (!input.parentFullName || input.parentFullName.trim().length < 2) {
+    return { valid: false, errorCode: 'invalid_parent_name' };
+  }
+  if (!input.phone || input.phone.trim().length < 6) {
+    return { valid: false, errorCode: 'invalid_phone' };
+  }
+  return { valid: true };
+}
+
+export async function submitEnrollmentApplication(
+  input: SubmitEnrollmentInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<SubmitEnrollmentReceipt>> {
+  const check = validateEnrollmentInput(input);
+  if (check.valid === false) {
+    return {
+      ok: false,
+      status: 'ERROR',
+      errorCode: check.errorCode,
+      errorMessage: 'Please complete all required admission fields.',
+    };
+  }
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client.rpc('submit_enrollment_application', {
+      p_student_full_name: input.studentFullName.trim(),
+      p_birth_date: input.birthDate.trim(),
+      p_desired_level_code: input.desiredLevelCode.trim().toUpperCase(),
+      p_parent_full_name: input.parentFullName.trim(),
+      p_phone: input.phone.trim(),
+      p_email: input.email?.trim() || null,
+      p_notes: input.notes?.trim() || null,
+    });
+    if (error) {
+      return { ok: false, ...classifySupabaseError(error) };
+    }
+    return {
+      ok: true,
+      status: 'READY',
+      data: data as SubmitEnrollmentReceipt,
+    };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
+export async function listEnrollmentApplications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<EnrollmentApplication[]>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client
+      .from('enrollment_applications')
+      .select(
+        'id, reference_code, student_full_name, birth_date, desired_level_code, parent_full_name, phone, email, notes, submitted_by_user_id, status, review_note, reviewed_at, version, created_at',
+      )
+      .order('created_at', { ascending: false });
+    if (error) {
+      return { ok: false, ...classifySupabaseError(error) };
+    }
+    const mapped: EnrollmentApplication[] = Array.isArray(data)
+      ? data.map((row: Record<string, unknown>) => ({
+          id: String(row.id),
+          referenceCode: String(row.reference_code),
+          studentFullName: String(row.student_full_name),
+          birthDate: String(row.birth_date),
+          desiredLevelCode: String(row.desired_level_code),
+          parentFullName: String(row.parent_full_name),
+          phone: String(row.phone),
+          email: row.email ? String(row.email) : null,
+          notes: row.notes ? String(row.notes) : null,
+          submittedByUserId: row.submitted_by_user_id ? String(row.submitted_by_user_id) : null,
+          status: String(row.status) as EnrollmentApplicationStatus,
+          reviewNote: row.review_note ? String(row.review_note) : null,
+          reviewedAt: row.reviewed_at ? String(row.reviewed_at) : null,
+          version: Number(row.version ?? 1),
+          createdAt: String(row.created_at),
+        }))
+      : [];
+    return { ok: true, status: 'READY', data: mapped };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
+export async function reviewEnrollmentApplication(
+  input: ReviewEnrollmentInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<
+  BackendOpResult<{
+    id: string;
+    referenceCode: string;
+    status: EnrollmentApplicationStatus;
+    version: number;
+    reviewedAt: string;
+  }>
+> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client.rpc('review_enrollment_application', {
+      p_application_id: input.applicationId,
+      p_decision: input.decision,
+      p_review_note: input.reviewNote?.trim() || null,
+      p_expected_version: input.expectedVersion,
+    });
+    if (error) {
+      return { ok: false, ...classifySupabaseError(error) };
+    }
+    return {
+      ok: true,
+      status: 'READY',
+      data: data as {
+        id: string;
+        referenceCode: string;
+        status: EnrollmentApplicationStatus;
+        version: number;
+        reviewedAt: string;
+      },
+    };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
