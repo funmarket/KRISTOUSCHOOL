@@ -236,6 +236,15 @@ export function StudentsManagementView({
     setLoadingDetail(false);
   }, [actorScopeKey]);
 
+  // Restore list keyboard focus after returning from a locally opened dossier.
+  useEffect(() => {
+    if (selectedStudentId || loadingList || !listFocusStudentRef.current) return;
+    const id = listFocusStudentRef.current;
+    const target = listViewRef.current?.querySelector<HTMLElement>(`[data-testid="students-view-${id}"]`);
+    (target ?? listViewRef.current?.querySelector<HTMLElement>('input[type="text"]'))?.focus();
+    listFocusStudentRef.current = null;
+  }, [selectedStudentId, loadingList]);
+
   if (!isAuthorized) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-8 px-4">
@@ -261,15 +270,6 @@ export function StudentsManagementView({
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-  // Restore list keyboard focus after returning from a locally opened dossier.
-  useEffect(() => {
-    if (selectedStudentId || loadingList || !listFocusStudentRef.current) return;
-    const id = listFocusStudentRef.current;
-    const target = listViewRef.current?.querySelector<HTMLElement>(`[data-testid="students-view-${id}"]`);
-    (target ?? listViewRef.current?.querySelector<HTMLElement>('input[type="text"]'))?.focus();
-    listFocusStudentRef.current = null;
-  }, [selectedStudentId, loadingList]);
 
   // If a student is selected, render the administrative student overview panel
   if (selectedStudentId) {
