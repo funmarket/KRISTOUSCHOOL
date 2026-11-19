@@ -28,7 +28,7 @@ import { ParentNotesView } from './components/views/ParentNotesView';
 import { PickupBoardView } from './components/views/PickupBoardView';
 import { FoodMenuView } from './components/views/FoodMenuView';
 import { DirectoryView } from './components/views/DirectoryView';
-import { ClassesManagementView } from './components/views/ClassesManagementView';
+import { ClassesManagementView, type ClassRosterReturnContext } from './components/views/ClassesManagementView';
 import { RegistrationView } from './components/views/RegistrationView';
 import { StudentsManagementView } from './components/views/StudentsManagementView';
 import { AttendanceView } from './components/views/AttendanceView';
@@ -59,6 +59,8 @@ function MainLayout() {
   const [notificationTarget, setNotificationTarget] = useState<NotificationTargetIntent | null>(null);
   const [selectedStudentDetailId, setSelectedStudentDetailId] = useState<string | null>(null);
   const [studentNavOrigin, setStudentNavOrigin] = useState<'students' | 'roster'>('students');
+  const [rosterReturnContext, setRosterReturnContext] = useState<ClassRosterReturnContext | null>(null);
+  const studentActorScopeKey = `${currentUser?.id ?? 'anonymous'}:${currentUser?.role ?? ''}:${currentUser?.accountStatus ?? ''}:${(currentUser?.capabilities ?? []).slice().sort().join(',')}`;
   const [isAttendanceDirty, setIsAttendanceDirty] = useState<boolean>(false);
   const [pendingAttendanceLeave, setPendingAttendanceLeave] = useState<PendingAttendanceLeaveNav | null>(null);
   const notificationRequestSeq = useRef(0);
@@ -69,7 +71,8 @@ function MainLayout() {
     setPendingAttendanceLeave(null);
     setSelectedStudentDetailId(null);
     setStudentNavOrigin('students');
-  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
+    setRosterReturnContext(null);
+  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus, studentActorScopeKey]);
 
   const applyNotificationTarget = (notification: NotificationItem): boolean => {
     const actorKey = getNotificationActorKey(currentUser);
@@ -117,6 +120,7 @@ function MainLayout() {
       setSelectedStudentDetailId(null);
       setStudentNavOrigin('students');
     }
+    if (nextTab === 'classes') setRosterReturnContext(null);
     applySetTab(nextTab);
   };
 
@@ -302,6 +306,8 @@ function MainLayout() {
         {activeTab === 'classes' &&
           (canAccessAppTab(currentUser, 'classes') ? (
             <ClassesManagementView
+              key={studentActorScopeKey}
+              rosterReturnContext={rosterReturnContext}
               initialClasses={classRosters}
               initialRosters={rostersRecord}
               backendStatus={mappedClassesStatus}
@@ -315,7 +321,9 @@ function MainLayout() {
                 setSelectedClassId(classId);
                 handleSetTab('attendance');
               }}
-              onOpenStudentDetail={(studentId) => {
+              onOpenStudentDetail={(studentId, context) => {
+                setRosterReturnContext(context);
+                setSelectedClassId(context.classId);
                 setSelectedStudentDetailId(studentId);
                 setStudentNavOrigin('roster');
                 applySetTab('students');
@@ -335,13 +343,14 @@ function MainLayout() {
         {activeTab === 'students' &&
           (canAccessAppTab(currentUser, 'students') ? (
             <StudentsManagementView
+              key={studentActorScopeKey}
               initialSelectedStudentId={selectedStudentDetailId}
               navOrigin={studentNavOrigin}
               onBackToOrigin={() => {
+                setSelectedStudentDetailId(null);
                 if (studentNavOrigin === 'roster') {
+                  setStudentNavOrigin('students');
                   applySetTab('classes');
-                } else {
-                  setSelectedStudentDetailId(null);
                 }
               }}
             />
