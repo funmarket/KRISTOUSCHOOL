@@ -10,6 +10,10 @@ const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
 export default defineConfig({
   root: projectRoot,
   plugins: [react()],
+  define: {
+    __KRISTOU_SUPABASE_URL__: JSON.stringify('https://example.supabase.co'),
+    __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: JSON.stringify('test-publishable-key'),
+  },
   resolve: {
     alias: [
       { find: /^\.\.\/\.\.\/context\/AppContext$/, replacement: mockContext },
