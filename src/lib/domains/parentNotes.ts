@@ -13,6 +13,99 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid parent notes response.',
+  };
+}
+
+const PARENT_NOTE_TOPICS = new Set<ParentNote['topic']>([
+  'ABSENCE',
+  'HOMEWORK',
+  'BEHAVIOR',
+  'HEALTH',
+  'PICKUP',
+  'OTHER',
+]);
+
+const PARENT_NOTE_STATUSES = new Set<ParentNote['status']>(['SENT', 'READ', 'REPLIED']);
+
+function optionalString(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function parseParentNoteRow(data: unknown): ParentNote | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as Record<string, unknown>;
+
+  const id = optionalString(row.id);
+  const parentId = optionalString(row.parent_user_id);
+  const parentName = optionalString(row.parent_name);
+  const childId = optionalString(row.student_id);
+  const childName = optionalString(row.student_name);
+  const topic = optionalString(row.topic);
+  const content = optionalString(row.content);
+  const status = optionalString(row.status);
+  const createdAt = optionalString(row.created_at);
+
+  if (
+    typeof id !== 'string' ||
+    typeof parentId !== 'string' ||
+    typeof parentName !== 'string' ||
+    typeof childId !== 'string' ||
+    typeof childName !== 'string' ||
+    typeof topic !== 'string' ||
+    !PARENT_NOTE_TOPICS.has(topic as ParentNote['topic']) ||
+    typeof content !== 'string' ||
+    typeof status !== 'string' ||
+    !PARENT_NOTE_STATUSES.has(status as ParentNote['status']) ||
+    typeof createdAt !== 'string'
+  ) {
+    return null;
+  }
+
+  const classId = optionalString(row.class_id);
+  const teacherId = optionalString(row.recipient_teacher_id);
+  const schoolDay = optionalString(row.school_day);
+  const replyContent = optionalString(row.reply_content);
+  const repliedByName = optionalString(row.replied_by_name);
+  const repliedAt = optionalString(row.replied_at);
+
+  if (
+    classId === undefined ||
+    teacherId === undefined ||
+    typeof schoolDay !== 'string' ||
+    (row.reply_content !== undefined && replyContent === undefined) ||
+    (row.replied_by_name !== undefined && repliedByName === undefined) ||
+    (row.replied_at !== undefined && repliedAt === undefined)
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    parentId,
+    parentName,
+    childId,
+    childName,
+    classId,
+    teacherId,
+    topic: topic as ParentNote['topic'],
+    content,
+    schoolDay: schoolDay ?? undefined,
+    status: status as ParentNote['status'],
+    replyContent: replyContent ?? undefined,
+    repliedByName: repliedByName ?? undefined,
+    repliedAt: repliedAt ?? undefined,
+    createdAt,
+  };
+}
+
 export function getTunisTimeParts(date: Date = new Date()): {
   year: number;
   month: number;
@@ -106,25 +199,13 @@ export async function listParentNotes(
       )
       .order('created_at', { ascending: false });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const mapped: ParentNote[] = Array.isArray(data)
-      ? data.map((r: Record<string, unknown>) => ({
-          id: String(r.id),
-          parentId: String(r.parent_user_id),
-          parentName: String(r.parent_name),
-          childId: String(r.student_id),
-          childName: String(r.student_name),
-          classId: r.class_id ? String(r.class_id) : null,
-          teacherId: r.recipient_teacher_id ? String(r.recipient_teacher_id) : null,
-          topic: String(r.topic) as ParentNote['topic'],
-          content: String(r.content),
-          schoolDay: r.school_day ? String(r.school_day) : undefined,
-          status: String(r.status) as ParentNote['status'],
-          replyContent: r.reply_content ? String(r.reply_content) : undefined,
-          repliedByName: r.replied_by_name ? String(r.replied_by_name) : undefined,
-          repliedAt: r.replied_at ? String(r.replied_at) : undefined,
-          createdAt: String(r.created_at),
-        }))
-      : [];
+    if (!Array.isArray(data)) return invalidResponseResult();
+    const mapped: ParentNote[] = [];
+    for (const row of data) {
+      const note = parseParentNoteRow(row);
+      if (!note) return invalidResponseResult();
+      mapped.push(note);
+    }
     return { ok: true, status: 'READY', data: mapped };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -159,28 +240,23 @@ export async function sendParentNote(
       p_content: content.trim(),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const payload = (data ?? {}) as { note?: Record<string, unknown>; remainingToday?: number };
-    const r = payload.note ?? {};
+    if (!data || typeof data !== 'object') return invalidResponseResult();
+    const payload = data as Record<string, unknown>;
+    const note = parseParentNoteRow(payload.note);
+    const remainingToday = payload.remainingToday;
+    if (
+      !note ||
+      typeof remainingToday !== 'number' ||
+      !Number.isInteger(remainingToday) ||
+      remainingToday < 0 ||
+      remainingToday > PARENT_NOTES_DAILY_QUOTA
+    ) {
+      return invalidResponseResult();
+    }
     return {
       ok: true,
       status: 'READY',
-      data: {
-        remainingToday: Number(payload.remainingToday ?? 0),
-        note: {
-          id: String(r.id),
-          parentId: String(r.parent_user_id),
-          parentName: String(r.parent_name),
-          childId: String(r.student_id),
-          childName: String(r.student_name),
-          classId: r.class_id ? String(r.class_id) : null,
-          teacherId: r.recipient_teacher_id ? String(r.recipient_teacher_id) : null,
-          topic: String(r.topic) as ParentNote['topic'],
-          content: String(r.content),
-          schoolDay: r.school_day ? String(r.school_day) : undefined,
-          status: String(r.status) as ParentNote['status'],
-          createdAt: String(r.created_at),
-        },
-      },
+      data: { note, remainingToday },
     };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -203,27 +279,9 @@ export async function replyParentNote(
       p_reply_content: replyContent.trim(),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    return {
-      ok: true,
-      status: 'READY',
-      data: {
-        id: String(r.id),
-        parentId: String(r.parent_user_id),
-        parentName: String(r.parent_name),
-        childId: String(r.student_id),
-        childName: String(r.student_name),
-        classId: r.class_id ? String(r.class_id) : null,
-        teacherId: r.recipient_teacher_id ? String(r.recipient_teacher_id) : null,
-        topic: String(r.topic) as ParentNote['topic'],
-        content: String(r.content),
-        status: String(r.status) as ParentNote['status'],
-        replyContent: r.reply_content ? String(r.reply_content) : undefined,
-        repliedByName: r.replied_by_name ? String(r.replied_by_name) : undefined,
-        repliedAt: r.replied_at ? String(r.replied_at) : undefined,
-        createdAt: String(r.created_at),
-      },
-    };
+    const note = parseParentNoteRow(data);
+    if (!note) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: note };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
