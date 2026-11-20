@@ -1,244 +1,1498 @@
-# KRISTOU SCHOOL — STRUCTURE AND ARCHITECTURE
+# KRISTOU SCHOOL — CLEAN STRUCTURE AND DOMAIN ARCHITECTURE
 
-Status: **PRIMARY ARCHITECTURE CONTRACT**
+Status: **PRIMARY ARCHITECTURE CONTRACT — CLEAN TARGET + VERIFIED CURRENT BOUNDARIES**
 
-Revision: **2026-11-14 — DOC-D2**
+Revision: **2026-11-20**
 
-Repository: `funmarket/KRISTOUSCHOOL`
+Repository: **funmarket/KRISTOUSCHOOL**
 
-Product boundary: **one school, one shared Browser/Telegram product, one backend/data authority**
+Current recovery branch checkpoint used for this revision: **3117fbd6438b43a1b939decc5d42639d49c323ee**
 
-This document defines runtime boundaries, domain ownership and integration rules. Accepted behavior belongs in [requirements.md](requirements.md); canonical relationships and write invariants belong in [docs/CANONICAL_MODEL.md](docs/CANONICAL_MODEL.md); durable decisions belong in [docs/DECISIONS.md](docs/DECISIONS.md); execution discipline belongs in [docs/LIVING_BUILD_PLAN.md](docs/LIVING_BUILD_PLAN.md); dated evidence belongs in [progress.md](progress.md).
+Supabase project inspected read-only for this revision: **KRISTOUSCHOOL / ofppapwofhovhroyjtkc**
 
-This revision follows the Owner-approved **KRISTOU SCHOOL Master Execution Plan, revision 3**, saved as `KRISTOU_MASTER_EXECUTION_PLAN(1).txt`, SHA-256 `d0213cd47d3cbf94d749a7234a9ab29cc965448c0c39850f9d234978b053e3cd`, and accepted requirements revision DOC-D1. It reconciles **structure.md only**. Other authorities await their own document tasks; older Attendance/grades exclusions, historical runtime claims and alternative queues do not override these newer decisions. No application, SQL, account, infrastructure, commit, push, merge or deployment is authorized here. Backend implementation remains paused.
+Product boundary: **one school, one React product, one Supabase backend/data authority, one canonical identity model, Browser and Telegram as two runtime contexts of the same application.**
 
-## 1. Current topology and target
+---
 
-### 1.1 Dated source and inventory checkpoint
+## 0. Purpose and authority of this document
 
-The observations below were inspected on 2026-11-14. They establish the starting point, not production readiness. Refresh them before implementation or release.
+This document defines how the KRISTOU SCHOOL application must be structured so that future implementation stays maintainable, testable, secure, and free of duplicate ownership.
 
-| Surface | Observed state | Boundary of the evidence |
-| --- | --- | --- |
-| Repository | `main@32067aa961620facffe4ff906c5598f68d27d6ff`; PR #15 open/draft/unmerged at `473d889c1b8e86bf71f88f66b67779f4c3502f8e` | The PR candidate is separate from main and the unknown exact live frontend SHA |
-| Local documentation candidate | `fix/gov01-source-database-parity@2dc828a66968246c76f325edfd603a4771c83555`; existing accepted local `requirements.md` edit | Local HEAD has the PR-equivalent source tree; DOC-D1/D2 edits are uncommitted, not GitHub publication |
-| Frontend | One Vite/React/TypeScript app; tab/subtab composition, seven role homes plus public home, status screen and Owner oversight | Navigation guards are presentation, not backend authorization |
-| Identity/governance | Supabase Auth integration, server username resolver, explicit Telegram linking/re-entry and typed governance adapters exist | Do not describe all roles/login as mocks; presence does not prove every privileged operation |
-| Existing backend | Supabase project `KRISTOUSCHOOL / ofppapwofhovhroyjtkc`; six public tables with RLS enabled; seven migration records; `claim_telegram_account_link` exists | RLS flags and object counts are inventory, not allow/deny or concurrency acceptance |
-| Current public tables | `profiles`, `role_assignments`, `telegram_identities`, `account_link_challenges`, `manager_capability_grants`, `account_governance_audit_logs` | Table names do not imply full feature or Manager delegation completion |
-| Migration source | Six SQL files on main; seven in the PR-equivalent checkout, including recovered canonical roles | Historical source/live version mappings remain deliberate; no blind history repair or replay |
-| School-domain views | Context still imports mock school content; many actions are local, placeholders or unavailable; Pickup commands are explicitly backend-blocked | No installed People/Academics/Family/Enrollment/Attendance/Assessment/calendar/Pickup tables were found among the six public tables |
-| Storage and Realtime | **0 Storage buckets**; **0 public tables in the supabase_realtime publication** | No working private uploads or published table-change stream is assumed; this says nothing about all Broadcast/Presence channels |
-| Client database types | `src/lib/supabase.ts` contains handwritten `DatabaseSchema`, including absent `users`, `children`, `parent_notes` and `pickup_records` tables and an empty Functions map; profile Row omits `account_status` | These declarations are not a generated or installed-schema authority. Governance uses a separate RPC interface/cast; contract refresh is required, not claimed complete |
-| Owner manual acceptance | Owner reports successful deployed login, workspace navigation and non-impersonating oversight with Return to My Home | Valid manual evidence; not direct RLS/concurrency proof or exact-candidate release acceptance |
-| Frontend hosting | Vercel is the current frontend host; exact deployed SHA remains unestablished by this review | The old missing-public-config diagnosis is historical; do not report it as a current failure |
+It is intentionally not a feature wishlist and not a claim that every target folder below already exists.
 
-Detailed migration/function provenance remains in the master and dated [docs/REMOTE_SCHEMA_INVENTORY.md](docs/REMOTE_SCHEMA_INVENTORY.md). The master records username handler v6 versus newer source and protected Telegram handler parity limits; versions require fresh release inspection, not assumptions from this architecture file. Never redeploy old Telegram source merely to make source and hosting look alike.
+There are three kinds of statements in this document:
 
-### 1.2 Target and protected topology
+- **VERIFIED CURRENT** — observed in the current repository or installed Supabase project at the revision above.
+- **CLEAN TARGET** — the required architectural direction for future work.
+- **PLANNED / NOT INSTALLED** — accepted conceptual domain ownership whose physical persistence has not yet been established in the installed database.
 
-Continue the **existing** React product and Supabase project. Browser and Telegram WebView share one feature implementation, navigation authority, API contract and canonical durable state. Telegram adapts host mechanics and verified identity transport; it is not another frontend, role system, router or business backend.
+When a CLEAN TARGET section proposes a future split, it is an architectural boundary, not automatic authorization to refactor the repository.
 
-Supabase Auth owns Web credentials and provider sessions. The current canonical account maps `auth.users.id` to `profiles.id`; role assignments are separate records and may be plural. Do not describe every role assignment as a one-to-one Auth mapping or silently introduce a second User table. School person/student identity may exist independently of login credentials; any account association is explicit and verified.
+Accepted product behavior remains governed by requirements.md. Canonical data relationships and invariants remain governed by docs/CANONICAL_MODEL.md. Durable architecture decisions remain governed by docs/DECISIONS.md. Execution authorization and current task sequencing remain governed by the latest Product Owner instruction and docs/LIVING_BUILD_PLAN.md.
 
-Use the smallest existing topology that meets the accepted scope. No monorepo conversion, Node API runtime, worker fleet, second frontend, speculative packages, school registry, inter-school memberships or school switching. A measured need and explicit architecture decision must precede any additional runtime.
+The purpose of structure.md is narrower:
 
-The following diagram describes source-level connectivity of existing identity/governance paths, not completion of future school features:
+1. define source boundaries;
+2. define canonical domain ownership;
+3. define dependency direction;
+4. define where database authority lives;
+5. prevent monolithic modules and duplicate business owners;
+6. define how the current code should evolve without a rewrite.
 
-```mermaid
+---
+
+# 1. Non-negotiable architecture principles
+
+## 1.1 One product, not parallel applications
+
+KRISTOU SCHOOL has one product implementation.
+
+Browser and Telegram WebView use the same React application, the same domain contracts, the same canonical account model, and the same Supabase authority.
+
+Telegram code may adapt:
+
+- Telegram initData verification;
+- launch/re-entry mechanics;
+- explicit account-link transport;
+- Telegram-specific host behavior.
+
+Telegram must not own:
+
+- a second role system;
+- a second student model;
+- a second router;
+- a second backend;
+- duplicate school feature logic;
+- duplicate durable application state.
+
+~~~mermaid
+flowchart LR
+  WEB["Browser"] --> APP["Canonical React Application"]
+  TG["Telegram WebView"] --> APP
+  APP --> AUTH["Supabase Auth / verified identity"]
+  APP --> CONTRACTS["Typed domain contracts"]
+  CONTRACTS --> SUPA["Supabase RPC / RLS / approved reads"]
+  SUPA --> DB["PostgreSQL durable authority"]
+~~~
+
+---
+
+## 1.2 One canonical owner per durable concept
+
+Every durable concept has exactly one owner.
+
+A UI screen may display fields owned by several domains, but the screen does not become the owner of those fields.
+
+A context provider may compose state from several domains, but it does not become the database owner.
+
+A compatibility barrel may export functions from several domains, but it does not become a business service.
+
+No feature is allowed to create a second table, second type hierarchy, second state store, or second API merely because importing the canonical owner is inconvenient.
+
+---
+
+## 1.3 Dependency direction is inward toward domain contracts
+
+The required direction is:
+
+**UI → feature composition → domain adapter → server/database contract → durable owner**
+
+Never:
+
+**UI → arbitrary table queries → cross-domain mutation → local state pretending to be authority**
+
+~~~mermaid
+flowchart LR
+  UI["Components / Views"] --> COMPOSE["Thin feature composition"]
+  COMPOSE --> DOMAIN["Owning domain adapter"]
+  DOMAIN --> API["RPC / RLS-scoped query"]
+  API --> DATA["Canonical tables"]
+  DATA --> API
+  API --> DOMAIN
+  DOMAIN --> MAP["Validated view-model mapping"]
+  MAP --> COMPOSE
+  COMPOSE --> UI
+~~~
+
+---
+
+## 1.4 PostgreSQL is durable business truth
+
+Supabase PostgreSQL owns durable school state.
+
+React state owns only:
+
+- current presentation state;
+- selected tabs/filters;
+- optimistic UI state with safe rollback/readback;
+- local display caches;
+- temporary form state.
+
+React state must never silently become the only owner of:
+
+- account approval;
+- roles/capabilities;
+- students;
+- guardian links;
+- class membership;
+- attendance;
+- grades;
+- Parent Notes;
+- messages;
+- publication state;
+- pickup/release state;
+- notification read state.
+
+---
+
+## 1.5 Authorization is server-owned
+
+Navigation visibility is presentation.
+
+Real authorization belongs to server contracts:
+
+- RLS;
+- RPC authorization;
+- verified server identity;
+- capability checks;
+- resource relationship checks.
+
+Client role strings are never sufficient authorization for a protected mutation.
+
+GENERAL_USER is not a database account role. Public visitors are anonymous readers of explicitly public content.
+
+---
+
+# 2. Verified current topology — 2026-11-20
+
+The current branch is a Vite + React + TypeScript application backed by the existing Supabase project.
+
+Verified current source characteristics:
+
+- src/context/AppContext.tsx is approximately **1,814 lines** and currently carries broad composition responsibility.
+- src/types.ts is approximately **590 lines** and mixes many application view types.
+- src/lib/domains already contains focused domain adapters and is the correct direction for business ownership.
+- src/lib/schoolContent.ts is primarily a compatibility re-export barrel.
+- src/lib/schoolOperations.ts is a compatibility re-export barrel.
+- the installed public Supabase schema currently contains **48 public tables**, all observed with RLS enabled.
+- current installed data includes identity/governance, preferences/notifications, people/academics, enrollment, broadcasts/calendar, class community, Parent Notes, messaging, directory, food menu, public content, academic subjects/allocations, attendance, and class-creation permissions.
+
+This means the clean-up goal is **not** to rebuild the application from scratch.
+
+The goal is to finish separating ownership that is already emerging.
+
+---
+
+# 3. Clean target source structure
+
+The following is the target organization.
+
+It preserves current repository conventions and avoids a disruptive framework rewrite.
+
+Files should move toward this shape only in explicitly authorized domain packets.
+
+~~~text
+src/
+├── main.tsx
+├── App.tsx
+│
+├── app/
+│   ├── AppShell.tsx                  # target: top-level composition only
+│   ├── routeModel.ts                 # target: typed tab/view route model
+│   └── featureRegistry.ts            # target only if needed; no business logic
+│
+├── context/
+│   ├── AppContext.tsx                # transition owner; composition only
+│   ├── IdentityContext.tsx           # target split when authorized
+│   ├── PreferencesContext.tsx        # target split when authorized
+│   └── NotificationContext.tsx       # target split when authorized
+│
+├── components/
+│   ├── AuthModal.tsx
+│   ├── Navbar.tsx
+│   ├── Footer.tsx
+│   │
+│   ├── homepages/
+│   │   ├── HomePageResolver.tsx
+│   │   ├── homepageAccess.ts
+│   │   ├── OwnerHomePage.tsx
+│   │   ├── ManagerHomePage.tsx
+│   │   ├── AdministrativePersonnelHomePage.tsx
+│   │   ├── TeacherHomePage.tsx
+│   │   ├── ParentHomePage.tsx
+│   │   ├── StudentHomePage.tsx
+│   │   ├── SchoolStaffHomePage.tsx
+│   │   ├── PublicHomePage.tsx
+│   │   └── shared/
+│   │
+│   └── views/
+│       ├── StudentsManagementView.tsx
+│       ├── ClassesManagementView.tsx
+│       ├── AttendanceView.tsx
+│       ├── MessagesView.tsx
+│       ├── ParentNotesView.tsx
+│       ├── DirectoryView.tsx
+│       ├── FoodMenuView.tsx
+│       ├── GlobalAnnouncementsCalendarView.tsx
+│       ├── ClassCommunityView.tsx
+│       ├── RegistrationView.tsx
+│       ├── PickupBoardView.tsx
+│       └── Shared/
+│
+├── lib/
+│   ├── supabase.ts                   # one browser Supabase client owner
+│   ├── database.types.ts             # generated/verified DB contract owner
+│   ├── auth.ts                       # identity transport adapter
+│   ├── telegram.ts                   # Telegram host adapter only
+│   ├── username.ts                   # identifier rules
+│   │
+│   ├── domains/
+│   │   ├── academics.ts
+│   │   ├── people.ts
+│   │   ├── enrollment.ts
+│   │   ├── broadcasts.ts
+│   │   ├── calendarMutations.ts
+│   │   ├── classCommunity.ts
+│   │   ├── parentNotes.ts
+│   │   ├── messaging.ts
+│   │   ├── preferences.ts
+│   │   ├── notifications.ts
+│   │   ├── directory.ts
+│   │   ├── foodMenu.ts
+│   │   ├── publicContent.ts
+│   │   └── publicInquiry.ts
+│   │
+│   ├── attendance/
+│   │   ├── api.ts
+│   │   ├── logic.ts
+│   │   └── dateUtils.ts
+│   │
+│   ├── calendar/
+│   │   ├── calendarModel.ts
+│   │   ├── calendarQueries.ts
+│   │   ├── calendarAudience.ts
+│   │   ├── calendarReadOwner.ts
+│   │   └── useCalendarMonth.ts
+│   │
+│   ├── classes/
+│   │   ├── classCreation.ts
+│   │   ├── classFilters.ts
+│   │   └── studentOverview.ts
+│   │
+│   ├── schoolContent.ts              # compatibility barrel ONLY
+│   ├── schoolOperations.ts           # compatibility barrel ONLY
+│   └── focused cross-cutting guards
+│
+├── i18n/
+│   ├── translations.ts
+│   ├── authMessages.ts
+│   ├── homepages.ts
+│   ├── content.ts
+│   └── telegram-link.ts
+│
+├── data/
+│   └── mockData.ts                   # development/test preview only; never durable authority
+│
+└── types.ts                          # transition compatibility types; shrink over time
+
+supabase/
+├── config.toml
+├── migrations/
+├── functions/
+│   ├── _shared/
+│   ├── auth-username-signin/
+│   ├── telegram-auth/
+│   └── telegram-link-challenge/
+├── tests/
+└── seed.sql
+
+tests/
+├── browser/
+├── db/
+├── functions/
+├── helpers/
+└── focused Node regression suites
+~~~
+
+## 3.1 Important rule about the target tree
+
+The target tree does **not** require creating every proposed target file immediately.
+
+A file should be split only when a real responsibility boundary exists.
+
+The correct migration rule is:
+
+**move → prove → remove**
+
+Never:
+
+**copy → leave old owner active → create two sources of truth**
+
+---
+
+# 4. Domain module shape
+
+A domain may stay as one file while it remains focused.
+
+When a domain file becomes too large or begins to mix responsibilities, split **inside that domain**, not into generic shared files.
+
+Example clean growth pattern:
+
+~~~text
+src/lib/domains/messaging/
+├── index.ts             # public exports only
+├── api.ts               # Supabase/RPC calls
+├── contracts.ts         # domain request/result types
+├── mappers.ts           # server-row → application mapping
+├── validation.ts        # pure validation
+└── selectors.ts         # pure derived reads if needed
+~~~
+
+Not allowed:
+
+~~~text
+src/lib/
+├── management.ts
+├── helpers.ts
+├── common.ts
+├── everything.ts
+└── schoolService.ts
+~~~
+
+unless a file has one genuinely cross-domain technical responsibility.
+
+A name such as helpers, common, management, or service is not an ownership model.
+
+---
+
+# 5. No-monolith rules
+
+## 5.1 A module must have one reason to change
+
+A single module must not simultaneously own:
+
+- React rendering;
+- role authorization;
+- Supabase queries;
+- database row mapping;
+- form validation;
+- notifications;
+- routing;
+- Telegram behavior;
+- unrelated school domains.
+
+If a change to Parent Notes and a change to Food Menu both regularly modify the same implementation file, ownership is wrong.
+
+---
+
+## 5.2 AppContext is composition, not a school database
+
+The current AppContext is a transition point and is too broad to remain the permanent owner of feature behavior.
+
+Clean target responsibility for AppContext:
+
+- expose current signed-in identity/session context;
+- coordinate top-level application composition;
+- expose small stable context interfaces;
+- compose domain-specific providers/hooks where justified;
+- clear private presentation state on identity change.
+
+AppContext must gradually stop owning:
+
+- raw Parent Notes mapping;
+- raw Messaging mapping;
+- Notification persistence logic;
+- preference persistence rules;
+- directory CRUD;
+- food-menu CRUD;
+- calendar business rules;
+- student/class business rules.
+
+Domain behavior belongs to the owning adapter or domain-specific composition hook.
+
+---
+
+## 5.3 Components render; domains decide data contracts
+
+A component may:
+
+- collect input;
+- display loading/error/empty/denied states;
+- invoke an approved domain operation;
+- render returned application models.
+
+A component must not:
+
+- invent Supabase table names;
+- build privileged RPC parameter contracts ad hoc;
+- guess role authorization;
+- join unrelated tables in the browser;
+- convert malformed backend data into success;
+- silently swallow nested query errors.
+
+---
+
+## 5.4 Compatibility barrels are not service owners
+
+schoolContent.ts and schoolOperations.ts may remain while existing consumers depend on them.
+
+Their rule is strict:
+
+**re-export only, except explicitly approved tiny technical helpers during transition.**
+
+They must not accumulate:
+
+- business validation;
+- database queries;
+- cross-domain orchestration;
+- authorization;
+- server row mapping.
+
+The existing inline URL helper in schoolContent.ts is a known low-priority cleanup candidate, not permission to expand the barrel.
+
+---
+
+## 5.5 Size is a warning, responsibility is the real gate
+
+No hard line-count rule can replace design judgment, but the following review thresholds apply:
+
+- **0–250 lines:** normally healthy for a focused module.
+- **250–400 lines:** inspect responsibility density.
+- **400–700 lines:** split is normally expected unless the file is a cohesive declarative model.
+- **700+ lines:** requires explicit justification and a decomposition plan.
+- **1000+ lines:** presumed monolithic unless proven otherwise.
+
+The current 1,814-line AppContext is therefore a transition owner, not the desired end state.
+
+The purpose of splitting is not smaller files for their own sake. The purpose is one clear owner per behavior.
+
+---
+
+# 6. Clean application-layer architecture
+
+~~~mermaid
 flowchart TB
-  B["Browser"] --> UI["Canonical React product"]
-  T["Telegram WebView"] --> UI
-  UI --> API["Supabase Auth, RPC and Edge boundaries"]
-  API --> DB["Shared PostgreSQL authority"]
-```
+  subgraph Runtime["Runtime contexts"]
+    Browser["Browser"]
+    Telegram["Telegram WebView"]
+  end
 
-## 2. Runtime and source boundaries
+  subgraph Presentation["Presentation"]
+    App["App / App Shell"]
+    Nav["Navbar + role home resolver"]
+    Views["Feature Views"]
+    SharedUI["Shared presentational components"]
+  end
 
-### 2.1 Existing source map
+  subgraph Composition["Thin composition"]
+    IdentityCtx["Identity/session composition"]
+    FeatureCtx["Feature-specific hooks/providers"]
+  end
 
-These paths exist in the inspected checkout. They identify current reading/edit owners, not permission to change them in DOC-D2.
+  subgraph Domains["Canonical client domain adapters"]
+    Identity["Identity/Auth"]
+    Governance["Access/Governance"]
+    People["People"]
+    Academics["Academics"]
+    Enrollment["Enrollment"]
+    Attendance["Attendance"]
+    Calendar["Calendar"]
+    Broadcasts["Broadcasts"]
+    Community["Class Community"]
+    ParentNotes["Parent Notes"]
+    Messaging["Messaging"]
+    Notifications["Notifications"]
+    Preferences["Preferences"]
+    Directory["Directory"]
+    Food["Food Menu"]
+    Public["Public Content / Inquiry"]
+  end
 
-| Existing path | Current responsibility | Target discipline |
-| --- | --- | --- |
-| `src/main.tsx`, `src/App.tsx` | Entry and tab/subtab composition | Preserve one product; integrate actual permitted destinations without a new parallel router |
-| `src/context/AppContext.tsx` | Shared session/host/presentation composition plus remaining mock school data/actions | Migrate each accepted domain slice through its typed boundary; do not make this a permanent global business database |
-| `src/types.ts` | UI/product types | Separate view models from generated DB contracts; a UI interface does not create a table or permission |
-| `src/lib/supabase.ts` | Public client configuration, handwritten DB typing | Keep one client composition owner; refresh schema types under the contract gate |
-| `src/lib/auth.ts`, `src/lib/username.ts`, `src/lib/telegram.ts` | Shared credentials/profile loading, identifier rules, Telegram invocation/deep link | Preserve accepted auth and host behavior; no feature-owned credentials or browser contact lookup |
-| `src/lib/accountGovernance.ts` | Governance RPC adapters, command/result types and an in-memory test harness | Reuse existing RPCs; test harness is not a server or database concurrency proof |
-| `src/components/AuthModal.tsx`, `src/components/Navbar.tsx` | Shared authentication UI and navigation | Preserve AR/FR/EN copy, existing geometry and current login policy |
-| `src/components/homepages/HomePageResolver.tsx`, `src/components/homepages/homepageAccess.ts` | Role-home presentation and non-impersonating oversight | Actor stays unchanged; every private operation still needs server authorization |
-| `src/components/homepages/OwnerGovernanceWorkspace.tsx` | Existing governance screens | Domain adapters own effects; no UI-created privilege |
-| `src/components/views/ClassesManagementView.tsx`, `src/components/views/ClassCommunityView.tsx` | Roster and community surfaces | Wire real Academics/People/Family/content contracts; keep global member calendar accessible without a class |
-| `src/components/views/ParentNotesView.tsx`, `src/components/views/PickupBoardView.tsx` | Notes and safety-locked Pickup UI | Notes quota belongs server-side; no Pickup unlock without accepted backend |
-| `src/components/views/RegistrationView.tsx`, `src/components/views/FoodMenuView.tsx`, `src/components/views/DirectoryView.tsx`, `src/components/views/HomeView.tsx` | Admission, food, directories and public content | Replace mock/local paths only in the owning accepted vertical slice |
-| `src/i18n/translations.ts`, `src/i18n/authMessages.ts`, `src/i18n/homepages.ts`, `src/i18n/content.ts` | Shared interface/content localization | Arabic text within stable LTR shell; no mirrored control positions |
-| `supabase/config.toml`, `supabase/migrations/`, `supabase/seed.sql` | Local stack, versioned schema/security, synthetic seed | Existing project remains; isolated replay before hosted changes |
-| `supabase/functions/auth-username-signin/index.ts` | Username credential transport | New source is not automatically the installed handler |
-| `supabase/functions/telegram-auth/index.ts`, `supabase/functions/telegram-link-challenge/index.ts`, `supabase/functions/_shared/telegram-init-data.ts` | Telegram link/re-entry handlers, challenge and verifier source | Preserve baseline; source/deployed drift is a scoped parity issue, not automatic deployment permission |
-| `supabase/tests/`, `tests/` | SQL policy tests and Node tests | Distinguish real DB/API behavior, mocks, static guards and runtime evidence |
-| `vite.config.ts`, `package.json`, `tsconfig.json` | Vite build/configuration and checking | Only public Supabase config enters browser; frontend typecheck excludes Edge Functions and cannot certify their runtime |
+  subgraph Backend["Supabase backend authority"]
+    Auth["Supabase Auth"]
+    RPC["RPC / Edge Functions"]
+    RLS["RLS / grants / constraints"]
+    PG["PostgreSQL"]
+    Outbox["Notification outbox"]
+  end
 
-### 2.2 Frontend and server composition
+  Browser --> App
+  Telegram --> App
+  App --> Nav
+  App --> Views
+  Views --> SharedUI
+  App --> IdentityCtx
+  Views --> FeatureCtx
 
-React owns rendering, interaction, selection and presentation caches. It does not own account approval, capabilities, class membership, Attendance marks, grades, private object decisions or child release. Preserve current styles/logo, eight homes, Owner Teachers → Classes → Registration order, light-default/Pitch Black, mobile behavior and Arabic text inside a stable LTR shell.
+  IdentityCtx --> Identity
+  FeatureCtx --> Domains
 
-Future feature adapters follow existing `src/lib` conventions unless a demonstrated boundary needs a small colocated feature module. Exact proposed filenames from the master remain packet candidates until inspected; do not pre-create folders or move the entire app. Do not put server authority in browser-imported `src/` modules. If application/domain modules are extracted for a Deno function, keep them in a server-only import graph compatible with the actual function deployment packaging; freeze exact paths in that packet. No new `src/server` hierarchy or dependency installation is commissioned by this document.
+  Identity --> Auth
+  Governance --> RPC
+  Domains --> RPC
+  Domains --> RLS
+  RPC --> PG
+  RLS --> PG
+  PG --> Outbox
+  Outbox --> Notifications
+~~~
 
-Edge Functions are narrow transport/composition boundaries: request parsing, verified actor, input validation, domain operation and typed response. Domain policy must not depend on React, HTTP or a Supabase client. Database adapters and function composition depend toward domain/application contracts; consumers do not import another domain’s concrete persistence implementation.
+---
 
-### 2.3 Schema, storage and environment boundaries
+# 7. Canonical domain ownership matrix
 
-Versioned migrations own schema, constraints, indexes, grants, policies, SQL primitives and managed Storage-policy changes. PostgreSQL owns durable truth; object storage owns bytes. No dashboard-only schema owner, duplicate table family or automatic table creation from UI/mock types.
+| Domain | Owns | Does not own | Current primary source owner | Main installed database authority |
+| --- | --- | --- | --- | --- |
+| Identity & Authentication | canonical account identity, credentials transport, Telegram identity/link challenge | school roles, students, classes | auth.ts, telegram.ts, Edge Functions | auth.users, profiles, telegram_identities, account_link_challenges |
+| Access / Governance | approval state, effective roles, Manager capabilities, governance audit | login credentials, class membership | accountGovernance.ts + governance RPCs | role_assignments, manager_capability_grants, account_governance_audit_logs |
+| Preferences | language, theme, sound, vibration | permissions or access decisions | domains/preferences.ts | user_preferences |
+| Notifications | notification inbox/read state and delivery projection | source domain truth | domains/notifications.ts | notification_outbox, user_notifications |
+| People | student/person identity and school-member information projections | class membership, guardian relationship | domains/people.ts | students plus profile relationships |
+| Family | verified parent-child relationship | account identity, emergency-contact equivalence | server contract / narrow readers | parent_child_links |
+| Academics | years, levels, classes, class membership, teacher assignment, subject offerings | parent scope, attendance mark authority | domains/academics.ts plus classes modules | academic_years, school_levels, school_classes, student_class_memberships, teacher_class_assignments, curriculum/subject tables |
+| Enrollment | application intake/review and enrollment workflow | account approval, class membership mutation unless explicitly transactional | domains/enrollment.ts | enrollment_applications |
+| Calendar | canonical school event record, audiences, responses, cancellation lifecycle | announcements, attendance, pickup | calendar modules + domains/calendarMutations.ts | school_calendar_events, school_calendar_event_targets, school_calendar_responses |
+| Broadcasts | school announcements and publication targeting | canonical calendar state | domains/broadcasts.ts | school_broadcasts |
+| Class Community | class announcements, homework, class documents/gallery/questions/replies | class roster authority | domains/classCommunity.ts | class_announcements, class_homework_items, class_documents, class_gallery_items, class_questions, class_question_replies |
+| Parent Notes | structured parent-to-school notes, reply state, quota/window contract | generic DM system | domains/parentNotes.ts | parent_notes |
+| Messaging | short operational threads/messages and participant rules | Parent Notes, public announcements | domains/messaging.ts | message_threads, thread_participants, thread_messages |
+| Directory | approved public/internal directory presentation | private People records | domains/directory.ts | directory_entries |
+| Food Menu | weekly menu/day items and publication | general public content | domains/foodMenu.ts | food_menu_weeks, food_menu_days |
+| Public Content | published Home/About/Contact/activity content | private school records | domains/publicContent.ts | school_public_content |
+| Public Inquiry | public inquiry intake and staff response workflow | enrollment | domains/publicInquiry.ts | public_school_inquiries |
+| Attendance | registers, marks, attendance events/requests, authorized correction flow | class membership owner, assessment | lib/attendance | attendance_registers, attendance_entries, attendance_events, attendance_requests |
+| Class Creation Permission | explicit class-creation authorization | general governance or role assignment | classes/classCreation.ts + backend | class_creation_permissions |
+| Assessment / Performance | **PLANNED ownership** for marks/report calculations/publication | attendance, student identity | performance.ts is presentation logic today; backend owner not yet established | **not established in installed schema** |
+| Pickup / Release | **PLANNED safety domain** for authorized collector and release state | attendance or parent-arrival shortcut | PickupBoardView currently safety-blocked | **not established in installed schema** |
+| Media | **PLANNED generic byte lifecycle** | audience/meaning of attachments | no canonical installed owner yet | **not established** |
 
-Use caller-scoped access and tested RLS when the identity transport supports it. A service-role credential stays server-side, bypasses RLS and therefore needs explicit caller/resource authorization with deny-case tests. Ordinary clients never receive it.
+---
 
-Storage is a managed service boundary, not an existing repository folder or currently provisioned bucket. Create only the minimal private bucket/descriptor/policy contract required by the first accepted consumer in MED-01. Local/staging/production URLs, keys, data and Auth settings remain isolated; local reset uses synthetic data and must never target hosted production.
+# 8. Domain dependency rules
 
-## 3. Dependency and operation contracts
+Domain ownership does not mean isolation from all other domains.
 
-The common dependency direction is:
+It means dependencies are explicit and directional.
 
-**Presentation → typed feature adapter → verified server identity/access → owning application/domain operation → transactional persistence and approved projections.**
+~~~mermaid
+flowchart LR
+  Identity["Identity"] --> Access["Access / Governance"]
+  People["People"] --> Family["Family"]
+  People --> Academics["Academics"]
+  Academics --> Attendance["Attendance"]
+  Academics --> Calendar["Calendar"]
+  Academics --> Community["Class Community"]
+  Family --> ParentNotes["Parent Notes"]
+  Academics --> ParentNotes
+  Identity --> Messaging["Messaging"]
+  Access --> Messaging
+  Calendar --> Broadcasts["Broadcasts"]
+  Access --> Directory["Directory"]
+  People --> Directory
+  Identity --> Preferences["Preferences"]
+  Identity --> Notifications["Notifications"]
+  Enrollment["Enrollment"] --> People
+  Public["Public Content"] --> PublicUI["Anonymous public UI"]
+~~~
 
-Direct caller-scoped Supabase reads may use the same contract and RLS boundary without inventing an Edge Function for every query. Privileged or multi-row commands use the verified narrow RPC/function operation required by their invariant.
+Rules:
 
-| Dependency rule | Required consequence |
-| --- | --- |
-| Identity supplies the canonical actor; Access Control supplies current account/role/grants | Requested roles, client role strings, stale claims and cached profiles never authorize an operation |
-| Family/Academics/Enrollment supply relation, membership and eligibility facts | Attendance, Assessment, content and Pickup do not keep competing rosters or guardian lists |
-| One domain consumes another through a narrow approved reader/operation | No cross-domain React orchestration of unreviewed SQL or multiple HTTP calls presented as one transaction |
-| Source mutation, required audit and durable outbox commit atomically where required | Delivery failure cannot roll back or duplicate a committed business event |
-| Expected version/idempotency and conflict behavior are explicit per command | Retries and genuine concurrent requests cannot silently overwrite another accepted change |
-| Views, RPCs, files and realtime paths expose audience-filtered contracts | A base-table RLS flag or a signed URL’s existence is not full access proof |
-| Read models/caches/aggregates are non-authoritative | Profile history, reports and Control Center totals reconcile with source records and carry freshness where relevant |
+1. **Attendance consumes Academics membership/teaching context.** Attendance does not maintain a competing roster.
+2. **Parent Notes consumes Family + Academics facts.** Parent Notes does not infer a child from a surname or message recipient.
+3. **Messaging consumes approved participant identity.** Messaging does not use Parent Notes as a loophole and Parent Notes does not become generic chat.
+4. **Directory consumes safe presentation fields.** It does not expose the private People table directly.
+5. **Notifications project domain events.** A notification is never the authoritative state of the underlying domain.
+6. **Preferences are user-scoped.** Preferences never decide authorization.
+7. **Calendar owns calendar events.** Broadcasts and class features may reference or create calendar events only through the Calendar contract.
+8. **Enrollment acceptance is not account approval.** Identity/governance remains separate.
+9. **People identity is not class membership.** Academics owns membership.
+10. **Family link is not emergency contact text.** Family owns verified parent-child linkage.
 
-Calendar, Attendance, Assessment, admission, Parent Notes and Pickup each own their policy and transitions. Sharing a component or adapter transport does not transfer write authority. Structural extensibility means small coherent boundaries and tested contracts, not a generic management service.
+---
 
-## 4. Product-domain write ownership
+# 9. Installed database structure — clean ownership view
 
-The target boundaries below adopt the accepted master’s proposed Attendance/Assessment/calendar split for this architecture contract. They are **logical owners, not separate deployables or an installed schema**. DOC-D3 must reconcile conceptual relationships and invariants before new physical persistence. Unsettled fields/formulas/access policies remain the named decision gates.
+The installed database is larger than the old structure document described.
 
-| Durable concept | Canonical owner | Boundary |
-| --- | --- | --- |
-| Account, provider credentials/session, Telegram identity/challenge | Identity & Authentication | One canonical account; Supabase Auth credentials; explicit conflict-safe link/recovery; no person-name/contact merging |
-| Account approval/status, effective roles and grants | Access Control | Owner-only privileged appointments; automatic approved Office bundle for ordinary operations; Manager explicit delegation; no Office self/privileged governance |
-| Student/staff/parent identity and permitted contact/safety facts | People | School person can exist without credentials; account link explicit; restricted fields projected narrowly |
-| Verified guardian-to-child relationship | Family | Sole parent scope; emergency contact or name match is not a guardian link |
-| Year, level, class, subject, teacher/substitute assignment, student membership, teaching session, operational school date/closure | Academics | Sole academic scope/time context; temporary access bounded; past membership/session history retained |
-| Admission application, requirements/documents and enrollment eligibility | Enrollment | Acceptance is not account approval, guardian link, collector authorization or class membership |
-| Teacher registers/entries, corrections and absence-justification decision | Attendance | References pupil and approved teaching context; independent teachers; one counted entry per approved register identity; parent explanation is not mark authority |
-| Assessments/marks, report calculation/publication and educational remarks | Assessment | School policy before formulas; published/draft audiences distinct; no editable Profile totals or general confidential case dossier |
-| Class announcements/homework, class-content calendar, documents/gallery/questions | Class Community | Academics Class/membership is reused; no redundant ClassCommunity roster |
-| Structured parent notes/replies and their quota/time/audience | Parent Notes | 11 parent-originated notes, 08:00 inclusive–18:00 exclusive Africa/Tunis, 08:00 reset; not generic Messages |
-| Permitted short operational threads/messages | Messaging | Approved participants, 200-character limit; no student private DMs or Parent Notes loophole |
-| School/global notices and publication audiences | Broadcasts | One publication; all-approved-school audience distinct from class targeting; links canonical calendar events |
-| Dismissal policy, authorized collectors, arrival/release/early-leave records | Pickup | Sole physical-release authority; parent arrival and Attendance never release a child |
-| Notification inbox/read/delivery state | Notifications | Source-event projection and safe deep link; no private-body duplication or source-state authority |
-| Language, theme, sound/vibration preferences | Preferences | User-scoped presentation/delivery settings, not permissions |
-| Weekly/day menu and publication | Food Menu | La Toque Gourmande; approved editors, governed media and deliberate public visibility |
-| Public Teachers/Administration cards | School Directory | Approved presentation, separate from private People fields |
-| Home/About/Contact/activities/clubs/inquiries/public gallery and other approved public content | Public Content | Explicit public publication; public calendar references approved source events rather than owning another operational calendar |
-| Media descriptors and byte lifecycle | Media | Generic lifecycle only; owning product controls attachment meaning/audience |
-| Safe sensitive-operation history | Audit | Source operation supplies safe metadata; no tokens/passwords/unnecessary private bodies |
-| Durable asynchronous handoff | Async Foundation | Transactional outbox/delivery infrastructure; not another business owner or mandatory worker service |
-| Own Profile and Student Profile | Projections/orchestration over Identity, People, Family, Academics, Attendance and Assessment | Each field has one owner and permitted editor; no denormalized mutable all-in-one profile ledger |
-| School Settings | Owning domains, composed by authorized settings UI | No catch-all policy/configuration blob; changes do not retroactively rewrite history |
-| Reports and Control Center | Authorized read projections of owning domains | Aggregates confer no mutation rights; unavailable source is not a misleading zero |
-| Office/staff work queues and requests | School Operations application workflow over existing owners | Reuse admission/inquiry/other domain operations; DG-19 must identify owner/lifecycle of any genuinely new request before persistence |
-| AI assistant | Optional authorized API client | No second database or autonomous sensitive administrative authority |
+The following diagram groups currently installed tables by canonical owner.
 
-Transport/bus operations, tuition/payments, lunch ordering/payment, broad medical cases, automatic QR/face/geofence pickup, student private DMs and multi-school tenancy remain excluded. Existing service-card labels do not create those domains.
+~~~mermaid
+flowchart TB
+  subgraph IdentityDB["Identity / Governance"]
+    profiles["profiles"]
+    roles["role_assignments"]
+    tgids["telegram_identities"]
+    challenges["account_link_challenges"]
+    grants["manager_capability_grants"]
+    audit["account_governance_audit_logs"]
+  end
 
-## 5. Security and privacy architecture
+  subgraph UserDB["User-scoped state"]
+    prefs["user_preferences"]
+    notif["user_notifications"]
+    outbox["notification_outbox"]
+  end
 
-Every private operation verifies current actor, approved status, action capability and resource scope. Test pending/rejected/suspended/revoked status with old sessions, removed membership, revoked delegation and temporary-assignment expiry. Do not reopen protected Telegram lifecycle code as a shortcut; future feature transport must independently prove current server authorization.
+  subgraph AcademicDB["People / Family / Academics"]
+    years["academic_years"]
+    levels["school_levels"]
+    classes["school_classes"]
+    students["students"]
+    scm["student_class_memberships"]
+    tca["teacher_class_assignments"]
+    pcl["parent_child_links"]
+    curr["curriculum_domains"]
+    subjects["academic_subjects"]
+    components["academic_subject_components"]
+    applicability["subject_level_applicability"]
+    offerings["school_subject_offerings"]
+    allocations["teacher_subject_allocations"]
+    allocationEvents["teacher_subject_allocation_events"]
+    createPerm["class_creation_permissions"]
+  end
 
-Parents use verified Family links; Students use their own active membership; Teachers use assigned class/subject/session; Managers use delegated scope; School Staff use job-specific capability. Approved Office personnel receive the ordinary school-office bundle, not unrestricted medical, grade override or child-release authority. Only Owner appoints/governs Owner/Manager privileges; preserve a recoverable last Owner and reauthorize callers after lock waits.
+  subgraph EnrollmentDB["Enrollment / Public inquiry"]
+    enroll["enrollment_applications"]
+    inquiry["public_school_inquiries"]
+  end
 
-Exposed tables require deliberate least-privilege grants and tested RLS. Views require appropriate invoker/access semantics; SQL functions require reviewed ownership, execution grants and fixed search paths where privileged. A service-role or RLS-bypassing test runner cannot establish ordinary row isolation. Test API, RPC, storage and realtime denial as well as DB policies.
+  subgraph CalendarDB["Calendar / Broadcasts"]
+    broadcasts["school_broadcasts"]
+    events["school_calendar_events"]
+    targets["school_calendar_event_targets"]
+    responses["school_calendar_responses"]
+  end
 
-Minimize private data in projections/logs/notifications/exports. Emergency contacts are not automatically guardians or collectors. Minimal safety fields require DG-13 audience/verification policy and are narrower than full medical/enrollment records. Media policies inherit the owning resource scope; short-lived signed delivery still needs reviewed issue/revocation/expiry behavior. Synthetic fixtures only outside production.
+  subgraph CommunityDB["Class Community"]
+    ann["class_announcements"]
+    hw["class_homework_items"]
+    docs["class_documents"]
+    gallery["class_gallery_items"]
+    qs["class_questions"]
+    qrs["class_question_replies"]
+  end
 
-Use timezone-aware instants and **Africa/Tunis** for school business time. All-day dates use date-only semantics; a multi-day span covers every affected school date without device timezone shifts. No school-day absence is inferred from one lesson, and no calendar cancellation or pupil mark sets Pickup RELEASED.
+  subgraph CommunicationDB["Parent Notes / Messaging"]
+    notes["parent_notes"]
+    threads["message_threads"]
+    participants["thread_participants"]
+    messages["thread_messages"]
+  end
 
-## 6. Browser and Telegram identity boundary
+  subgraph PublicDB["Directory / Food / Public content"]
+    directory["directory_entries"]
+    menuWeeks["food_menu_weeks"]
+    menuDays["food_menu_days"]
+    content["school_public_content"]
+  end
 
-Preserve username/email-plus-password public login, phone-without-email signup requiring a chosen username, internal phone-backed username resolution, Unicode handles and approval separation. Full name is display data; public phone login and username-only provisioning remain unsupported.
+  subgraph AttendanceDB["Attendance"]
+    registers["attendance_registers"]
+    entries["attendance_entries"]
+    attEvents["attendance_events"]
+    requests["attendance_requests"]
+  end
 
-Browser uses the provider session to load the same canonical account. Telegram explicit linking validates signed fresh initData and atomically claims the one-time challenge; established later re-entry resolves that linked account without creating another account or issuing a Supabase Auth session. Preserve the agreed `09ffacf80daa4f546140053db441abb96c68ef8b` auth/link/challenge/cache/session baseline.
+  profiles --> roles
+  profiles --> tgids
+  profiles --> prefs
+  profiles --> notif
+  students --> scm
+  classes --> scm
+  classes --> tca
+  profiles --> tca
+  profiles --> pcl
+  students --> pcl
+  classes --> registers
+  registers --> entries
+  students --> entries
+  events --> targets
+  events --> responses
+  threads --> participants
+  threads --> messages
+  menuWeeks --> menuDays
+~~~
 
-A restored Telegram profile is not a Supabase bearer token or direct RLS authority. Each future private operation must define a verified Telegram transport with the same current role/resource policy and deny cases. Do not use a client profile/user ID to invoke a privileged handler, silently mint sessions, implement a second auth system or redeploy protected handlers during documentation work.
+---
 
-Owner workspace inspection changes presentation, not actor. Banner and Return to My Home remain; private calls retain the actual Owner identity and policy. Manager oversight is explicitly delegated and cannot become Owner privilege.
+# 10. Core relational schema
 
-## 7. Vertical wiring and feature dependencies
+The following ER diagram shows the principal identity, family, academics, communication, and attendance relationships.
 
-The master owns execution order; this table explains contracts between slices, not an alternative queue.
+It is intentionally not every column.
 
-| Slice | Required providers | Consumer/side-effect boundary | Master references |
-| --- | --- | --- | --- |
-| Existing governance closeout | Identity/Access, current migration parity, real isolated RLS/concurrency runner | Reuse existing `governance_*` RPC interfaces and workspace; Manager grants remain separately scoped | GOV-C1, F0-R1/R2/R3, F1-G1…G6 |
-| Records, individual entry and import | People/Academics/Enrollment/Family, reviewed identifiers/templates | Same writers for forms and CSV/XLSX preview/confirmed commit; no credentials/approval/guardian/collector side effects | F2-A1…A10, DG-02/DG-03 |
-| School/class calendar | Academic dates/subjects/assignments/sessions; Class Community; Broadcasts/Notifications | Shared calendar view models; global entry works without class; event referenced across feeds, not cloned | CAL-01/02/03, COM-01/02/03, DG-08/DG-14 |
-| Substitute cover | Access and effective Academic assignment | Current server-time/resource action limits; preserve actual actor and responsible context | CAL-04, DG-09 |
-| Attendance and justification | Pupil/membership, assigned teacher/subject/register or session, Family, private Media where needed | Register owner writes; Student Profile/reports read same records; parent explanation separate from staff decision | ATT-01…05, PRO-02, DG-08 |
-| Grades/report cards/remarks | Academic records/assignments, grading and audience policy | Assessment owns marks/calculations/review/publication; Profile/parent results are filtered projections | GRD-01…04, DG-11/DG-12 |
-| Emergency contacts/safety | People, verified relations, approved restricted field policy, Media if required | Staff/Pickup receive only their permitted operational projection | PRO-01/02, DG-13 |
-| Recovery/verified contact changes | Identity provider and verified operator/proof/session policy | Preserve canonical account/roles/links; profile edits cannot silently promote aliases | REC-01/02, ACC-01, DG-10 |
-| Admission and communication | Enrollment, Family/Academics/Access, Class Community/Parent Notes/Messaging as appropriate | Keep application, note, message and question state/audience distinct; publish safe notification references | F3-C1/C2/C3, COM-01/03/04 |
-| Public content, directory, Food Menu and preferences | Their canonical owners and approved Media | Private People/child data excluded; publication and user-preference contracts explicit | PUB-01…04, MED-01 |
-| Rollover | Years/enrollment/membership and historical consumers | Preview/confirmed audited commit; preserve prior Attendance/grades, expire current scopes | YEAR-01/02, DG-15 |
-| Pickup | Current account/authority, Family, enrollment/membership, collectors, dismissal policy | Atomic arrival vs verified physical release; Audit/Outbox, boards, reconnect and truthful delivery state | F4-P0…P3, DG-13/DG-16 |
-| Reports/settings/Control Center/staff queues | Approved source readers/domain operations | No duplicate ledgers/config owners; precise field/action scope and source freshness | REP-01, CFG-01, CTR-01, STF-01, DG-19 |
-| Whole-product operations | Isolated CI/staging, scope-specific acceptance, restore and measured targets | Compatible release order, monitoring, rollback/forward-fix and explicit activation | OPS-01…03, F5-V1…V3 |
+~~~mermaid
+erDiagram
+  PROFILES ||--o{ ROLE_ASSIGNMENTS : has
+  PROFILES ||--o| TELEGRAM_IDENTITIES : links
+  PROFILES ||--o{ USER_PREFERENCES : owns
+  PROFILES ||--o{ USER_NOTIFICATIONS : receives
 
-Attendance identity must distinguish different responsible teachers in the assigned teaching context. Class/day alone is insufficient. Repeated lessons by the same teacher on one day remain DG-08; do not freeze a unique key until that decision. Substitute/co-teaching and historical edit rights remain DG-09. These gates are design work, not reasons to remove accepted features.
+  ACADEMIC_YEARS ||--o{ SCHOOL_CLASSES : contains
+  SCHOOL_LEVELS ||--o{ SCHOOL_CLASSES : classifies
 
-Global Announcements contains the school calendar for **all seven approved school roles**, including staff with no class. Class-content calendar remains private to authorized class/guardian/staff scope. Academics owns closures and teaching-session changes; Broadcasts owns notice publication; neither a notice acknowledgement nor RSVP becomes Attendance. A closure can affect dismissal only through an explicitly reviewed Pickup policy.
+  STUDENTS ||--o{ STUDENT_CLASS_MEMBERSHIPS : joins
+  SCHOOL_CLASSES ||--o{ STUDENT_CLASS_MEMBERSHIPS : contains
 
-Hooma Athletes → Communities supplies interaction reference (month arrows, Today, selected date, markers and agenda, authorized inline edit/cancellation), not server ownership or infrastructure. Keep KRISTOU design, school timezone/date-only/multi-day behavior and audience semantics. Do not import Hooma Prisma, sports permissions, Photo Board or Whistle Board.
+  PROFILES ||--o{ TEACHER_CLASS_ASSIGNMENTS : teacher
+  SCHOOL_CLASSES ||--o{ TEACHER_CLASS_ASSIGNMENTS : staffed_by
 
-## 8. Schema, RPC and consumer contract-refresh gate
+  PROFILES ||--o{ PARENT_CHILD_LINKS : parent
+  STUDENTS ||--o{ PARENT_CHILD_LINKS : child
 
-Apply this gate to each authorized schema/RPC/function change, including existing reconciliation where relevant:
+  PROFILES ||--o{ PARENT_NOTES : submits
+  STUDENTS ||--o{ PARENT_NOTES : concerns
+  SCHOOL_CLASSES ||--o{ PARENT_NOTES : scopes
 
-1. Inspect actual installed schema, source migration mapping, handler versions and every caller. Freeze input/output/error, exposure/grant and compatibility contracts before editing.
-2. Replay reviewed changes in a clean isolated Supabase stack. Prove constraints, grants, RLS and exposed API/RPC allows and denies as ordinary principals; source guards and bypass-RLS runners are insufficient.
-3. Generate/refresh **one authoritative Supabase TypeScript database-type owner from the exact tested schema**. Freeze its path only after inspecting current consumers and actual pinned-tool support; record generation command and schema fingerprint. Handwritten duplicates are retired through the authorized consumer migration, not retained as another authority.
-4. Update affected typed adapters, validators and UI consumers. Test real RPC/API results/errors/denials and persisted readback, not only casts or compilation.
-5. Detect absent columns/tables, renamed RPC parameters, missing grants/exposure, stale generated types and incompatible handler payloads in CI/contract checks. Generated types do not prove RLS, policy or deployment.
-6. Release compatible backend dependencies before dependent frontend changes. Verify installed schema/function fingerprint and actual deployed app revision, with rollback/forward-fix and protected data postchecks.
+  MESSAGE_THREADS ||--o{ THREAD_PARTICIPANTS : contains
+  MESSAGE_THREADS ||--o{ THREAD_MESSAGES : contains
+  PROFILES ||--o{ THREAD_PARTICIPANTS : participates
+  PROFILES ||--o{ THREAD_MESSAGES : sends
 
-The current handwritten `DatabaseSchema` and separate governance RPC cast are gaps assigned to this gate, not instructions to create the nonexistent tables, enable broad grants or refactor all types during DOC-D2. Source/live historical migration mapping is not permission for blind `db push`, reset, history repair or replaying installed repair SQL.
+  SCHOOL_CALENDAR_EVENTS ||--o{ SCHOOL_CALENDAR_EVENT_TARGETS : targets
+  SCHOOL_CALENDAR_EVENTS ||--o{ SCHOOL_CALENDAR_RESPONSES : receives
 
-## 9. Media, asynchronous delivery and recovery
+  SCHOOL_CLASSES ||--o{ ATTENDANCE_REGISTERS : owns
+  ATTENDANCE_REGISTERS ||--o{ ATTENDANCE_ENTRIES : contains
+  STUDENTS ||--o{ ATTENDANCE_ENTRIES : marked_for
+~~~
 
-Media owns descriptors/byte lifecycle; product owners decide attachments/audiences. First-use provisioning includes file types/limits, upload binding, overwrite/delete, cleanup/retention and authorization tests. There are currently no observed Storage buckets to reuse; do not describe private documents as connected.
+---
 
-A business mutation and required durable delivery handoff commit together. Dispatch is bounded, retry-safe and idempotent, with safe failure observability. Select the minimal authorized transport when COM-01/F4-P3 are implemented; zero public Realtime publication tables do not prove that every channel is absent. Subscription/connect/reconnect and changed-recipient-scope tests are separate from a successful DB mutation.
+# 11. Identity and role model
 
-Keep Pickup’s backend-unavailable lock until isolated/staging safety acceptance and explicit activation. Reject unsafe commands when required coordination prerequisites fail. If a transition has already committed and delivery is delayed, show authoritative state plus delivery uncertainty; never pretend it rolled back or permit duplicate release. Only authorized staff physically verifies and confirms release.
+## 11.1 Canonical account roles
 
-Academic history uses effective memberships/assignments and versioned source records. Rollover, recovery and reports consume that history without rewriting it. Backup/restore scope must include required database, object, configuration and identity dependencies; database backup presence alone does not prove object recovery. Restore/readback is rehearsed in isolation, never a production overwrite drill.
+Registered-account roles are:
 
-## 10. Existing UI completeness and measured scalability
+1. APP_ADMIN — School Owner / Principal
+2. MANAGER — Manager / Associate Principal / Director
+3. PARENT
+4. STUDENT
+5. TEACHER
+6. SCHOOL_STAFF
+7. ADMINISTRATIVE_PERSONNEL
 
-Every existing Governance & Access, School Operations, role-home card, menu, form, bell and footer action must map to its real owning operation and correct destination. In particular: Manager Delegation/role governance are Access Control, Classes & Students are records/academic operations, school settings orchestrates domain config, and Control Center aggregates permitted readers. My Profile is not Home; Messages is not Parent Notes.
+GENERAL_USER is anonymous/public and is not an account role.
 
-Track each operation through destination, typed contract, verified server scope, canonical persistence, error/denied/offline/conflict/retry states, readback and staged/live acceptance. Keep the master’s 80-card register and UI-01/UI-02 action tracing; an Open label, explanatory panel or navigation-only route does not complete a feature. DG-19 classifies office/staff placeholders before new request lifecycles.
+## 11.2 Role ownership
 
-Use bounded queries/pagination, meaningful indexes for actual policy/join patterns, conflict-safe transactions, idempotent retries and measured query/load/error behavior. School-approved performance/recovery objectives are DG-16; do not invent limits or SLAs. Additional queues/caches/workers require demonstrated need and a separate decision. Reports/exports must remain scoped, audited and safe from private-field leaks and spreadsheet formula injection.
+Supabase Auth establishes authenticated identity.
 
-## 11. Architecture acceptance and continuation
+profiles stores canonical application profile/account state.
 
-A slice is accepted only when its canonical owner and dependencies are clear; reviewed schema/constraints/grants/RLS/storage/realtime contracts match the actual API; generated types and consumers agree; current-authority allow/deny cases pass; retries/concurrency preserve invariants; durable readback and applicable Browser/Telegram/mobile/trilingual/theme/accessibility flows are verified; and release/recovery evidence matches the exact candidate.
+role_assignments stores durable role assignments.
 
-Repository `lint` is frontend TypeScript checking, not ESLint; `tsconfig.json` excludes `supabase/functions`. The existing Node suite includes isolated logic and source guards. Neither proves Deno serving, real policy isolation, two-session concurrency, Storage, realtime or live acceptance. Use appropriate isolated SQL/function/API/runtime checks under each authorized implementation packet; do not reset hosted systems.
+manager_capability_grants stores delegated Manager capabilities.
 
-This documentation reconciliation validates text, references, ownership, dependencies and protected-file scope only. It does not certify the app as production-ready. Preserve manual Owner login/oversight acceptance as its proper evidence class. Real RLS/concurrency and matching deployed-version gates remain explicit; a plan check cannot close them.
+No UI component may infer an effective role by choosing whichever home page is visible.
 
-PR #15 overlaps `structure.md` and other authority documents. Before any later authorized publication/rebase/merge, inspect incoming hunks and preserve these newer accepted contracts, the local requirements reconciliation and protected Telegram scope. Do not expand the corrective PR into all-feature implementation, overwrite another writer, restore obsolete phone-login/Attendance exclusions or start another queue.
+No domain may create its own role enum.
 
-Next proposed document: **docs/CANONICAL_MODEL.md (DOC-D3)**, only after explicit instruction. Do not edit it, update the master/progress, merge PR #15 or resume backend work automatically.
+---
+
+# 12. Clean request flow
+
+Example: Parent sends a Parent Note.
+
+~~~mermaid
+sequenceDiagram
+  participant P as Parent UI
+  participant C as App composition
+  participant D as Parent Notes domain
+  participant RPC as send_parent_note RPC
+  participant DB as PostgreSQL
+  participant N as Notification outbox
+
+  P->>C: submit student/topic/content
+  C->>D: sendParentNote(...)
+  D->>D: local presentation validation
+  D->>RPC: p_student_id, p_topic, p_content
+  RPC->>RPC: verify auth + approved PARENT
+  RPC->>DB: verify parent-child link
+  RPC->>DB: verify quota/window/class
+  RPC->>DB: insert parent_notes
+  RPC->>N: enqueue teacher notification
+  RPC-->>D: {note, remainingToday}
+  D->>D: validate server response shape
+  D-->>C: typed BackendOpResult
+  C-->>P: update presentation state
+~~~
+
+This pattern applies across domains:
+
+- server owns privileged invariants;
+- client validates returned contract shape;
+- malformed success payloads fail closed;
+- UI never manufactures missing server fields.
+
+---
+
+# 13. State ownership
+
+## 13.1 Server-authoritative state
+
+Always server-authoritative:
+
+- account approval/status;
+- roles/capabilities;
+- parent-child links;
+- student identity;
+- class membership;
+- teacher assignments;
+- attendance;
+- Parent Notes quota/use;
+- message participants;
+- publication state;
+- notification read state;
+- calendar lifecycle;
+- enrollment state.
+
+## 13.2 Client presentation state
+
+Safe client-owned examples:
+
+- active tab;
+- open modal;
+- selected class;
+- search input;
+- expanded card;
+- unsaved form draft;
+- temporary loading/error state;
+- optimistic state that can be reconciled.
+
+## 13.3 Never mix the two
+
+A React state variable must not become authoritative merely because the UI needs immediate feedback.
+
+If the server rejects a mutation, the UI must show failure or reconcile from server truth.
+
+---
+
+# 14. Type ownership
+
+The application currently has a large src/types.ts compatibility surface.
+
+Clean target:
+
+1. database.types.ts owns generated or verified database-row contracts;
+2. each domain owns its request/result/application model types when the type is domain-specific;
+3. components consume domain/application view models;
+4. src/types.ts shrinks into genuinely shared presentation types only.
+
+Forbidden:
+
+- copying a database table interface into several feature files;
+- treating TypeScript casts as proof that a database column exists;
+- adding a field to a UI type and assuming persistence now supports it;
+- handwritten Supabase types that disagree with the installed schema.
+
+---
+
+# 15. Data-access rules
+
+## 15.1 Direct table reads
+
+Direct client reads are permitted only when:
+
+- RLS is the intended authorization boundary;
+- the table/view is intentionally exposed;
+- the adapter owns the query;
+- the selected columns are explicit;
+- malformed data/errors fail closed.
+
+## 15.2 RPCs
+
+Use RPCs for:
+
+- multi-row transactional invariants;
+- privileged state transitions;
+- atomic counters/quotas;
+- governance;
+- operations requiring server-derived identity;
+- operations whose correctness depends on locking or concurrency.
+
+## 15.3 Edge Functions
+
+Use Edge Functions for transport/integration boundaries that cannot be correctly expressed as an ordinary database contract, such as verified Telegram initData and username authentication transport.
+
+Do not create an Edge Function merely to move arbitrary JavaScript to another file.
+
+---
+
+# 16. Error semantics
+
+Every domain operation returns a typed result with an explicit status.
+
+No domain may:
+
+- convert null/malformed payloads into fake successful objects;
+- swallow a nested query error;
+- return READY after an essential child query failed;
+- replace missing IDs with empty strings;
+- convert undefined to the literal string "undefined";
+- treat authorization failure as an empty dataset.
+
+Recommended meanings:
+
+- READY — valid successful contract
+- ERROR — operation failed or backend response invalid
+- UNAUTHORIZED — actor not permitted
+- BLOCKED_BACKEND — required verified backend contract unavailable
+
+---
+
+# 17. Presentation architecture
+
+## 17.1 Home pages
+
+HomePageResolver decides presentation based on verified effective account context.
+
+Each home page owns layout and shortcuts for that role.
+
+It must not own protected business mutations.
+
+APP_ADMIN and MANAGER may see broad navigation, but server authorization still decides each protected operation.
+
+## 17.2 Views
+
+Views are feature surfaces.
+
+A view should normally depend on:
+
+- one primary domain;
+- small approved readers from related domains;
+- shared presentation components.
+
+A view should not become an orchestration script for five unrelated database domains.
+
+## 17.3 Shared components
+
+Shared components may own:
+
+- layout;
+- reusable display states;
+- generic form controls;
+- accessibility behavior.
+
+Shared components must not own school-specific business decisions merely to reduce duplication.
+
+---
+
+# 18. AppContext decomposition plan
+
+This section defines the desired end state without authorizing a large refactor.
+
+## Phase A — stop adding new business logic
+
+No new domain persistence logic should be added directly to AppContext.
+
+New functionality enters through an owning domain adapter first.
+
+## Phase B — extract domain composition
+
+As each domain is verified, AppContext may expose a thin wrapper or delegate to a focused hook/provider.
+
+Candidate examples:
+
+~~~text
+useIdentitySession()
+usePreferences()
+useNotifications()
+useMessaging()
+useParentNotes()
+useCalendar()
+~~~
+
+These names are target examples, not mandatory files until an authorized packet proves they improve ownership.
+
+## Phase C — reduce AppContext to shell composition
+
+Long-term AppContext should contain only cross-feature application composition that truly belongs at application scope.
+
+---
+
+# 19. Testing architecture
+
+Each domain must have evidence at the level appropriate to its risk.
+
+~~~text
+tests/
+├── focused domain unit/contract tests
+├── browser component/interaction tests
+├── db/
+│   └── database contract/concurrency tests
+├── functions/
+│   └── Edge Function tests
+└── helpers/
+    └── test-only infrastructure
+~~~
+
+## 19.1 Required test layers
+
+**Pure validation tests**
+
+For deterministic local rules.
+
+**Adapter contract tests**
+
+For RPC/table parameter names, mapping, malformed responses, and error propagation.
+
+**Database integration/RLS tests**
+
+For allowed/denied principals and real installed/isolated database behavior.
+
+**Concurrency tests**
+
+For last-owner protection, attendance/calendar serialization, quotas, and any operation where two valid callers can race.
+
+**Browser tests**
+
+For user-visible loading, error, unauthorized, empty, retry, keyboard/touch, responsive behavior.
+
+**Deployment proof**
+
+For exact commit deployment status.
+
+No layer substitutes for another.
+
+---
+
+# 20. Domain-by-domain physical database ownership
+
+## Identity / Governance
+
+Owns:
+
+- profiles
+- role_assignments
+- telegram_identities
+- account_link_challenges
+- manager_capability_grants
+- account_governance_audit_logs
+
+## Preferences / Notifications
+
+Owns:
+
+- user_preferences
+- notification_outbox
+- user_notifications
+
+Notification outbox is infrastructure for delivery, not the owner of the originating business event.
+
+## People / Family / Academics
+
+Owns:
+
+- students
+- parent_child_links
+- academic_years
+- school_levels
+- school_classes
+- student_class_memberships
+- teacher_class_assignments
+- curriculum_domains
+- academic_subjects
+- academic_subject_components
+- subject_level_applicability
+- school_subject_offerings
+- teacher_subject_allocations
+- teacher_subject_allocation_events
+- class_creation_permissions
+
+## Enrollment / Inquiry
+
+Owns:
+
+- enrollment_applications
+- public_school_inquiries
+
+## Broadcasts / Calendar
+
+Owns:
+
+- school_broadcasts
+- school_calendar_events
+- school_calendar_event_targets
+- school_calendar_responses
+
+## Class Community
+
+Owns:
+
+- class_announcements
+- class_homework_items
+- class_documents
+- class_gallery_items
+- class_questions
+- class_question_replies
+
+## Parent Notes
+
+Owns:
+
+- parent_notes
+
+## Messaging
+
+Owns:
+
+- message_threads
+- thread_participants
+- thread_messages
+
+## Directory / Food / Public Content
+
+Owns:
+
+- directory_entries
+- food_menu_weeks
+- food_menu_days
+- school_public_content
+
+## Attendance
+
+Owns:
+
+- attendance_registers
+- attendance_entries
+- attendance_events
+- attendance_requests
+
+---
+
+# 21. Cross-domain transaction rule
+
+A domain is allowed to reference another domain's canonical identifier.
+
+It is not allowed to silently duplicate that domain's state.
+
+Examples:
+
+- parent_notes.student_id references Students; Parent Notes does not own student identity.
+- attendance_entries reference Students; Attendance does not own the roster.
+- directory_entries may reference/profile approved people presentation; Directory does not own private People fields.
+- notifications reference a source target; Notifications do not own the source object's status.
+
+For an operation that must atomically modify more than one owner, define one explicit application operation with transactional server implementation and document which domain owns the command.
+
+Do not coordinate critical multi-domain transactions by firing several browser requests and calling the sequence "atomic."
+
+---
+
+# 22. Public versus private boundaries
+
+Public/anonymous surfaces may read only deliberately public contracts.
+
+Examples:
+
+- published school_public_content;
+- published directory entries;
+- deliberately public menu/public information;
+- public inquiry submission.
+
+An authenticated administrator having broad RLS visibility does not mean a function named "public reader" may return unpublished records.
+
+Public readers must encode their own published-only contract when required.
+
+---
+
+# 23. Security and RLS structure
+
+Every protected table needs a documented access model.
+
+For each domain, the implementation packet must identify:
+
+1. who can SELECT;
+2. who can INSERT;
+3. who can UPDATE;
+4. who can DELETE;
+5. whether writes are direct or RPC-only;
+6. whether the operation is security-definer;
+7. which grants expose the object;
+8. which allow and deny cases prove the policy.
+
+RLS enabled is not proof that RLS is correct.
+
+A service-role test cannot prove ordinary caller isolation.
+
+---
+
+# 24. Schema-change protocol
+
+No feature may modify the schema casually.
+
+Required sequence:
+
+1. inspect current installed schema;
+2. inspect repository migration history;
+3. define the owning domain;
+4. write the smallest forward migration;
+5. replay in isolated database;
+6. test constraints;
+7. test grants/RLS allow + deny;
+8. regenerate/verify database types;
+9. update the owning adapter;
+10. update every affected consumer;
+11. only then request hosted migration authorization.
+
+Never:
+
+- create a replacement Supabase project;
+- broad db push without inspection;
+- rewrite migration history to make it look tidy;
+- delete installed objects because source documentation looks different;
+- infer production schema from TypeScript alone.
+
+---
+
+# 25. Naming and ownership rules
+
+Preferred names identify a real bounded context:
+
+- messaging
+- parentNotes
+- academics
+- attendance
+- directory
+- enrollment
+
+Avoid catch-all names:
+
+- manager
+- misc
+- commonBusiness
+- schoolService
+- backendHelpers
+- operations2
+- newApi
+- utils2
+
+If a module cannot be named after the responsibility it owns, the boundary is probably unclear.
+
+---
+
+# 26. Import rules
+
+Allowed:
+
+~~~text
+component
+  -> feature/domain public API
+  -> shared technical adapter
+~~~
+
+Avoid:
+
+~~~text
+component A
+  -> internal implementation of domain B
+  -> internal implementation of domain C
+  -> raw Supabase tables
+~~~
+
+A domain may import:
+
+- genuinely shared technical primitives;
+- types/interfaces from an explicitly approved upstream owner;
+- narrow readers/contracts.
+
+A domain must not import another domain's concrete persistence implementation merely to bypass its public contract.
+
+---
+
+# 27. Clean feature example
+
+A clean Directory feature looks like:
+
+~~~text
+DirectoryView.tsx
+    |
+    v
+domains/directory.ts
+    |
+    +-- listPublicDirectory()
+    +-- listSchoolDirectory()
+    +-- upsertDirectoryEntry()
+    |
+    v
+Supabase table/RPC contract
+    |
+    v
+directory_entries + RLS
+~~~
+
+The UI does not query directory_entries itself.
+
+The domain adapter does not own private People records.
+
+The public reader explicitly enforces the public publication contract.
+
+The internal reader follows its own authorized contract.
+
+---
+
+# 28. Clean Messaging example
+
+~~~text
+MessagesView.tsx
+    |
+    v
+domains/messaging.ts
+    |
+    +-- listApprovedMessageRecipients()
+    +-- listMessageThreads()
+    +-- sendOperationalMessage()
+    +-- replyOperationalThread()
+    |
+    v
+message RPCs + participant RLS
+    |
+    v
+message_threads
+thread_participants
+thread_messages
+~~~
+
+Recipient names/roles come from canonical recipient identity contracts.
+
+The adapter never fabricates a role such as "SCHOOL" merely to satisfy a UI type.
+
+---
+
+# 29. Clean Parent Notes example
+
+~~~text
+ParentNotesPanel / ParentNotesView
+    |
+    v
+domains/parentNotes.ts
+    |
+    +-- listParentNotes()
+    +-- sendParentNote()
+    +-- replyParentNote()
+    |
+    v
+send_parent_note / reply_parent_note + RLS
+    |
+    v
+parent_notes
+~~~
+
+The server owns:
+
+- approved-parent authority;
+- parent-child link;
+- Tunis window;
+- quota;
+- class/teacher resolution.
+
+The client owns:
+
+- input presentation validation;
+- strict response-shape validation;
+- display state.
+
+---
+
+# 30. Clean recovery / implementation rule
+
+Every future domain recovery follows:
+
+**SOURCE → INSTALLED BACKEND → RED TEST → MINIMAL FIX → READBACK → FOCUSED TEST → SURROUNDING REGRESSION → BUILD → EXACT PREVIEW → STOP**
+
+Do not combine unrelated domains into one repair because they happen to share a branch.
+
+Do not merge merely because the branch builds.
+
+---
+
+# 31. Current clean-up priorities
+
+At this revision, the architecture direction is:
+
+1. preserve the verified domain adapter recovery already completed;
+2. continue domain-by-domain reconciliation;
+3. reduce AppContext only through later explicit decomposition packets;
+4. keep compatibility barrels thin;
+5. keep existing Supabase project and installed data;
+6. reconcile source migrations and installed backend without destructive history repair;
+7. keep Calendar, Attendance, Teacher T1/T2, Students/PR #33, auth, Telegram and other protected workstreams isolated from unrelated domain cleanup;
+8. create no second service layer merely for aesthetics.
+
+---
+
+# 32. Architecture acceptance checklist
+
+A new feature or repair is architecturally acceptable only if all applicable answers are YES.
+
+### Ownership
+
+- Is there one canonical domain owner?
+- Is every durable concept stored by one database owner?
+- Is a compatibility barrel re-export-only?
+- Is the UI free of business-data ownership?
+
+### Dependencies
+
+- Does dependency direction point toward domain contracts?
+- Is cross-domain access narrow and explicit?
+- Is there no circular business dependency?
+
+### Security
+
+- Is actor identity server-derived?
+- Are grants/RLS/RPC authority verified?
+- Are deny cases tested?
+- Is service-role usage isolated from browser code?
+
+### Data integrity
+
+- Are malformed backend responses rejected?
+- Are required fields validated?
+- Are concurrency/transaction requirements implemented server-side?
+- Is durable state not duplicated into a second table family?
+
+### Source structure
+
+- Does every file have one primary reason to change?
+- Is the change free from catch-all management/common/utils growth?
+- Did an existing monolith get smaller or at least not grow?
+- Is any new split inside the owning domain rather than horizontal technical dumping?
+
+### Evidence
+
+- Was exact HEAD verified?
+- Was the exact source read back?
+- Were focused and surrounding tests executed?
+- Was build evidence tied to the exact revision?
+- Was deployment/runtime evidence classified separately from source evidence?
+
+---
+
+# 33. Final architecture rule
+
+The clean KRISTOU SCHOOL application is not defined by having many small files.
+
+It is defined by **clear ownership**.
+
+The desired architecture is:
+
+**one product → thin presentation → thin composition → focused domain contracts → verified server authorization → one durable PostgreSQL owner per concept.**
+
+No monolithic school service.
+
+No monolithic AppContext business database.
+
+No duplicate domain models.
+
+No second backend.
+
+No UI-created authorization.
+
+No silent malformed-success states.
+
+No fake cleanup that moves the same coupled logic into a different large file.
+
+Every future structural change must make ownership clearer than it was before.
