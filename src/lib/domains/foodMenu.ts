@@ -11,6 +11,15 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid food menu response.',
+  };
+}
+
 export async function listFoodMenus(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
@@ -33,7 +42,8 @@ export async function listFoodMenus(
         .select('*')
         .in('menu_week_id', weekIds)
         .order('day_order', { ascending: true });
-      if (!dayErr && Array.isArray(dayRows)) {
+      if (dayErr) return { ok: false, ...classifySupabaseError(dayErr) };
+      if (Array.isArray(dayRows)) {
         for (const d of dayRows as Record<string, unknown>[]) {
           const wid = String(d.menu_week_id);
           const list = daysMap.get(wid) ?? [];
@@ -59,7 +69,7 @@ export async function listFoodMenus(
         published: st === 'PUBLISHED',
         status: (st as FoodMenuWeek['status']),
         providerName: String(w.provider_name || 'La Toque Gourmande'),
-        isDemoPreview: st === 'PUBLISHED',
+        isDemoPreview: false,
         items: daysMap.get(wid) ?? [],
       };
     });
@@ -139,10 +149,11 @@ export async function saveFoodMenuWeek(
       p_publish: publish,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const row = (data ?? {}) as { id?: string };
-    return { ok: true, status: 'READY', data: { id: String(row.id ?? '') } };
+    const row = (data ?? {}) as { id?: unknown };
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: { id } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
-
