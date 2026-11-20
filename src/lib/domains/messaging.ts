@@ -1,7 +1,12 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { AccountRole, MessageThread, MessageRecipientOption, BackendOpResult } from '../../types.ts';
+
+import type { AccountRole, BackendOpResult, BackendOpStatus, MessageRecipientOption, MessageThread } from '../../types.ts';
+
+
 
 export const SHORT_MESSAGE_MAX_CHARS = 200;
+
+
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {
@@ -12,9 +17,35 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid messaging response.',
+  };
+}
+
+function parseMessageRecipients(data: unknown): MessageRecipientOption[] | null {
+  if (!Array.isArray(data)) return null;
+
+  const recipients: MessageRecipientOption[] = [];
+  for (const item of data) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    const fullName = typeof row.fullName === 'string' ? row.fullName.trim() : '';
+    const role = typeof row.role === 'string' ? row.role.trim() : '';
+    if (!id || !fullName || !role) return null;
+    recipients.push({ id, fullName, role: role as AccountRole });
+  }
+
+  return recipients;
+}
+
 export function countUnreadThreads(
   threads: readonly MessageThread[] | null | undefined,
-  status?: string,
+  status?: BackendOpStatus,
 ): number {
   if (status !== 'READY' || !Array.isArray(threads)) return 0;
   return threads.filter((thread) => Boolean(thread.unread)).length;
@@ -29,6 +60,11 @@ export function validateShortMessageContent(
   }
   return { valid: true, clean };
 }
+
+/**
+ * UI-level role pair pre-check matching public.can_users_direct_message().
+ * Server RPCs/RLS additionally verify active linked-child class assignments for PARENT <-> TEACHER.
+ */
 
 export function canParticipantMessage(
   senderRole: AccountRole | null | undefined,
@@ -46,28 +82,83 @@ export function canParticipantMessage(
 }
 
 export async function listMessageThreads(
+  userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<MessageThread[]>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.from('message_threads').select('*').order('updated_at', { ascending: false });
+    const { data: threads, error } = await client
+      .from('message_threads')
+      .select('id, subject, created_by_user_id, last_message_preview, updated_at')
+      .order('updated_at', { ascending: false });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const mapped: MessageThread[] = Array.isArray(data)
-      ? data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          threadId: String(row.id),
-          subject: row.subject ? String(row.subject) : undefined,
-          recipientId: String(row.recipient_id || ''),
-          recipientName: String(row.recipient_name || 'Member'),
-          recipientRole: String(row.recipient_role || 'STAFF'),
-          lastMessage: String(row.last_message_preview || row.last_message || ''),
-          updatedAt: String(row.updated_at || new Date().toISOString()),
-          unread: Boolean(row.unread),
-          messages: Array.isArray(row.messages) ? (row.messages as MessageThread['messages']) : [],
-        }))
-      : [];
+    const threadRows = Array.isArray(threads) ? (threads as Record<string, unknown>[]) : [];
+    if (threadRows.length === 0) return { ok: true, status: 'READY', data: [] };
+
+    const threadIds = threadRows.map((t) => String(t.id));
+    const [{ data: participants, error: partErr }, { data: messages, error: msgErr }] = await Promise.all([
+      client.from('thread_participants').select('thread_id, user_id, unread').in('thread_id', threadIds),
+      client.from('thread_messages').select('*').in('thread_id', threadIds).order('created_at', { ascending: true }),
+    ]);
+    if (partErr) return { ok: false, ...classifySupabaseError(partErr) };
+    if (msgErr) return { ok: false, ...classifySupabaseError(msgErr) };
+
+    const { data: recipientData, error: recipientErr } = await client.rpc('list_approved_message_recipients');
+    if (recipientErr) return { ok: false, ...classifySupabaseError(recipientErr) };
+    const recipientOptions = parseMessageRecipients(recipientData);
+    if (!recipientOptions) return invalidResponseResult();
+    const recipientById = new Map(recipientOptions.map((recipient) => [recipient.id, recipient]));
+
+    const partByThread = new Map<string, { userId: string; unread: boolean }[]>();
+    if (Array.isArray(participants)) {
+      for (const p of participants as Record<string, unknown>[]) {
+        const tid = String(p.thread_id);
+        const list = partByThread.get(tid) ?? [];
+        list.push({ userId: String(p.user_id), unread: Boolean(p.unread) });
+        partByThread.set(tid, list);
+      }
+    }
+
+    const msgByThread = new Map<string, MessageThread['messages']>();
+    if (Array.isArray(messages)) {
+      for (const m of messages as Record<string, unknown>[]) {
+        const tid = String(m.thread_id);
+        const list = msgByThread.get(tid) ?? [];
+        list.push({
+          id: String(m.id),
+          senderId: String(m.sender_user_id),
+          senderName: m.sender_name ? String(m.sender_name) : undefined,
+          content: String(m.content),
+          createdAt: String(m.created_at),
+        });
+        msgByThread.set(tid, list);
+      }
+    }
+
+    const mapped: MessageThread[] = [];
+    for (const t of threadRows) {
+      const tid = String(t.id);
+      const parts = partByThread.get(tid) ?? [];
+      const selfPart = parts.find((p) => p.userId === userId);
+      const otherPart = parts.find((p) => p.userId !== userId);
+      if (!selfPart || !otherPart) return invalidResponseResult();
+      const recipient = recipientById.get(otherPart.userId);
+      if (!recipient) return invalidResponseResult();
+      const threadMsgs = msgByThread.get(tid) ?? [];
+      mapped.push({
+        id: tid,
+        subject: t.subject ? String(t.subject) : undefined,
+        recipientId: recipient.id,
+        recipientName: recipient.fullName,
+        recipientRole: recipient.role,
+        lastMessage: String(t.last_message_preview ?? ''),
+        updatedAt: String(t.updated_at),
+        unread: Boolean(selfPart.unread),
+        messages: threadMsgs,
+      });
+    }
+
     return { ok: true, status: 'READY', data: mapped };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -78,104 +169,76 @@ export async function listApprovedMessageRecipients(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<MessageRecipientOption[]>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('list_approved_message_recipients');
+    const { data, error } = await client.rpc('list_approved_message_recipients');
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const items = Array.isArray(data)
-      ? data.map((r: Record<string, unknown>) => ({
-          id: String(r.id),
-          fullName: String(r.full_name || r.fullName || ''),
-          role: (String(r.role || 'STAFF') as AccountRole),
-        }))
-      : [];
-    return { ok: true, status: 'READY', data: items };
+    const recipients = parseMessageRecipients(data);
+    if (!recipients) return invalidResponseResult();
+    return {
+      ok: true,
+      status: 'READY',
+      data: recipients,
+    };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
 
 export async function sendOperationalMessage(
-  recipientUserIdOrInput: string | { recipientId: string; content: string; subject?: string },
-  subjectOrContent?: string | any,
-  contentOrClient?: string | any,
-  maybeClient?: any,
-): Promise<BackendOpResult<MessageThread & { threadId: string }>> {
-  let recipientId = '';
-  let subject = '';
-  let content = '';
-  let client: any = supabase;
-
-  if (typeof recipientUserIdOrInput === 'object' && recipientUserIdOrInput !== null) {
-    recipientId = recipientUserIdOrInput.recipientId;
-    subject = recipientUserIdOrInput.subject || '';
-    content = recipientUserIdOrInput.content;
-    client = subjectOrContent || supabase;
-  } else {
-    recipientId = String(recipientUserIdOrInput || '');
-    subject = String(subjectOrContent || '');
-    content = String(contentOrClient || '');
-    client = maybeClient || supabase;
+  recipientUserId: string,
+  subject: string,
+  content: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<{ threadId: string }>> {
+  const check = validateShortMessageContent(content);
+  if (check.valid === false) {
+    return { ok: false, status: 'ERROR', errorCode: check.errorCode, errorMessage: 'Message must be 1 to 200 characters.' };
   }
-
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!recipientUserId) {
+    return { ok: false, status: 'ERROR', errorCode: 'invalid_recipient', errorMessage: 'Select a recipient.' };
+  }
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('send_operational_message', {
-      p_recipient_id: recipientId,
-      p_content: content.trim(),
-      p_subject: subject.trim() || null,
+    const { data, error } = await client.rpc('send_operational_message', {
+      p_recipient_user_id: recipientUserId,
+      p_subject: subject.trim(),
+      p_content: check.clean,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    const tid = String(r.id || '');
-    return {
-      ok: true,
-      status: 'READY',
-      data: {
-        id: tid,
-        threadId: tid,
-        subject: subject.trim() || undefined,
-        recipientId,
-        recipientName: String(r.recipient_name || 'Member'),
-        recipientRole: String(r.recipient_role || 'STAFF'),
-        lastMessage: content,
-        updatedAt: new Date().toISOString(),
-        unread: false,
-        messages: [],
-      },
-    };
+    const row = (data ?? {}) as { threadId?: string };
+    const threadId = typeof row.threadId === 'string' ? row.threadId.trim() : '';
+    if (!threadId) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: { threadId } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
 
 export async function replyOperationalThread(
-  threadIdOrInput: string | { threadId: string; content: string },
-  contentOrClient?: string | any,
-  maybeClient?: any,
-): Promise<BackendOpResult<{ threadId: string; messageId: string }>> {
-  const input = typeof threadIdOrInput === 'object' && threadIdOrInput !== null
-    ? threadIdOrInput
-    : { threadId: String(threadIdOrInput || ''), content: String(contentOrClient || '') };
-  const client = typeof threadIdOrInput === 'object' && threadIdOrInput !== null ? contentOrClient : maybeClient;
-  const activeClient = client || supabase;
-
-  if (!activeClient) return unavailableResult();
+  threadId: string,
+  content: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<{ id: string }>> {
+  const check = validateShortMessageContent(content);
+  if (check.valid === false) {
+    return { ok: false, status: 'ERROR', errorCode: check.errorCode, errorMessage: 'Reply must be 1 to 200 characters.' };
+  }
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('reply_operational_thread', {
-      p_thread_id: input.threadId,
-      p_content: input.content.trim(),
+    const { data, error } = await client.rpc('reply_operational_thread', {
+      p_thread_id: threadId,
+      p_content: check.clean,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    return {
-      ok: true,
-      status: 'READY',
-      data: { threadId: input.threadId, messageId: String(r.id || '') },
-    };
+    const row = (data ?? {}) as { id?: string };
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: { id } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
+

@@ -1,5 +1,6 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { BackendOpResult, UserPreferencesState } from '../../types.ts';
+
+import type { BackendOpResult, UserPreferencesState, Language, ThemeMode, NotificationSoundOption } from '../../types.ts';
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {
@@ -10,86 +11,83 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
-export async function fetchUserPreferences(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any = supabase,
-): Promise<BackendOpResult<UserPreferencesState>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
-  try {
-    const { data, error } = await activeClient.from('user_preferences').select('*').maybeSingle();
-    if (error) return { ok: false, ...classifySupabaseError(error) };
-    if (!data) {
-      return {
-        ok: true,
-        status: 'READY',
-        data: {
-          language: 'ar',
-          theme: 'light',
-          notificationSound: 'Kristou Bell',
-          soundMuted: false,
-          vibrationEnabled: true,
-        },
-      };
-    }
-    const row = data as Record<string, unknown>;
-    return {
-      ok: true,
-      status: 'READY',
-      data: {
-        language: (String(row.language || 'ar') as UserPreferencesState['language']),
-        theme: (String(row.theme || 'light') as UserPreferencesState['theme']),
-        notificationSound: (String(row.notification_sound || 'Kristou Bell') as UserPreferencesState['notificationSound']),
-        soundMuted: Boolean(row.sound_muted),
-        vibrationEnabled: row.vibration_enabled !== false,
-      },
-    };
-  } catch (err) {
-    return { ok: false, ...classifySupabaseError(err) };
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid preferences response.',
+  };
+}
+
+function parsePreferencesRow(data: unknown): UserPreferencesState | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as Record<string, unknown>;
+  if (
+    typeof row.language !== 'string' ||
+    typeof row.theme !== 'string' ||
+    typeof row.notification_sound !== 'string' ||
+    typeof row.sound_muted !== 'boolean' ||
+    typeof row.vibration_enabled !== 'boolean'
+  ) {
+    return null;
   }
+
+  return {
+    language: row.language as Language,
+    theme: row.theme as ThemeMode,
+    notificationSound: row.notification_sound as NotificationSoundOption,
+    soundMuted: row.sound_muted,
+    vibrationEnabled: row.vibration_enabled,
+  };
 }
 
 export async function loadMyPreferences(
-  userIdOrClient?: string | any,
-  maybeClient?: any,
-): Promise<BackendOpResult<UserPreferencesState>> {
-  const client = typeof userIdOrClient === 'string' ? maybeClient : userIdOrClient;
-  return fetchUserPreferences(client);
-}
-
-export async function updateUserPreferences(
-  preferences: Partial<UserPreferencesState>,
+  userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
-): Promise<BackendOpResult<UserPreferencesState>> {
-  const fullPrefs: UserPreferencesState = {
-    language: preferences.language || 'ar',
-    theme: preferences.theme || 'light',
-    notificationSound: preferences.notificationSound || 'Kristou Bell',
-    soundMuted: preferences.soundMuted ?? false,
-    vibrationEnabled: preferences.vibrationEnabled ?? true,
-  };
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+): Promise<BackendOpResult<UserPreferencesState | null>> {
+  if (!client) return unavailableResult();
   try {
-    const { error } = await activeClient.rpc('upsert_my_preferences', {
-      p_language: fullPrefs.language,
-      p_theme: fullPrefs.theme,
-      p_notification_sound: fullPrefs.notificationSound,
-      p_sound_muted: fullPrefs.soundMuted,
-      p_vibration_enabled: fullPrefs.vibrationEnabled,
-    });
+    const { data, error } = await client
+      .from('user_preferences')
+      .select('language, theme, notification_sound, sound_muted, vibration_enabled')
+      .eq('user_id', userId)
+      .maybeSingle();
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    return { ok: true, status: 'READY', data: fullPrefs };
+    if (!data) return { ok: true, status: 'READY', data: null };
+    const preferences = parsePreferencesRow(data);
+    if (!preferences) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: preferences };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
 
 export async function saveMyPreferences(
-  preferences: Partial<UserPreferencesState>,
+  prefs: Partial<UserPreferencesState>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<UserPreferencesState>> {
-  return updateUserPreferences(preferences, client);
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client.rpc('upsert_my_preferences', {
+      p_language: prefs.language ?? null,
+      p_theme: prefs.theme ?? null,
+      p_notification_sound: prefs.notificationSound ?? null,
+      p_sound_muted: prefs.soundMuted ?? null,
+      p_vibration_enabled: prefs.vibrationEnabled ?? null,
+    });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    const preferences = parsePreferencesRow(data);
+    if (!preferences) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: preferences };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
 }
+
+export const fetchUserPreferences = loadMyPreferences;
+
+export const updateUserPreferences = saveMyPreferences;
+

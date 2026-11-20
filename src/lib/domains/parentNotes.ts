@@ -1,5 +1,6 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { ParentNote, BackendOpResult } from '../../types.ts';
+
+import type { BackendOpResult, ParentNote } from '../../types.ts';
 
 export const PARENT_NOTES_DAILY_QUOTA = 11;
 
@@ -9,6 +10,99 @@ function unavailableResult<T>(): BackendOpResult<T> {
     status: 'BLOCKED_BACKEND',
     errorCode: 'backend_unavailable',
     errorMessage: 'This workflow is awaiting verified Supabase backend deployment.',
+  };
+}
+
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid parent notes response.',
+  };
+}
+
+const PARENT_NOTE_TOPICS = new Set<ParentNote['topic']>([
+  'ABSENCE',
+  'HOMEWORK',
+  'BEHAVIOR',
+  'HEALTH',
+  'PICKUP',
+  'OTHER',
+]);
+
+const PARENT_NOTE_STATUSES = new Set<ParentNote['status']>(['SENT', 'READ', 'REPLIED']);
+
+function optionalString(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function parseParentNoteRow(data: unknown): ParentNote | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as Record<string, unknown>;
+
+  const id = optionalString(row.id);
+  const parentId = optionalString(row.parent_user_id);
+  const parentName = optionalString(row.parent_name);
+  const childId = optionalString(row.student_id);
+  const childName = optionalString(row.student_name);
+  const topic = optionalString(row.topic);
+  const content = optionalString(row.content);
+  const status = optionalString(row.status);
+  const createdAt = optionalString(row.created_at);
+
+  if (
+    typeof id !== 'string' ||
+    typeof parentId !== 'string' ||
+    typeof parentName !== 'string' ||
+    typeof childId !== 'string' ||
+    typeof childName !== 'string' ||
+    typeof topic !== 'string' ||
+    !PARENT_NOTE_TOPICS.has(topic as ParentNote['topic']) ||
+    typeof content !== 'string' ||
+    typeof status !== 'string' ||
+    !PARENT_NOTE_STATUSES.has(status as ParentNote['status']) ||
+    typeof createdAt !== 'string'
+  ) {
+    return null;
+  }
+
+  const classId = optionalString(row.class_id);
+  const teacherId = optionalString(row.recipient_teacher_id);
+  const schoolDay = optionalString(row.school_day);
+  const replyContent = optionalString(row.reply_content);
+  const repliedByName = optionalString(row.replied_by_name);
+  const repliedAt = optionalString(row.replied_at);
+
+  if (
+    classId === undefined ||
+    teacherId === undefined ||
+    typeof schoolDay !== 'string' ||
+    (row.reply_content !== undefined && replyContent === undefined) ||
+    (row.replied_by_name !== undefined && repliedByName === undefined) ||
+    (row.replied_at !== undefined && repliedAt === undefined)
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    parentId,
+    parentName,
+    childId,
+    childName,
+    classId,
+    teacherId,
+    topic: topic as ParentNote['topic'],
+    content,
+    schoolDay: schoolDay ?? undefined,
+    status: status as ParentNote['status'],
+    replyContent: replyContent ?? undefined,
+    repliedByName: repliedByName ?? undefined,
+    repliedAt: repliedAt ?? undefined,
+    createdAt,
   };
 }
 
@@ -48,6 +142,11 @@ export function isWithinParentNotesTunisWindow(date: Date = new Date()): boolean
 export function getTunisSchoolDay(date: Date = new Date()): string {
   return getTunisTimeParts(date).dateStr;
 }
+
+/**
+ * Returns the active Parent Notes quota cycle day anchored to 08:00 Africa/Tunis.
+ * Before 08:00 Tunis, the prior school day's cycle remains active until the 08:00 reset.
+ */
 
 export function getParentNotesQuotaDay(date: Date = new Date()): string {
   const parts = getTunisTimeParts(date);
@@ -91,30 +190,22 @@ export async function listParentNotes(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<ParentNote[]>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.from('parent_notes').select('*').order('created_at', { ascending: false });
+    const { data, error } = await client
+      .from('parent_notes')
+      .select(
+        'id, parent_user_id, parent_name, student_id, student_name, class_id, recipient_teacher_id, topic, content, school_day, status, reply_content, replied_by_name, replied_at, created_at',
+      )
+      .order('created_at', { ascending: false });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const mapped: ParentNote[] = Array.isArray(data)
-      ? data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          parentId: String(row.parent_user_id || row.parent_id || ''),
-          parentName: String(row.parent_name || 'Parent'),
-          childId: String(row.student_id || row.child_id || ''),
-          childName: String(row.child_name || 'Student'),
-          classId: row.class_id ? String(row.class_id) : undefined,
-          teacherId: row.teacher_id ? String(row.teacher_id) : undefined,
-          topic: (String(row.topic || 'OTHER') as ParentNote['topic']),
-          content: String(row.content || ''),
-          schoolDay: row.school_day ? String(row.school_day) : undefined,
-          createdAt: String(row.created_at || new Date().toISOString()),
-          status: (String(row.status || 'SENT') as ParentNote['status']),
-          replyContent: row.reply_content ? String(row.reply_content) : undefined,
-          repliedByName: row.replied_by_name ? String(row.replied_by_name) : undefined,
-          repliedAt: row.replied_at ? String(row.replied_at) : undefined,
-        }))
-      : [];
+    if (!Array.isArray(data)) return invalidResponseResult();
+    const mapped: ParentNote[] = [];
+    for (const row of data) {
+      const note = parseParentNoteRow(row);
+      if (!note) return invalidResponseResult();
+      mapped.push(note);
+    }
     return { ok: true, status: 'READY', data: mapped };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -122,57 +213,50 @@ export async function listParentNotes(
 }
 
 export async function sendParentNote(
-  studentIdOrInput: string | { studentId?: string; childId?: string; topic: ParentNote['topic']; content: string; classId?: string },
-  topicOrClient?: ParentNote['topic'] | any,
-  contentOrClient?: string | any,
-  maybeClient?: any,
-): Promise<BackendOpResult<ParentNote & { note: ParentNote }>> {
-  let studentId = '';
-  let topic: ParentNote['topic'] = 'OTHER';
-  let content = '';
-  let client: any = supabase;
-
-  if (typeof studentIdOrInput === 'object' && studentIdOrInput !== null) {
-    studentId = String(studentIdOrInput.studentId || studentIdOrInput.childId || '');
-    topic = studentIdOrInput.topic;
-    content = studentIdOrInput.content;
-    client = topicOrClient || supabase;
-  } else {
-    studentId = String(studentIdOrInput || '');
-    topic = topicOrClient as ParentNote['topic'];
-    content = String(contentOrClient || '');
-    client = maybeClient || supabase;
+  studentId: string,
+  topic: ParentNote['topic'],
+  content: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+  now: Date = new Date(),
+): Promise<BackendOpResult<{ note: ParentNote; remainingToday: number }>> {
+  const check = validateParentNoteSubmission(content, now);
+  if (check.valid === false) {
+    return {
+      ok: false,
+      status: 'ERROR',
+      errorCode: check.errorCode,
+      errorMessage:
+        check.errorCode === 'parent_notes_outside_window'
+          ? 'Parent notes can only be sent between 08:00 and 18:00 Tunis time.'
+          : 'Please enter note content (1 to 1000 characters).',
+    };
   }
-
-  const activeClient = client || supabase;
-  const check = validateParentNoteSubmission(content);
-  if (!check.valid) {
-    return { ok: false, status: 'ERROR', errorCode: check.errorCode, errorMessage: 'Parent note validation failed.' };
-  }
-  if (!activeClient) return unavailableResult();
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('send_parent_note', {
+    const { data, error } = await client.rpc('send_parent_note', {
       p_student_id: studentId,
       p_topic: topic,
       p_content: content.trim(),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    const createdNote: ParentNote = {
-      id: String(r.id || ''),
-      parentId: String(r.parent_user_id || r.parent_id || ''),
-      parentName: String(r.parent_name || 'Parent'),
-      childId: studentId,
-      childName: String(r.child_name || 'Student'),
-      topic,
-      content: content.trim(),
-      createdAt: String(r.created_at || new Date().toISOString()),
-      status: 'SENT',
-    };
+    if (!data || typeof data !== 'object') return invalidResponseResult();
+    const payload = data as Record<string, unknown>;
+    const note = parseParentNoteRow(payload.note);
+    const remainingToday = payload.remainingToday;
+    if (
+      !note ||
+      typeof remainingToday !== 'number' ||
+      !Number.isInteger(remainingToday) ||
+      remainingToday < 0 ||
+      remainingToday > PARENT_NOTES_DAILY_QUOTA
+    ) {
+      return invalidResponseResult();
+    }
     return {
       ok: true,
       status: 'READY',
-      data: { ...createdNote, note: createdNote },
+      data: { note, remainingToday },
     };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
@@ -180,39 +264,26 @@ export async function sendParentNote(
 }
 
 export async function replyParentNote(
-  noteIdOrInput: string | { noteId: string; replyContent: string },
-  contentOrClient?: string | any,
-  maybeClient?: any,
+  noteId: string,
+  replyContent: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
 ): Promise<BackendOpResult<ParentNote>> {
-  const noteId = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? noteIdOrInput.noteId : String(noteIdOrInput || '');
-  const replyContent = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? noteIdOrInput.replyContent : String(contentOrClient || '');
-  const client = typeof noteIdOrInput === 'object' && noteIdOrInput !== null ? contentOrClient : maybeClient;
-  const activeClient = client || supabase;
-
-  if (!activeClient) return unavailableResult();
+  if (!replyContent.trim()) {
+    return { ok: false, status: 'ERROR', errorCode: 'invalid_reply_content', errorMessage: 'Reply cannot be empty.' };
+  }
+  if (!client) return unavailableResult();
   try {
-    const { data, error } = await activeClient.rpc('reply_parent_note', {
+    const { data, error } = await client.rpc('reply_parent_note', {
       p_note_id: noteId,
       p_reply_content: replyContent.trim(),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    const updatedNote: ParentNote = {
-      id: noteId,
-      parentId: String(r.parent_user_id || r.parent_id || ''),
-      parentName: String(r.parent_name || 'Parent'),
-      childId: String(r.student_id || r.child_id || ''),
-      childName: String(r.child_name || 'Student'),
-      topic: (String(r.topic || 'OTHER') as ParentNote['topic']),
-      content: String(r.content || ''),
-      createdAt: String(r.created_at || new Date().toISOString()),
-      status: 'REPLIED',
-      replyContent: replyContent.trim(),
-      repliedByName: String(r.replied_by_name || 'Teacher'),
-      repliedAt: String(r.replied_at || new Date().toISOString()),
-    };
-    return { ok: true, status: 'READY', data: updatedNote };
+    const note = parseParentNoteRow(data);
+    if (!note) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: note };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
 }
+

@@ -1,5 +1,14 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+
 import type { BackendOpResult, TeacherDirectoryMember, AdminDirectoryMember } from '../../types.ts';
+
+type DirectoryData = {
+  teachers: TeacherDirectoryMember[];
+  admins: AdminDirectoryMember[];
+};
+
+const DIRECTORY_SELECT =
+  'id, entry_type, display_name, title, photo_url, bio, tags, languages, is_published, sort_order';
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {
@@ -10,75 +19,100 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
-export async function listSchoolDirectory(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any = supabase,
-): Promise<BackendOpResult<{ teachers: TeacherDirectoryMember[]; administration: AdminDirectoryMember[]; admins: AdminDirectoryMember[] }>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
-  try {
-    const { data, error } = await activeClient
-      .from('directory_entries')
-      .select('id, entry_type, display_name, title, bio, tags, languages, photo_url, is_published, sort_order')
-      .order('sort_order', { ascending: true });
-    if (error) return { ok: false, ...classifySupabaseError(error) };
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid directory response.',
+  };
+}
 
-    const rows = Array.isArray(data) ? data : [];
-    const teachers: TeacherDirectoryMember[] = [];
-    const administration: AdminDirectoryMember[] = [];
+function mapDirectoryRows(rows: unknown[], requirePublished: boolean): DirectoryData {
+  const teachers: TeacherDirectoryMember[] = [];
+  const admins: AdminDirectoryMember[] = [];
 
-    for (const r of rows as Record<string, unknown>[]) {
-      const type = String(r.entry_type || 'TEACHER');
-      if (type === 'TEACHER') {
-        teachers.push({
-          id: String(r.id),
-          name: String(r.display_name || ''),
-          title: String(r.title || ''),
-          photoUrl: String(r.photo_url || '/assets/kristou-logo.png'),
-          bio: String(r.bio || ''),
-          classes: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-          languages: Array.isArray(r.languages) ? (r.languages as string[]) : [],
-          isPublished: Boolean(r.is_published ?? true),
-        });
-      } else {
-        administration.push({
-          id: String(r.id),
-          name: String(r.display_name || ''),
-          title: String(r.title || ''),
-          photoUrl: String(r.photo_url || '/assets/kristou-logo.png'),
-          bio: String(r.bio || ''),
-          responsibilities: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-          languages: Array.isArray(r.languages) ? (r.languages as string[]) : [],
-          isPublished: Boolean(r.is_published ?? true),
-        });
-      }
+  for (const rawRow of rows) {
+    if (!rawRow || typeof rawRow !== 'object') continue;
+    const row = rawRow as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) continue;
+    if (requirePublished && row.is_published !== true) continue;
+
+    const entryType = String(row.entry_type);
+    if (entryType === 'TEACHER') {
+      teachers.push({
+        id,
+        name: String(row.display_name),
+        title: String(row.title),
+        photoUrl: String(row.photo_url || '/assets/kristou-logo.png'),
+        bio: String(row.bio ?? ''),
+        classes: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+        languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
+        isPublished: row.is_published === true,
+      });
+    } else if (entryType === 'ADMIN') {
+      admins.push({
+        id,
+        name: String(row.display_name),
+        title: String(row.title),
+        photoUrl: String(row.photo_url || '/assets/kristou-logo.png'),
+        bio: String(row.bio ?? ''),
+        responsibilities: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+        languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
+        isPublished: row.is_published === true,
+      });
     }
-
-    return {
-      ok: true,
-      status: 'READY',
-      data: { teachers, administration, admins: administration },
-    };
-  } catch (err) {
-    return { ok: false, ...classifySupabaseError(err) };
   }
+
+  return { teachers, admins };
 }
 
 export async function listPublicDirectory(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
-): Promise<BackendOpResult<{ teachers: TeacherDirectoryMember[]; administration: AdminDirectoryMember[]; admins: AdminDirectoryMember[] }>> {
-  return listSchoolDirectory(client);
+): Promise<BackendOpResult<DirectoryData>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client
+      .from('directory_entries')
+      .select(DIRECTORY_SELECT)
+      .eq('is_published', true)
+      .order('sort_order', { ascending: true });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    if (!Array.isArray(data)) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: mapDirectoryRows(data, true) };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
+}
+
+export async function listSchoolDirectory(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any = supabase,
+): Promise<BackendOpResult<DirectoryData>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client
+      .from('directory_entries')
+      .select(DIRECTORY_SELECT)
+      .order('sort_order', { ascending: true });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    if (!Array.isArray(data)) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: mapDirectoryRows(data, false) };
+  } catch (err) {
+    return { ok: false, ...classifySupabaseError(err) };
+  }
 }
 
 export async function upsertDirectoryEntry(
   input: {
     id?: string | null;
-    entryType?: 'TEACHER' | 'ADMIN';
-    displayName?: string;
-    title?: string;
-    bio?: string;
-    tags?: string[];
+    entryType: 'TEACHER' | 'ADMIN';
+    displayName: string;
+    title: string;
+    bio: string;
+    tags: string[];
     languages?: string[];
     photoUrl?: string;
     isPublished?: boolean;
@@ -86,23 +120,46 @@ export async function upsertDirectoryEntry(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<{ id: string }>> {
-  const activeClient = client || supabase;
-  if (!activeClient) return unavailableResult();
+  const displayName = input.displayName.trim();
+  const title = input.title.trim();
+  const validEntryType = input.entryType === 'TEACHER' || input.entryType === 'ADMIN';
+  const validId = input.id == null || input.id.trim().length > 0;
+  if (
+    !validEntryType ||
+    !validId ||
+    displayName.length < 2 ||
+    displayName.length > 120 ||
+    title.length < 2 ||
+    title.length > 160
+  ) {
+    return {
+      ok: false,
+      status: 'ERROR',
+      errorCode: 'invalid_directory_input',
+      errorMessage: 'Directory entry type, name, title, and optional ID must be valid.',
+    };
+  }
+  if (!client) return unavailableResult();
+
   try {
-    const { data, error } = await activeClient.rpc('upsert_directory_entry', {
+    const { data, error } = await client.rpc('upsert_directory_entry', {
       p_id: input.id || null,
-      p_entry_type: input.entryType || 'TEACHER',
-      p_display_name: input.displayName || '',
-      p_title: input.title || '',
-      p_bio: input.bio || '',
-      p_tags: input.tags || [],
-      p_languages: input.languages || [],
-      p_photo_url: input.photoUrl || '/assets/kristou-logo.png',
+      p_entry_type: input.entryType,
+      p_display_name: displayName,
+      p_title: title,
+      p_bio: input.bio.trim(),
+      p_tags: input.tags,
+      p_languages: input.languages ?? [],
+      p_photo_url: input.photoUrl?.trim() || '/assets/kristou-logo.png',
       p_is_published: input.isPublished ?? true,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    return { ok: true, status: 'READY', data: { id: String(r.id || '') } };
+
+    const row = (data ?? {}) as { id?: unknown };
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    if (!id) return invalidResponseResult();
+
+    return { ok: true, status: 'READY', data: { id } };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }

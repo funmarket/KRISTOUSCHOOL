@@ -832,7 +832,10 @@ test('T1-8: AR (RTL), FR, EN localization, responsive layout classes, and Admin/
     { lang: 'en', heading: 'My Classes & Student Rosters', action: 'View Students' },
   ];
   for (const item of langExpectations) {
-    globalThis.__T1_CTX__ = baseCtx({ language: item.lang });
+    globalThis.__T1_CTX__ = baseCtx({
+      language: item.lang,
+      selectedClassId: '',
+    });
     const html = renderToStaticMarkup(
       React.createElement(ClassesManagementView, {
         initialClasses: SAMPLE_CLASSES,
@@ -853,7 +856,10 @@ test('T1-8: AR (RTL), FR, EN localization, responsive layout classes, and Admin/
     makeUser({ role: 'ADMINISTRATIVE_PERSONNEL', capabilities: [] }),
     makeUser({ role: 'MANAGER', capabilities: ['CLASSES_MANAGE', 'CLASSES_ROSTER_VIEW'] }),
   ]) {
-    globalThis.__T1_CTX__ = baseCtx({ currentUser: adminUser });
+    globalThis.__T1_CTX__ = baseCtx({
+      currentUser: adminUser,
+      selectedClassId: '',
+    });
     const html = renderToStaticMarkup(
       React.createElement(ClassesManagementView, {
         initialClasses: SAMPLE_CLASSES,
