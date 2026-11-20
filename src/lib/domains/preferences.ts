@@ -11,6 +11,37 @@ function unavailableResult<T>(): BackendOpResult<T> {
   };
 }
 
+function invalidResponseResult<T>(): BackendOpResult<T> {
+  return {
+    ok: false,
+    status: 'ERROR',
+    errorCode: 'operation_failed',
+    errorMessage: 'The server returned an invalid preferences response.',
+  };
+}
+
+function parsePreferencesRow(data: unknown): UserPreferencesState | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as Record<string, unknown>;
+  if (
+    typeof row.language !== 'string' ||
+    typeof row.theme !== 'string' ||
+    typeof row.notification_sound !== 'string' ||
+    typeof row.sound_muted !== 'boolean' ||
+    typeof row.vibration_enabled !== 'boolean'
+  ) {
+    return null;
+  }
+
+  return {
+    language: row.language as Language,
+    theme: row.theme as ThemeMode,
+    notificationSound: row.notification_sound as NotificationSoundOption,
+    soundMuted: row.sound_muted,
+    vibrationEnabled: row.vibration_enabled,
+  };
+}
+
 export async function loadMyPreferences(
   userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,17 +56,9 @@ export async function loadMyPreferences(
       .maybeSingle();
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (!data) return { ok: true, status: 'READY', data: null };
-    return {
-      ok: true,
-      status: 'READY',
-      data: {
-        language: (data.language as Language) || 'fr',
-        theme: (data.theme as ThemeMode) || 'light',
-        notificationSound: (data.notification_sound as NotificationSoundOption) || 'Kristou Bell',
-        soundMuted: Boolean(data.sound_muted),
-        vibrationEnabled: data.vibration_enabled !== false,
-      },
-    };
+    const preferences = parsePreferencesRow(data);
+    if (!preferences) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: preferences };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
@@ -56,18 +79,9 @@ export async function saveMyPreferences(
       p_vibration_enabled: prefs.vibrationEnabled ?? null,
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
-    const r = (data ?? {}) as Record<string, unknown>;
-    return {
-      ok: true,
-      status: 'READY',
-      data: {
-        language: (r.language as Language) || 'fr',
-        theme: (r.theme as ThemeMode) || 'light',
-        notificationSound: (r.notification_sound as NotificationSoundOption) || 'Kristou Bell',
-        soundMuted: Boolean(r.sound_muted),
-        vibrationEnabled: r.vibration_enabled !== false,
-      },
-    };
+    const preferences = parsePreferencesRow(data);
+    if (!preferences) return invalidResponseResult();
+    return { ok: true, status: 'READY', data: preferences };
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
