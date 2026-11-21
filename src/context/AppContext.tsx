@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { PreferencesProvider, usePreferences, type PreferencesContextValue, type PreferencesActions } from './PreferencesContext';
+import { NotificationProvider, useNotifications, type NotificationContextValue, type NotificationActions } from './NotificationContext';
 import {
   AccountRole,
   AdminDirectoryMember,
@@ -67,19 +69,14 @@ import {
   fetchPublicContent,
   listClassCommunityContent,
   listMessageThreads,
-  listMyNotifications,
   listParentNotes,
   listPublicDirectory,
   listSchoolBroadcasts,
   listSchoolCalendarEvents,
-  loadMyPreferences,
-  markAllNotificationsReadOnServer,
-  markNotificationReadOnServer,
   moderateClassQuestion as moderateClassQuestionRpc,
   postClassQuestion as postClassQuestionRpc,
   replyClassQuestion as replyClassQuestionRpc,
   replyParentNote as replyParentNoteRpc,
-  saveMyPreferences,
   sendParentNote as sendParentNoteRpc,
 } from '../lib/schoolContent';
 import {
@@ -88,18 +85,10 @@ import {
   type ParentNotesBoundarySnapshot,
 } from '../lib/parentNotesBoundary';
 import {
-  applyAllNotificationsOptimisticRead,
-  applySingleNotificationOptimisticRead,
   isMatchingApprovedAccountContext,
-  mergeRefreshedNotifications,
-  captureNotificationReadSnapshot,
-  reconcileFailedMarkAllNotificationsRead,
-  reconcileFailedSingleNotificationRead,
   reconcileSelectedClassId,
   resolveClassesRosterFetchStrategy,
-  resolvePreferencesPersistOutcome,
   type AccountIdentityContext,
-  type PendingNotificationSnapshot,
   type PreferencesSyncStatus,
 } from '../lib/appStateGuards';
 import { canReviewOrdinaryAccountsUi } from '../components/homepages/homepageAccess';
@@ -238,44 +227,16 @@ interface AppContextType {
   setVibrationEnabled: (enabled: boolean) => void;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const SOUND_OPTIONS: readonly NotificationSoundOption[] = [
-  'Kristou Bell',
-  'Soft Chime',
-  'Classroom Bell',
-  'Gentle Pop',
-  'Silent',
-];
-
-function sanitizeSound(raw: string | null): NotificationSoundOption {
-  if (raw && (SOUND_OPTIONS as readonly string[]).includes(raw)) {
-    return raw as NotificationSoundOption;
-  }
-  return 'Kristou Bell';
-}
+type CoreAppContextType = Omit<
+  AppContextType,
+  keyof PreferencesContextValue | keyof NotificationContextValue | 't' | 'dir'
+>;
+const AppContext = createContext<CoreAppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const telegramIdentityUser = useRef<User | null>(null);
   const [currentRole, setCurrentRoleState] = useState<AccountRole | null>(null);
-  const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('kristou_lang');
-    return saved === 'ar' || saved === 'fr' || saved === 'en' ? saved : 'fr';
-  });
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('kristou_theme');
-    return saved === 'pitch-black' ? 'pitch-black' : 'light';
-  });
-  const [notificationSound, setNotificationSoundState] = useState<NotificationSoundOption>(() =>
-    sanitizeSound(localStorage.getItem('kristou_notification_sound')),
-  );
-  const [soundMuted, setSoundMutedState] = useState<boolean>(
-    () => localStorage.getItem('kristou_sound_muted') === 'true',
-  );
-  const [vibrationEnabled, setVibrationEnabledState] = useState<boolean>(
-    () => localStorage.getItem('kristou_vibration_enabled') !== 'false',
-  );
   const [telegramLinkNotice, setTelegramLinkNotice] = useState<'success' | 'error' | null>(null);
 
   // Private operational state starts strictly empty (zero mock private records).
@@ -331,13 +292,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [enrollmentsError, setEnrollmentsError] = useState<string | null>(null);
   const [publicInquiries, setPublicInquiries] = useState<PublicInquiryItem[]>([]);
   const [inquiriesStatus, setInquiriesStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationsError, setNotificationsError] = useState<string | null>(null);
-  const [markingNotificationIds, setMarkingNotificationIds] = useState<string[]>([]);
-  const [markingAllNotifications, setMarkingAllNotifications] = useState<boolean>(false);
-  const [preferencesError, setPreferencesError] = useState<string | null>(null);
-  const [preferencesSyncStatus, setPreferencesSyncStatus] = useState<PreferencesSyncStatus>('LOCAL_ONLY');
-
   // Concurrency, identity-generation, and unmount guards
   const mountedRef = useRef<boolean>(true);
   const authGenerationRef = useRef<number>(1);
@@ -349,15 +303,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const publicHydrationGenRef = useRef<number>(0);
   const authHydrationGenRef = useRef<number>(0);
   const classCommGenRef = useRef<number>(0);
-  const prefsGenRef = useRef<number>(0);
-  const preferencesErrorRef = useRef<string | null>(null);
-  const notificationsRef = useRef<NotificationItem[]>([]);
-  const notifSeqRef = useRef<number>(0);
-  const inFlightSingleReadsRef = useRef<Set<string>>(new Set());
-  const pendingNotificationSnapshotsRef = useRef<Map<number, PendingNotificationSnapshot>>(new Map());
-  const pendingMarkAllReadsRef = useRef<Map<number, ReadonlySet<string>>>(new Map());
-  const confirmedReadSeqByIdRef = useRef<Map<string, number>>(new Map());
-  const latestMarkAllConfirmedSeqRef = useRef<number>(0);
+  // Registration bridges, not duplicate feature state.
+  const preferencesActionsRef = useRef<PreferencesActions | null>(null);
+  const notificationsActionsRef = useRef<NotificationActions | null>(null);
+  const registerPreferencesActions = useCallback((actions: PreferencesActions | null) => {
+    preferencesActionsRef.current = actions;
+  }, []);
+  const registerNotificationActions = useCallback((actions: NotificationActions | null) => {
+    notificationsActionsRef.current = actions;
+  }, []);
   const notesBoundaryControllerRef = useRef<ReturnType<typeof createParentNotesQuotaBoundaryController> | null>(null);
   if (!notesBoundaryControllerRef.current) {
     notesBoundaryControllerRef.current = createParentNotesQuotaBoundaryController({
@@ -393,31 +347,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  useEffect(() => {
-    preferencesErrorRef.current = preferencesError;
-  }, [preferencesError]);
-
-  const updateNotificationsState = useCallback(
-    (updater: NotificationItem[] | ((prev: NotificationItem[]) => NotificationItem[])) => {
-      setNotifications((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        notificationsRef.current = next;
-        return next;
-      });
-    },
-    [],
-  );
-
-  const resetNotificationTracking = useCallback(() => {
-    inFlightSingleReadsRef.current.clear();
-    pendingMarkAllReadsRef.current.clear();
-    pendingNotificationSnapshotsRef.current.clear();
-    confirmedReadSeqByIdRef.current.clear();
-    latestMarkAllConfirmedSeqRef.current = 0;
-    setMarkingNotificationIds([]);
-    setMarkingAllNotifications(false);
-  }, []);
-
   const syncAccountIdentity = useCallback(
     (nextUser: User | null) => {
       const prevId = currentIdentityRef.current.userId;
@@ -431,7 +360,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           accountStatus: nextStatus,
           generation: authGenerationRef.current,
         };
-        resetNotificationTracking();
         setChildrenList([]);
         setClassesList([]);
         setClassRosters([]);
@@ -455,32 +383,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(nextUser);
       setCurrentRoleState(nextUser ? nextUser.role : null);
     },
-    [resetNotificationTracking],
+    [],
   );
-
-  const dir = language === 'ar' ? 'rtl' : 'ltr';
-
-  useEffect(() => {
-    document.documentElement.dir = dir;
-    document.documentElement.lang = language;
-  }, [dir, language]);
-
-  useEffect(() => {
-    if (theme === 'pitch-black') {
-      document.documentElement.classList.add('dark', 'pitch-black');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark', 'pitch-black');
-    }
-    localStorage.setItem('kristou_theme', theme);
-  }, [theme]);
 
   const clearPrivateState = useCallback(() => {
     authHydrationGenRef.current += 1;
     classCommGenRef.current += 1;
-    prefsGenRef.current += 1;
-    resetNotificationTracking();
+    preferencesActionsRef.current?.clear();
+    notificationsActionsRef.current?.clear();
     setIsHydratingSchoolData(false);
     setIsLoadingClassCommunity(false);
     setChildrenList([]);
@@ -512,11 +422,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEnrollmentsError(null);
     setPublicInquiries([]);
     setInquiriesStatus('BLOCKED_BACKEND');
-    updateNotificationsState([]);
-    setNotificationsError(null);
-    setPreferencesError(null);
-    setPreferencesSyncStatus('LOCAL_ONLY');
-  }, [resetNotificationTracking, updateNotificationsState]);
+
+  }, []);
 
   const hydratePublicData = useCallback(async (targetUserId?: string | null): Promise<boolean> => {
     const reqGen = ++publicHydrationGenRef.current;
@@ -649,53 +556,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       setIsHydratingSchoolData(true);
       setSchoolContextError(null);
-      setNotificationsError(null);
 
       try {
-        const [ctxRes, prefsRes, notifRes] = await Promise.all([
+        const [ctxRes] = await Promise.all([
           fetchMySchoolContext(),
-          loadMyPreferences(user.id),
-          listMyNotifications(),
+          preferencesActionsRef.current?.hydrate(user.id, isStillValid),
+          notificationsActionsRef.current?.hydrate(isStillValid),
         ]);
 
         if (!isStillValid()) return false;
-
-        if (prefsRes.ok && prefsRes.data) {
-          setLanguageState(prefsRes.data.language);
-          localStorage.setItem('kristou_lang', prefsRes.data.language);
-          setThemeState(prefsRes.data.theme);
-          localStorage.setItem('kristou_theme', prefsRes.data.theme);
-          setNotificationSoundState(prefsRes.data.notificationSound);
-          localStorage.setItem('kristou_notification_sound', prefsRes.data.notificationSound);
-          setSoundMutedState(prefsRes.data.soundMuted);
-          localStorage.setItem('kristou_sound_muted', String(prefsRes.data.soundMuted));
-          setVibrationEnabledState(prefsRes.data.vibrationEnabled);
-          localStorage.setItem('kristou_vibration_enabled', String(prefsRes.data.vibrationEnabled));
-          setPreferencesError(null);
-          setPreferencesSyncStatus('SAVED');
-        } else if (prefsRes.status === 'BLOCKED_BACKEND') {
-          setPreferencesSyncStatus('UNAVAILABLE');
-        } else if (!prefsRes.ok) {
-          setPreferencesSyncStatus('ERROR');
-          setPreferencesError(prefsRes.errorMessage || prefsRes.errorCode || 'Unable to load preferences.');
-        }
-
-        if (notifRes.ok && notifRes.data) {
-          updateNotificationsState(
-            mergeRefreshedNotifications(
-              notifRes.data,
-              inFlightSingleReadsRef.current,
-              pendingMarkAllReadsRef.current,
-              confirmedReadSeqByIdRef.current,
-            ),
-          );
-          setNotificationsError(null);
-        } else if (notifRes.status === 'UNAUTHORIZED') {
-          updateNotificationsState([]);
-          setNotificationsError(notifRes.errorMessage || notifRes.errorCode || 'Not authorized to load notifications.');
-        } else if (!notifRes.ok && notifRes.status !== 'BLOCKED_BACKEND') {
-          setNotificationsError(notifRes.errorMessage || notifRes.errorCode || 'Unable to load notifications.');
-        }
 
         let resolvedClassIds = user.assignedClassIds ?? [];
         if (ctxRes.ok && ctxRes.data) {
@@ -961,7 +830,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     },
-    [clearPrivateState, selectedClassId, updateNotificationsState],
+    [clearPrivateState, selectedClassId],
   );
 
   const refreshSchoolData = useCallback(async (): Promise<boolean> => {
@@ -1183,87 +1052,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [syncAccountIdentity]);
 
-  const persistPreferencesUpdate = (patch: {
-    language?: Language;
-    theme?: ThemeMode;
-    notificationSound?: NotificationSoundOption;
-    soundMuted?: boolean;
-    vibrationEnabled?: boolean;
-  }) => {
-    if (!currentUser || currentUser.accountStatus !== 'APPROVED') {
-      setPreferencesSyncStatus('LOCAL_ONLY');
-      return;
-    }
-
-    const origin: AccountIdentityContext = {
-      userId: currentUser.id,
-      accountStatus: currentUser.accountStatus,
-      generation: currentIdentityRef.current.generation,
-    };
-    const requestSeq = ++prefsGenRef.current;
-    setPreferencesSyncStatus('SAVING');
-
-    void saveMyPreferences(patch)
-      .catch((err): BackendOpResult<unknown> => ({
-        ok: false,
-        status: 'ERROR',
-        errorCode: 'preference_save_failed',
-        errorMessage: err instanceof Error ? err.message : 'Failed to save preferences.',
-      }))
-      .then((result) => {
-        const outcome = resolvePreferencesPersistOutcome({
-          result,
-          origin,
-          current: currentIdentityRef.current,
-          requestSeq,
-          latestRequestSeq: prefsGenRef.current,
-          previousError: preferencesErrorRef.current,
-          isMounted: mountedRef.current,
-        });
-        if (outcome.ignored) return;
-        setPreferencesSyncStatus(outcome.syncStatus);
-        setPreferencesError(outcome.error);
-      });
-  };
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('kristou_lang', lang);
-    persistPreferencesUpdate({ language: lang });
-  };
-
-  const setTheme = (thm: ThemeMode) => {
-    setThemeState(thm);
-    localStorage.setItem('kristou_theme', thm);
-    persistPreferencesUpdate({ theme: thm });
-  };
-
-  const setNotificationSound = (sound: NotificationSoundOption) => {
-    setNotificationSoundState(sound);
-    localStorage.setItem('kristou_notification_sound', sound);
-    persistPreferencesUpdate({ notificationSound: sound });
-  };
-
-  const setSoundMuted = (muted: boolean) => {
-    setSoundMutedState(muted);
-    localStorage.setItem('kristou_sound_muted', String(muted));
-    persistPreferencesUpdate({ soundMuted: muted });
-  };
-
-  const setVibrationEnabled = (enabled: boolean) => {
-    setVibrationEnabledState(enabled);
-    localStorage.setItem('kristou_vibration_enabled', String(enabled));
-    persistPreferencesUpdate({ vibrationEnabled: enabled });
-  };
-
-  const t = useCallback(
-    (key: TranslationKey): string => {
-      const dict = translations[language] || translations.en;
-      return dict[key] || translations.en[key] || key;
-    },
-    [language],
-  );
-
   // Merge school-wide broadcasts (only show demo preview when status === 'BLOCKED_BACKEND',
   // never when an ordinary network/permission ERROR or UNAUTHORIZED occurred) + class announcements.
   const combinedAnnouncements: Announcement[] = [
@@ -1274,55 +1062,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : []),
     ...classAnnouncements,
   ];
-
-  const localizedAnnouncements = combinedAnnouncements.map((item) =>
-    item.isDemoPreview
-      ? {
-          ...item,
-          title: contentT(language, 'announcements', item.id, 'title', item.title),
-          body: contentT(language, 'announcements', item.id, 'body', item.body),
-          authorRole: contentT(language, 'announcements', item.id, 'authorRole', item.authorRole),
-        }
-      : item,
-  );
-
-  const localizedFoodMenu = foodMenu.isDemoPreview
-    ? {
-        ...foodMenu,
-        weekRange: contentT(language, 'menu', foodMenu.id, 'weekRange', foodMenu.weekRange),
-        items: foodMenu.items.map((item, index) => ({
-          ...item,
-          day: contentT(language, 'menu', String(index), 'day', item.day),
-          starter: contentT(language, 'menu', String(index), 'starter', item.starter),
-          main: contentT(language, 'menu', String(index), 'main', item.main),
-          side: contentT(language, 'menu', String(index), 'side', item.side),
-          dessert: contentT(language, 'menu', String(index), 'dessert', item.dessert),
-          notes: item.notes ? contentT(language, 'menu', String(index), 'notes', item.notes) : item.notes,
-        })),
-      }
-    : foodMenu;
-
-  const localizedTeachers =
-    directoryStatus === 'READY'
-      ? teachers
-      : directoryStatus === 'BLOCKED_BACKEND'
-      ? teachers.map((item) => ({
-          ...item,
-          title: contentT(language, 'teachers', item.id, 'title', item.title),
-          bio: contentT(language, 'teachers', item.id, 'bio', item.bio),
-        }))
-      : [];
-
-  const localizedAdmins =
-    directoryStatus === 'READY'
-      ? admins
-      : directoryStatus === 'BLOCKED_BACKEND'
-      ? admins.map((item) => ({
-          ...item,
-          title: contentT(language, 'admins', item.id, 'title', item.title),
-          bio: contentT(language, 'admins', item.id, 'bio', item.bio),
-        }))
-      : [];
 
   const login = async (identifier: string, pass: string) => {
     try {
@@ -1337,7 +1076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {
         success: false,
         errorCode,
-        error: resolveSignInErrorMessage(language, errorCode),
+        error: resolveSignInErrorMessage(preferencesActionsRef.current?.getLanguage() ?? 'fr', errorCode),
       };
     }
   };
@@ -1364,7 +1103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {
         success: false,
         errorCode,
-        error: resolveSignUpErrorMessage(language, errorCode),
+        error: resolveSignUpErrorMessage(preferencesActionsRef.current?.getLanguage() ?? 'fr', errorCode),
       };
     }
   };
@@ -1528,193 +1267,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     error: 'pickup_backend_unavailable',
   });
 
-  const reconcileNotificationsFromServer = async (origin: AccountIdentityContext) => {
-    try {
-      const readback = await listMyNotifications();
-      if (!isMatchingApprovedAccountContext(origin, currentIdentityRef.current, mountedRef.current)) {
-        return;
-      }
-      if (readback.ok && readback.data) {
-        updateNotificationsState(
-          mergeRefreshedNotifications(
-            readback.data,
-            inFlightSingleReadsRef.current,
-            pendingMarkAllReadsRef.current,
-            confirmedReadSeqByIdRef.current,
-          ),
-        );
-      }
-    } catch {
-      // Keep the deterministic local reconciliation state if readback itself cannot complete.
-    }
+  const identityAccess = {
+    generation: currentIdentityRef.current.generation,
+    getUser: () => currentUser,
+    getIdentity: () => currentIdentityRef.current,
+    isMounted: () => mountedRef.current,
   };
-
-  const markNotificationRead = (id: string) => {
-    if (!currentUser || currentUser.accountStatus !== 'APPROVED') return;
-
-    const origin: AccountIdentityContext = {
-      userId: currentUser.id,
-      accountStatus: currentUser.accountStatus,
-      generation: currentIdentityRef.current.generation,
-    };
-    const requestSeq = ++notifSeqRef.current;
-    const snapshot = captureNotificationReadSnapshot(
-      notificationsRef.current, [id], pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
-    );
-    pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
-
-    inFlightSingleReadsRef.current.add(id);
-    setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
-    setNotificationsError(null);
-    updateNotificationsState((prev) => applySingleNotificationOptimisticRead(prev, id));
-
-    void (async () => {
-      let res: BackendOpResult<boolean>;
-      try {
-        res = await markNotificationReadOnServer(id);
-      } catch (err) {
-        res = {
-          ok: false,
-          status: 'ERROR',
-          errorCode: 'notification_mark_failed',
-          errorMessage: err instanceof Error ? err.message : 'Unable to update notification status.',
-        };
-      }
-
-      if (!isMatchingApprovedAccountContext(origin, currentIdentityRef.current, mountedRef.current)) {
-        return;
-      }
-
-      pendingNotificationSnapshotsRef.current.delete(requestSeq);
-      inFlightSingleReadsRef.current.delete(id);
-      setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
-
-      if (res.ok) {
-        const prevSeq = confirmedReadSeqByIdRef.current.get(id) ?? 0;
-        if (requestSeq > prevSeq) {
-          confirmedReadSeqByIdRef.current.set(id, requestSeq);
-        }
-        updateNotificationsState((prev) => mergeRefreshedNotifications(
-          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
-        ));
-        return;
-      }
-
-      updateNotificationsState((prev) => mergeRefreshedNotifications(
-        reconcileFailedSingleNotificationRead(
-          prev,
-          snapshot,
-          currentIdentityRef.current,
-          confirmedReadSeqByIdRef.current,
-          latestMarkAllConfirmedSeqRef.current,
-          mountedRef.current,
-        ).notifications,
-        inFlightSingleReadsRef.current,
-        pendingMarkAllReadsRef.current,
-        confirmedReadSeqByIdRef.current,
-      ));
-
-      if (res.status !== 'BLOCKED_BACKEND') {
-        setNotificationsError(
-          res.errorMessage || res.errorCode || 'Unable to update notification status.',
-        );
-        if (res.status !== 'UNAUTHORIZED') {
-          await reconcileNotificationsFromServer(origin);
-        }
-      }
-    })();
-  };
-
-  const markAllNotificationsRead = () => {
-    if (!currentUser || currentUser.accountStatus !== 'APPROVED') return;
-
-    const origin: AccountIdentityContext = {
-      userId: currentUser.id,
-      accountStatus: currentUser.accountStatus,
-      generation: currentIdentityRef.current.generation,
-    };
-    const requestSeq = ++notifSeqRef.current;
-    const snapshot = captureNotificationReadSnapshot(
-      notificationsRef.current, notificationsRef.current.map(item => item.id),
-      pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
-    );
-    pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
-
-    pendingMarkAllReadsRef.current.set(requestSeq, new Set(snapshot.targetIds));
-    setMarkingAllNotifications(true);
-    setNotificationsError(null);
-    updateNotificationsState((prev) => applyAllNotificationsOptimisticRead(prev).nextNotifications);
-
-    void (async () => {
-      let res: BackendOpResult<number>;
-      try {
-        res = await markAllNotificationsReadOnServer();
-      } catch (err) {
-        res = {
-          ok: false,
-          status: 'ERROR',
-          errorCode: 'notifications_mark_all_failed',
-          errorMessage: err instanceof Error ? err.message : 'Unable to mark notifications read.',
-        };
-      }
-
-      if (!isMatchingApprovedAccountContext(origin, currentIdentityRef.current, mountedRef.current)) {
-        return;
-      }
-
-      pendingNotificationSnapshotsRef.current.delete(requestSeq);
-      pendingMarkAllReadsRef.current.delete(requestSeq);
-      setMarkingAllNotifications(pendingMarkAllReadsRef.current.size > 0);
-
-      if (res.ok) {
-        for (const id of snapshot.targetIds) {
-          confirmedReadSeqByIdRef.current.set(id, Math.max(requestSeq, confirmedReadSeqByIdRef.current.get(id) ?? 0));
-        }
-        if (requestSeq > latestMarkAllConfirmedSeqRef.current) {
-          latestMarkAllConfirmedSeqRef.current = requestSeq;
-        }
-        updateNotificationsState((prev) => mergeRefreshedNotifications(
-          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
-        ));
-        return;
-      }
-
-      updateNotificationsState((prev) => mergeRefreshedNotifications(
-        reconcileFailedMarkAllNotificationsRead(
-          prev,
-          snapshot,
-          currentIdentityRef.current,
-          confirmedReadSeqByIdRef.current,
-          latestMarkAllConfirmedSeqRef.current,
-          mountedRef.current,
-        ).notifications,
-        inFlightSingleReadsRef.current,
-        pendingMarkAllReadsRef.current,
-        confirmedReadSeqByIdRef.current,
-      ));
-
-      if (res.status !== 'BLOCKED_BACKEND') {
-        setNotificationsError(
-          res.errorMessage || res.errorCode || 'Unable to mark notifications read.',
-        );
-        if (res.status !== 'UNAUTHORIZED') {
-          await reconcileNotificationsFromServer(origin);
-        }
-      }
-    })();
-  };
-
   return (
-    <AppContext.Provider
+    <PreferencesProvider identity={identityAccess} onRegister={registerPreferencesActions}>
+      <NotificationProvider identity={identityAccess} onRegister={registerNotificationActions}>
+        <AppContext.Provider
       value={{
         currentUser,
         currentRole,
-        language,
-        setLanguage,
-        theme,
-        setTheme,
-        t,
-        dir,
         childrenList,
         classesList,
         classRosters,
@@ -1729,7 +1294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isHydratingSchoolData,
         isLoadingClassCommunity,
         schoolContextError,
-        announcements: localizedAnnouncements,
+        announcements: combinedAnnouncements,
         broadcasts,
         broadcastsStatus,
         broadcastsError,
@@ -1753,11 +1318,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         messagesStatus,
         messagesError,
         pickupRecords,
-        foodMenu: localizedFoodMenu,
+        foodMenu,
         foodMenuStatus,
         foodMenuError,
-        teachers: localizedTeachers,
-        admins: localizedAdmins,
+        teachers,
+        admins,
         directoryStatus,
         directoryError,
         publicContent,
@@ -1768,12 +1333,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         enrollmentsError,
         publicInquiries,
         inquiriesStatus,
-        notifications,
-        notificationsError,
-        markingNotificationIds,
-        markingAllNotifications,
-        preferencesError,
-        preferencesSyncStatus,
         login,
         signup,
         logout,
@@ -1789,25 +1348,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         moderateClassQuestion,
         markPickupArrived,
         confirmPickupRelease,
-        markNotificationRead,
-        markAllNotificationsRead,
-        notificationSound,
-        setNotificationSound,
-        soundMuted,
-        setSoundMuted,
-        vibrationEnabled,
-        setVibrationEnabled,
       }}
     >
       {children}
-    </AppContext.Provider>
+        </AppContext.Provider>
+      </NotificationProvider>
+    </PreferencesProvider>
   );
 };
 
-export const useApp = () => {
+export const useApp = (): AppContextType => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+  const preferences = usePreferences();
+  const notifications = useNotifications();
+  if (!context) throw new Error('useApp must be used within an AppProvider');
+
+  const { language } = preferences;
+  const dir = language === 'ar' ? 'rtl' : 'ltr';
+  const t = useCallback(
+    (key: TranslationKey): string => {
+      const dict = translations[language] || translations.en;
+      return dict[key] || translations.en[key] || key;
+    },
+    [language],
+  );
+
+  const localizedAnnouncements = context.announcements.map((item) =>
+    item.isDemoPreview
+      ? {
+          ...item,
+          title: contentT(language, 'announcements', item.id, 'title', item.title),
+          body: contentT(language, 'announcements', item.id, 'body', item.body),
+          authorRole: contentT(language, 'announcements', item.id, 'authorRole', item.authorRole),
+        }
+      : item,
+  );
+
+  const localizedFoodMenu = context.foodMenu.isDemoPreview
+    ? {
+        ...context.foodMenu,
+        weekRange: contentT(language, 'menu', context.foodMenu.id, 'weekRange', context.foodMenu.weekRange),
+        items: context.foodMenu.items.map((item, index) => ({
+          ...item,
+          day: contentT(language, 'menu', String(index), 'day', item.day),
+          starter: contentT(language, 'menu', String(index), 'starter', item.starter),
+          main: contentT(language, 'menu', String(index), 'main', item.main),
+          side: contentT(language, 'menu', String(index), 'side', item.side),
+          dessert: contentT(language, 'menu', String(index), 'dessert', item.dessert),
+          notes: item.notes ? contentT(language, 'menu', String(index), 'notes', item.notes) : item.notes,
+        })),
+      }
+    : context.foodMenu;
+
+  const localizedTeachers =
+    context.directoryStatus === 'READY'
+      ? context.teachers
+      : context.directoryStatus === 'BLOCKED_BACKEND'
+      ? context.teachers.map((item) => ({
+          ...item,
+          title: contentT(language, 'teachers', item.id, 'title', item.title),
+          bio: contentT(language, 'teachers', item.id, 'bio', item.bio),
+        }))
+      : [];
+
+  const localizedAdmins =
+    context.directoryStatus === 'READY'
+      ? context.admins
+      : context.directoryStatus === 'BLOCKED_BACKEND'
+      ? context.admins.map((item) => ({
+          ...item,
+          title: contentT(language, 'admins', item.id, 'title', item.title),
+          bio: contentT(language, 'admins', item.id, 'bio', item.bio),
+        }))
+      : [];
+
+
+  return {
+    ...context,
+    ...preferences,
+    ...notifications,
+    t, dir,
+    announcements: localizedAnnouncements,
+    foodMenu: localizedFoodMenu,
+    teachers: localizedTeachers,
+    admins: localizedAdmins,
+  };
 };
