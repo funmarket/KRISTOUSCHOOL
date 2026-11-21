@@ -19,4 +19,3 @@ function PublicConsumer() {
   })}</pre>;
 }
 createRoot(document.getElementById('root')!).render(<AppProvider><PublicConsumer /></AppProvider>);
-

@@ -203,4 +203,3 @@ export function usePreferences(): PreferencesContextValue {
   if (!context) throw new Error('usePreferences must be used within PreferencesProvider');
   return context;
 }
-
