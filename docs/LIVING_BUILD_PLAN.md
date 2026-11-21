@@ -1,7 +1,62 @@
 # KRISTOU SCHOOL — LIVING BUILD PLAN
 
 Status: **ACTIVE BUILD DISCIPLINE**
-Revision: **2026-11-14 — DOC-D6**
+Revision: **2026-11-21 — ARCH-MASTER-01 execution and proof gates; DOC-D6 history retained**
+
+## LIVE EXECUTION CHECKPOINT — 2026-11-21 / ARCH-MASTER-01
+
+**ACTIVE STATUS: this section supersedes the dated task-status and next-step language below, but preserves historical text unchanged.** It strengthens execution discipline only. It does not change product authority in requirements.md, domain/architecture authority in structure.md, database truth in CANONICAL_MODEL.md, or accepted decisions. The latest explicit Owner command is required for each mutation and each new ARCH packet.
+
+### Verified source checkpoint and evidence limitations
+
+- Canonical repository: \`funmarket/KRISTOUSCHOOL\`. Verified source \`main\` at this checkpoint: \`6c932c07661cf2f35649bdccbffc7409a6dfb6fe\`.
+- **ARCH-01: PR #36 MERGED**, 2026-11-21, merge/main SHA \`6c932c07661cf2f35649bdccbffc7409a6dfb6fe\`; prior branch HEAD \`8db21cacd29fc048f96c327af1875d6a749dddab\`. \`AppContext.tsx\` physically shrank 1,813 → 1,436 lines. \`PreferencesContext.tsx\` and \`NotificationContext.tsx\` exist in merged source.
+- On the exact merged main, independently executed *controlled React browser* ARCH-01 tests 13/13 PASS; canonical Messages browser tests 5/5 PASS; Node suite 183/183 PASS; frozen dependency install, lint/typecheck, build and \`git diff --check\` all exit 0. These prove only the specific executed checks and their source revision. They do not prove real hosted RLS, authenticated production user flows, or Telegram live behavior.
+- **Historical procedural exception, permanently recorded:** Original ARCH-01 source changes and commit lacked contemporaneous Literal Command Executor preflight/begin/postcheck proof. Historical process compliance remains **NOT VERIFIED**; later tests or gatekeeper use cannot retroactively certify the original work. Do not suppress this exception.
+- Protected Students PR #33 remains OPEN / DRAFT at \`6dfa1aac7e5f740bd9240f950b33778451774fb6\`; do not edit, absorb, merge, close or silently rebase it.
+- **ARCH-02 is NOT STARTED / LOCKED**. No automatic advancement from ARCH-01 merger or passing tests. It requires a new exact Owner implementation authorization and fresh source/ownership inspection.
+- Older DOC-D6 "backend paused" and "next DOC-D7" wording and historical GOV queue below are dated checkpoints, not the current task. This update grants **no** Supabase mutation, production deployment, CI setting changes, auth/Telegram edits, or application-code changes.
+
+### Sequential monolith decomposition packet contract
+
+One packet is active at a time. Each packet gets its own explicit Owner authorization, fresh baseline, file allowlist, evidence ledger, isolated branch, draft PR, separately authorized merge, post-merge exact-main verification and STOP. The next packet is never auto-authorized.
+
+| Packet | Physical target | Acceptance threshold and status |
+|---|---|---|
+| ARCH-00 | Fresh main/PR/owner/consumer/line-count baseline | Historical inspection only; refresh before each packet |
+| ARCH-01 | Separate Preferences and Notification state from AppContext; preserve \`useApp()\` | MERGED IN SOURCE; AppContext 1,436 ≤1,500; historical process exception above remains |
+| ARCH-02 | Extract \`IdentityContext.tsx\` — one session/auth owner | LOCKED; AppContext ≤1,050 and IdentityContext ≤400 |
+| ARCH-03 | Extract \`AppShell.tsx\` and typed \`routeModel.ts\` from \`App.tsx\` | LOCKED; App.tsx ≤150 |
+| ARCH-04 | Decompose \`ClassesManagementView.tsx\` into focused UI | LOCKED; original view ≤450 |
+| ARCH-05 | Decompose \`StudentsManagementView.tsx\`, reconcile protected PR #33 only by separate approval | LOCKED; original view ≤350 |
+| ARCH-06 | Re-export-only schoolContent/schoolOperations barrels and canonical domain-owned types | LOCKED; types.ts ≤300; domain-file writes require exact separate authorization |
+| ARCH-07a | \`StaffAttendanceRegisterPanel.tsx\` | LOCKED; ≤450 |
+| ARCH-07b | \`SchoolCalendarPanel.tsx\` | LOCKED; ≤450 |
+| ARCH-07c | \`OwnerGovernanceWorkspace.tsx\` | LOCKED; ≤450 |
+| ARCH-07d | \`PerformanceView.tsx\` | LOCKED; ≤450 |
+| ARCH-07e | \`PublicHomePage.tsx\` | LOCKED; ≤450 |
+| ARCH-07f | \`ClassCommunityView.tsx\` | LOCKED; ≤450 |
+| ARCH-08 | Whole-repository ownership/remaining-monolith/dependency/CI/document reconciliation audit | **PROPOSED ONLY**, not authorized |
+
+Extracted focused view components should normally be ≤400 lines. Line counts are physical acceptance checks, not permission to scatter ownership. \`move → prove → remove\`; never leave two active owners, create catch-all services or unused placeholder files. Preserve all existing AR/FR/EN UX, roles, approvals, account identity, Telegram link/re-entry, Calendar/Attendance/Parent Notes contracts, school records, and the existing single Supabase project.
+
+### Non-negotiable deterministic execution and proof system
+
+1. **Before any source edit, branch/ref write, commit, push, PR/merge, deployment or database mutation**, load applicable Evidence-First Execution, Literal Command Executor, Superpowers, Understand and Build Web Apps instructions. Run the available environment proof or a recorded equivalent. Determine exact repo/branch/main SHA, clean/dirty state, PR overlap, current schema where relevant, installed tools and independent test environment.
+2. Create an off-repository **literal task contract** holding the latest Owner command verbatim; one \`CURRENT_COMMAND\`; exact target paths and allowed/forbidden actions; prerequisite evidence IDs; fresh fingerprints; decision and approval gates. Do not extrapolate authorization from roadmap entries, convenience or previous success.
+3. Use the deterministic \`gatekeeper.py\` controller for every consequential write: \`init\` → \`evidence\` → fresh \`preflight\` token → \`begin\` → **exactly one logical mutation** → read-back and focused verification → \`postcheck\` → \`advance\` → final \`finalize\`. Store state outside repository and never hand-edit controller state. Controller refusal, missing tool, expired token, mismatch, or \`STOP_ON_DRIFT\` blocks the affected mutation; start a new verified controller state rather than bypassing it.
+4. Evidence-first execution loop for testable changes: establish an actual behavior baseline and observe a meaningful **RED** failure before the implementation; minimal fix; **GREEN**; isolate a **negative control** that deliberately breaks the protected behavior and proves the test detects it; restore source byte-for-byte; rerun on the exact final candidate. A timeout caused by test infrastructure is not sufficient RED proof. Do not weaken or skip tests.
+5. At each gate, preserve an append-only, timestamped evidence ledger and full raw logs. Each row requires: packet ID, exact user authorization quote, repo/main/branch HEAD, worktree state, file allowlist, candidate fingerprint, environment, exact command, exit code, actually printed pass/fail/skip counts (if tests), evidence path, what the result proves and does not prove, and status \`PASS | FAIL | NOT VERIFIED | BLOCKED | NOT STARTED\`. Keep credentials and child/family private data out of logs. Zero tests collected is never a pass; do not hide skips or masked exit codes.
+6. The **Hard Evidence Block** for every implementation packet must identify all changed files and before/after line counts, SHA-256 and Git blob hashes, full diff and \`git diff --check\`, canonical state and durable write owner, imports/dependency cycles, type and error contract, focused and surrounding real test logs, actual browser interaction, regression RED/GREEN/negative-control trace, and any deny/concurrency evidence where relevant. Distinguish controlled React fixture, real RLS server, preview deployment READY, authenticated live preview and production checks. **Never substitute one evidence class for another**.
+7. A **draft PR** requires independent exact-head review and CI/preview evidence when applicable. A green build, preview READY, or mergeable flag never authorizes merging. Owner approval must name exact packet and PR. After a separately authorized merge, independently verify resultant main tree, rerun required post-merge tests, confirm protected branches remained unchanged, obtain Owner acceptance of the evidence block, then STOP. Starting the next packet requires its own Owner command.
+8. Fail closed on missing historical authorization records, failed security deny cases, unexpected modified files, changed/stale branch, weak tests, conflicts, unverified server state, or inability to inspect a material contract. Mark missing proof **NOT VERIFIED** or **BLOCKED** and report it; never invent logs, approvals, SHA values, migrations, tests, or completed architecture.
+9. Public/browser presentation never authorizes protected behavior. Use verified server identity, least-privilege RPC/grants/RLS and the canonical domain adapters for protected operations. Never change hosted SQL, Auth/Telegram handlers, accounts, approved roles, student/guardian records or deployment under an architecture documentation update.
+
+### Proof implementation boundary of this documentation-only update
+
+This update **installs mandatory written execution and evidence obligations in this file**. It does **not** create or configure CI workflows, GitHub branch protection, executable acceptance scripts, Supabase migrations, deployment, or a new runtime service. Any **automated enforcement** implementation requires its own explicitly scoped packet, evidence and approval. Do not claim written process rules are already machine-enforced.
+
+---
 
 ### Current continuation — 2026-11-18
 
