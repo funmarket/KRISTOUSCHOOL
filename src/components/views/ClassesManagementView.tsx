@@ -44,7 +44,15 @@ export type ClassesBackendStatus =
   | 'ERROR'
   | 'UNAUTHORIZED';
 
+export interface ClassRosterReturnContext {
+  classId: string;
+  searchQuery: string;
+  page: number;
+  studentId: string;
+}
+
 export interface ClassesManagementViewProps {
+  rosterReturnContext?: ClassRosterReturnContext | null;
   initialClasses?: SchoolClassSummary[];
   initialRosters?: Record<string, ClassStudentRosterItem[]>;
   backendStatus?: ClassesBackendStatus;
@@ -52,7 +60,7 @@ export interface ClassesManagementViewProps {
   onRefresh?: () => Promise<boolean | void> | void;
   onOpenClassCommunity?: (classId: string) => void;
   onOpenAttendance?: (classId: string) => void;
-  onOpenStudentDetail?: (studentId: string) => void;
+  onOpenStudentDetail?: (studentId: string, context: ClassRosterReturnContext) => void;
 }
 
 const ROSTER_PAGE_SIZE = 25;
@@ -68,6 +76,7 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   onOpenClassCommunity,
   onOpenAttendance,
   onOpenStudentDetail,
+  rosterReturnContext,
 }) => {
   const {
     currentUser,
@@ -80,13 +89,11 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('ALL');
   const [selectedYear, setSelectedYear] = useState('ALL');
-  const [selectedClassId, setLocalSelectedClassId] = useState<string | null>(sharedSelectedClassId || null);
+  const [selectedClassId, setLocalSelectedClassId] = useState<string | null>(rosterReturnContext?.classId || sharedSelectedClassId || null);
 
   const setSelectedClassId = (id: string | null) => {
     setLocalSelectedClassId(id);
-    if (id) {
-      setSharedSelectedClassId?.(id);
-    }
+    setSharedSelectedClassId?.(id);
   };
 
   useEffect(() => {
@@ -98,8 +105,10 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   const [selectionActorId, setSelectionActorId] = useState<string | null>(null);
   const rosterContainerRef = useRef<HTMLDivElement | null>(null);
   const lastClickedStudentIdRef = useRef<string | null>(null);
-  const [studentSearchQuery, setStudentSearchQuery] = useState('');
-  const [rosterPage, setRosterPage] = useState(1);
+  const [studentSearchQuery, setStudentSearchQuery] = useState(rosterReturnContext?.searchQuery ?? '');
+  const [rosterPage, setRosterPage] = useState(rosterReturnContext?.page ?? 1);
+  const restoreFocusStudentIdRef = useRef(rosterReturnContext?.studentId ?? null);
+  const previousActorScopeRef = useRef(`${currentUser?.id ?? 'anonymous'}:${currentUser?.role ?? ''}:${currentUser?.accountStatus ?? ''}`);
 
   useEffect(() => {
     if (backendStatus === 'READY' && selectedClassId && selectedStudentId) {
@@ -177,18 +186,22 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
   );
 
   useEffect(() => {
+    const nextScope = `${currentUser?.id ?? 'anonymous'}:${currentUser?.role ?? ''}:${currentUser?.accountStatus ?? ''}`;
+    if (previousActorScopeRef.current === nextScope) return; // Do not erase roster context on initial mount.
+    previousActorScopeRef.current = nextScope;
     setSelectedClassId(null);
     setSelectedStudentId(null);
     setStudentSearchQuery('');
     setRosterPage(1);
     setSelectedLevel('ALL');
     setSelectedYear('ALL');
-  }, [currentUser?.id, currentUser?.role]);
+    restoreFocusStudentIdRef.current = null;
+  }, [currentUser?.id, currentUser?.role, currentUser?.accountStatus]);
 
   useEffect(() => {
     if (
       isBackendUnauthorized ||
-      (selectedClassId && !scopedInitialClasses.some((cls) => cls.id === selectedClassId))
+      (backendStatus === 'READY' && selectedClassId && !scopedInitialClasses.some((cls) => cls.id === selectedClassId))
     ) {
       setSelectedClassId(null);
       setSelectedStudentId(null);
@@ -336,6 +349,15 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
     const start = (safeRosterPage - 1) * ROSTER_PAGE_SIZE;
     return filteredRoster.slice(start, start + ROSTER_PAGE_SIZE);
   }, [filteredRoster, safeRosterPage]);
+
+  useEffect(() => {
+    const studentId = restoreFocusStudentIdRef.current;
+    if (!studentId || !selectedClass || backendStatus !== 'READY') return;
+    const element = rosterContainerRef.current?.querySelector<HTMLElement>(`[data-testid="view-student-${studentId}"]`);
+    const fallback = rosterContainerRef.current?.querySelector<HTMLElement>('#roster-heading');
+    (element ?? fallback)?.focus();
+    restoreFocusStudentIdRef.current = null;
+  }, [selectedClass, backendStatus, safeRosterPage, studentSearchQuery]);
 
   const classGateRef = useRef(new ClassOperationGate());
   const classGate = classGateRef.current;
@@ -834,7 +856,12 @@ export const ClassesManagementView: React.FC<ClassesManagementViewProps> = ({
                           onClick={() => {
                             lastClickedStudentIdRef.current = student.studentId;
                             if (onOpenStudentDetail && !isTeacherView && canAccessAppTab(currentUser, 'students')) {
-                              onOpenStudentDetail(student.studentId);
+                              onOpenStudentDetail(student.studentId, {
+                                classId: selectedClass.id,
+                                searchQuery: studentSearchQuery,
+                                page: safeRosterPage,
+                                studentId: student.studentId,
+                              });
                             } else {
                               setSelectedStudentId(student.studentId);
                               setSelectionActorId(currentUser?.id ?? null);
