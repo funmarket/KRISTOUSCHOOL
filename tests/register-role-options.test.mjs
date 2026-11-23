@@ -332,11 +332,13 @@ test('Test H — authenticateTelegramInitData rejects unapproved Telegram accoun
       username: 'parent_tg',
       fullName: 'Approved Parent',
       role: 'PARENT',
+      accountStatus: 'APPROVED',
       capabilities: ['GENERAL_USER', 'PARENT'],
     }),
   );
   assert.equal(approvedResult.linked, true);
   assert.equal(approvedResult.user.role, 'PARENT');
+  assert.equal(approvedResult.user.accountStatus, 'APPROVED');
   assert.deepEqual(approvedResult.user.capabilities, ['PARENT']);
 });
 

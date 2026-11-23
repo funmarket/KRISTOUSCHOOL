@@ -10,17 +10,20 @@ export default defineConfig(({mode}) => {
   const fileEnv = loadEnv(mode, process.cwd(), '');
   const env = {...fileEnv, ...process.env};
   const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
-  const supabasePublishableKey =
-    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  const supabaseAnonKey =
     env.VITE_SUPABASE_ANON_KEY ||
-    env.SUPABASE_PUBLISHABLE_KEY ||
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     env.SUPABASE_ANON_KEY ||
+    env.SUPABASE_PUBLISHABLE_KEY ||
     '';
 
   return {
     define: {
       __KRISTOU_SUPABASE_URL__: JSON.stringify(supabaseUrl),
-      __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(supabasePublishableKey),
+      __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(supabaseAnonKey),
+      'process.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
+      'process.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseAnonKey),
     },
     plugins: [react(), tailwindcss()],
     resolve: {

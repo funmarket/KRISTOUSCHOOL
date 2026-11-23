@@ -1,0 +1,464 @@
+Exact source state
+- Repository: funmarket/KRISTOUSCHOOL
+- Branch: fix/domain-contract-regressions-20261119
+- Starting HEAD: 3117fbd6438b43a1b939decc5d42639d49c323ee
+- New HEAD: 0103de09ffea59c5b3efabd46f61b4a244573251
+- Commit: docs(architecture): define clean domain ownership structure
+- Changed file: only structure.md
+- New structure.md: 1,499 lines
+- GitHub blob: f9923d9687aaf199401e8429d7692efda6171d48
+No application code, tests, Supabase objects, migrations, PR #33, main, deployment, or runtime behavior was modified.
+What the cleaned structure.md now establishes
+The document no longer treats the old November 14 six-table snapshot as the current architecture. It explicitly separates:
+
+VERIFIED CURRENT — what we actually inspected in the repository/database.
+
+CLEAN TARGET — where the architecture must evolve.
+
+PLANNED / NOT INSTALLED — accepted domains such as Assessment/Pickup whose durable backend owner is not yet established.
+
+That distinction is important because it stops future agents from presenting a proposed folder or planned table as something already implemented.
+Clean application model
+The central architecture is now:
+Browser ──────────────┐
+                     │
+Telegram WebView ─────┤
+                     ▼
+          ONE CANONICAL REACT APP
+                     │
+                     ▼
+              Presentation
+                     │
+                     ▼
+             Thin Composition
+                     │
+                     ▼
+          Focused Domain Contracts
+                     │
+                     ▼
+       RPC / RLS-scoped Data Access
+                     │
+                     ▼
+         ONE SUPABASE / POSTGRES DB
+
+There is explicitly no second Telegram app, second backend, second student model, second role model, or parallel feature implementation.
+Clean source hierarchy
+The architecture document now defines this direction:
+src/
+├── main.tsx
+├── App.tsx
+│
+├── app/                         # target composition layer
+│   ├── AppShell.tsx
+│   ├── routeModel.ts
+│   └── featureRegistry.ts       # only if genuinely needed
+│
+├── context/
+│   ├── AppContext.tsx           # transition owner; composition only
+│   ├── IdentityContext.tsx      # future authorized split
+│   ├── PreferencesContext.tsx
+│   └── NotificationContext.tsx
+│
+├── components/
+│   ├── AuthModal.tsx
+│   ├── Navbar.tsx
+│   ├── Footer.tsx
+│   ├── homepages/
+│   └── views/
+│
+├── lib/
+│   ├── supabase.ts
+│   ├── database.types.ts
+│   ├── auth.ts
+│   ├── telegram.ts
+│   ├── username.ts
+│   │
+│   ├── domains/
+│   │   ├── academics.ts
+│   │   ├── people.ts
+│   │   ├── enrollment.ts
+│   │   ├── broadcasts.ts
+│   │   ├── calendarMutations.ts
+│   │   ├── classCommunity.ts
+│   │   ├── parentNotes.ts
+│   │   ├── messaging.ts
+│   │   ├── preferences.ts
+│   │   ├── notifications.ts
+│   │   ├── directory.ts
+│   │   ├── foodMenu.ts
+│   │   ├── publicContent.ts
+│   │   └── publicInquiry.ts
+│   │
+│   ├── attendance/
+│   ├── calendar/
+│   ├── classes/
+│   │
+│   ├── schoolContent.ts         # compatibility barrel ONLY
+│   └── schoolOperations.ts      # compatibility barrel ONLY
+│
+├── i18n/
+├── data/
+└── types.ts                     # transition surface; shrink over time
+
+The document explicitly says do not create all these target files automatically. Splits happen only when an authorized domain packet demonstrates the need.
+
+The migration rule is:
+move → prove → remove
+
+Never:
+copy → keep old owner → create two sources of truth
+
+Domain ownership is now explicit
+The cleaned document contains a full ownership matrix.
+
+The important boundaries are:
+Domain	Canonical ownership
+Identity/Auth	account identity, credential transport, Telegram identity/linking
+Access/Governance	approval, effective roles, capabilities, governance audit
+People	student/person identity
+Family	verified parent-child relationship
+Academics	years, levels, classes, membership, teacher assignments, subjects
+Enrollment	application/review workflow
+Calendar	event lifecycle, target audiences, RSVP
+Broadcasts	school publications/announcements
+Class Community	announcements, homework, questions, gallery/documents
+Parent Notes	structured parent notes/replies/quota/window
+Messaging	approved operational DM threads/messages
+Preferences	language/theme/sound/vibration
+Notifications	inbox/read/delivery projection
+Directory	controlled public/internal presentation
+Food Menu	week/day menu publication
+Public Content	published school information
+Public Inquiry	anonymous inquiry intake/response
+Attendance	registers, entries, events, requests
+Assessment	planned canonical marks/report domain
+Pickup	planned safety-critical child release domain
+Media	planned shared byte lifecycle
+
+
+The document also clearly states what each domain does not own.
+
+For example:
+- Attendance does not own the roster.
+- Parent Notes does not own family relationships.
+- Directory does not own private People records.
+- Messaging does not own Parent Notes.
+- Notifications do not own the underlying business event.
+- Enrollment acceptance does not equal account approval.
+Real installed database structure is now represented
+The old document talked about only six installed tables. That was obsolete.
+
+The updated structure uses our current read-only Supabase inventory:
+
+48 public tables observed, all with RLS enabled.
+
+The document groups them by domain rather than presenting one giant unrelated table list.
+
+For example:
+IDENTITY / GOVERNANCE
+├── profiles
+├── role_assignments
+├── telegram_identities
+├── account_link_challenges
+├── manager_capability_grants
+└── account_governance_audit_logs
+
+PEOPLE / FAMILY / ACADEMICS
+├── students
+├── parent_child_links
+├── academic_years
+├── school_levels
+├── school_classes
+├── student_class_memberships
+├── teacher_class_assignments
+├── curriculum_domains
+├── academic_subjects
+├── academic_subject_components
+├── subject_level_applicability
+├── school_subject_offerings
+├── teacher_subject_allocations
+├── teacher_subject_allocation_events
+└── class_creation_permissions
+
+COMMUNICATION
+├── parent_notes
+├── message_threads
+├── thread_participants
+└── thread_messages
+
+ATTENDANCE
+├── attendance_registers
+├── attendance_entries
+├── attendance_events
+└── attendance_requests
+
+And the full structure covers Calendar, Class Community, Public Content, Directory, Food Menu, Enrollment, Preferences, and Notifications.
+Core relational schema
+The document now includes a clean ER model such as:
+PROFILES
+   │
+   ├──── ROLE_ASSIGNMENTS
+   ├──── TELEGRAM_IDENTITIES
+   ├──── USER_PREFERENCES
+   └──── USER_NOTIFICATIONS
+
+STUDENTS
+   │
+   ├──── STUDENT_CLASS_MEMBERSHIPS ──── SCHOOL_CLASSES
+   │
+   ├──── PARENT_CHILD_LINKS ─────────── PROFILES(parent)
+   │
+   ├──── PARENT_NOTES
+   │
+   └──── ATTENDANCE_ENTRIES
+
+SCHOOL_CLASSES
+   │
+   ├──── TEACHER_CLASS_ASSIGNMENTS ──── PROFILES(teacher)
+   ├──── ATTENDANCE_REGISTERS
+   └──── STUDENT_CLASS_MEMBERSHIPS
+
+MESSAGE_THREADS
+   ├──── THREAD_PARTICIPANTS ────────── PROFILES
+   └──── THREAD_MESSAGES ────────────── PROFILES
+
+SCHOOL_CALENDAR_EVENTS
+   ├──── SCHOOL_CALENDAR_EVENT_TARGETS
+   └──── SCHOOL_CALENDAR_RESPONSES
+
+This makes the important distinction between identity, people, family, and academic membership much clearer.
+AppContext is explicitly declared a transition owner
+This is one of the most important additions.
+
+Current evidence:
+
+src/context/AppContext.tsx = approximately 1,814 lines.
+
+The new structure document does not say “delete AppContext.”
+
+Instead it defines a safe decomposition path.
+Phase A — stop making it larger
+No new feature persistence/business logic should be added directly to AppContext.
+Phase B — move domain composition gradually
+As a domain is verified, composition can move toward focused hooks/providers such as:
+useIdentitySession()
+usePreferences()
+useNotifications()
+useMessaging()
+useParentNotes()
+useCalendar()
+
+These are architectural examples, not automatically authorized files.
+Phase C — AppContext becomes shell composition
+Eventually AppContext should only coordinate genuinely application-wide state.
+
+It should not remain the permanent school business database.
+Explicit anti-monolith rules
+structure.md now says a module must not simultaneously own:
+- React rendering;
+- authorization;
+- Supabase access;
+- row mapping;
+- unrelated form validation;
+- routing;
+- notifications;
+- Telegram mechanics;
+- multiple unrelated business domains.
+It also defines review thresholds:
+0–250 lines   normally healthy
+250–400       inspect responsibility density
+400–700       split normally expected
+700+          explicit justification required
+1000+         presumed monolithic unless proven otherwise
+
+But the document makes the more important point:
+Size is only a warning. Responsibility ownership is the real gate.
+
+A 500-line cohesive academic catalogue can be healthier than five 100-line files with mixed ownership.
+Domain growth pattern
+A large domain should split inside itself:
+domains/messaging/
+├── index.ts
+├── api.ts
+├── contracts.ts
+├── mappers.ts
+├── validation.ts
+└── selectors.ts
+
+Not into garbage catch-all modules such as:
+helpers.ts
+common.ts
+management.ts
+schoolService.ts
+everything.ts
+
+This is now explicitly prohibited.
+Dependency rules
+The clean direction now looks like:
+Identity ───────→ Governance
+   │
+   └────────────→ Messaging
+
+People ─────────→ Family
+  │
+  ├─────────────→ Academics
+  │                 │
+  │                 ├────→ Attendance
+  │                 ├────→ Calendar
+  │                 ├────→ Class Community
+  │                 └────→ Parent Notes
+  │
+  └─────────────→ Directory
+
+Family ─────────→ Parent Notes
+
+Calendar ───────→ Broadcast references
+
+Identity ───────→ Preferences
+Identity ───────→ Notifications
+
+And the document explains what these arrows mean: consuming an approved contract, not importing another domain's persistence internals.
+Public/private boundary is explicit
+The document now protects us from one of the exact problems we discovered during DB-01.
+
+An authenticated administrator may legitimately have broad RLS access.
+
+That does not mean:
+listPublicDirectory()
+
+may expose unpublished directory entries.
+
+A function whose contract says “public” must encode its own published-only boundary.
+
+That principle applies to:
+- directory;
+- public content;
+- food menu;
+- calendar/public events;
+- other anonymous reads.
+Malformed success is explicitly forbidden
+Because Messaging, Preferences and Parent Notes all exposed this defect class, the architecture now treats it as a global rule.
+
+A domain must never:
+String(undefined)
+
+or:
+missing id → ""
+
+or:
+missing nested result → READY
+
+or:
+child query fails → valid empty data
+
+Malformed backend responses must fail closed.
+Database/RPC/Edge Function responsibilities are separated
+The document explains:
+Direct RLS-scoped queries
+Good for simple caller-scoped reads where RLS is the correct boundary.
+RPCs
+Use for:
+- transactional invariants;
+- quotas;
+- locks;
+- governance;
+- privileged mutations;
+- server-derived actor identity;
+- multi-row state transitions.
+Edge Functions
+Use for true transport/integration boundaries such as:
+- username authentication transport;
+- Telegram initData verification/link/re-entry.
+Not as a generic place to move arbitrary JavaScript.
+Cross-domain transactions
+A particularly important new rule is:
+A domain can reference another domain's ID, but it may not duplicate the other domain's state.
+
+Example:
+parent_notes.student_id
+
+references the student.
+
+It does not make Parent Notes the owner of student identity.
+
+For genuine multi-domain atomic operations:
+Browser request 1
+Browser request 2
+Browser request 3
+
+must not be presented as a transaction.
+
+There should be one explicit server-owned transactional operation.
+Testing structure
+The architecture now separates evidence layers:
+tests/
+├── focused unit/contract tests
+├── browser/
+│   └── component + interaction behavior
+├── db/
+│   └── real database/concurrency contracts
+├── functions/
+│   └── Edge Function behavior
+└── helpers/
+
+And states explicitly:
+- build ≠ authorization proof;
+- unit test ≠ real DB proof;
+- RLS flag ≠ allow/deny proof;
+- READY deployment ≠ behavioral acceptance;
+- service-role test ≠ normal caller RLS proof.
+Clean domain implementation lifecycle
+Every future domain packet now has one architectural sequence:
+SOURCE
+  ↓
+INSTALLED BACKEND
+  ↓
+RED TEST
+  ↓
+MINIMAL DOMAIN FIX
+  ↓
+SOURCE READBACK
+  ↓
+FOCUSED TEST
+  ↓
+SURROUNDING REGRESSION
+  ↓
+BUILD
+  ↓
+EXACT-SHA PREVIEW
+  ↓
+STOP / REVIEW
+
+That directly reflects the process that has already worked for:
+- RBR-01
+- RBR-02
+- DOM-01 Messaging
+- DOM-02 Preferences
+- DOM-03 Parent Notes
+Verification of the documentation change
+Fresh GitHub readback confirms the new file contains the major architecture sections:
+- Clean target source structure
+- No-monolith rules
+- Canonical domain ownership matrix
+- Core relational schema
+- AppContext decomposition plan
+- Architecture acceptance checklist
+- multiple Mermaid diagrams using valid ~~~mermaid fenced blocks
+GitHub confirms the commit contains exactly:
+structure.md
++1426
+-172
+
+No other file.
+
+Branch now resolves exactly to:
+
+0103de09ffea59c5b3efabd46f61b4a244573251
+Status
+IMPLEMENTED IN SOURCE — DOCUMENTATION ONLY
+
+No runtime claim is being made from this documentation update.
+
+And I have not resumed DOM-04 automatically.
+
+The architecture contract is now much closer to what we actually want the KRISTOU app to become: clear domain ownership, narrow interfaces, one database authority, thin composition, and no giant monolithic business scripts.

@@ -495,9 +495,11 @@ test('Packet G (UI & Helpers): Tunis boundary delay helper and ParentNotesPanel 
   assert.ok(mismatchHtml.includes('No linked child in this class'));
 
   const appCtxSrc = fs.readFileSync(new URL('../src/context/AppContext.tsx', import.meta.url), 'utf8');
-  assert.match(appCtxSrc, /createParentNotesQuotaBoundaryController/);
-  assert.match(appCtxSrc, /visibilitychange/);
-  assert.match(appCtxSrc, /pageshow/);
+  const parentNotesStateSrc = fs.readFileSync(new URL('../src/context/useParentNotesState.ts', import.meta.url), 'utf8');
+  assert.match(parentNotesStateSrc, /createParentNotesQuotaBoundaryController/);
+  assert.match(parentNotesStateSrc, /visibilitychange/);
+  assert.match(parentNotesStateSrc, /pageshow/);
+  assert.match(appCtxSrc, /useParentNotesState/);
   assert.match(appCtxSrc, /isRefreshingParentNotesQuota/);
   assert.match(appCtxSrc, /parentNotesQuotaStale/);
 });
@@ -521,7 +523,7 @@ test('Packet G Scenario 1: Exhausted panel crossing 07:59 -> 08:00 Tunis (and 07
     makeNote(i + 1, `2026-11-14T10:${String(i).padStart(2, '0')}:00.000Z`),
   );
 
-  let fakeNow = new Date('2026-11-15T06:59:00.000Z'); // 07:59 Africa/Tunis (quota day 2026-11-14)
+  let fakeNow = new Date('2026-11-14T22:55:00.000Z'); // 23:55 Africa/Tunis on Nov 14 (quota day 2026-11-14)
   let currentNotes = [...yesterdayNotes];
   let identity = { userId: 'parent-a', accountStatus: 'APPROVED' };
   let fetchCount = 0;
@@ -550,8 +552,8 @@ test('Packet G Scenario 1: Exhausted panel crossing 07:59 -> 08:00 Tunis (and 07
   assert.equal(controller.getSnapshot().quotaStale, false);
   assert.equal(controller.computeRemainingQuota(currentNotes, 'parent-a'), 0);
 
-  // Cross 08:00 Africa/Tunis (07:00:05 UTC)
-  fakeNow = new Date('2026-11-15T07:00:05.000Z');
+  // Cross 00:00 Africa/Tunis calendar midnight (23:00:05 UTC on Nov 14 -> 00:00:05 Tunis on Nov 15)
+  fakeNow = new Date('2026-11-14T23:00:05.000Z');
   const p1 = controller.checkBoundaryAndRefresh();
   const p2 = controller.checkBoundaryAndRefresh();
 
@@ -571,16 +573,16 @@ test('Packet G Scenario 1: Exhausted panel crossing 07:59 -> 08:00 Tunis (and 07
   assert.equal(controller.getSnapshot().quotaStale, false);
   assert.equal(controller.computeRemainingQuota(currentNotes, 'parent-a'), 11);
 
-  // Browser suspension jump: 07:55 on 2026-11-16 -> 09:10 on 2026-11-16 (server already has 2 notes for new day)
-  fakeNow = new Date('2026-11-16T06:55:00.000Z'); // 07:55 Tunis (still 2026-11-15 quota day)
+  // Browser suspension jump: 23:55 on 2026-11-15 Tunis -> 01:10 on 2026-11-16 Tunis (server already has 2 notes for new day)
+  fakeNow = new Date('2026-11-15T22:55:00.000Z'); // 23:55 Tunis on Nov 15 (still 2026-11-15 quota day)
   assert.equal((await controller.checkBoundaryAndRefresh()).refreshed, false);
-  fakeNow = new Date('2026-11-16T08:10:00.000Z'); // 09:10 Tunis (quota day 2026-11-16)
+  fakeNow = new Date('2026-11-16T00:10:00.000Z'); // 01:10 Tunis on Nov 16 (quota day 2026-11-16)
   const jumpPromise = controller.checkBoundaryAndRefresh();
   assert.equal(fetchCount, 2);
   const newDayNotes = [
     ...yesterdayNotes,
-    makeNote(101, '2026-11-16T07:10:00.000Z'),
-    makeNote(102, '2026-11-16T07:20:00.000Z'),
+    makeNote(101, '2026-11-16T00:10:00.000Z'),
+    makeNote(102, '2026-11-16T00:20:00.000Z'),
   ];
   resolveDeferred({ ok: true, status: 'READY', data: newDayNotes });
   const jumpRes = await jumpPromise;
@@ -665,7 +667,7 @@ test('Packet G Scenario 3: Failed boundary refresh never manufactures 11/11 rese
     status: 'SENT',
   }));
 
-  let fakeNow = new Date('2026-11-15T06:59:00.000Z');
+  let fakeNow = new Date('2026-11-14T22:55:00.000Z');
   let mode = 'ERROR_RESULT';
   let currentNotes = [...exhaustedNotes];
   let statusEvents = [];
@@ -692,8 +694,8 @@ test('Packet G Scenario 3: Failed boundary refresh never manufactures 11/11 rese
   controller.setIdentity(true);
   controller.recordHydratedResult(identity, { ok: true, status: 'READY', data: exhaustedNotes }, fakeNow, true);
 
-  // Cross 08:00 Tunis with ERROR result
-  fakeNow = new Date('2026-11-15T07:05:00.000Z');
+  // Cross 00:00 Tunis midnight with ERROR result
+  fakeNow = new Date('2026-11-14T23:05:00.000Z');
   const errCheck = await controller.checkBoundaryAndRefresh();
   assert.equal(errCheck.refreshed, false);
   assert.equal(controller.getSnapshot().status, 'ERROR');
@@ -716,7 +718,7 @@ test('Packet G Scenario 3: Failed boundary refresh never manufactures 11/11 rese
     parentNotesQuotaStale: true,
     isRefreshingParentNotesQuota: false,
   });
-  const errPanelHtml = withMockedNow('2026-11-15T07:05:00.000Z', () =>
+  const errPanelHtml = withMockedNow('2026-11-14T23:05:00.000Z', () =>
     renderToStaticMarkup(React.createElement(ParentNotesPanel, { classId: 'class-1' })),
   );
   assert.ok(errPanelHtml.includes('data-testid="parent-notes-error-state"'));
@@ -740,7 +742,7 @@ test('Packet G Scenario 3: Failed boundary refresh never manufactures 11/11 rese
 });
 
 test('Packet G Scenario 4: Account change during in-flight boundary refresh discards stale completion', async () => {
-  let fakeNow = new Date('2026-11-15T06:59:00.000Z');
+  let fakeNow = new Date('2026-11-14T22:55:00.000Z');
   let identity = { userId: 'parent-a', accountStatus: 'APPROVED' };
   let appliedForCurrentAccount = null;
   let cleared = false;
@@ -764,8 +766,8 @@ test('Packet G Scenario 4: Account change during in-flight boundary refresh disc
   controller.setIdentity(true);
   controller.recordHydratedResult(identity, { ok: true, status: 'READY', data: [] }, fakeNow, true);
 
-  // Start refresh as Account A at 08:00 Tunis
-  fakeNow = new Date('2026-11-15T07:00:05.000Z');
+  // Start refresh as Account A at 00:00 Tunis
+  fakeNow = new Date('2026-11-14T23:00:05.000Z');
   const inFlightA = controller.checkBoundaryAndRefresh();
   assert.equal(controller.getSnapshot().refreshing, true);
 
@@ -968,8 +970,8 @@ test('Final Correction B: Dedicated refresh and ordinary hydration crossing 08:0
     makeNote(`y-${i}`, `2026-11-14T12:${String(i).padStart(2, '0')}:00.000Z`),
   );
 
-  // 1. Dedicated refreshNow() starts at 07:59:59 Tunis (06:59:59Z) and completes at 08:00:02 Tunis (07:00:02Z)
-  let fakeNow = new Date('2026-11-15T06:59:59.000Z');
+  // 1. Dedicated refreshNow() starts at 23:59:59 Tunis (22:59:59Z) and completes at 00:00:02 Tunis (23:00:02Z on Nov 14 -> 00:00:02 Tunis on Nov 15)
+  let fakeNow = new Date('2026-11-14T22:59:59.000Z');
   const identity = { userId: 'parent-a', accountStatus: 'APPROVED', generation: 1 };
   let currentNotes = [...yesterdayNotes];
   let fetchCount = 0;
@@ -997,18 +999,18 @@ test('Final Correction B: Dedicated refresh and ordinary hydration crossing 08:0
   assert.equal(controller.getSnapshot().verifiedQuotaDay, '2026-11-14');
   assert.equal(controller.getSnapshot().quotaVerified, true);
 
-  // Start dedicated refresh BEFORE 08:00
+  // Start dedicated refresh BEFORE 00:00 midnight
   const preBoundaryRefresh = controller.refreshNow();
   assert.equal(fetchCount, 1);
 
-  // Cross 08:00 Tunis while in-flight; concurrent boundary checks must NOT spawn a fetch storm
-  fakeNow = new Date('2026-11-15T07:00:01.000Z'); // 08:00:01 Tunis
+  // Cross 00:00 Tunis midnight while in-flight; concurrent boundary checks must NOT spawn a fetch storm
+  fakeNow = new Date('2026-11-14T23:00:01.000Z'); // 00:00:01 Tunis on Nov 15
   const concurrentCheck1 = controller.checkBoundaryAndRefresh();
   const concurrentCheck2 = controller.checkBoundaryAndRefresh();
   assert.equal(fetchCount, 1, 'Single-flight must deduplicate concurrent boundary triggers');
 
-  // Pre-boundary request settles at 08:00:02 Tunis -> MUST NOT certify 2026-11-15
-  fakeNow = new Date('2026-11-15T07:00:02.000Z');
+  // Pre-boundary request settles at 00:00:02 Tunis -> MUST NOT certify 2026-11-15
+  fakeNow = new Date('2026-11-14T23:00:02.000Z');
   pendingResolvers.shift()({ ok: true, status: 'READY', data: yesterdayNotes });
   assert.equal(await preBoundaryRefresh, false);
   const [c1, c2] = await Promise.all([concurrentCheck1, concurrentCheck2]);
@@ -1067,10 +1069,10 @@ test('Final Correction B: Dedicated refresh and ordinary hydration crossing 08:0
     onClearNotes: () => {},
   });
   ctrl2.setIdentity(true);
-  fakeNow = new Date('2026-11-17T06:59:59.000Z'); // 07:59:59 Tunis (cycle 2026-11-16)
+  fakeNow = new Date('2026-11-16T22:59:59.000Z'); // 23:59:59 Tunis on Nov 16 (cycle 2026-11-16)
   const crossReq = ctrl2.beginHydrationRequest(identity, true);
   assert.ok(crossReq);
-  fakeNow = new Date('2026-11-17T07:00:02.000Z'); // 08:00:02 Tunis (cycle 2026-11-17)
+  fakeNow = new Date('2026-11-16T23:00:02.000Z'); // 00:00:02 Tunis on Nov 17 (cycle 2026-11-17)
   const crossCertified = ctrl2.recordHydratedResult(
     identity,
     { ok: true, status: 'READY', data: yesterdayNotes },
@@ -1078,15 +1080,17 @@ test('Final Correction B: Dedicated refresh and ordinary hydration crossing 08:0
     true,
     crossReq,
   );
-  assert.equal(crossCertified, false, 'Pre-boundary ordinary hydration must not certify post-08:00 cycle');
+  assert.equal(crossCertified, false, 'Pre-boundary ordinary hydration must not certify post-midnight cycle');
   assert.equal(ctrl2.getSnapshot().verifiedQuotaDay, '2026-11-16');
   assert.equal(ctrl2.getSnapshot().quotaVerified, false);
   assert.equal(ctrl2.getSnapshot().quotaStale, true);
 
-  // Verify AppContext wires beginHydrationRequest + isRequestCurrent around listParentNotes()
+  // Verify useParentNotesState wires beginHydrationRequest + isRequestCurrent around listParentNotes() and AppContext delegates to it
   const appCtxSrc = fs.readFileSync(new URL('../src/context/AppContext.tsx', import.meta.url), 'utf8');
-  assert.match(appCtxSrc, /beginHydrationRequest\(/);
-  assert.match(appCtxSrc, /isRequestCurrent\(/);
+  const parentNotesStateSrc = fs.readFileSync(new URL('../src/context/useParentNotesState.ts', import.meta.url), 'utf8');
+  assert.match(appCtxSrc, /useParentNotesState/);
+  assert.match(parentNotesStateSrc, /beginHydrationRequest\(/);
+  assert.match(parentNotesStateSrc, /isRequestCurrent\(/);
 });
 
 test('Final Correction C & D: AR/FR/EN quota wording explicitly marks estimate as estimated, distinguishes outdated/unverified states, and keeps UNAUTHORIZED locked', () => {

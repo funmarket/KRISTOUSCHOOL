@@ -1,6 +1,24 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult } from '../../types.ts';
 
-import type { BackendOpResult, FoodMenuItem, FoodMenuWeek } from '../../types.ts';
+export interface FoodMenuItem {
+  day: string;
+  starter: string;
+  main: string;
+  side: string;
+  dessert: string;
+  notes?: string;
+}
+
+export interface FoodMenuWeek {
+  id: string;
+  weekRange: string;
+  published: boolean;
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  providerName?: string;
+  isDemoPreview?: boolean;
+  items: FoodMenuItem[];
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {

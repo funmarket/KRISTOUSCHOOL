@@ -1,13 +1,74 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type {
-  BackendOpResult,
-  Announcement,
-  Homework,
-  ClassQuestion,
-  ClassQuestionReply,
-  ClassDocumentItem,
-  ClassGalleryItem,
-} from '../../types.ts';
+import type { BackendOpResult } from '../../types.ts';
+import type { Announcement } from './broadcasts.ts';
+
+export interface Homework {
+  id: string;
+  classId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  teacherName: string;
+  createdAt: string;
+}
+
+export interface ClassDocumentItem {
+  id: string;
+  classId: string;
+  title: string;
+  description: string;
+  documentUrl: string;
+  fileType: string;
+  createdAt: string;
+}
+
+export interface ClassGalleryItem {
+  id: string;
+  classId?: string | null;
+  title: string;
+  caption: string;
+  imageUrl: string;
+  isPublic: boolean;
+  createdAt: string;
+}
+
+export interface ClassQuestion {
+  id: string;
+  classId: string;
+  authorUserId?: string;
+  authorName?: string;
+  studentId: string;
+  studentName: string;
+  content: string; // max 200 chars
+  isHidden?: boolean;
+  createdAt: string;
+  repliesCount: number;
+  replies?: ClassQuestionReply[];
+}
+
+export interface ClassQuestionReply {
+  id: string;
+  questionId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export function isSafeExternalOrAssetUrl(rawUrl: string | null | undefined): boolean {
+  if (typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/assets/') && !trimmed.startsWith('//')) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {
@@ -117,11 +178,15 @@ export async function listClassCommunityContent(
 
     const questions: ClassQuestion[] = questionsRows.map((r) => {
       const reps = repliesMap.get(String(r.id)) ?? [];
+      const authorUserId = typeof r.author_user_id === 'string' ? r.author_user_id : '';
+      const authorName = typeof r.author_name === 'string' ? r.author_name : '';
       return {
         id: String(r.id),
         classId: String(r.class_id),
-        studentId: String(r.student_id || r.author_user_id || ''),
-        studentName: String(r.student_name || r.author_name || 'Parent'),
+        authorUserId,
+        authorName,
+        studentId: typeof r.student_id === 'string' ? r.student_id : '',
+        studentName: typeof r.student_name === 'string' && r.student_name ? r.student_name : authorName,
         content: String(r.content || r.body || r.title || ''),
         isHidden: Boolean(r.is_hidden),
         createdAt: String(r.created_at),
@@ -182,10 +247,19 @@ export async function createClassAnnouncement(
   const client = typeof classIdOrInput === 'object' && classIdOrInput !== null ? titleOrClient : maybeClient;
   const activeClient = client || supabase;
 
+  const classId = typeof input.classId === 'string' ? input.classId.trim() : '';
+  if (!classId) {
+    return {
+      ok: false,
+      status: 'ERROR',
+      errorCode: 'class_id_required',
+      errorMessage: 'Class selection is required for class announcements.',
+    };
+  }
   if (!activeClient) return unavailableResult();
   try {
     const { data, error } = await activeClient.rpc('create_class_announcement', {
-      p_class_id: input.classId || null,
+      p_class_id: classId,
       p_title: input.title.trim(),
       p_body: input.body.trim(),
       p_priority: input.priority ?? 'NORMAL',
@@ -276,14 +350,18 @@ export async function postClassQuestion(
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const r = (data ?? {}) as Record<string, unknown>;
+    const authorUserId = typeof r.author_user_id === 'string' ? r.author_user_id : '';
+    const authorName = typeof r.author_name === 'string' ? r.author_name : '';
     return {
       ok: true,
       status: 'READY',
       data: {
         id: String(r.id || ''),
         classId: String(r.class_id || input.classId),
-        studentId: String(r.student_id || ''),
-        studentName: String(r.student_name || 'Parent'),
+        authorUserId,
+        authorName,
+        studentId: typeof r.student_id === 'string' ? r.student_id : '',
+        studentName: typeof r.student_name === 'string' && r.student_name ? r.student_name : authorName,
         content: String(r.content || input.content),
         createdAt: String(r.created_at || new Date().toISOString()),
         repliesCount: 0,
@@ -320,8 +398,8 @@ export async function replyClassQuestion(
       data: {
         id: String(r.id || ''),
         questionId: String(r.question_id || input.questionId),
-        authorId: String(r.author_id || ''),
-        authorName: String(r.author_name || 'Teacher'),
+        authorId: String(r.author_user_id ?? r.author_id ?? ''),
+        authorName: typeof r.author_name === 'string' ? r.author_name : '',
         content: String(r.content || input.content),
         createdAt: String(r.created_at || new Date().toISOString()),
       },
@@ -346,7 +424,7 @@ export async function moderateClassQuestion(
   try {
     const { data, error } = await activeClient.rpc('moderate_class_question', {
       p_question_id: input.questionId,
-      p_is_hidden: input.isHidden,
+      p_hidden: Boolean(input.isHidden),
     });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const r = (data ?? {}) as Record<string, unknown>;

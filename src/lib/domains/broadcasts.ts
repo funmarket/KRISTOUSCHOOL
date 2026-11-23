@@ -1,5 +1,27 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { BackendOpResult, SchoolBroadcastItem, AccountRole } from '../../types.ts';
+import type { BackendOpResult, AccountRole } from '../../types.ts';
+
+export interface Announcement {
+  id: string;
+  classId?: string; // undefined if school-wide broadcast
+  title: string;
+  body: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+  priority: 'NORMAL' | 'URGENT';
+  audienceScope?: 'ALL_SCHOOL' | 'ALL_CLASSES' | 'SELECTED_LEVELS' | 'SELECTED_CLASSES' | 'PUBLIC_SITE';
+  isPublic?: boolean;
+  isDemoPreview?: boolean;
+}
+
+export interface SchoolBroadcastItem extends Announcement {
+  status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'REVOKED';
+  audienceScope: 'ALL_SCHOOL' | 'ALL_CLASSES' | 'SELECTED_LEVELS' | 'SELECTED_CLASSES' | 'PUBLIC_SITE';
+  targetLevelCodes: string[];
+  targetClassIds: string[];
+  isPublic: boolean;
+}
 
 const CANONICAL_SCHOOL_LEVELS = [
   { code: 'CP' }, { code: 'CE1' }, { code: 'CE2' }, { code: 'CM1' }, { code: 'CM2' }, { code: '6EME' }

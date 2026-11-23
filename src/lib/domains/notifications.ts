@@ -1,6 +1,16 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult } from '../../types.ts';
 
-import type { BackendOpResult, NotificationItem } from '../../types.ts';
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: 'pickup' | 'note' | 'announcement' | 'message' | 'calendar' | 'system';
+  targetTab?: string | null;
+  targetRefId?: string | null;
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {

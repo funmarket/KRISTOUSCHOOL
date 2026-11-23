@@ -1,6 +1,17 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult } from '../../types.ts';
 
-import type { BackendOpResult, PublicContentEntry } from '../../types.ts';
+export interface PublicContentEntry {
+  slug: string;
+  titleAr: string;
+  titleFr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyFr: string;
+  bodyEn: string;
+  isPublished: boolean;
+  updatedAt?: string;
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {

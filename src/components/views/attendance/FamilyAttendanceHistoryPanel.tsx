@@ -91,7 +91,7 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
       errorMessage: null,
     });
 
-    void resolveStudentSelfRecord(currentUser.id, language).then((res) => {
+    void resolveStudentSelfRecord({ userId: currentUser.id, language }).then((res) => {
       const latest = latestScopeRef.current;
       if (
         !mountedRef.current ||

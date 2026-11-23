@@ -1,6 +1,27 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult } from '../../types.ts';
 
-import type { BackendOpResult, TeacherDirectoryMember, AdminDirectoryMember } from '../../types.ts';
+export interface TeacherDirectoryMember {
+  id: string;
+  name: string;
+  title: string;
+  photoUrl: string;
+  bio: string;
+  classes: string[];
+  languages: string[];
+  isPublished?: boolean;
+}
+
+export interface AdminDirectoryMember {
+  id: string;
+  name: string;
+  title: string;
+  photoUrl: string;
+  bio: string;
+  responsibilities: string[];
+  languages?: string[];
+  isPublished?: boolean;
+}
 
 type DirectoryData = {
   teachers: TeacherDirectoryMember[];

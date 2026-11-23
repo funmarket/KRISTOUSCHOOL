@@ -1,5 +1,18 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { BackendOpResult, PublicInquiryItem } from '../../types.ts';
+import type { BackendOpResult } from '../../types.ts';
+
+export interface PublicInquiryItem {
+  id: string;
+  senderName: string;
+  phone?: string | null;
+  email?: string | null;
+  subject: string;
+  message: string;
+  status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED';
+  staffResponse?: string | null;
+  respondedAt?: string | null;
+  createdAt: string;
+}
 
 export interface SubmitPublicInquiryInput {
   senderName: string;

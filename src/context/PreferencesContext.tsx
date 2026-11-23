@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { BackendOpResult, Language, NotificationSoundOption, ThemeMode, User, UserPreferencesState } from '../types';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import type { BackendOpResult, Language, NotificationSoundOption, ThemeMode } from '../types';
+import { translations, type TranslationKey } from '../i18n/translations';
 import { loadMyPreferences, saveMyPreferences } from '../lib/domains/preferences';
 import {
   isMatchingApprovedAccountContext,
@@ -8,26 +9,13 @@ import {
   type PreferencesSyncStatus,
 } from '../lib/appStateGuards';
 
-export interface PreferencesIdentityAccess {
-  readonly generation: number;
-  getUser: () => User | null;
-  getIdentity: () => AccountIdentityContext;
-  isMounted: () => boolean;
-}
-export interface PreferencesServices {
-  loadMyPreferences: (userId: string) => Promise<BackendOpResult<UserPreferencesState | null>>;
-  saveMyPreferences: (patch: Partial<UserPreferencesState>) => Promise<BackendOpResult<UserPreferencesState>>;
-}
-export interface PreferencesActions {
-  hydrate: (userId: string, isStillValid: () => boolean) => Promise<void>;
-  clear: () => void;
-  getLanguage: () => Language;
-}
-export interface PreferencesContextValue extends PreferencesActions {
+export interface PreferencesContextType {
   language: Language;
-  setLanguage: (language: Language) => void;
+  setLanguage: (lang: Language) => void;
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
+  t: (key: TranslationKey) => string;
+  dir: 'rtl' | 'ltr';
   notificationSound: NotificationSoundOption;
   setNotificationSound: (sound: NotificationSoundOption) => void;
   soundMuted: boolean;
@@ -36,170 +24,285 @@ export interface PreferencesContextValue extends PreferencesActions {
   setVibrationEnabled: (enabled: boolean) => void;
   preferencesError: string | null;
   preferencesSyncStatus: PreferencesSyncStatus;
+  syncPreferencesIdentity: (identity: AccountIdentityContext) => void;
+  hydratePreferencesForAccount: (origin: AccountIdentityContext) => Promise<void>;
+  resetPreferencesState: () => void;
 }
-const PreferencesContext = createContext<PreferencesContextValue | null>(null);
-const defaultServices: PreferencesServices = { loadMyPreferences, saveMyPreferences };
+
+export const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
+
 const SOUND_OPTIONS: readonly NotificationSoundOption[] = [
-  'Kristou Bell', 'Soft Chime', 'Classroom Bell', 'Gentle Pop', 'Silent',
+  'Kristou Bell',
+  'Soft Chime',
+  'Classroom Bell',
+  'Gentle Pop',
+  'Silent',
 ];
+
 function sanitizeSound(raw: string | null): NotificationSoundOption {
-  if (raw && (SOUND_OPTIONS as readonly string[]).includes(raw)) return raw as NotificationSoundOption;
+  if (raw && (SOUND_OPTIONS as readonly string[]).includes(raw)) {
+    return raw as NotificationSoundOption;
+  }
   return 'Kristou Bell';
+}
+
+function readStorage(key: string): string | null {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // Ignore storage write errors in restricted environments.
+  }
 }
 
 export const PreferencesProvider: React.FC<{
   children: React.ReactNode;
-  identity: PreferencesIdentityAccess;
-  services?: PreferencesServices;
-  onRegister?: (actions: PreferencesActions | null) => void;
-}> = ({ children, identity, services = defaultServices, onRegister }) => {
+  initialIdentity?: AccountIdentityContext;
+}> = ({ children, initialIdentity }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('kristou_lang');
+    const saved = readStorage('kristou_lang');
     return saved === 'ar' || saved === 'fr' || saved === 'en' ? saved : 'fr';
   });
-  const [theme, setThemeState] = useState<ThemeMode>(() =>
-    localStorage.getItem('kristou_theme') === 'pitch-black' ? 'pitch-black' : 'light',
-  );
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    const saved = readStorage('kristou_theme');
+    return saved === 'pitch-black' ? 'pitch-black' : 'light';
+  });
   const [notificationSound, setNotificationSoundState] = useState<NotificationSoundOption>(() =>
-    sanitizeSound(localStorage.getItem('kristou_notification_sound')),
+    sanitizeSound(readStorage('kristou_notification_sound')),
   );
   const [soundMuted, setSoundMutedState] = useState<boolean>(
-    () => localStorage.getItem('kristou_sound_muted') === 'true',
+    () => readStorage('kristou_sound_muted') === 'true',
   );
   const [vibrationEnabled, setVibrationEnabledState] = useState<boolean>(
-    () => localStorage.getItem('kristou_vibration_enabled') !== 'false',
+    () => readStorage('kristou_vibration_enabled') !== 'false',
   );
   const [preferencesError, setPreferencesError] = useState<string | null>(null);
   const [preferencesSyncStatus, setPreferencesSyncStatus] = useState<PreferencesSyncStatus>('LOCAL_ONLY');
-  const prefsGenRef = useRef(0);
+
+  const mountedRef = useRef<boolean>(true);
+  const identityRef = useRef<AccountIdentityContext>(
+    initialIdentity ?? {
+      userId: null,
+      accountStatus: null,
+      generation: 1,
+    },
+  );
+  const prefsGenRef = useRef<number>(0);
   const preferencesErrorRef = useRef<string | null>(null);
 
-  useEffect(() => { preferencesErrorRef.current = preferencesError; }, [preferencesError]);
   useEffect(() => {
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = language;
-  }, [language]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
-    if (theme === 'pitch-black') {
-      document.documentElement.classList.add('dark', 'pitch-black');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark', 'pitch-black');
+    preferencesErrorRef.current = preferencesError;
+  }, [preferencesError]);
+
+  const dir: 'rtl' | 'ltr' = language === 'ar' ? 'rtl' : 'ltr';
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = dir;
+      document.documentElement.lang = language;
     }
-    localStorage.setItem('kristou_theme', theme);
+  }, [dir, language]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'pitch-black') {
+        document.documentElement.classList.add('dark', 'pitch-black');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark', 'pitch-black');
+      }
+    }
+    writeStorage('kristou_theme', theme);
   }, [theme]);
 
-  const clear = useCallback(() => {
+  const syncPreferencesIdentity = useCallback((identity: AccountIdentityContext) => {
+    identityRef.current = identity;
+  }, []);
+
+  const resetPreferencesState = useCallback(() => {
     prefsGenRef.current += 1;
-    preferencesErrorRef.current = null;
     setPreferencesError(null);
     setPreferencesSyncStatus('LOCAL_ONLY');
   }, []);
 
-  useLayoutEffect(() => { clear(); }, [identity.generation, clear]);
-
-  const hydrate = useCallback(async (userId: string, isStillValid: () => boolean) => {
-    const origin = identity.getIdentity();
-    const sequence = prefsGenRef.current;
-    const res = await services.loadMyPreferences(userId);
-    if (!isStillValid() || sequence !== prefsGenRef.current ||
-      !isMatchingApprovedAccountContext(origin, identity.getIdentity(), identity.isMounted())) return;
-    if (res.ok && res.data) {
-      setLanguageState(res.data.language);
-      localStorage.setItem('kristou_lang', res.data.language);
-      setThemeState(res.data.theme);
-      localStorage.setItem('kristou_theme', res.data.theme);
-      setNotificationSoundState(res.data.notificationSound);
-      localStorage.setItem('kristou_notification_sound', res.data.notificationSound);
-      setSoundMutedState(res.data.soundMuted);
-      localStorage.setItem('kristou_sound_muted', String(res.data.soundMuted));
-      setVibrationEnabledState(res.data.vibrationEnabled);
-      localStorage.setItem('kristou_vibration_enabled', String(res.data.vibrationEnabled));
-      preferencesErrorRef.current = null;
-      setPreferencesError(null);
-      setPreferencesSyncStatus('SAVED');
-    } else if (res.status === 'BLOCKED_BACKEND') {
-      setPreferencesSyncStatus('UNAVAILABLE');
-    } else if (!res.ok) {
-      setPreferencesSyncStatus('ERROR');
-      setPreferencesError(res.errorMessage || res.errorCode || 'Unable to load preferences.');
-    }
-  }, [identity, services]);
-
-  const persistPreferencesUpdate = (patch: Partial<UserPreferencesState>) => {
-    const user = identity.getUser();
-    if (!user || user.accountStatus !== 'APPROVED' || user.id !== identity.getIdentity().userId) {
-      setPreferencesSyncStatus('LOCAL_ONLY');
+  const hydratePreferencesForAccount = useCallback(async (origin: AccountIdentityContext) => {
+    if (!origin.userId || origin.accountStatus !== 'APPROVED') {
       return;
     }
-    const origin = identity.getIdentity();
-    const requestSeq = ++prefsGenRef.current;
-    setPreferencesSyncStatus('SAVING');
-    void services.saveMyPreferences(patch)
-      .catch((err): BackendOpResult<unknown> => ({
-        ok: false, status: 'ERROR', errorCode: 'preference_save_failed',
-        errorMessage: err instanceof Error ? err.message : 'Failed to save preferences.',
-      }))
-      .then((result) => {
-        const outcome = resolvePreferencesPersistOutcome({
-          result, origin, current: identity.getIdentity(),
-          requestSeq, latestRequestSeq: prefsGenRef.current,
-          previousError: preferencesErrorRef.current,
-          isMounted: identity.isMounted(),
+    identityRef.current = origin;
+    const prefsRes = await loadMyPreferences(origin.userId);
+    if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) {
+      return;
+    }
+    if (prefsRes.ok && prefsRes.data) {
+      setLanguageState(prefsRes.data.language);
+      writeStorage('kristou_lang', prefsRes.data.language);
+      setThemeState(prefsRes.data.theme);
+      writeStorage('kristou_theme', prefsRes.data.theme);
+      setNotificationSoundState(prefsRes.data.notificationSound);
+      writeStorage('kristou_notification_sound', prefsRes.data.notificationSound);
+      setSoundMutedState(prefsRes.data.soundMuted);
+      writeStorage('kristou_sound_muted', String(prefsRes.data.soundMuted));
+      setVibrationEnabledState(prefsRes.data.vibrationEnabled);
+      writeStorage('kristou_vibration_enabled', String(prefsRes.data.vibrationEnabled));
+      setPreferencesError(null);
+      setPreferencesSyncStatus('SAVED');
+    } else if (prefsRes.status === 'BLOCKED_BACKEND') {
+      setPreferencesSyncStatus('UNAVAILABLE');
+    } else if (!prefsRes.ok) {
+      setPreferencesSyncStatus('ERROR');
+      setPreferencesError(prefsRes.errorMessage || prefsRes.errorCode || 'Unable to load preferences.');
+    }
+  }, []);
+
+  const persistPreferencesUpdate = useCallback(
+    (patch: {
+      language?: Language;
+      theme?: ThemeMode;
+      notificationSound?: NotificationSoundOption;
+      soundMuted?: boolean;
+      vibrationEnabled?: boolean;
+    }) => {
+      const current = identityRef.current;
+      if (!current.userId || current.accountStatus !== 'APPROVED') {
+        setPreferencesSyncStatus('LOCAL_ONLY');
+        return;
+      }
+
+      const origin: AccountIdentityContext = {
+        userId: current.userId,
+        accountStatus: current.accountStatus,
+        generation: current.generation,
+      };
+      const requestSeq = ++prefsGenRef.current;
+      setPreferencesSyncStatus('SAVING');
+
+      void saveMyPreferences(patch)
+        .catch((err): BackendOpResult<unknown> => ({
+          ok: false,
+          status: 'ERROR',
+          errorCode: 'preference_save_failed',
+          errorMessage: err instanceof Error ? err.message : 'Failed to save preferences.',
+        }))
+        .then((result) => {
+          const outcome = resolvePreferencesPersistOutcome({
+            result,
+            origin,
+            current: identityRef.current,
+            requestSeq,
+            latestRequestSeq: prefsGenRef.current,
+            previousError: preferencesErrorRef.current,
+            isMounted: mountedRef.current,
+          });
+          if (outcome.ignored) return;
+          setPreferencesSyncStatus(outcome.syncStatus);
+          setPreferencesError(outcome.error);
         });
-        if (outcome.ignored) return;
-        preferencesErrorRef.current = outcome.error;
-        setPreferencesSyncStatus(outcome.syncStatus);
-        setPreferencesError(outcome.error);
-      });
-  };
+    },
+    [],
+  );
 
-  const setLanguage = (value: Language) => {
-    setLanguageState(value);
-    localStorage.setItem('kristou_lang', value);
-    persistPreferencesUpdate({ language: value });
-  };
-  const setTheme = (value: ThemeMode) => {
-    setThemeState(value);
-    localStorage.setItem('kristou_theme', value);
-    persistPreferencesUpdate({ theme: value });
-  };
-  const setNotificationSound = (value: NotificationSoundOption) => {
-    setNotificationSoundState(value);
-    localStorage.setItem('kristou_notification_sound', value);
-    persistPreferencesUpdate({ notificationSound: value });
-  };
-  const setSoundMuted = (value: boolean) => {
-    setSoundMutedState(value);
-    localStorage.setItem('kristou_sound_muted', String(value));
-    persistPreferencesUpdate({ soundMuted: value });
-  };
-  const setVibrationEnabled = (value: boolean) => {
-    setVibrationEnabledState(value);
-    localStorage.setItem('kristou_vibration_enabled', String(value));
-    persistPreferencesUpdate({ vibrationEnabled: value });
-  };
+  const setLanguage = useCallback(
+    (lang: Language) => {
+      setLanguageState(lang);
+      writeStorage('kristou_lang', lang);
+      persistPreferencesUpdate({ language: lang });
+    },
+    [persistPreferencesUpdate],
+  );
 
-  useLayoutEffect(() => {
-    onRegister?.({ hydrate, clear, getLanguage: () => language });
-    return () => onRegister?.(null);
-  }, [hydrate, clear, language, onRegister]);
+  const setTheme = useCallback(
+    (thm: ThemeMode) => {
+      setThemeState(thm);
+      writeStorage('kristou_theme', thm);
+      persistPreferencesUpdate({ theme: thm });
+    },
+    [persistPreferencesUpdate],
+  );
+
+  const setNotificationSound = useCallback(
+    (sound: NotificationSoundOption) => {
+      setNotificationSoundState(sound);
+      writeStorage('kristou_notification_sound', sound);
+      persistPreferencesUpdate({ notificationSound: sound });
+    },
+    [persistPreferencesUpdate],
+  );
+
+  const setSoundMuted = useCallback(
+    (muted: boolean) => {
+      setSoundMutedState(muted);
+      writeStorage('kristou_sound_muted', String(muted));
+      persistPreferencesUpdate({ soundMuted: muted });
+    },
+    [persistPreferencesUpdate],
+  );
+
+  const setVibrationEnabled = useCallback(
+    (enabled: boolean) => {
+      setVibrationEnabledState(enabled);
+      writeStorage('kristou_vibration_enabled', String(enabled));
+      persistPreferencesUpdate({ vibrationEnabled: enabled });
+    },
+    [persistPreferencesUpdate],
+  );
+
+  const t = useCallback(
+    (key: TranslationKey): string => {
+      const dict = translations[language] || translations.en;
+      return dict[key] || translations.en[key] || key;
+    },
+    [language],
+  );
 
   return (
-    <PreferencesContext.Provider value={{
-      language, setLanguage, theme, setTheme,
-      notificationSound, setNotificationSound, soundMuted, setSoundMuted,
-      vibrationEnabled, setVibrationEnabled, preferencesError, preferencesSyncStatus,
-      hydrate, clear, getLanguage: () => language,
-    }}>
+    <PreferencesContext.Provider
+      value={{
+        language,
+        setLanguage,
+        theme,
+        setTheme,
+        t,
+        dir,
+        notificationSound,
+        setNotificationSound,
+        soundMuted,
+        setSoundMuted,
+        vibrationEnabled,
+        setVibrationEnabled,
+        preferencesError,
+        preferencesSyncStatus,
+        syncPreferencesIdentity,
+        hydratePreferencesForAccount,
+        resetPreferencesState,
+      }}
+    >
       {children}
     </PreferencesContext.Provider>
   );
 };
 
-export function usePreferences(): PreferencesContextValue {
+export const usePreferences = (): PreferencesContextType => {
   const context = useContext(PreferencesContext);
-  if (!context) throw new Error('usePreferences must be used within PreferencesProvider');
+  if (!context) {
+    throw new Error('usePreferences must be used within a PreferencesProvider');
+  }
   return context;
-}
+};

@@ -62,6 +62,7 @@ export {
   postClassQuestion,
   replyClassQuestion,
   moderateClassQuestion,
+  isSafeExternalOrAssetUrl,
 } from './domains/classCommunity.ts';
 
 export {
@@ -94,18 +95,3 @@ export {
   listPublicContent,
   fetchPublicContent,
 } from './domains/publicContent.ts';
-
-export function isSafeExternalOrAssetUrl(rawUrl: string | null | undefined): boolean {
-  if (typeof rawUrl !== 'string') return false;
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return false;
-  if (trimmed.startsWith('/assets/') && !trimmed.startsWith('//')) {
-    return true;
-  }
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}

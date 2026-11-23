@@ -10,10 +10,12 @@ import {
 import { EmptyFeatureState } from '../homepages/shared/EmptyFeatureState';
 import { SchoolCalendarPanel } from './Shared/SchoolCalendarPanel';
 import { ParentNotesPanel } from './Shared/ParentNotesPanel';
+import { BroadcastFeedSection } from './announcements/BroadcastFeedSection';
+import { BroadcastAudienceSelector } from './announcements/BroadcastAudienceSelector';
 import { publishSchoolBroadcast } from '../../lib/schoolContent';
 import { CANONICAL_SCHOOL_LEVELS } from '../../lib/schoolOperations';
 import { SchoolBroadcastItem } from '../../types';
-import { Megaphone, Calendar as CalendarIcon, Send, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
+import { Megaphone, Calendar as CalendarIcon, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface GlobalAnnouncementsCalendarViewProps {
   initialSubTab?: 'broadcasts' | 'calendar';
@@ -43,6 +45,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
   React.useEffect(() => {
     setSubTab(initialSubTab);
   }, [initialSubTab]);
+
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [priority, setPriority] = useState<'NORMAL' | 'URGENT'>('NORMAL');
@@ -63,7 +66,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
         byId.set(c.id, { id: c.id, name: c.name, level: c.level });
       }
     }
-    return Array.from(byId.values());
+    return [...byId.values()];
   }, [classRosters, classesList]);
 
   const teacherAssignedClasses = useMemo(
@@ -92,11 +95,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
 
   const handleScopeChange = (nextScope: SchoolBroadcastItem['audienceScope']) => {
     setAudienceScope(nextScope);
-    if (nextScope === 'PUBLIC_SITE') {
-      setIsPublic(true);
-    } else {
-      setIsPublic(false);
-    }
+    setIsPublic(nextScope === 'PUBLIC_SITE');
   };
 
   const handlePublicToggle = (checked: boolean) => {
@@ -155,43 +154,6 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
       ),
     });
     await refreshSchoolData();
-  };
-
-  const formatLevelLabel = (code: string) => {
-    const match = CANONICAL_SCHOOL_LEVELS.find((l) => l.code === code);
-    if (!match) return code;
-    return language === 'ar' ? match.labelAr : language === 'fr' ? match.labelFr : match.labelEn;
-  };
-
-  const formatScopeBadge = (ann: SchoolBroadcastItem) => {
-    if (ann.audienceScope === 'SELECTED_LEVELS') {
-      const levels = ann.targetLevelCodes.join(', ');
-      return pickText(
-        {
-          ar: `مستويات محددة: ${levels}`,
-          fr: `Niveaux ciblés : ${levels}`,
-          en: `Selected Levels: ${levels}`,
-        },
-        language,
-      );
-    }
-    if (ann.audienceScope === 'SELECTED_CLASSES') {
-      return pickText(
-        {
-          ar: `أقسام محددة (${ann.targetClassIds.length})`,
-          fr: `Classes ciblées (${ann.targetClassIds.length})`,
-          en: `Selected Classes (${ann.targetClassIds.length})`,
-        },
-        language,
-      );
-    }
-    if (ann.audienceScope === 'ALL_CLASSES') {
-      return pickText({ ar: 'جميع الأقسام', fr: 'Toutes les classes', en: 'All Classes' }, language);
-    }
-    if (ann.audienceScope === 'PUBLIC_SITE' || ann.isPublic) {
-      return pickText({ ar: 'الموقع العام', fr: 'Site public', en: 'Public Site' }, language);
-    }
-    return pickText({ ar: 'كل المدرسة', fr: 'Toute l’école', en: 'All School' }, language);
   };
 
   return (
@@ -352,225 +314,42 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
               </div>
 
               {audienceScope === 'SELECTED_LEVELS' && (
-                <div
-                  className="p-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50 space-y-2"
-                  data-testid="broadcast-level-selector"
-                >
-                  <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
-                    {pickText(
-                      {
-                        ar: 'اختر المستويات المستهدفة:',
-                        fr: 'Sélectionnez les niveaux ciblés :',
-                        en: 'Select target school levels:',
-                      },
-                      language,
-                    )}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {CANONICAL_SCHOOL_LEVELS.map((lvl) => {
-                      const active = selectedLevelCodes.includes(lvl.code);
-                      return (
-                        <label
-                          key={lvl.code}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
-                            active
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                              : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={active}
-                            onChange={() => toggleLevel(lvl.code)}
-                          />
-                          <span>{formatLevelLabel(lvl.code)}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                <BroadcastAudienceSelector
+                  mode="levels"
+                  language={language}
+                  levels={CANONICAL_SCHOOL_LEVELS}
+                  selectedLevelCodes={selectedLevelCodes}
+                  onToggleLevel={toggleLevel}
+                  availableClasses={availableClasses}
+                  selectedClassIds={selectedClassIds}
+                  onToggleClass={toggleClass}
+                />
               )}
 
               {audienceScope === 'SELECTED_CLASSES' && (
-                <div
-                  className="p-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50 space-y-2"
-                  data-testid="broadcast-class-selector"
-                >
-                  <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
-                    {pickText(
-                      {
-                        ar: 'اختر الأقسام المستهدفة:',
-                        fr: 'Sélectionnez les classes ciblées :',
-                        en: 'Select target classes:',
-                      },
-                      language,
-                    )}
-                  </p>
-                  {availableClasses.length === 0 ? (
-                    <p className="text-xs text-gray-500">
-                      {pickText(
-                        {
-                          ar: 'لا توجد أقسام متاحة حالياً.',
-                          fr: 'Aucune classe active disponible.',
-                          en: 'No active classes loaded.',
-                        },
-                        language,
-                      )}
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {availableClasses.map((cls) => {
-                        const active = selectedClassIds.includes(cls.id);
-                        return (
-                          <label
-                            key={cls.id}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
-                              active
-                                ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                                : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={active}
-                              onChange={() => toggleClass(cls.id)}
-                            />
-                            <span>
-                              {cls.name} ({cls.level})
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <BroadcastAudienceSelector
+                  mode="classes"
+                  language={language}
+                  levels={CANONICAL_SCHOOL_LEVELS}
+                  selectedLevelCodes={selectedLevelCodes}
+                  onToggleLevel={toggleLevel}
+                  availableClasses={availableClasses}
+                  selectedClassIds={selectedClassIds}
+                  onToggleClass={toggleClass}
+                />
               )}
             </form>
           )}
 
-          {broadcastsStatus === 'UNAUTHORIZED' && (
-            <div
-              data-testid="broadcasts-unauthorized-state"
-              role="alert"
-              className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-amber-900 dark:text-amber-200"
-            >
-              <div className="flex items-center gap-2 font-semibold">
-                <Lock className="w-4 h-4 shrink-0" />
-                <span>
-                  {broadcastsError ||
-                    pickText(
-                      {
-                        ar: 'غير مصرح بعرض الإعلانات المدرسية.',
-                        fr: 'Accès non autorisé aux annonces scolaires.',
-                        en: 'Not authorized to view school broadcasts.',
-                      },
-                      language,
-                    )}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => void refreshSchoolData()}
-                className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
-              >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-              </button>
-            </div>
-          )}
-
-          {broadcastsStatus === 'ERROR' && (
-            <div
-              data-testid="broadcasts-error-state"
-              role="alert"
-              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 text-xs text-red-800 dark:text-red-300"
-            >
-              <div className="flex items-center gap-2 font-semibold">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>
-                  {broadcastsError ||
-                    pickText(
-                      {
-                        ar: 'تعذر تحميل الإعلانات المدرسية من الخادم.',
-                        fr: 'Impossible de charger les annonces scolaires.',
-                        en: 'Failed to load school broadcasts from server.',
-                      },
-                      language,
-                    )}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => void refreshSchoolData()}
-                className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
-              >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-              </button>
-            </div>
-          )}
-
-          {broadcastsStatus !== 'UNAUTHORIZED' && (
-            <>
-              {isHydratingSchoolData && broadcasts.length === 0 ? (
-                <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs font-bold text-gray-500">
-                  {t('loading')}
-                </div>
-              ) : broadcastsStatus === 'BLOCKED_BACKEND' && broadcasts.length === 0 ? (
-                <EmptyFeatureState
-                  state="BLOCKED_BACKEND"
-                  title={pickText(
-                    {
-                      ar: 'الإعلانات المدرسية بانتظار التفعيل في الخادم',
-                      fr: 'Annonces générales en attente du contrat serveur',
-                      en: 'School Broadcasts Pending Backend Deployment',
-                    },
-                    language,
-                  )}
-                  description={pickText(
-                    {
-                      ar: 'جدول school_broadcasts غير منشور بعد في قاعدة بيانات Supabase.',
-                      fr: 'La table public.school_broadcasts n’est pas encore déployée sur Supabase.',
-                      en: 'public.school_broadcasts is awaiting deployment on Supabase.',
-                    },
-                    language,
-                  )}
-                />
-              ) : broadcasts.length === 0 && broadcastsStatus === 'READY' ? (
-                <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500">
-                  {t('noItems')}
-                </div>
-              ) : broadcasts.length > 0 ? (
-                <div className="space-y-4">
-                  {broadcasts.map((ann) => (
-                    <div
-                      key={ann.id}
-                      className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {ann.priority === 'URGENT' && (
-                            <span className="px-2 py-0.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-extrabold uppercase">
-                              {t('urgent')}
-                            </span>
-                          )}
-                          <span className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold">
-                            {formatScopeBadge(ann)}
-                          </span>
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                            {ann.authorName}
-                          </span>
-                        </div>
-                        <span className="text-xs text-gray-400">
-                          {new Date(ann.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-base text-gray-900 dark:text-white">{ann.title}</h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{ann.body}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </>
-          )}
+          <BroadcastFeedSection
+            language={language}
+            broadcasts={broadcasts}
+            broadcastsStatus={broadcastsStatus}
+            broadcastsError={broadcastsError}
+            isHydratingSchoolData={isHydratingSchoolData}
+            onRefresh={() => void refreshSchoolData()}
+            t={t}
+          />
         </div>
       )}
 

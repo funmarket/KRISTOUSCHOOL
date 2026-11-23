@@ -1,7 +1,44 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
-import type { BackendOpResult, CalendarEvent, CalendarEventCategory, CalendarAudienceMode, AccountRole } from '../../types.ts';
+import type { BackendOpResult, AccountRole } from '../../types.ts';
 import { validateCalendarCreateInput } from '../calendar/calendarAudience.ts';
 import type { DatabaseSchema } from '../supabase.ts';
+
+export type CalendarEventCategory =
+  | 'EXAM'
+  | 'TEST'
+  | 'EVENT'
+  | 'HOLIDAY'
+  | 'MEETING'
+  | 'CLOSURE'
+  | 'ACTIVITY'
+  | 'TRIP'
+  | 'OTHER';
+
+export type CalendarAudienceMode =
+  | 'WHOLE_SCHOOL'
+  | 'SINGLE_CLASS'
+  | 'TEACHER_CLASSES'
+  | 'ALL_MY_CLASSES';
+
+export interface CalendarEvent {
+  id: string;
+  audienceMode?: CalendarAudienceMode;
+  classId?: string;
+  targetClassIds?: string[];
+  title: string;
+  date: string;
+  endDate?: string;
+  isAllDay?: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+  timezone?: string;
+  status?: 'SCHEDULED' | 'CANCELLED' | 'RESCHEDULED';
+  cancellationReason?: string | null;
+  isPublic?: boolean;
+  myResponse?: 'ATTENDING' | 'ACKNOWLEDGED' | 'DECLINED' | null;
+  category: CalendarEventCategory;
+  description: string;
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {

@@ -1,6 +1,23 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult } from '../../types.ts';
 
-import type { BackendOpResult, ParentNote } from '../../types.ts';
+export interface ParentNote {
+  id: string;
+  parentId: string;
+  parentName: string;
+  childId: string;
+  childName: string;
+  classId?: string | null;
+  teacherId?: string | null;
+  topic: 'ABSENCE' | 'HOMEWORK' | 'BEHAVIOR' | 'HEALTH' | 'PICKUP' | 'OTHER';
+  content: string;
+  schoolDay?: string;
+  createdAt: string;
+  status: 'SENT' | 'READ' | 'REPLIED';
+  replyContent?: string;
+  repliedByName?: string;
+  repliedAt?: string;
+}
 
 export const PARENT_NOTES_DAILY_QUOTA = 11;
 
@@ -144,17 +161,10 @@ export function getTunisSchoolDay(date: Date = new Date()): string {
 }
 
 /**
- * Returns the active Parent Notes quota cycle day anchored to 08:00 Africa/Tunis.
- * Before 08:00 Tunis, the prior school day's cycle remains active until the 08:00 reset.
+ * Returns the active Parent Notes quota cycle day anchored to 00:00 Africa/Tunis calendar date.
  */
-
 export function getParentNotesQuotaDay(date: Date = new Date()): string {
-  const parts = getTunisTimeParts(date);
-  if (parts.hour >= 8) {
-    return parts.dateStr;
-  }
-  const prevUtcDay = new Date(Date.UTC(parts.year, parts.month - 1, parts.day - 1));
-  return `${prevUtcDay.getUTCFullYear()}-${String(prevUtcDay.getUTCMonth() + 1).padStart(2, '0')}-${String(prevUtcDay.getUTCDate()).padStart(2, '0')}`;
+  return getTunisTimeParts(date).dateStr;
 }
 
 export function getRemainingParentNotesQuota(

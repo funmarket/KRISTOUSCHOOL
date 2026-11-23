@@ -1,22 +1,47 @@
+// @ts-ignore Deno Edge Runtime URL import
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { validateInitData } from '../_shared/telegram-init-data.ts';
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? 'http://localhost:3000';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': allowedOrigin,
+declare const Deno:
+  | {
+      env?: { get?(key: string): string | undefined };
+      serve?(handler: (request: Request) => Promise<Response> | Response): void;
+    }
+  | undefined;
+
+const CANONICAL_ROLES = new Set([
+  'APP_ADMIN',
+  'MANAGER',
+  'ADMINISTRATIVE_PERSONNEL',
+  'TEACHER',
+  'SCHOOL_STAFF',
+  'PARENT',
+  'STUDENT',
+]);
+
+function getEnv(key: string): string | undefined {
+  if (typeof Deno !== 'undefined' && Deno?.env && typeof Deno.env.get === 'function') {
+    return Deno.env.get(key);
+  }
+  return undefined;
+}
+
+const getAllowedOrigin = () => getEnv('ALLOWED_ORIGIN') ?? 'http://localhost:3000';
+const getCorsHeaders = () => ({
+  'Access-Control-Allow-Origin': getAllowedOrigin(),
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+});
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
-  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
 });
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+export async function handleTelegramAuth(request: Request): Promise<Response> {
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const origin = request.headers.get('origin');
-  if (origin && origin !== allowedOrigin) return json({ error: 'origin_not_allowed' }, 403);
+  if (origin && origin !== getAllowedOrigin()) return json({ error: 'origin_not_allowed' }, 403);
   if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
     return json({ error: 'unsupported_media_type' }, 415);
   }
@@ -29,9 +54,9 @@ Deno.serve(async (request) => {
       return json({ error: 'invalid_telegram_auth' }, 400);
     }
 
-    const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-    const url = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const botToken = getEnv('TELEGRAM_BOT_TOKEN');
+    const url = getEnv('SUPABASE_URL');
+    const serviceKey = getEnv('SERVICE_ROLE_KEY') ?? getEnv('SUPABASE_SERVICE_ROLE_KEY');
     if (!botToken || !url || !serviceKey) return json({ error: 'telegram_unavailable' }, 503);
 
     const validated = await validateInitData(body.initData, botToken);
@@ -68,18 +93,47 @@ Deno.serve(async (request) => {
     if (!identity) return json({ error: 'telegram_not_linked' }, 404);
 
     const [profileResult, roleResult] = await Promise.all([
-      db.from('profiles').select('id,username,full_name,email,avatar_url').eq('id', identity.user_id).single(),
+      db.from('profiles').select('id,username,full_name,email,avatar_url,account_status').eq('id', identity.user_id).single(),
       db.from('role_assignments').select('role').eq('user_id', identity.user_id).eq('active', true),
     ]);
     if (profileResult.error || !profileResult.data || roleResult.error) {
       return json({ error: 'telegram_account_lookup_failed' }, 500);
     }
 
-    const capabilities = (roleResult.data ?? []).map((assignment) => String(assignment.role));
-    const role = capabilities.includes('APP_ADMIN')
-      ? 'APP_ADMIN'
-      : capabilities.find((assignedRole) => assignedRole !== 'GENERAL_USER') ?? 'GENERAL_USER';
     const profile = profileResult.data;
+    const accountStatus = typeof profile.account_status === 'string' ? profile.account_status.trim() : '';
+    if (accountStatus !== 'APPROVED') {
+      return json({ error: 'account_not_approved' }, 403);
+    }
+
+    const rawRoles = (roleResult.data ?? []).map((assignment: { role?: unknown }) => String(assignment.role ?? '').trim());
+    const roleCapabilities = rawRoles.filter((assignedRole: string) => CANONICAL_ROLES.has(assignedRole));
+    const role = roleCapabilities.includes('APP_ADMIN')
+      ? 'APP_ADMIN'
+      : roleCapabilities[0] ?? null;
+    if (!role) {
+      return json({ error: 'account_not_approved' }, 403);
+    }
+
+    const managerCapabilities: string[] = [];
+    if (role === 'MANAGER') {
+      const { data: grantRows, error: grantError } = await db
+        .from('manager_capability_grants')
+        .select('capability')
+        .eq('manager_user_id', identity.user_id)
+        .eq('active', true);
+      if (grantError) {
+        return json({ error: 'telegram_account_lookup_failed' }, 500);
+      }
+      for (const row of grantRows ?? []) {
+        const cap = typeof row?.capability === 'string' ? row.capability.trim() : '';
+        if (cap && !managerCapabilities.includes(cap)) {
+          managerCapabilities.push(cap);
+        }
+      }
+    }
+
+    const capabilities = [...new Set([...roleCapabilities, ...managerCapabilities])];
     return json({
       linked,
       user: {
@@ -89,11 +143,19 @@ Deno.serve(async (request) => {
         email: profile.email,
         avatarUrl: profile.avatar_url,
         role,
+        account_status: accountStatus,
+        accountStatus,
         capabilities,
+        manager_capabilities: managerCapabilities,
         telegramLinked: true,
       },
     });
   } catch {
     return json({ error: 'telegram_link_failed' }, 400);
   }
-});
+}
+
+if (typeof Deno !== 'undefined' && typeof Deno?.serve === 'function') {
+  Deno.serve((request) => handleTelegramAuth(request));
+}
+

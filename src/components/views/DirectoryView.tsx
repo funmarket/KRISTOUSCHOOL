@@ -5,7 +5,9 @@ import { canManagePublicContentUi } from '../homepages/homepageAccess';
 import { pickText } from '../../i18n/homepages';
 import { upsertDirectoryEntry } from '../../lib/schoolContent';
 import { visibleDirectoryEntries } from '../../lib/directoryVisibility';
-import { Plus, AlertCircle, CheckCircle2, Edit3, Lock, X, ChevronRight } from 'lucide-react';
+import { DirectoryEntryForm } from './directory/DirectoryEntryForm';
+import { DirectoryProfileDialog } from './directory/DirectoryProfileDialog';
+import { Plus, AlertCircle, CheckCircle2, Edit3, Lock, ChevronRight } from 'lucide-react';
 
 export interface DirectoryViewProps {
   initialSubTab?: DirectorySubTab;
@@ -115,14 +117,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         displayName,
         title,
         bio,
-        tags: tagsCsv
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        languages: languagesCsv
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        tags: tagsCsv.split(',').map((s) => s.trim()).filter(Boolean),
+        languages: languagesCsv.split(',').map((s) => s.trim()).filter(Boolean),
         isPublished,
       });
 
@@ -228,83 +224,28 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
       )}
 
       {canManage && !isDirectoryUnauthorized && showForm && (
-        <form
+        <DirectoryEntryForm
+          language={language}
+          editingId={editingId}
+          entryType={entryType}
+          setEntryType={setEntryType}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          title={title}
+          setTitle={setTitle}
+          bio={bio}
+          setBio={setBio}
+          tagsCsv={tagsCsv}
+          setTagsCsv={setTagsCsv}
+          languagesCsv={languagesCsv}
+          setLanguagesCsv={setLanguagesCsv}
+          isPublished={isPublished}
+          setIsPublished={setIsPublished}
+          saving={saving}
+          onCancel={() => setShowForm(false)}
           onSubmit={handleSave}
-          className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
-        >
-          <h2 className="font-bold text-sm text-gray-900 dark:text-white">
-            {editingId
-              ? pickText({ ar: 'تحديث بطاقة الدليل', fr: 'Modifier la fiche', en: 'Update Directory Entry' }, language)
-              : pickText({ ar: 'بطاقة جديدة في دليل المدرسة', fr: 'Nouvelle fiche annuaire', en: 'New Directory Entry' }, language)}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <select
-              value={entryType}
-              onChange={(e) => setEntryType(e.target.value as 'TEACHER' | 'ADMIN')}
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-semibold"
-            >
-              <option value="TEACHER">{t('teachers')}</option>
-              <option value="ADMIN">{t('administration')}</option>
-            </select>
-            <input
-              type="text"
-              required
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder={pickText({ ar: 'الاسم الكامل', fr: 'Nom complet', en: 'Display name' }, language)}
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-            />
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={pickText({ ar: 'الصفة / المادة', fr: 'Titre / Poste', en: 'Role / Subject title' }, language)}
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-            />
-          </div>
-          <textarea
-            rows={2}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder={pickText({ ar: 'نبذة تعريفية', fr: 'Biographie courte', en: 'Short bio' }, language)}
-            className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-            <input
-              type="text"
-              value={tagsCsv}
-              onChange={(e) => setTagsCsv(e.target.value)}
-              placeholder="Tags (comma-separated, e.g. CP, CE1)"
-              className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-            />
-            <div className="flex items-center justify-between gap-3">
-              <input
-                type="text"
-                value={languagesCsv}
-                onChange={(e) => setLanguagesCsv(e.target.value)}
-                placeholder="AR, FR, EN"
-                className="flex-1 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
-              />
-              <label className="inline-flex items-center gap-1.5 text-xs font-semibold">
-                <input
-                  type="checkbox"
-                  checked={isPublished}
-                  onChange={(e) => setIsPublished(e.target.checked)}
-                />
-                <span>Published</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border text-xs font-semibold">
-              {t('cancel')}
-            </button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:opacity-50">
-              {saving ? t('loading') : t('save')}
-            </button>
-          </div>
-        </form>
+          t={t}
+        />
       )}
 
       {isDirectoryUnauthorized && (
@@ -318,11 +259,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <span>
               {directoryError ||
                 pickText(
-                  {
-                    ar: 'غير مصرح بعرض دليل المدرسة حالياً.',
-                    fr: 'Accès non autorisé à l’annuaire de l’école.',
-                    en: 'Not authorized to access the school directory.',
-                  },
+                  { ar: 'غير مصرح بعرض دليل المدرسة حالياً.', fr: 'Accès non autorisé à l’annuaire de l’école.', en: 'Not authorized to access the school directory.' },
                   language,
                 )}
             </span>
@@ -348,11 +285,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <span>
               {directoryError ||
                 pickText(
-                  {
-                    ar: 'تعذر تحميل بيانات الدليل المباشر من الخادم.',
-                    fr: 'Impossible de charger l’annuaire en direct depuis le serveur.',
-                    en: 'Failed to load live school directory from server.',
-                  },
+                  { ar: 'تعذر تحميل بيانات الدليل المباشر من الخادم.', fr: 'Impossible de charger l’annuaire en direct depuis le serveur.', en: 'Failed to load live school directory from server.' },
                   language,
                 )}
             </span>
@@ -407,9 +340,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                   {teach.bio && <span className="block text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{teach.bio}</span>}
                   <span className="flex flex-wrap gap-1.5 pt-1">
                     {teach.classes.map((cls, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold rounded-lg">
-                        {cls}
-                      </span>
+                      <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold rounded-lg">{cls}</span>
                     ))}
                   </span>
                   {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -456,9 +387,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                   {adm.bio && <span className="block text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{adm.bio}</span>}
                   <span className="flex flex-wrap gap-1.5 pt-1">
                     {adm.responsibilities.map((resp, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg">
-                        {resp}
-                      </span>
+                      <span key={i} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg">{resp}</span>
                     ))}
                   </span>
                   {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
@@ -487,100 +416,18 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           ))}
         </div>
       )}
-      <dialog
-        ref={detailDialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="directory-detail-title"
-        dir={language === 'ar' ? 'rtl' : 'ltr'}
-        onKeyDown={(event) => {
-          if (event.key !== 'Tab') return;
-          const dialog = event.currentTarget;
-          const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          )).filter((element) => element.getClientRects().length > 0);
-          const first = controls[0];
-          const last = controls[controls.length - 1];
-          if (!first || !last) {
-            event.preventDefault();
-            dialog.focus();
-          } else if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last.focus();
-          } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-          }
-        }}
+
+      <DirectoryProfileDialog
+        detailDialogRef={detailDialogRef}
+        language={language}
+        selectedMember={selectedMember}
+        selectedTeacher={selectedTeacher}
+        detailTags={detailTags}
+        detailLanguages={detailLanguages}
+        canManage={canManage}
         onClose={closeDirectoryProfile}
-        onCancel={() => setSelectedDirectoryEntry(null)}
-        data-testid="directory-detail-dialog"
-        className="m-auto w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-gray-200 bg-white p-5 sm:p-7 text-gray-900 shadow-2xl backdrop:bg-gray-950/70 dark:border-gray-800 dark:bg-[#111111] dark:text-white"
-      >
-        {selectedMember && (
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <h2 id="directory-detail-title" className="text-xl font-extrabold leading-snug break-words">
-                {selectedMember.name}
-              </h2>
-              <button
-                type="button"
-                data-testid="directory-detail-close"
-                onClick={closeDirectoryProfile}
-                aria-label={pickText({ ar: 'إغلاق التفاصيل', fr: 'Fermer le profil', en: 'Close profile' }, language)}
-                className="rounded-xl p-2 shrink-0 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            {selectedMember.isPublished !== true && canManage && (
-              <p data-testid="directory-unpublished-preview" className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                {pickText({
-                  ar: 'معاينة إدارية — هذه البطاقة غير منشورة للزوار.',
-                  fr: 'Aperçu de gestion — cette fiche n’est pas publique.',
-                  en: 'Management preview — this profile is not published to visitors.',
-                }, language)}
-              </p>
-            )}
-            <div className="flex items-start gap-4">
-              <img
-                src={selectedMember.photoUrl || '/assets/kristou-logo.png'}
-                onError={(event) => {
-                  if (!event.currentTarget.src.endsWith('/assets/kristou-logo.png')) {
-                    event.currentTarget.src = '/assets/kristou-logo.png';
-                  }
-                }}
-                alt={selectedMember.name}
-                className="h-24 w-24 shrink-0 rounded-2xl border-2 border-blue-500 object-cover sm:h-28 sm:w-28"
-              />
-              <div className="min-w-0">
-                {selectedMember.title && <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 break-words">{selectedMember.title}</p>}
-                {detailLanguages.length > 0 && (
-                  <p className="mt-3 text-xs leading-relaxed">
-                    <strong>{pickText({ ar: 'اللغات', fr: 'Langues', en: 'Languages' }, language)}: </strong>
-                    {detailLanguages.join(' · ')}
-                  </p>
-                )}
-              </div>
-            </div>
-            {selectedMember.bio && <p className="text-sm leading-7 whitespace-pre-wrap break-words">{selectedMember.bio}</p>}
-            {detailTags.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-xs font-bold">
-                  {selectedTeacher
-                    ? pickText({ ar: 'الأقسام والمواد', fr: 'Classes et disciplines', en: 'Classes and subjects' }, language)
-                    : pickText({ ar: 'المسؤوليات', fr: 'Responsabilités', en: 'Responsibilities' }, language)}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {detailTags.map((item, index) => (
-                    <span key={index} className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">{item}</span>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        )}
-      </dialog>
+        onClearSelection={() => setSelectedDirectoryEntry(null)}
+      />
     </div>
   );
 };

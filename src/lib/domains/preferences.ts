@@ -1,6 +1,13 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { BackendOpResult, Language, ThemeMode, NotificationSoundOption } from '../../types.ts';
 
-import type { BackendOpResult, UserPreferencesState, Language, ThemeMode, NotificationSoundOption } from '../../types.ts';
+export interface UserPreferencesState {
+  language: Language;
+  theme: ThemeMode;
+  notificationSound: NotificationSoundOption;
+  soundMuted: boolean;
+  vibrationEnabled: boolean;
+}
 
 function unavailableResult<T>(): BackendOpResult<T> {
   return {

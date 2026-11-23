@@ -5,12 +5,12 @@ import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
 import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
-import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { OwnerGovernanceWorkspace, type OwnerGovernanceSection } from './OwnerGovernanceWorkspace';
 import {
-  OwnerGovernanceSection,
-  OwnerGovernanceWorkspace,
-} from './OwnerGovernanceWorkspace';
+  OwnerGovernanceSurfacePanel,
+  OwnerOversightSelector,
+} from './owner/OwnerGovernanceSurfacePanel';
 import { fetchGovernanceActorScope } from '../../lib/accountGovernance';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { canAccessAppTab } from './homepageAccess';
@@ -20,16 +20,6 @@ export interface OwnerHomePageProps {
   onNavigateToSubTab?: (tab: 'community' | 'directory' | 'announcements', subTab: string) => void;
   onInspectRoleHome?: (homeKey: HomePageKey | null) => void;
 }
-
-const INSPECTABLE_WORKSPACES: HomePageKey[] = [
-  'PUBLIC_HOME',
-  'PARENT_HOME',
-  'STUDENT_HOME',
-  'TEACHER_HOME',
-  'SCHOOL_STAFF_HOME',
-  'ADMINISTRATIVE_PERSONNEL_HOME',
-  'MANAGER_HOME',
-];
 
 export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   setActiveTab,
@@ -89,7 +79,6 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
   const openGovernanceSection = (section: OwnerGovernanceSection) => {
     setGovernancePanel(null);
     setActiveGovernanceSection(section);
-    // Reopening the same section must reveal it even when React state is unchanged.
     if (section === activeGovernanceSection) revealGovernanceSurface();
   };
 
@@ -132,111 +121,45 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
           language,
         )}
       >
-        {/* Non-impersonating Owner Workspace Oversight Selector (Section 12.3) */}
         {onInspectRoleHome && (
-          <div className="mt-2">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1.5">
-              {pickText(
-                {
-                  ar: 'معاينة فضاءات الأدوار (إشراف المالك دون انتحال هوية):',
-                  fr: 'Inspecter un espace de rôle (supervision sans changement d’identité) :',
-                  en: 'View role workspace (non-impersonating Owner oversight):',
-                },
-                language,
-              )}
-            </span>
-            <div className="kh-selector-bar" aria-label="Owner workspace oversight selector">
-              {INSPECTABLE_WORKSPACES.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  data-testid={`owner-inspect-${key}`}
-                  onClick={() => onInspectRoleHome(key)}
-                  className="kh-selector-pill"
-                >
-                  👁️ {pickText(HOMEPAGE_BADGE_LABELS[key], language)}
-                </button>
-              ))}
-            </div>
-          </div>
+          <OwnerOversightSelector
+            language={language}
+            onInspectRoleHome={onInspectRoleHome}
+          />
         )}
       </HomePageHeader>
 
-      {(activeGovernanceSection || governancePanel) && (
-        <div
-          ref={governanceSurfaceRef}
-          tabIndex={-1}
-          role="region"
-          aria-label={pickText({ ar: 'مساحة إدارة المدرسة', fr: 'Espace de gestion scolaire', en: 'School management workspace' }, language)}
-          className="scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-3xl"
-          data-testid="owner-governance-surface"
-        >
-          {activeGovernanceSection && (
-            <OwnerGovernanceWorkspace
-              activeSection={activeGovernanceSection}
-              onSelectSection={(sec) => setActiveGovernanceSection(sec)}
-              onClose={() => setActiveGovernanceSection(null)}
-              onScopeVerified={(available) =>
-                setGovernanceBackendStatus(available ? 'READY' : 'BLOCKED_BACKEND')
-              }
-            />
-          )}
+      <OwnerGovernanceSurfacePanel
+        language={language}
+        governanceSurfaceRef={governanceSurfaceRef}
+        activeGovernanceSection={activeGovernanceSection}
+        governancePanel={governancePanel}
+        governanceBackendStatus={governanceBackendStatus}
+        onClosePanel={() => setGovernancePanel(null)}
+        onRetryReadiness={() => setGovernanceRetrySeq((s) => s + 1)}
+      >
+        {activeGovernanceSection && (
+          <OwnerGovernanceWorkspace
+            activeSection={activeGovernanceSection}
+            onSelectSection={(sec) => setActiveGovernanceSection(sec)}
+            onClose={() => setActiveGovernanceSection(null)}
+            onScopeVerified={(available) =>
+              setGovernanceBackendStatus(available ? 'READY' : 'BLOCKED_BACKEND')
+            }
+          />
+        )}
+      </OwnerGovernanceSurfacePanel>
 
-          {governancePanel && (
-            <EmptyFeatureState
-              state={governancePanel.state}
-              title={governancePanel.title}
-              description={governancePanel.description}
-              onClose={() => setGovernancePanel(null)}
-            />
-          )}
-        </div>
-      )}
-
-      {governanceBackendStatus === 'ERROR' && (
-        <div
-          role="alert"
-          data-testid="owner-governance-error-banner"
-          className="mb-4 rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-xs font-bold text-red-700 dark:text-red-300 flex flex-wrap items-center justify-between gap-2"
-        >
-          <span>
-            {pickText(
-              {
-                ar: 'تعذر التحقق من جاهزية وحدة حوكمة الحسابات عبر الخادم.',
-                fr: 'Impossible de vérifier la disponibilité du module de gouvernance.',
-                en: 'Unable to verify Account Governance backend readiness from server.',
-              },
-              language,
-            )}
-          </span>
-          <button
-            type="button"
-            onClick={() => setGovernanceRetrySeq((s) => s + 1)}
-            className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
-          >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-          </button>
-        </div>
-      )}
-
-      {/* Group 1: School Operations — matching Screenshot 7 (ADMIN HOME / SCHOOL OWNER HOME) */}
       <HomeSection
         title={pickText(
-          {
-            ar: 'العمليات المدرسية اليومية',
-            fr: 'Opérations scolaires',
-            en: 'School Operations',
-          },
+          { ar: 'العمليات المدرسية اليومية', fr: 'Opérations scolaires', en: 'School Operations' },
           language,
         )}
       >
         <HomeCardGrid ariaLabel="School Owner operations cards">
           <HomeShortcutCard
             id="owner-control-center"
-            title={pickText(
-              { ar: 'مركز القيادة', fr: 'Centre de contrôle', en: 'Control Center' },
-              language,
-            )}
+            title={pickText({ ar: 'مركز القيادة', fr: 'Centre de contrôle', en: 'Control Center' }, language)}
             actionLabel={openActionLabel}
             icon="🛠️"
             tone="slate"
@@ -254,14 +177,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-classes"
-            title={pickText(
-              {
-                ar: 'الأقسام وقوائم التلاميذ',
-                fr: 'Classes & Élèves',
-                en: 'Classes & Students',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'الأقسام وقوائم التلاميذ', fr: 'Classes & Élèves', en: 'Classes & Students' }, language)}
             actionLabel={openActionLabel}
             icon="🏫"
             tone="teal"
@@ -270,10 +186,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-registration"
-            title={pickText(
-              { ar: 'ملفات التسجيل', fr: 'Inscriptions', en: 'Registration' },
-              language,
-            )}
+            title={pickText({ ar: 'ملفات التسجيل', fr: 'Inscriptions', en: 'Registration' }, language)}
             actionLabel={openActionLabel}
             icon="📋"
             tone="orange"
@@ -283,10 +196,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
           {canAccessAppTab(currentUser, 'students') && (
             <HomeShortcutCard
               id="owner-students"
-              title={pickText(
-                { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
-                language,
-              )}
+              title={pickText({ ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' }, language)}
               actionLabel={openActionLabel}
               icon="🎓"
               tone="blue"
@@ -314,10 +224,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-public-content"
-            title={pickText(
-              { ar: 'المحتوى العام للموقع', fr: 'Contenu public', en: 'Public content' },
-              language,
-            )}
+            title={pickText({ ar: 'المحتوى العام للموقع', fr: 'Contenu public', en: 'Public content' }, language)}
             actionLabel={openActionLabel}
             icon="🌐"
             tone="blue"
@@ -326,14 +233,9 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
         </HomeCardGrid>
       </HomeSection>
 
-      {/* Group 2: Governance & Access — Owner-exclusive governance modules (Section 12.2) */}
       <HomeSection
         title={pickText(
-          {
-            ar: 'الحوكمة وإدارة الحسابات والصلاحيات',
-            fr: 'Gouvernance, Approbations & Accès',
-            en: 'Governance & Access',
-          },
+          { ar: 'الحوكمة وإدارة الحسابات والصلاحيات', fr: 'Gouvernance, Approbations & Accès', en: 'Governance & Access' },
           language,
         )}
         subtitle={pickText(
@@ -348,14 +250,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
         <HomeCardGrid ariaLabel="School Owner governance cards">
           <HomeShortcutCard
             id="owner-pending-approvals"
-            title={pickText(
-              {
-                ar: 'طلبات الحسابات قيد المراجعة',
-                fr: 'Approbations de comptes',
-                en: 'Pending Account Approvals',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'طلبات الحسابات قيد المراجعة', fr: 'Approbations de comptes', en: 'Pending Account Approvals' }, language)}
             actionLabel={governanceCardActionLabel}
             statusBadge={governanceCardBadge}
             state={governanceCardState}
@@ -366,14 +261,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-user-directory"
-            title={pickText(
-              {
-                ar: 'دليل الحسابات وحالتها',
-                fr: 'Répertoire des comptes',
-                en: 'User Directory & Account Status',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'دليل الحسابات وحالتها', fr: 'Répertoire des comptes', en: 'User Directory & Account Status' }, language)}
             actionLabel={governanceCardActionLabel}
             statusBadge={governanceCardBadge}
             state={governanceCardState}
@@ -384,14 +272,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-manager-delegation"
-            title={pickText(
-              {
-                ar: 'تفويض المدير المساعد (Manager)',
-                fr: 'Délégation Manager',
-                en: 'Manager Delegation',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'تفويض المدير المساعد (Manager)', fr: 'Délégation Manager', en: 'Manager Delegation' }, language)}
             actionLabel={governanceCardActionLabel}
             statusBadge={governanceCardBadge}
             state={governanceCardState}
@@ -402,14 +283,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-role-governance"
-            title={pickText(
-              {
-                ar: 'حوكمة الأدوار والصلاحيات',
-                fr: 'Gouvernance des rôles',
-                en: 'Role & Permission Governance',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'حوكمة الأدوار والصلاحيات', fr: 'Gouvernance des rôles', en: 'Role & Permission Governance' }, language)}
             actionLabel={governanceCardActionLabel}
             statusBadge={governanceCardBadge}
             state={governanceCardState}
@@ -420,14 +294,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-directory-oversight"
-            title={pickText(
-              {
-                ar: 'إشراف الدليل والموقع العام',
-                fr: 'Supervision Annuaires & Site',
-                en: 'Directory & Public Site Oversight',
-              },
-              language,
-            )}
+            title={pickText({ ar: 'إشراف الدليل والموقع العام', fr: 'Supervision Annuaires & Site', en: 'Directory & Public Site Oversight' }, language)}
             actionLabel={openActionLabel}
             icon="🏛️"
             tone="slate"
@@ -436,10 +303,7 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
 
           <HomeShortcutCard
             id="owner-school-settings"
-            title={pickText(
-              { ar: 'إعدادات المدرسة', fr: 'Paramètres de l’école', en: 'School Settings' },
-              language,
-            )}
+            title={pickText({ ar: 'إعدادات المدرسة', fr: 'Paramètres de l’école', en: 'School Settings' }, language)}
             actionLabel={comingSoonLabel}
             statusBadge={comingSoonLabel}
             state="COMING_SOON"
@@ -469,4 +333,3 @@ export const OwnerHomePage: React.FC<OwnerHomePageProps> = ({
     </div>
   );
 };
-

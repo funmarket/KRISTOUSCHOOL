@@ -12,6 +12,7 @@ import { ManagerHomePage } from './ManagerHomePage';
 import { OwnerHomePage } from './OwnerHomePage';
 import { ApplicationStatusScreen } from './ApplicationStatusScreen';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+export { HomeView } from '../views/HomeView';
 
 export interface HomePageResolverProps {
   setActiveTab: (tab: string) => void;

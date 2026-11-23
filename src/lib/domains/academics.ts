@@ -3,12 +3,69 @@ import type {
   BackendOpResult,
   Child,
   ClassItem,
-  ClassStudentRosterItem,
   OperationalCounts,
-  SchoolLevelOption,
 } from '../../types.ts';
 
-export type { SchoolClassSummary } from '../../types.ts';
+export interface TeacherSubjectComponentSummary {
+  id: string;
+  code: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  sortOrder: number;
+}
+
+export interface TeacherAllocatedSubjectItem {
+  allocationId: string;
+  assignmentId: string;
+  teacherUserId: string;
+  classId: string;
+  className: string;
+  levelCode: string;
+  academicYear: string;
+  isHomeroom: boolean;
+  subjectId: string;
+  subjectCode: string;
+  domainCode: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  offeringId: string;
+  active: boolean;
+  allocatedAt: string;
+  version: number;
+  components: TeacherSubjectComponentSummary[];
+}
+
+export interface SchoolClassSummary {
+  id: string;
+  name: string;
+  level: string;
+  levelCode?: string;
+  academicYear: string;
+  homeroomTeacherId?: string | null;
+  homeroomTeacherName: string | null;
+  activeStudentCount: number;
+  capacity?: number | null;
+  roomLabel?: string | null;
+}
+
+export interface ClassStudentRosterItem {
+  studentId: string;
+  studentCode: string;
+  fullName: string;
+  enrollmentStatus: 'ACTIVE' | 'TRANSFERRED' | 'WITHDRAWN' | 'COMPLETED';
+  enrolledAt: string;
+  primaryGuardianName?: string | null;
+}
+
+export interface SchoolLevelOption {
+  code: string;
+  labelAr: string;
+  labelFr: string;
+  labelEn: string;
+  sortOrder: number;
+}
 
 export const CANONICAL_SCHOOL_LEVELS: SchoolLevelOption[] = [
   { code: 'CP', labelAr: 'السنة الأولى (CP)', labelFr: '1ère année (CP)', labelEn: 'Year 1 (CP)', sortOrder: 1 },
@@ -19,7 +76,7 @@ export const CANONICAL_SCHOOL_LEVELS: SchoolLevelOption[] = [
   { code: '6EME', labelAr: 'السنة السادسة (6ème)', labelFr: '6ème année', labelEn: 'Year 6', sortOrder: 6 },
 ];
 
-export type SchoolClassWithRoster = import('../../types.ts').SchoolClassSummary & {
+export type SchoolClassWithRoster = SchoolClassSummary & {
   roster: ClassStudentRosterItem[];
 };
 
@@ -120,18 +177,58 @@ export async function fetchSchoolClassesWithRosters(
       return { ok: false, ...classifySupabaseError(error) };
     }
     const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-    const mapped: SchoolClassWithRoster[] = rows.map((row) => ({
-      id: String(row.id || ''),
-      name: String(row.name || ''),
-      level: String(row.level || row.level_code || 'CP'),
-      levelCode: String(row.level_code || row.level || 'CP'),
-      academicYear: String(row.academic_year || row.academic_year_code || '2026-2027'),
-      homeroomTeacherName: row.homeroom_teacher_name ? String(row.homeroom_teacher_name) : null,
-      activeStudentCount: Number(row.active_student_count ?? row.studentCount ?? 0),
-      capacity: row.capacity !== undefined ? Number(row.capacity) : 28,
-      roomLabel: row.room_label ? String(row.room_label) : null,
-      roster: Array.isArray(row.roster) ? (row.roster as ClassStudentRosterItem[]) : [],
-    }));
+    const mapped: SchoolClassWithRoster[] = [];
+    for (const row of rows) {
+      const id = typeof row.id === 'string' ? row.id.trim() : '';
+      const name = typeof row.name === 'string' ? row.name.trim() : '';
+      const rawLevelCode = row.levelCode ?? row.level_code;
+      const levelCode = typeof rawLevelCode === 'string' && rawLevelCode.trim() ? rawLevelCode.trim() : undefined;
+      const rawLevel = row.level ?? levelCode;
+      const level = typeof rawLevel === 'string' ? rawLevel.trim() : '';
+      const rawYear = row.academicYear ?? row.academic_year ?? row.academic_year_code;
+      const academicYear = typeof rawYear === 'string' ? rawYear.trim() : '';
+      const rawCount = row.activeStudentCount ?? row.active_student_count ?? row.studentCount;
+      const activeStudentCount =
+        typeof rawCount === 'number' && Number.isFinite(rawCount)
+          ? rawCount
+          : typeof rawCount === 'string' && rawCount.trim() !== '' && Number.isFinite(Number(rawCount))
+          ? Number(rawCount)
+          : null;
+
+      if (!id || !name || !level || !academicYear || activeStudentCount === null) {
+        return {
+          ok: false,
+          status: 'ERROR',
+          errorCode: 'invalid_class_roster_payload',
+          errorMessage: 'Class roster payload is missing required fields.',
+        };
+      }
+
+      const rawTeacherId = row.homeroomTeacherId ?? row.homeroom_teacher_id;
+      const rawTeacherName = row.homeroomTeacherName ?? row.homeroom_teacher_name;
+      const rawRoomLabel = row.roomLabel ?? row.room_label;
+      const rawCapacity = row.capacity;
+      const capacity =
+        rawCapacity === null || rawCapacity === undefined
+          ? null
+          : Number.isFinite(Number(rawCapacity))
+          ? Number(rawCapacity)
+          : null;
+
+      mapped.push({
+        id,
+        name,
+        level,
+        levelCode,
+        academicYear,
+        homeroomTeacherId: typeof rawTeacherId === 'string' && rawTeacherId.trim() ? rawTeacherId.trim() : null,
+        homeroomTeacherName: typeof rawTeacherName === 'string' && rawTeacherName.trim() ? rawTeacherName.trim() : null,
+        activeStudentCount,
+        capacity,
+        roomLabel: typeof rawRoomLabel === 'string' && rawRoomLabel.trim() ? rawRoomLabel.trim() : null,
+        roster: Array.isArray(row.roster) ? (row.roster as ClassStudentRosterItem[]) : [],
+      });
+    }
     return {
       ok: true,
       status: 'READY',

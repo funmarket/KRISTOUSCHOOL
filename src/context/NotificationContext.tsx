@@ -1,62 +1,65 @@
-import React, { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
-import type { BackendOpResult, NotificationItem, User } from '../types';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import type { BackendOpResult, NotificationItem } from '../types';
 import {
-  listMyNotifications, markNotificationReadOnServer, markAllNotificationsReadOnServer,
+  listMyNotifications,
+  markAllNotificationsReadOnServer,
+  markNotificationReadOnServer,
 } from '../lib/domains/notifications';
 import {
-  applyAllNotificationsOptimisticRead, applySingleNotificationOptimisticRead,
-  captureNotificationReadSnapshot, isMatchingApprovedAccountContext,
-  mergeRefreshedNotifications, reconcileFailedMarkAllNotificationsRead,
+  applyAllNotificationsOptimisticRead,
+  applySingleNotificationOptimisticRead,
+  captureNotificationReadSnapshot,
+  isMatchingApprovedAccountContext,
+  mergeRefreshedNotifications,
+  reconcileFailedMarkAllNotificationsRead,
   reconcileFailedSingleNotificationRead,
-  type AccountIdentityContext, type PendingNotificationSnapshot,
+  type AccountIdentityContext,
+  type PendingNotificationSnapshot,
 } from '../lib/appStateGuards';
 
-export interface NotificationIdentityAccess {
-  readonly generation: number;
-  getUser: () => User | null;
-  getIdentity: () => AccountIdentityContext;
-  isMounted: () => boolean;
-}
-export interface NotificationServices {
-  listMyNotifications: () => ReturnType<typeof listMyNotifications>;
-  markNotificationReadOnServer: (id: string) => ReturnType<typeof markNotificationReadOnServer>;
-  markAllNotificationsReadOnServer: () => ReturnType<typeof markAllNotificationsReadOnServer>;
-}
-export interface NotificationActions {
-  hydrate: (isStillValid: () => boolean) => Promise<void>;
-  clear: () => void;
-}
-export interface NotificationContextValue extends NotificationActions {
+export interface NotificationContextType {
   notifications: NotificationItem[];
+  unreadNotificationsCount: number;
   notificationsError: string | null;
   markingNotificationIds: string[];
   markingAllNotifications: boolean;
-  unreadNotificationsCount: number;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  syncNotificationsIdentity: (identity: AccountIdentityContext) => void;
+  hydrateNotificationsForAccount: (origin: AccountIdentityContext) => Promise<void>;
+  resetNotificationTracking: () => void;
+  clearNotificationsState: () => void;
 }
-const NotificationContext = createContext<NotificationContextValue | null>(null);
-const defaultServices: NotificationServices = {
-  listMyNotifications, markNotificationReadOnServer, markAllNotificationsReadOnServer,
-};
+
+export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{
   children: React.ReactNode;
-  identity: NotificationIdentityAccess;
-  services?: NotificationServices;
-  onRegister?: (actions: NotificationActions | null) => void;
-}> = ({ children, identity, services = defaultServices, onRegister }) => {
+  initialIdentity?: AccountIdentityContext;
+}> = ({ children, initialIdentity }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [markingNotificationIds, setMarkingNotificationIds] = useState<string[]>([]);
-  const [markingAllNotifications, setMarkingAllNotifications] = useState(false);
+  const [markingAllNotifications, setMarkingAllNotifications] = useState<boolean>(false);
+
+  const mountedRef = useRef<boolean>(true);
+  const identityRef = useRef<AccountIdentityContext>(
+    initialIdentity ?? { userId: null, accountStatus: null, generation: 1 },
+  );
   const notificationsRef = useRef<NotificationItem[]>([]);
-  const notifSeqRef = useRef(0);
+  const notifSeqRef = useRef<number>(0);
   const inFlightSingleReadsRef = useRef<Set<string>>(new Set());
   const pendingNotificationSnapshotsRef = useRef<Map<number, PendingNotificationSnapshot>>(new Map());
   const pendingMarkAllReadsRef = useRef<Map<number, ReadonlySet<string>>>(new Map());
   const confirmedReadSeqByIdRef = useRef<Map<string, number>>(new Map());
-  const latestMarkAllConfirmedSeqRef = useRef(0);
+  const latestMarkAllConfirmedSeqRef = useRef<number>(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const updateNotificationsState = useCallback(
     (updater: NotificationItem[] | ((prev: NotificationItem[]) => NotificationItem[])) => {
@@ -65,8 +68,21 @@ export const NotificationProvider: React.FC<{
         notificationsRef.current = next;
         return next;
       });
-    }, [],
+    },
+    [],
   );
+
+  const mergeWithPending = useCallback(
+    (items: NotificationItem[]) =>
+      mergeRefreshedNotifications(
+        items,
+        inFlightSingleReadsRef.current,
+        pendingMarkAllReadsRef.current,
+        confirmedReadSeqByIdRef.current,
+      ),
+    [],
+  );
+
   const resetNotificationTracking = useCallback(() => {
     inFlightSingleReadsRef.current.clear();
     pendingMarkAllReadsRef.current.clear();
@@ -76,147 +92,138 @@ export const NotificationProvider: React.FC<{
     setMarkingNotificationIds([]);
     setMarkingAllNotifications(false);
   }, []);
-  const clear = useCallback(() => {
+
+  const clearNotificationsState = useCallback(() => {
     resetNotificationTracking();
     updateNotificationsState([]);
     setNotificationsError(null);
   }, [resetNotificationTracking, updateNotificationsState]);
 
-  useLayoutEffect(() => { clear(); }, [identity.generation, clear]);
-  const hydrate = async (isStillValid: () => boolean): Promise<void> => {
-    const origin = identity.getIdentity();
-    setNotificationsError(null);
-    const res = await services.listMyNotifications();
-    if (!isStillValid() ||
-      !isMatchingApprovedAccountContext(origin, identity.getIdentity(), identity.isMounted())) return;
-    if (res.ok && res.data) {
-      updateNotificationsState(mergeRefreshedNotifications(
-        res.data, inFlightSingleReadsRef.current,
-        pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
-      ));
-      setNotificationsError(null);
-    } else if (res.status === 'UNAUTHORIZED') {
-      updateNotificationsState([]);
-      setNotificationsError(res.errorMessage || res.errorCode || 'Not authorized to load notifications.');
-    } else if (!res.ok && res.status !== 'BLOCKED_BACKEND') {
-      setNotificationsError(res.errorMessage || res.errorCode || 'Unable to load notifications.');
-    }
-  };
+  const syncNotificationsIdentity = useCallback((identity: AccountIdentityContext) => {
+    identityRef.current = identity;
+  }, []);
 
-  const reconcileNotificationsFromServer = async (origin: AccountIdentityContext) => {
-    try {
-      const readback = await services.listMyNotifications();
-      if (!isMatchingApprovedAccountContext(origin, identity.getIdentity(), identity.isMounted())) {
-        return;
+  const hydrateNotificationsForAccount = useCallback(
+    async (origin: AccountIdentityContext) => {
+      if (!origin.userId || origin.accountStatus !== 'APPROVED') return;
+      identityRef.current = origin;
+      setNotificationsError(null);
+      const notifRes = await listMyNotifications();
+      if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) return;
+      if (notifRes.ok && notifRes.data) {
+        updateNotificationsState(mergeWithPending(notifRes.data));
+        setNotificationsError(null);
+      } else if (notifRes.status === 'UNAUTHORIZED') {
+        updateNotificationsState([]);
+        setNotificationsError(
+          notifRes.errorMessage || notifRes.errorCode || 'Not authorized to load notifications.',
+        );
+      } else if (!notifRes.ok && notifRes.status !== 'BLOCKED_BACKEND') {
+        setNotificationsError(
+          notifRes.errorMessage || notifRes.errorCode || 'Unable to load notifications.',
+        );
       }
-      if (readback.ok && readback.data) {
-        updateNotificationsState(
-          mergeRefreshedNotifications(
-            readback.data,
-            inFlightSingleReadsRef.current,
-            pendingMarkAllReadsRef.current,
-            confirmedReadSeqByIdRef.current,
+    },
+    [mergeWithPending, updateNotificationsState],
+  );
+
+  const reconcileNotificationsFromServer = useCallback(
+    async (origin: AccountIdentityContext) => {
+      try {
+        const readback = await listMyNotifications();
+        if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) return;
+        if (readback.ok && readback.data) {
+          updateNotificationsState(mergeWithPending(readback.data));
+        }
+      } catch {
+        // Keep deterministic local reconciliation state if readback cannot complete.
+      }
+    },
+    [mergeWithPending, updateNotificationsState],
+  );
+
+  const markNotificationRead = useCallback(
+    (id: string) => {
+      const current = identityRef.current;
+      if (!current.userId || current.accountStatus !== 'APPROVED') return;
+
+      const origin: AccountIdentityContext = { ...current };
+      const requestSeq = ++notifSeqRef.current;
+      const snapshot = captureNotificationReadSnapshot(
+        notificationsRef.current,
+        [id],
+        pendingNotificationSnapshotsRef.current.values(),
+        origin,
+        requestSeq,
+      );
+      pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
+      inFlightSingleReadsRef.current.add(id);
+      setMarkingNotificationIds([...inFlightSingleReadsRef.current]);
+      setNotificationsError(null);
+      updateNotificationsState((prev) => applySingleNotificationOptimisticRead(prev, id));
+
+      void (async () => {
+        let res: BackendOpResult<boolean>;
+        try {
+          res = await markNotificationReadOnServer(id);
+        } catch (err) {
+          res = {
+            ok: false,
+            status: 'ERROR',
+            errorCode: 'notification_mark_failed',
+            errorMessage: err instanceof Error ? err.message : 'Unable to update notification status.',
+          };
+        }
+
+        if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) return;
+
+        pendingNotificationSnapshotsRef.current.delete(requestSeq);
+        inFlightSingleReadsRef.current.delete(id);
+        setMarkingNotificationIds([...inFlightSingleReadsRef.current]);
+
+        if (res.ok) {
+          const prevSeq = confirmedReadSeqByIdRef.current.get(id) ?? 0;
+          if (requestSeq > prevSeq) confirmedReadSeqByIdRef.current.set(id, requestSeq);
+          updateNotificationsState((prev) => mergeWithPending(prev));
+          return;
+        }
+
+        updateNotificationsState((prev) =>
+          mergeWithPending(
+            reconcileFailedSingleNotificationRead(
+              prev,
+              snapshot,
+              identityRef.current,
+              confirmedReadSeqByIdRef.current,
+              latestMarkAllConfirmedSeqRef.current,
+              mountedRef.current,
+            ).notifications,
           ),
         );
-      }
-    } catch {
-      // Keep the deterministic local reconciliation state if readback itself cannot complete.
-    }
-  };
 
-  const markNotificationRead = (id: string) => {
-    const user = identity.getUser();
-    if (!user || user.accountStatus !== 'APPROVED' || user.id !== identity.getIdentity().userId) return;
+        if (res.status !== 'BLOCKED_BACKEND') {
+          setNotificationsError(res.errorMessage || res.errorCode || 'Unable to update notification status.');
+          if (res.status !== 'UNAUTHORIZED') await reconcileNotificationsFromServer(origin);
+        }
+      })();
+    },
+    [mergeWithPending, reconcileNotificationsFromServer, updateNotificationsState],
+  );
 
-    const origin: AccountIdentityContext = {
-      userId: user.id,
-      accountStatus: user.accountStatus,
-      generation: identity.getIdentity().generation,
-    };
+  const markAllNotificationsRead = useCallback(() => {
+    const current = identityRef.current;
+    if (!current.userId || current.accountStatus !== 'APPROVED') return;
+
+    const origin: AccountIdentityContext = { ...current };
     const requestSeq = ++notifSeqRef.current;
     const snapshot = captureNotificationReadSnapshot(
-      notificationsRef.current, [id], pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
+      notificationsRef.current,
+      notificationsRef.current.map((item) => item.id),
+      pendingNotificationSnapshotsRef.current.values(),
+      origin,
+      requestSeq,
     );
     pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
-
-    inFlightSingleReadsRef.current.add(id);
-    setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
-    setNotificationsError(null);
-    updateNotificationsState((prev) => applySingleNotificationOptimisticRead(prev, id));
-
-    void (async () => {
-      let res: BackendOpResult<boolean>;
-      try {
-        res = await services.markNotificationReadOnServer(id);
-      } catch (err) {
-        res = {
-          ok: false,
-          status: 'ERROR',
-          errorCode: 'notification_mark_failed',
-          errorMessage: err instanceof Error ? err.message : 'Unable to update notification status.',
-        };
-      }
-
-      if (!isMatchingApprovedAccountContext(origin, identity.getIdentity(), identity.isMounted())) {
-        return;
-      }
-
-      pendingNotificationSnapshotsRef.current.delete(requestSeq);
-      inFlightSingleReadsRef.current.delete(id);
-      setMarkingNotificationIds(Array.from(inFlightSingleReadsRef.current));
-
-      if (res.ok) {
-        const prevSeq = confirmedReadSeqByIdRef.current.get(id) ?? 0;
-        if (requestSeq > prevSeq) {
-          confirmedReadSeqByIdRef.current.set(id, requestSeq);
-        }
-        updateNotificationsState((prev) => mergeRefreshedNotifications(
-          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
-        ));
-        return;
-      }
-
-      updateNotificationsState((prev) => mergeRefreshedNotifications(
-        reconcileFailedSingleNotificationRead(
-          prev,
-          snapshot,
-          identity.getIdentity(),
-          confirmedReadSeqByIdRef.current,
-          latestMarkAllConfirmedSeqRef.current,
-          identity.isMounted(),
-        ).notifications,
-        inFlightSingleReadsRef.current,
-        pendingMarkAllReadsRef.current,
-        confirmedReadSeqByIdRef.current,
-      ));
-
-      if (res.status !== 'BLOCKED_BACKEND') {
-        setNotificationsError(
-          res.errorMessage || res.errorCode || 'Unable to update notification status.',
-        );
-        if (res.status !== 'UNAUTHORIZED') {
-          await reconcileNotificationsFromServer(origin);
-        }
-      }
-    })();
-  };
-
-  const markAllNotificationsRead = () => {
-    const user = identity.getUser();
-    if (!user || user.accountStatus !== 'APPROVED' || user.id !== identity.getIdentity().userId) return;
-
-    const origin: AccountIdentityContext = {
-      userId: user.id,
-      accountStatus: user.accountStatus,
-      generation: identity.getIdentity().generation,
-    };
-    const requestSeq = ++notifSeqRef.current;
-    const snapshot = captureNotificationReadSnapshot(
-      notificationsRef.current, notificationsRef.current.map(item => item.id),
-      pendingNotificationSnapshotsRef.current.values(), origin, requestSeq,
-    );
-    pendingNotificationSnapshotsRef.current.set(requestSeq, snapshot);
-
     pendingMarkAllReadsRef.current.set(requestSeq, new Set(snapshot.targetIds));
     setMarkingAllNotifications(true);
     setNotificationsError(null);
@@ -225,7 +232,7 @@ export const NotificationProvider: React.FC<{
     void (async () => {
       let res: BackendOpResult<number>;
       try {
-        res = await services.markAllNotificationsReadOnServer();
+        res = await markAllNotificationsReadOnServer();
       } catch (err) {
         res = {
           ok: false,
@@ -235,9 +242,7 @@ export const NotificationProvider: React.FC<{
         };
       }
 
-      if (!isMatchingApprovedAccountContext(origin, identity.getIdentity(), identity.isMounted())) {
-        return;
-      }
+      if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) return;
 
       pendingNotificationSnapshotsRef.current.delete(requestSeq);
       pendingMarkAllReadsRef.current.delete(requestSeq);
@@ -245,60 +250,65 @@ export const NotificationProvider: React.FC<{
 
       if (res.ok) {
         for (const id of snapshot.targetIds) {
-          confirmedReadSeqByIdRef.current.set(id, Math.max(requestSeq, confirmedReadSeqByIdRef.current.get(id) ?? 0));
+          confirmedReadSeqByIdRef.current.set(
+            id,
+            Math.max(requestSeq, confirmedReadSeqByIdRef.current.get(id) ?? 0),
+          );
         }
         if (requestSeq > latestMarkAllConfirmedSeqRef.current) {
           latestMarkAllConfirmedSeqRef.current = requestSeq;
         }
-        updateNotificationsState((prev) => mergeRefreshedNotifications(
-          prev, inFlightSingleReadsRef.current, pendingMarkAllReadsRef.current, confirmedReadSeqByIdRef.current,
-        ));
+        updateNotificationsState((prev) => mergeWithPending(prev));
         return;
       }
 
-      updateNotificationsState((prev) => mergeRefreshedNotifications(
-        reconcileFailedMarkAllNotificationsRead(
-          prev,
-          snapshot,
-          identity.getIdentity(),
-          confirmedReadSeqByIdRef.current,
-          latestMarkAllConfirmedSeqRef.current,
-          identity.isMounted(),
-        ).notifications,
-        inFlightSingleReadsRef.current,
-        pendingMarkAllReadsRef.current,
-        confirmedReadSeqByIdRef.current,
-      ));
+      updateNotificationsState((prev) =>
+        mergeWithPending(
+          reconcileFailedMarkAllNotificationsRead(
+            prev,
+            snapshot,
+            identityRef.current,
+            confirmedReadSeqByIdRef.current,
+            latestMarkAllConfirmedSeqRef.current,
+            mountedRef.current,
+          ).notifications,
+        ),
+      );
 
       if (res.status !== 'BLOCKED_BACKEND') {
-        setNotificationsError(
-          res.errorMessage || res.errorCode || 'Unable to mark notifications read.',
-        );
-        if (res.status !== 'UNAUTHORIZED') {
-          await reconcileNotificationsFromServer(origin);
-        }
+        setNotificationsError(res.errorMessage || res.errorCode || 'Unable to mark notifications read.');
+        if (res.status !== 'UNAUTHORIZED') await reconcileNotificationsFromServer(origin);
       }
     })();
-  };
+  }, [mergeWithPending, reconcileNotificationsFromServer, updateNotificationsState]);
 
-
-  useLayoutEffect(() => {
-    onRegister?.({ hydrate, clear });
-    return () => onRegister?.(null);
-  }, [hydrate, clear, onRegister]);
+  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <NotificationContext.Provider value={{
-      notifications, notificationsError, markingNotificationIds,
-      markingAllNotifications, unreadNotificationsCount: notifications.filter(item => !item.read).length,
-      markNotificationRead, markAllNotificationsRead, hydrate, clear,
-    }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadNotificationsCount,
+        notificationsError,
+        markingNotificationIds,
+        markingAllNotifications,
+        markNotificationRead,
+        markAllNotificationsRead,
+        syncNotificationsIdentity,
+        hydrateNotificationsForAccount,
+        resetNotificationTracking,
+        clearNotificationsState,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );
 };
-export function useNotifications(): NotificationContextValue {
+
+export const useNotifications = (): NotificationContextType => {
   const context = useContext(NotificationContext);
-  if (!context) throw new Error('useNotifications must be used within NotificationProvider');
+  if (!context) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
   return context;
-}
+};

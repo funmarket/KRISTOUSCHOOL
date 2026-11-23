@@ -5,12 +5,27 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-declare const __KRISTOU_SUPABASE_URL__: string;
-declare const __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: string;
+declare const __KRISTOU_SUPABASE_URL__: string | undefined;
+declare const __KRISTOU_SUPABASE_PUBLISHABLE_KEY__: string | undefined;
+
+const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string | undefined> }).env) || {};
+const procEnv = (typeof process !== 'undefined' && process.env) || {};
 
 // vite.config.ts selectively injects only public config, never a service-role key.
-const supabaseUrl = __KRISTOU_SUPABASE_URL__;
-const supabasePublishableKey = __KRISTOU_SUPABASE_PUBLISHABLE_KEY__;
+const supabaseUrl =
+  metaEnv.VITE_SUPABASE_URL ||
+  procEnv.VITE_SUPABASE_URL ||
+  (typeof __KRISTOU_SUPABASE_URL__ !== 'undefined' ? __KRISTOU_SUPABASE_URL__ : '') ||
+  '';
+
+const supabasePublishableKey =
+  metaEnv.VITE_SUPABASE_ANON_KEY ||
+  metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  procEnv.VITE_SUPABASE_ANON_KEY ||
+  procEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  (typeof __KRISTOU_SUPABASE_PUBLISHABLE_KEY__ !== 'undefined' ? __KRISTOU_SUPABASE_PUBLISHABLE_KEY__ : '') ||
+  '';
+
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 
 import type { Database } from './database.types';

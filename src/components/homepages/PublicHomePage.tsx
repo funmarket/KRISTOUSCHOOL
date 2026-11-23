@@ -1,22 +1,20 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import {
-  Bell,
   BookOpen,
   CalendarDays,
-  GraduationCap,
   Images,
   Megaphone,
   UsersRound,
   Utensils,
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { submitPublicInquiry } from '../../lib/schoolOperations';
-import { canAccessAppTab, canManagePublicContentUi } from './homepageAccess';
+import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { PublicFeaturedAndCanteenPanels } from './public-home/PublicFeaturedAndCanteenPanels';
+import { PublicInquiryContactSection } from './public-home/PublicInquiryContactSection';
+import { PublicSchoolContentSections } from './public-home/PublicSchoolContentSections';
+import { ASSET, usePublicHomePage } from './public-home/usePublicHomePage';
+import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomePageHeader } from './shared/HomePageHeader';
 import { HomeShortcutCard } from './shared/HomeShortcutCard';
-import { HomeCardGrid } from './shared/HomeCardGrid';
-import { HomeSection } from './shared/HomeSection';
-import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
 import '../views/KristouHome.css';
 
 export interface PublicHomePageProps {
@@ -24,17 +22,6 @@ export interface PublicHomePageProps {
   onOpenAuth: (mode?: 'signin' | 'register') => void;
   onNavigateToSubTab?: (tab: 'community' | 'directory', subTab: string) => void;
 }
-
-const ASSET = '/assets/kristou-home/';
-
-const PUBLIC_CAMPUS_PHOTOS = [
-  `${ASSET}school-building.png`,
-  `${ASSET}hero-schoolchildren.png`,
-  `${ASSET}enrollment-children.png`,
-  `${ASSET}canteen-meal.png`,
-  `${ASSET}announcement-school.png`,
-  `${ASSET}announcement-bardo.png`,
-];
 
 export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   setActiveTab,
@@ -44,156 +31,45 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
   const {
     language,
     t,
-    announcements,
-    broadcastsStatus,
-    broadcastsError,
-    foodMenu,
-    foodMenuStatus,
-    foodMenuError,
-    publicContent,
-    publicContentStatus,
-    publicContentError,
     currentUser,
     refreshSchoolData,
-  } = useApp();
-  const exploreSectionRef = useRef<HTMLDivElement | null>(null);
-  const levelsSectionRef = useRef<HTMLDivElement | null>(null);
-  const activitiesSectionRef = useRef<HTMLDivElement | null>(null);
-  const gallerySectionRef = useRef<HTMLDivElement | null>(null);
-  const announcementsSectionRef = useRef<HTMLDivElement | null>(null);
-  const contactSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const [inquiryForm, setInquiryForm] = useState({
-    senderName: '',
-    phone: '',
-    email: '',
-    subject: '',
-    message: '',
+    broadcastsStatus,
+    broadcastsError,
+    broadcastsHasError,
+    publicAnnouncements,
+    isAnnouncementsDemo,
+    foodMenu,
+    foodMenuError,
+    foodMenuHasError,
+    isMenuDemo,
+    publicContentStatus,
+    publicContentError,
+    publicContentHasError,
+    canManagePublicContent,
+    publishedCmsSlugs,
+    pickPublicEntry,
+    inquiryForm,
+    setInquiryForm,
+    inquirySubmitting,
+    inquiryFeedback,
+    handleInquirySubmit,
+    exploreSectionRef,
+    levelsSectionRef,
+    activitiesSectionRef,
+    gallerySectionRef,
+    announcementsSectionRef,
+    contactSectionRef,
+    scrollToRef,
+    openTeachers,
+    openAdministration,
+    openPrivateCommunityShortcut,
+  } = usePublicHomePage({
+    setActiveTab,
+    onOpenAuth,
+    onNavigateToSubTab,
   });
-  const [inquirySubmitting, setInquirySubmitting] = useState(false);
-  const [inquiryFeedback, setInquiryFeedback] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
 
-  const broadcastsHasError = broadcastsStatus === 'ERROR' || broadcastsStatus === 'UNAUTHORIZED';
-  const foodMenuHasError = foodMenuStatus === 'ERROR' || foodMenuStatus === 'UNAUTHORIZED';
-  const publicContentHasError =
-    publicContentStatus === 'ERROR' || publicContentStatus === 'UNAUTHORIZED';
-  const canManagePublicContent = canManagePublicContentUi(currentUser);
-  const publishedCmsSlugs = Object.keys(publicContent ?? {}).filter(
-    (slug) => publicContent?.[slug]?.isPublished,
-  );
-
-  // The signed-in feed may contain internal notices and drafts. Public Site
-  // requires explicit publication; retain the existing labelled public demos
-  // ONLY when not in ERROR / UNAUTHORIZED state.
-  const publicAnnouncements = broadcastsHasError
-    ? []
-    : announcements.filter(
-        (a) =>
-          !a.classId &&
-          (a.isDemoPreview === true ||
-            (a.isPublic === true &&
-              a.audienceScope === 'PUBLIC_SITE' &&
-              'status' in a &&
-              a.status === 'PUBLISHED')),
-      );
-
-  const isAnnouncementsDemo =
-    !broadcastsHasError &&
-    (broadcastsStatus === 'BLOCKED_BACKEND' || publicAnnouncements.some((a) => a.isDemoPreview === true));
-  const isMenuDemo =
-    !foodMenuHasError &&
-    (foodMenu.isDemoPreview === true || foodMenuStatus === 'BLOCKED_BACKEND');
-
-  const pickPublicEntry = (slug: string, field: 'title' | 'body'): string | null => {
-    if (publicContentHasError) return null;
-    const entry = publicContent?.[slug];
-    if (!entry || !entry.isPublished) return null;
-    const raw =
-      field === 'title'
-        ? language === 'ar'
-          ? entry.titleAr
-          : language === 'fr'
-          ? entry.titleFr
-          : entry.titleEn
-        : language === 'ar'
-        ? entry.bodyAr
-        : language === 'fr'
-        ? entry.bodyFr
-        : entry.bodyEn;
-    return raw && raw.trim() ? raw.trim() : null;
-  };
-
-  const handleInquirySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setInquiryFeedback(null);
-    setInquirySubmitting(true);
-    const res = await submitPublicInquiry(inquiryForm);
-    setInquirySubmitting(false);
-    if (!res.ok) {
-      setInquiryFeedback({
-        type: 'error',
-        message:
-          res.status === 'BLOCKED_BACKEND'
-            ? pickText(
-                {
-                  ar: 'بوابة استفسارات الموقع العام بانتظار نشر جدول الخادم (Supabase). لا يتم حفظ استفسارات وهمية.',
-                  fr: 'Le formulaire de contact public attend le déploiement de la table Supabase.',
-                  en: 'Public inquiry persistence is awaiting Supabase backend deployment. No fake local submission saved.',
-                },
-                language,
-              )
-            : res.errorMessage || t('error'),
-      });
-      return;
-    }
-    setInquiryFeedback({
-      type: 'success',
-      message: pickText(
-        {
-          ar: 'تم استلام استفساركم بنجاح وحفظه لدى إدارة المدرسة.',
-          fr: 'Votre demande a été enregistrée auprès du secrétariat de l’école.',
-          en: 'Your public school inquiry was saved with school administration.',
-        },
-        language,
-      ),
-    });
-    setInquiryForm({ senderName: '', phone: '', email: '', subject: '', message: '' });
-  };
-
-  const scrollToRef = (ref: React.RefObject<HTMLDivElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const openTeachers = () => {
-    if (onNavigateToSubTab) {
-      onNavigateToSubTab('directory', 'teachers');
-    } else {
-      setActiveTab('directory');
-    }
-  };
-
-  const openAdministration = () => {
-    if (onNavigateToSubTab) {
-      onNavigateToSubTab('directory', 'admin');
-    } else {
-      setActiveTab('directory');
-    }
-  };
-
-  const openPrivateCommunityShortcut = (subTab: 'homework' | 'announcements') => {
-    if (canAccessAppTab(currentUser, 'community')) {
-      if (onNavigateToSubTab) {
-        onNavigateToSubTab('community', subTab);
-      } else {
-        setActiveTab('community');
-      }
-    } else {
-      onOpenAuth('signin');
-    }
-  };
+  const schoolWidePublicAnnouncements = publicAnnouncements.filter((a) => !a.classId);
 
   const shortcuts = [
     {
@@ -246,20 +122,176 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     },
   ] as const;
 
-  const levelLabels = [
-    [t('levelCp'), t('level1')],
-    [t('levelCe1'), t('level2')],
-    [t('levelCe2'), t('level3')],
-    [t('levelCm1'), t('level4')],
-    [t('levelCm2'), t('level5')],
-    [t('levelSix'), t('level6')],
-  ] as const;
-  const levelColors = ['#d8f0ff', '#d4f7eb', '#ffeab5', '#ffdfd2', '#e8dcff', '#ffdfe8'];
-  const levelInk = ['#15539d', '#007965', '#815008', '#8a542e', '#4b35a3', '#a92b5a'];
+  const announcementsPreviewBadge = (
+    <span className="kr-chip" data-testid="announcements-preview-badge">
+      {broadcastsHasError
+        ? t('error')
+        : isAnnouncementsDemo
+        ? t('demoPreview')
+        : pickText({ ar: 'منشور', fr: 'Publié', en: 'Published' }, language)}
+    </span>
+  );
+
+  const canteenPreviewBadge = (
+    <p className="kr-week" data-testid="canteen-preview-badge">
+      {foodMenu.weekRange}
+      {isMenuDemo ? ` • ${t('demoPreview')}` : ''}
+    </p>
+  );
+
+  const serviceCardsGrid = (
+    <HomeCardGrid ariaLabel="Public school services">
+      <HomeShortcutCard
+        id="public-teachers"
+        title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers' }, language)}
+        actionLabel={pickText(
+          {
+            ar: 'ملفات تعريف معتمدة',
+            fr: 'Profils approuvés par l’école',
+            en: 'School-approved profiles',
+          },
+          language,
+        )}
+        icon="👩‍🏫"
+        tone="blue"
+        onClick={openTeachers}
+      />
+
+      <HomeShortcutCard
+        id="public-food-menu"
+        title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+        actionLabel="La Toque Gourmande"
+        icon="🍽️"
+        tone="green"
+        onClick={() => setActiveTab('foodMenu')}
+      />
+
+      <HomeShortcutCard
+        id="public-administration"
+        title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration' }, language)}
+        actionLabel={pickText(
+          { ar: 'الهيئة الإدارية', fr: 'Direction de l’école', en: 'School Board' },
+          language,
+        )}
+        icon="🏛️"
+        tone="purple"
+        onClick={openAdministration}
+      />
+
+      <HomeShortcutCard
+        id="public-admissions"
+        title={pickText(
+          { ar: 'القبول والتسجيل', fr: 'Admissions', en: 'Admissions' },
+          language,
+        )}
+        actionLabel={pickText(
+          { ar: 'بوابة التسجيل', fr: 'Entrée des demandes', en: 'Application entry' },
+          language,
+        )}
+        icon="📋"
+        tone="orange"
+        onClick={() => setActiveTab('registration')}
+      />
+
+      <HomeShortcutCard
+        id="public-levels-classes"
+        title={pickText(
+          { ar: 'المستويات والأقسام', fr: 'Niveaux & Classes', en: 'Levels & Classes' },
+          language,
+        )}
+        actionLabel={pickText(
+          {
+            ar: 'السنة الأولى إلى السادسة ابتدائي',
+            fr: 'De la 1ère à la 6ème année',
+            en: 'Year 1 through Year 6',
+          },
+          language,
+        )}
+        icon="🎓"
+        tone="teal"
+        onClick={() => scrollToRef(levelsSectionRef)}
+      />
+
+      <HomeShortcutCard
+        id="public-activities-clubs"
+        title={pickText(
+          { ar: 'الأنشطة والنوادي', fr: 'Activités & Clubs', en: 'Activities & Clubs' },
+          language,
+        )}
+        actionLabel={pickText(
+          { ar: 'الحياة المدرسية', fr: 'Vie scolaire', en: 'School life' },
+          language,
+        )}
+        icon="🎨"
+        tone="yellow"
+        onClick={() => scrollToRef(activitiesSectionRef)}
+      />
+
+      <HomeShortcutCard
+        id="public-gallery"
+        title={pickText(
+          { ar: 'المعرض العام', fr: 'Galerie publique', en: 'Public Gallery' },
+          language,
+        )}
+        actionLabel={pickText(
+          {
+            ar: 'صور معتمدة فقط',
+            fr: 'Médias approuvés uniquement',
+            en: 'Approved media only',
+          },
+          language,
+        )}
+        icon="🖼️"
+        tone="slate"
+        onClick={() => scrollToRef(gallerySectionRef)}
+      />
+
+      <HomeShortcutCard
+        id="public-apply-register"
+        title={pickText(
+          { ar: 'قدّم طلب تسجيل', fr: 'Postuler / S’inscrire', en: 'Apply / Register' },
+          language,
+        )}
+        actionLabel={pickText(
+          { ar: 'ابدأ ملف التسجيل', fr: 'Démarrer un dossier', en: 'Start an application' },
+          language,
+        )}
+        icon="✨"
+        tone="red"
+        onClick={() => setActiveTab('registration')}
+      />
+
+      <HomeShortcutCard
+        id="public-announcements"
+        title={pickText(
+          { ar: 'البلاغات العامة', fr: 'Annonces publiques', en: 'Announcements' },
+          language,
+        )}
+        actionLabel={pickText(
+          { ar: 'أخبار المدرسة', fr: 'Actualités de l’école', en: 'Public school notices' },
+          language,
+        )}
+        icon="📢"
+        tone="blue"
+        onClick={() => scrollToRef(announcementsSectionRef)}
+      />
+
+      <HomeShortcutCard
+        id="public-contact"
+        title={pickText(
+          { ar: 'الاتصال والموقع', fr: 'Contact & Accès', en: 'Contact' },
+          language,
+        )}
+        actionLabel={t('tunis')}
+        icon="📍"
+        tone="teal"
+        onClick={() => scrollToRef(contactSectionRef)}
+      />
+    </HomeCardGrid>
+  );
 
   return (
     <div className="kh-role-page" data-testid="homepage-PUBLIC_HOME">
-      {/* 1. RESTORED ORIGINAL KRISTOU PUBLIC HOMEPAGE (IMAGE 1 SOURCE OF TRUTH) */}
       <section className="kr-home" aria-label={t('home')} data-testid="original-kristou-homepage">
         <div className="kr-hero">
           <div className="kr-hero-copy">
@@ -315,235 +347,25 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           ))}
         </div>
 
-        <div className="kr-info-grid">
-          <section className="kr-panel">
-            <div className="kr-panel-head">
-              <h2>
-                <Bell size={20} color="#119fff" /> {t('featuredTitle')}
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="kr-chip" data-testid="announcements-preview-badge">
-                  {broadcastsHasError
-                    ? t('error')
-                    : isAnnouncementsDemo
-                    ? t('demoPreview')
-                    : pickText({ ar: 'منشور', fr: 'Publié', en: 'Published' }, language)}
-                </span>
-                <button
-                  type="button"
-                  className="kr-link"
-                  onClick={() => scrollToRef(announcementsSectionRef)}
-                >
-                  {t('featuredLink')} →
-                </button>
-              </div>
-            </div>
-            {broadcastsHasError && (
-              <div
-                role="alert"
-                data-testid="public-announcements-error-banner"
-                className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 flex items-center justify-between gap-2"
-              >
-                <span>
-                  {broadcastsError ||
-                    pickText(
-                      {
-                        ar: 'تعذر تحميل الإعلانات العامة من الخادم.',
-                        fr: 'Impossible de charger les annonces publiques.',
-                        en: 'Unable to load live public announcements.',
-                      },
-                      language,
-                    )}
-                </span>
-                {typeof refreshSchoolData === 'function' && (
-                  <button
-                    type="button"
-                    onClick={() => void refreshSchoolData()}
-                    className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
-                  >
-                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-                  </button>
-                )}
-              </div>
-            )}
-            {publicAnnouncements.length ? (
-              publicAnnouncements.slice(0, 2).map((ann, index) => (
-                <article className="kr-announcement" key={ann.id}>
-                  <img
-                    src={`${ASSET}${index === 0 ? 'announcement-school' : 'announcement-bardo'}.png`}
-                    alt={t('announcementImageAlt')}
-                  />
-                  <div>
-                    {ann.priority === 'URGENT' && (
-                      <span className="kr-urgent">{t('urgent')}</span>
-                    )}
-                    <h3>{ann.title}</h3>
-                    <time dateTime={ann.createdAt}>
-                      {new Date(ann.createdAt).toLocaleDateString()}
-                      {ann.isDemoPreview ? ` • ${t('demoPreview')}` : ''}
-                    </time>
-                    <p>{ann.body}</p>
-                  </div>
-                </article>
-              ))
-            ) : (
-              !broadcastsHasError && <p>{t('noItems')}</p>
-            )}
-          </section>
-
-          <section className="kr-panel kr-canteen">
-            <div className="kr-panel-head">
-              <h2>
-                <Utensils color="#f6a400" size={20} /> {t('canteenTitle')}
-              </h2>
-              <span className="kr-chip">{t('canteenBrand')}</span>
-            </div>
-            {foodMenuHasError ? (
-              <div
-                role="alert"
-                data-testid="public-food-menu-error-banner"
-                className="my-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 flex items-center justify-between gap-2"
-              >
-                <span>
-                  {foodMenuError ||
-                    pickText(
-                      {
-                        ar: 'تعذر تحميل قائمة الطعام من الخادم.',
-                        fr: 'Impossible de charger le menu de la cantine.',
-                        en: 'Unable to load live canteen menu.',
-                      },
-                      language,
-                    )}
-                </span>
-                {typeof refreshSchoolData === 'function' && (
-                  <button
-                    type="button"
-                    onClick={() => void refreshSchoolData()}
-                    className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
-                  >
-                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <p className="kr-week" data-testid="canteen-preview-badge">
-                {foodMenu.weekRange}
-                {isMenuDemo ? ` • ${t('demoPreview')}` : ''}
-              </p>
-            )}
-            <div className="kr-meals">
-              <img src={`${ASSET}canteen-meal.png`} alt={t('canteenImageAlt')} />
-              <div>
-                {foodMenu.items.slice(0, 5).map((item, index) => (
-                  <div className="kr-meal" key={`${item.day}-${index}`}>
-                    <b>{item.day}</b>
-                    <span>{item.main}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="kr-meal-action"
-              onClick={() => setActiveTab('foodMenu')}
-            >
-              {t('fullMenu')} →
-            </button>
-          </section>
-
-          <section className="kr-panel kr-kids">
-            <div className="kr-panel-head">
-              <h2>
-                <UsersRound size={21} color="#00a595" /> {t('familySpace')}
-              </h2>
-            </div>
-            <p>{t('familySpaceBody')}</p>
-            <div className="kr-actions" style={{ marginTop: '12px' }}>
-              <button
-                type="button"
-                className="kr-btn"
-                onClick={() => setActiveTab('registration')}
-              >
-                {t('registration')} →
-              </button>
-              {!currentUser && (
-                <button
-                  type="button"
-                  className="kr-btn ghost"
-                  onClick={() => onOpenAuth('signin')}
-                >
-                  {t('login')}
-                </button>
-              )}
-            </div>
-          </section>
-        </div>
-
-        <div className="kr-lower">
-          <div className="kr-campus">
-            <img src={`${ASSET}school-building.png`} alt={t('schoolBuildingAlt')} />
-            <button
-              type="button"
-              className="kr-video"
-              onClick={() => setActiveTab('directory')}
-            >
-              {t('discoverSchool')} →
-            </button>
-          </div>
-
-          <section className="kr-levels">
-            <h2>
-              <GraduationCap
-                size={23}
-                color="#009d92"
-                style={{ display: 'inline', verticalAlign: 'middle' }}
-              />{' '}
-              {t('levelsTitle')}
-            </h2>
-            <p>{t('levelsBody')}</p>
-            <div className="kr-level-row">
-              {levelLabels.map(([name, desc], index) => (
-                <div
-                  className="kr-level"
-                  key={name}
-                  style={
-                    {
-                      '--lvbg': levelColors[index],
-                      '--lvink': levelInk[index],
-                    } as React.CSSProperties
-                  }
-                >
-                  {name}
-                  <small>{desc}</small>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="kr-enroll">
-            <img src={`${ASSET}enrollment-children.png`} alt={t('enrollmentImageAlt')} />
-            <div>
-              <h2>{t('enrollmentTitle')}</h2>
-              <button
-                type="button"
-                className="kr-btn"
-                onClick={() => setActiveTab('registration')}
-              >
-                {t('heroSecondary')} →
-              </button>
-            </div>
-          </section>
-        </div>
-
-        <div className="kr-foot-stripe">
-          <div>🎓 &nbsp; {t('featureQualified')}</div>
-          <div>📊 &nbsp; {t('featureTracking')}</div>
-          <div>🎨 &nbsp; {t('featureActivities')}</div>
-          <div>🛡️ &nbsp; {t('featureSafe')}</div>
-        </div>
+        <PublicFeaturedAndCanteenPanels
+          language={language}
+          t={t}
+          currentUser={currentUser}
+          broadcastsHasError={broadcastsHasError}
+          broadcastsError={broadcastsError}
+          publicAnnouncements={schoolWidePublicAnnouncements}
+          foodMenu={foodMenu}
+          foodMenuHasError={foodMenuHasError}
+          foodMenuError={foodMenuError}
+          announcementsPreviewBadge={announcementsPreviewBadge}
+          canteenPreviewBadge={canteenPreviewBadge}
+          refreshSchoolData={refreshSchoolData}
+          setActiveTab={setActiveTab}
+          onOpenAuth={onOpenAuth}
+          onScrollToAnnouncements={() => scrollToRef(announcementsSectionRef)}
+        />
       </section>
 
-      {/* 2. SECONDARY SUPPORTING CONTENT (IMAGE 2 ADDITIONS MOVED LOWER) */}
       <div
         ref={exploreSectionRef}
         className="kr-secondary-divider"
@@ -581,643 +403,38 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
           )}
         </HomePageHeader>
 
-        {publicContentHasError && (
-          <div
-            role="alert"
-            data-testid="public-content-error-banner"
-            className="mb-4 rounded-2xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30 px-4 py-3 text-xs font-semibold text-red-700 dark:text-red-300 flex flex-wrap items-center justify-between gap-3"
-          >
-            <span>
-              {publicContentError ||
-                pickText(
-                  {
-                    ar: 'تعذر تحميل نصوص الموقع العام المعتمدة من الخادم.',
-                    fr: 'Impossible de charger le contenu public officiel depuis le serveur.',
-                    en: 'Unable to load school-approved public content from server.',
-                  },
-                  language,
-                )}
-            </span>
-            {typeof refreshSchoolData === 'function' && (
-              <button
-                type="button"
-                onClick={() => void refreshSchoolData()}
-                className="rounded-xl bg-red-700 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
-              >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-              </button>
-            )}
-          </div>
-        )}
-
-        {canManagePublicContent && (
-          <div
-            data-testid="public-cms-management-banner"
-            className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/90 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-3 text-xs text-amber-900 dark:text-amber-200 space-y-1.5"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <strong className="font-extrabold">
-                {pickText(
-                  {
-                    ar: 'إدارة المحتوى العام (قراءة فقط)',
-                    fr: 'Gestion du contenu public (lecture seule)',
-                    en: 'Public Content Management (Read-Only)',
-                  },
-                  language,
-                )}
-              </strong>
-              <div className="flex items-center gap-2">
-                <span
-                  data-testid="public-cms-status-badge"
-                  className="rounded-lg bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-[10px] font-extrabold uppercase"
-                >
-                  {publicContentStatus === 'READY'
-                    ? pickText(
-                        {
-                          ar: `منشور: ${publishedCmsSlugs.length}`,
-                          fr: `Publiés : ${publishedCmsSlugs.length}`,
-                          en: `Published: ${publishedCmsSlugs.length}`,
-                        },
-                        language,
-                      )
-                    : publicContentStatus === 'ERROR'
-                    ? pickText(
-                        {
-                          ar: 'تعذر التحميل',
-                          fr: 'Échec du chargement',
-                          en: 'Loading Failed',
-                        },
-                        language,
-                      )
-                    : publicContentStatus === 'UNAUTHORIZED'
-                    ? pickText(
-                        {
-                          ar: 'غير مصرح',
-                          fr: 'Accès refusé',
-                          en: 'Access Denied',
-                        },
-                        language,
-                      )
-                    : pickText(
-                        {
-                          ar: 'غير متاح حالياً',
-                          fr: 'Service indisponible',
-                          en: 'Feature Unavailable',
-                        },
-                        language,
-                      )}
-                </span>
-                {publicContentStatus === 'ERROR' && typeof refreshSchoolData === 'function' && (
-                  <button
-                    type="button"
-                    data-testid="public-cms-retry-btn"
-                    onClick={() => void refreshSchoolData()}
-                    className="rounded-lg bg-red-700 px-2.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-800"
-                  >
-                    {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
-                  </button>
-                )}
-              </div>
-            </div>
-            <p className="text-[11px] font-medium">
-              {publicContentStatus === 'ERROR'
-                ? pickText(
-                    {
-                      ar: 'تعذر تحميل حالة المحتوى العام من الخادم. يمكنك إعادة المحاولة لتحديث العرض.',
-                      fr: 'Impossible de charger le contenu public depuis le serveur. Vous pouvez réessayer.',
-                      en: 'Could not load public content from the server. Please try again.',
-                    },
-                    language,
-                  )
-                : publicContentStatus === 'UNAUTHORIZED'
-                ? pickText(
-                    {
-                      ar: 'تم رفض الوصول إلى إعدادات المحتوى العام لهذا الحساب.',
-                      fr: 'L’accès au contenu public a été refusé pour ce compte.',
-                      en: 'Access to public content management was denied for this account.',
-                    },
-                    language,
-                  )
-                : publicContentStatus === 'READY'
-                ? pickText(
-                    {
-                      ar: 'نصوص الصفحة الرئيسية معروضة حالياً للقراءة فقط؛ التعديل والنشر عبر الويب غير مفعّلين بعد.',
-                      fr: 'Le contenu public est affiché en lecture seule ; la modification et la publication en ligne ne sont pas encore activées.',
-                      en: 'Public homepage content is currently read-only; online editing and publishing are not yet enabled.',
-                    },
-                    language,
-                  )
-                : pickText(
-                    {
-                      ar: 'ميزة تعديل ونشر نصوص الصفحة الرئيسية غير متاحة حالياً لأن خدمة النشر لم تُفعّل بعد.',
-                      fr: 'La modification et la publication du contenu public sont actuellement indisponibles car le service de publication n’est pas encore activé.',
-                      en: 'Public content editing and publishing are currently unavailable because the publishing service is not yet enabled.',
-                    },
-                    language,
-                  )}
-            </p>
-          </div>
-        )}
-
-        {/* Two clean public overview panels */}
-        <div className="kh-info-panels">
-          <article className="kh-info-panel">
-            <div className="space-y-2">
-              <h2 className="kh-info-panel-title">
-                {pickPublicEntry('about', 'title') ??
-                  pickText(
-                    {
-                      ar: 'حول مدرسة كريستو (KRISTOU)',
-                      fr: 'À propos de KRISTOU',
-                      en: 'About KRISTOU',
-                    },
-                    language,
-                  )}
-              </h2>
-              <p className="kh-info-panel-body">
-                {pickPublicEntry('about', 'body') ??
-                  pickText(
-                    {
-                      ar: 'تجدون هنا التقديم المعتمد للمدرسة، مقاربتنا التربوية، ومعلومات التواصل العامة لمدرسة كريستو في تونس. يتم نشر المعطيات العامة كمحتوى مدرسي معتمد دون كشف أي بيانات خاصة بالتلاميذ.',
-                      fr: 'Présentation approuvée par l’école, approche pédagogique et informations de contact générales figurent ici. Les données publiques sont gérées indépendamment des dossiers privés des élèves.',
-                      en: 'School-approved introduction, educational approach and contact information live here. Public facts are maintained as school content rather than inferred from private data.',
-                    },
-                    language,
-                  )}
-              </p>
-            </div>
-          </article>
-
-          <article className="kh-info-panel">
-            <div className="space-y-2">
-              <h2 className="kh-info-panel-title">
-                {broadcastsStatus === 'READY' && publicAnnouncements[0]
-                  ? publicAnnouncements[0].title
-                  : pickText(
-                      {
-                        ar: 'أحدث إعلان عام',
-                        fr: 'Dernière annonce publique',
-                        en: 'Latest announcement',
-                      },
-                      language,
-                    )}
-              </h2>
-              <p className="kh-info-panel-body">
-                {broadcastsStatus === 'READY' && publicAnnouncements[0]
-                  ? publicAnnouncements[0].body
-                  : pickText(
-                      {
-                        ar: 'معلومات التسجيل للسنة الدراسية والأنشطة المدرسية العامة القادمة تُعرض هنا للعموم.',
-                        fr: 'Les informations d’inscription et la prochaine activité publique de l’école sont mises en avant ici.',
-                        en: 'Registration information and the next public school activity can be highlighted here.',
-                      },
-                      language,
-                    )}
-              </p>
-            </div>
-            <span className="kh-info-chip">
-              {pickText({ ar: 'عام', fr: 'Public', en: 'Public' }, language)}
-            </span>
-          </article>
-        </div>
-
-        {/* Supporting Explore Kristou Public Service Card Grid */}
-        <HomeCardGrid ariaLabel="Public school services">
-        <HomeShortcutCard
-          id="public-teachers"
-          title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers' }, language)}
-          actionLabel={pickText(
-            {
-              ar: 'ملفات تعريف معتمدة',
-              fr: 'Profils approuvés par l’école',
-              en: 'School-approved profiles',
-            },
-            language,
-          )}
-          icon="👩‍🏫"
-          tone="blue"
-          onClick={openTeachers}
+        <PublicSchoolContentSections
+          language={language}
+          t={t}
+          publicContentStatus={publicContentStatus}
+          publicContentError={publicContentError}
+          publicContentHasError={publicContentHasError}
+          canManagePublicContent={canManagePublicContent}
+          publishedCmsSlugs={publishedCmsSlugs}
+          broadcastsStatus={broadcastsStatus}
+          broadcastsHasError={broadcastsHasError}
+          isAnnouncementsDemo={isAnnouncementsDemo}
+          publicAnnouncements={schoolWidePublicAnnouncements}
+          pickPublicEntry={pickPublicEntry}
+          refreshSchoolData={refreshSchoolData}
+          levelsSectionRef={levelsSectionRef}
+          activitiesSectionRef={activitiesSectionRef}
+          gallerySectionRef={gallerySectionRef}
+          announcementsSectionRef={announcementsSectionRef}
+          serviceCardsGrid={serviceCardsGrid}
         />
 
-        <HomeShortcutCard
-          id="public-food-menu"
-          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
-          actionLabel="La Toque Gourmande"
-          icon="🍽️"
-          tone="green"
-          onClick={() => setActiveTab('foodMenu')}
+        <PublicInquiryContactSection
+          language={language}
+          t={t}
+          contactSectionRef={contactSectionRef}
+          pickPublicEntry={pickPublicEntry}
+          inquiryForm={inquiryForm}
+          setInquiryForm={setInquiryForm}
+          inquirySubmitting={inquirySubmitting}
+          inquiryFeedback={inquiryFeedback}
+          handleInquirySubmit={handleInquirySubmit}
         />
-
-        <HomeShortcutCard
-          id="public-administration"
-          title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration' }, language)}
-          actionLabel={pickText(
-            { ar: 'الهيئة الإدارية', fr: 'Direction de l’école', en: 'School Board' },
-            language,
-          )}
-          icon="🏛️"
-          tone="purple"
-          onClick={openAdministration}
-        />
-
-        <HomeShortcutCard
-          id="public-admissions"
-          title={pickText(
-            { ar: 'القبول والتسجيل', fr: 'Admissions', en: 'Admissions' },
-            language,
-          )}
-          actionLabel={pickText(
-            { ar: 'بوابة التسجيل', fr: 'Entrée des demandes', en: 'Application entry' },
-            language,
-          )}
-          icon="📋"
-          tone="orange"
-          onClick={() => setActiveTab('registration')}
-        />
-
-        <HomeShortcutCard
-          id="public-levels-classes"
-          title={pickText(
-            { ar: 'المستويات والأقسام', fr: 'Niveaux & Classes', en: 'Levels & Classes' },
-            language,
-          )}
-          actionLabel={pickText(
-            {
-              ar: 'السنة الأولى إلى السادسة ابتدائي',
-              fr: 'De la 1ère à la 6ème année',
-              en: 'Year 1 through Year 6',
-            },
-            language,
-          )}
-          icon="🎓"
-          tone="teal"
-          onClick={() => scrollToRef(levelsSectionRef)}
-        />
-
-        <HomeShortcutCard
-          id="public-activities-clubs"
-          title={pickText(
-            { ar: 'الأنشطة والنوادي', fr: 'Activités & Clubs', en: 'Activities & Clubs' },
-            language,
-          )}
-          actionLabel={pickText(
-            { ar: 'الحياة المدرسية', fr: 'Vie scolaire', en: 'School life' },
-            language,
-          )}
-          icon="🎨"
-          tone="yellow"
-          onClick={() => scrollToRef(activitiesSectionRef)}
-        />
-
-        <HomeShortcutCard
-          id="public-gallery"
-          title={pickText(
-            { ar: 'المعرض العام', fr: 'Galerie publique', en: 'Public Gallery' },
-            language,
-          )}
-          actionLabel={pickText(
-            {
-              ar: 'صور معتمدة فقط',
-              fr: 'Médias approuvés uniquement',
-              en: 'Approved media only',
-            },
-            language,
-          )}
-          icon="🖼️"
-          tone="slate"
-          onClick={() => scrollToRef(gallerySectionRef)}
-        />
-
-        <HomeShortcutCard
-          id="public-apply-register"
-          title={pickText(
-            { ar: 'قدّم طلب تسجيل', fr: 'Postuler / S’inscrire', en: 'Apply / Register' },
-            language,
-          )}
-          actionLabel={pickText(
-            { ar: 'ابدأ ملف التسجيل', fr: 'Démarrer un dossier', en: 'Start an application' },
-            language,
-          )}
-          icon="✨"
-          tone="red"
-          onClick={() => setActiveTab('registration')}
-        />
-
-        <HomeShortcutCard
-          id="public-announcements"
-          title={pickText(
-            { ar: 'البلاغات العامة', fr: 'Annonces publiques', en: 'Announcements' },
-            language,
-          )}
-          actionLabel={pickText(
-            { ar: 'أخبار المدرسة', fr: 'Actualités de l’école', en: 'Public school notices' },
-            language,
-          )}
-          icon="📢"
-          tone="blue"
-          onClick={() => scrollToRef(announcementsSectionRef)}
-        />
-
-        <HomeShortcutCard
-          id="public-contact"
-          title={pickText(
-            { ar: 'الاتصال والموقع', fr: 'Contact & Accès', en: 'Contact' },
-            language,
-          )}
-          actionLabel={t('tunis')}
-          icon="📍"
-          tone="teal"
-          onClick={() => scrollToRef(contactSectionRef)}
-        />
-      </HomeCardGrid>
-
-      {/* Public Educational Levels Overview using approved translations.ts copy */}
-      <div ref={levelsSectionRef}>
-        <HomeSection
-          title={t('levelsTitle')}
-          subtitle={t('levelsBody')}
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { code: 'CP', label: t('level1') },
-              { code: 'CE1', label: t('level2') },
-              { code: 'CE2', label: t('level3') },
-              { code: 'CM1', label: t('level4') },
-              { code: 'CM2', label: t('level5') },
-              { code: '6ème', label: t('level6') },
-            ].map((lvl) => (
-              <div key={lvl.code} className="kh-info-panel">
-                <span className="kh-info-chip">{lvl.code}</span>
-                <h3 className="kh-info-panel-title text-sm sm:text-base mt-1">
-                  {lvl.label}
-                </h3>
-              </div>
-            ))}
-          </div>
-        </HomeSection>
-      </div>
-
-      {/* Public School Pillars & Activities Overview using approved translations.ts copy */}
-      <div ref={activitiesSectionRef}>
-        <HomeSection
-          title={pickText(
-            {
-              ar: 'ركائز المدرسة والأنشطة التربوية',
-              fr: 'Piliers éducatifs & Vie scolaire',
-              en: 'Educational Pillars & School Life',
-            },
-            language,
-          )}
-          subtitle={t('heroDescription')}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {[
-              {
-                icon: '👩‍🏫',
-                title: t('featureQualified'),
-                body: t('directoryDescription'),
-              },
-              {
-                icon: '📚',
-                title: t('featureTracking'),
-                body: t('growthBody'),
-              },
-              {
-                icon: '🎨',
-                title: t('featureActivities'),
-                body: t('creativityBody'),
-              },
-              {
-                icon: '🛡️',
-                title: t('featureSafe'),
-                body: t('storyBody'),
-              },
-            ].map((pillar, idx) => (
-              <div key={idx} className="kh-info-panel">
-                <span className="text-2xl">{pillar.icon}</span>
-                <h3 className="kh-info-panel-title text-sm sm:text-base mt-1">
-                  {pillar.title}
-                </h3>
-                <p className="kh-info-panel-body mt-1">{pillar.body}</p>
-              </div>
-            ))}
-          </div>
-        </HomeSection>
-      </div>
-
-      {/* Public Approved Gallery */}
-      <div ref={gallerySectionRef}>
-        <HomeSection
-          title={pickText(
-            {
-              ar: 'المعرض العام لمدرسة كريستو',
-              fr: 'Galerie publique du campus KRISTOU',
-              en: 'KRISTOU Campus Public Gallery',
-            },
-            language,
-          )}
-          subtitle={pickText(
-            {
-              ar: 'صور معتمدة من فضاءات المدرسة والأنشطة العامة.',
-              fr: 'Photos officielles approuvées du campus et de la vie scolaire.',
-              en: 'School-approved campus and public activity media only.',
-            },
-            language,
-          )}
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {PUBLIC_CAMPUS_PHOTOS.map((src, index) => (
-              <div
-                key={src}
-                className="overflow-hidden rounded-2xl border border-slate-200 dark:border-zinc-800 aspect-[4/3] bg-slate-100 dark:bg-zinc-900"
-              >
-                <img
-                  src={src}
-                  alt={`KRISTOU School campus ${index + 1}`}
-                  className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
-        </HomeSection>
-      </div>
-
-      {/* Public School-Wide Announcements */}
-      <div ref={announcementsSectionRef}>
-        <HomeSection
-          title={pickText(
-            {
-              ar: 'البلاغات المدرسية العامة',
-              fr: 'Annonces officielles de l’école',
-              en: 'Public School Announcements',
-            },
-            language,
-          )}
-          subtitle={
-            broadcastsHasError
-              ? t('error')
-              : isAnnouncementsDemo
-              ? t('demoPreview')
-              : pickText(
-                  {
-                    ar: 'بلاغات المدرسة المعتمدة',
-                    fr: 'Annonces officielles publiées',
-                    en: 'Published school notices',
-                  },
-                  language,
-                )
-          }
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {publicAnnouncements.map((item) => (
-              <article key={item.id} className="kh-info-panel">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="kh-info-chip">
-                      {item.createdAt}
-                      {item.isDemoPreview ? ` • ${t('demoPreview')}` : ''}
-                    </span>
-                    <span className="text-xs font-bold text-slate-500">{item.authorName}</span>
-                  </div>
-                  <h3 className="kh-info-panel-title">{item.title}</h3>
-                  <p className="kh-info-panel-body">{item.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </HomeSection>
-      </div>
-
-      {/* Public Contact & Location — using approved location and neutral verification notice */}
-      <div ref={contactSectionRef}>
-        <HomeSection
-          title={
-            pickPublicEntry('contact', 'title') ??
-            pickText(
-              {
-                ar: `معلومات الاتصال — ${t('school')}`,
-                fr: `Coordonnées — ${t('school')}`,
-                en: `Contact & Location — ${t('school')}`,
-              },
-              language,
-            )
-          }
-        >
-          <div className="kh-info-panel">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-              <div>
-                <strong className="block text-[#1E3A6D] dark:text-white mb-1">
-                  📍 {pickText({ ar: 'الموقع', fr: 'Localisation', en: 'Location' }, language)}
-                </strong>
-                <span className="kh-info-panel-body">
-                  {t('school')} — {t('tunis')}
-                </span>
-              </div>
-              <div>
-                <strong className="block text-[#1E3A6D] dark:text-white mb-1">
-                  📞 {pickText({ ar: 'الاستقبال والإدارة', fr: 'Accueil & Secrétariat', en: 'Reception & Office' }, language)}
-                </strong>
-                <span className="kh-info-panel-body">
-                  {pickPublicEntry('contact', 'body') ??
-                    pickText(
-                      {
-                        ar: 'بيانات الهاتف والعنوان التفصيلي تُنشر بعد التحديث الرسمي من إدارة المدرسة.',
-                        fr: 'Les coordonnées téléphoniques et l’adresse précise sont publiées après validation officielle par la direction.',
-                        en: 'Official street address and reception telephone details are published upon school administration verification.',
-                      },
-                      language,
-                    )}
-                </span>
-              </div>
-              <div>
-                <strong className="block text-[#1E3A6D] dark:text-white mb-1">
-                  📋 {pickText({ ar: 'القبول والتسجيل', fr: 'Inscriptions', en: 'Admissions' }, language)}
-                </strong>
-                <span className="kh-info-panel-body">
-                  {t('enrollmentTitle')}
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleInquirySubmit} className="mt-5 pt-5 border-t border-slate-200 dark:border-zinc-800 space-y-3">
-              <h3 className="text-sm font-extrabold text-[#1E3A6D] dark:text-white">
-                {pickText(
-                  {
-                    ar: 'إرسال استفسار لإدارة المدرسة',
-                    fr: 'Envoyer une demande d’information au secrétariat',
-                    en: 'Send a Public School Inquiry',
-                  },
-                  language,
-                )}
-              </h3>
-
-              {inquiryFeedback && (
-                <div
-                  role="alert"
-                  className={`rounded-xl border px-3 py-2 text-xs font-bold ${
-                    inquiryFeedback.type === 'success'
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
-                      : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
-                  }`}
-                >
-                  {inquiryFeedback.message}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <input
-                  type="text"
-                  required
-                  value={inquiryForm.senderName}
-                  onChange={(e) => setInquiryForm((p) => ({ ...p, senderName: e.target.value }))}
-                  placeholder={pickText({ ar: 'الاسم الكامل', fr: 'Nom complet', en: 'Your full name' }, language)}
-                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
-                />
-                <input
-                  type="tel"
-                  value={inquiryForm.phone}
-                  onChange={(e) => setInquiryForm((p) => ({ ...p, phone: e.target.value }))}
-                  placeholder={pickText({ ar: 'رقم الهاتف (اختياري)', fr: 'Téléphone (optionnel)', en: 'Phone (optional)' }, language)}
-                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
-                />
-                <input
-                  type="email"
-                  value={inquiryForm.email}
-                  onChange={(e) => setInquiryForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder={pickText({ ar: 'البريد الإلكتروني (اختياري)', fr: 'E-mail (optionnel)', en: 'Email (optional)' }, language)}
-                  className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
-                />
-              </div>
-              <input
-                type="text"
-                required
-                value={inquiryForm.subject}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, subject: e.target.value }))}
-                placeholder={pickText({ ar: 'الموضوع', fr: 'Objet de la demande', en: 'Subject' }, language)}
-                className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
-              />
-              <textarea
-                rows={3}
-                required
-                value={inquiryForm.message}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, message: e.target.value }))}
-                placeholder={pickText({ ar: 'نص الاستفسار...', fr: 'Votre message...', en: 'Your question or message...' }, language)}
-                className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
-              />
-              <button
-                type="submit"
-                disabled={inquirySubmitting}
-                className="rounded-xl bg-[#0D8AE8] px-4 py-2 text-xs font-extrabold text-white hover:bg-[#0B76C7] disabled:opacity-50"
-              >
-                {inquirySubmitting
-                  ? t('loading')
-                  : pickText({ ar: 'إرسال الاستفسار', fr: 'Envoyer la demande', en: 'Submit Inquiry' }, language)}
-              </button>
-            </form>
-          </div>
-        </HomeSection>
-      </div>
       </div>
     </div>
   );

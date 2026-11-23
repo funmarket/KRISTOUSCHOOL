@@ -733,12 +733,11 @@ test('5: Africa/Tunis [08:00, 18:00) window, 08:00 quota reset, 11/day shared cr
   assert.equal(validateParentNoteSubmission('x'.repeat(1001), tunis0800).errorCode, 'invalid_note_content');
   assert.equal(validateParentNoteSubmission('x'.repeat(1000), tunis0800).valid, true);
 
-  // 08:00 Africa/Tunis quota cycle reset:
-  // A note sent on 2026-11-15 at 15:00 Tunis (14:00Z) belongs to cycle 2026-11-15.
-  // At 2026-11-16 07:59 Tunis (06:59Z), the active quota day is STILL 2026-11-15!
-  // At 2026-11-16 08:00 Tunis (07:00Z), the active quota day resets to 2026-11-16!
-  assert.equal(getParentNotesQuotaDay(new Date('2026-11-16T06:59:00Z')), '2026-11-15');
-  assert.equal(getParentNotesQuotaDay(new Date('2026-11-16T07:00:00Z')), '2026-11-16');
+  // 00:00 Africa/Tunis quota cycle calendar day reset:
+  // At 2026-11-15 23:59 Tunis (22:59Z), the active quota day is 2026-11-15.
+  // At 2026-11-16 00:00 Tunis (23:00Z on Nov 15), the active quota day resets to 2026-11-16!
+  assert.equal(getParentNotesQuotaDay(new Date('2026-11-15T22:59:00Z')), '2026-11-15');
+  assert.equal(getParentNotesQuotaDay(new Date('2026-11-15T23:00:00Z')), '2026-11-16');
 
   // 11 notes across 2 linked children share one daily parent quota
   const notes = Array.from({ length: PARENT_NOTES_DAILY_QUOTA }, (_, idx) => ({
@@ -753,8 +752,8 @@ test('5: Africa/Tunis [08:00, 18:00) window, 08:00 quota reset, 11/day shared cr
     status: 'SENT',
     createdAt: '2026-11-15T14:00:00Z',
   }));
-  assert.equal(getRemainingParentNotesQuota(notes, 'parent-1', new Date('2026-11-16T06:59:00Z')), 0);
-  assert.equal(getRemainingParentNotesQuota(notes, 'parent-1', new Date('2026-11-16T07:00:00Z')), 11);
+  assert.equal(getRemainingParentNotesQuota(notes, 'parent-1', new Date('2026-11-15T22:59:00Z')), 0);
+  assert.equal(getRemainingParentNotesQuota(notes, 'parent-1', new Date('2026-11-15T23:00:00Z')), 11);
 
   // Strict separation from 200-char Messages & Student DM exclusion
   assert.equal(SHORT_MESSAGE_MAX_CHARS, 200);

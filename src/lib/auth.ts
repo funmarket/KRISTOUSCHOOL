@@ -371,31 +371,48 @@ export function authenticateTelegramInitData(
       avatarUrl?: string | null;
       role?: string;
       capabilities?: string[];
+      manager_capabilities?: string[];
+      managerCapabilities?: string[];
       telegramLinked?: boolean;
       accountStatus?: string;
       account_status?: string;
     };
-    const rawTgStatus = rawUser.accountStatus ?? rawUser.account_status;
-    if (
-      rawTgStatus === 'PENDING' ||
-      rawTgStatus === 'REJECTED' ||
-      rawTgStatus === 'SUSPENDED' ||
-      rawTgStatus === 'REVOKED'
-    ) {
+    const rawTgStatus =
+      typeof rawUser.accountStatus === 'string'
+        ? rawUser.accountStatus.trim()
+        : typeof rawUser.account_status === 'string'
+        ? rawUser.account_status.trim()
+        : '';
+    if (rawTgStatus !== 'APPROVED') {
       throw new Error('account_not_approved');
     }
-    const rawCapabilities = Array.isArray(rawUser.capabilities) ? rawUser.capabilities : [];
+    const rawCapabilities = Array.isArray(rawUser.capabilities)
+      ? rawUser.capabilities.filter((c): c is string => typeof c === 'string' && c.trim().length > 0).map((c) => c.trim())
+      : [];
     const candidateRoles = [
-      ...(rawUser.role ? [rawUser.role] : []),
+      ...(typeof rawUser.role === 'string' ? [rawUser.role.trim()] : []),
       ...rawCapabilities,
     ];
     const resolvedRole = resolveCanonicalAccountRole(candidateRoles);
     if (!resolvedRole) {
       throw new Error('account_not_approved');
     }
-    const canonicalCapabilities = rawCapabilities.filter((candidate: string) =>
-      Boolean(roleMap[candidate]),
-    );
+    const rawManagerCaps = Array.isArray(rawUser.manager_capabilities)
+      ? rawUser.manager_capabilities
+      : Array.isArray(rawUser.managerCapabilities)
+      ? rawUser.managerCapabilities
+      : [];
+    const mergedCaps = new Set<string>([resolvedRole]);
+    for (const candidate of rawCapabilities) {
+      if (roleMap[candidate] || (resolvedRole === 'MANAGER' && candidate !== 'GENERAL_USER' && candidate !== 'EMPLOYEE')) {
+        mergedCaps.add(candidate);
+      }
+    }
+    if (resolvedRole === 'MANAGER') {
+      for (const cap of rawManagerCaps) {
+        if (typeof cap === 'string' && cap.trim()) mergedCaps.add(cap.trim());
+      }
+    }
     return {
       linked: data.linked === true,
       user: {
@@ -405,7 +422,8 @@ export function authenticateTelegramInitData(
         email: rawUser.email ?? undefined,
         avatarUrl: rawUser.avatarUrl ?? undefined,
         role: resolvedRole,
-        capabilities: canonicalCapabilities.length > 0 ? canonicalCapabilities : [resolvedRole],
+        accountStatus: 'APPROVED' as const,
+        capabilities: [...mergedCaps],
         telegramLinked: rawUser.telegramLinked ?? true,
       },
     };

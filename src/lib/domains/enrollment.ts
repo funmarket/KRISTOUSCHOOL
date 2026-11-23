@@ -1,10 +1,34 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
 import { CANONICAL_SCHOOL_LEVELS } from './academics.ts';
-import type {
-  BackendOpResult,
-  EnrollmentApplication,
-  EnrollmentApplicationStatus,
-} from '../../types.ts';
+import type { BackendOpResult } from '../../types.ts';
+
+export type EnrollmentApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'NEED_DOCUMENTS'
+  | 'ACCEPTED'
+  | 'WAITLIST'
+  | 'REJECTED'
+  | 'ENROLLED';
+
+export interface EnrollmentApplication {
+  id: string;
+  referenceCode: string;
+  studentFullName: string;
+  birthDate: string;
+  desiredLevelCode: string;
+  parentFullName: string;
+  phone: string;
+  email?: string | null;
+  notes?: string | null;
+  submittedByUserId?: string | null;
+  status: EnrollmentApplicationStatus;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  version: number;
+  createdAt: string;
+}
 
 export interface SubmitEnrollmentInput {
   studentFullName: string;

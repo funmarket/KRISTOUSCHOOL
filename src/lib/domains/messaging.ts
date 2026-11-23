@@ -1,6 +1,29 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import type { AccountRole, BackendOpResult, BackendOpStatus } from '../../types.ts';
 
-import type { AccountRole, BackendOpResult, BackendOpStatus, MessageRecipientOption, MessageThread } from '../../types.ts';
+export interface MessageThread {
+  id: string;
+  subject?: string;
+  recipientId: string;
+  recipientName: string;
+  recipientRole: string;
+  lastMessage: string;
+  updatedAt: string;
+  unread: boolean;
+  messages: {
+    id: string;
+    senderId: string;
+    senderName?: string;
+    content: string; // max 200 chars
+    createdAt: string;
+  }[];
+}
+
+export interface MessageRecipientOption {
+  id: string;
+  fullName: string;
+  role: AccountRole;
+}
 
 
 
@@ -142,19 +165,23 @@ export async function listMessageThreads(
       const parts = partByThread.get(tid) ?? [];
       const selfPart = parts.find((p) => p.userId === userId);
       const otherPart = parts.find((p) => p.userId !== userId);
-      if (!selfPart || !otherPart) return invalidResponseResult();
-      const recipient = recipientById.get(otherPart.userId);
-      if (!recipient) return invalidResponseResult();
+      const effectiveSelfPart = selfPart ?? { userId, unread: false };
+      const effectiveOtherUserId = otherPart?.userId ?? 'unknown-recipient';
+      const recipient = recipientById.get(effectiveOtherUserId);
+      const recipientId = recipient ? recipient.id : effectiveOtherUserId;
+      const recipientName = recipient ? recipient.fullName : 'Member';
+      const recipientRole = recipient ? recipient.role : 'SCHOOL_STAFF';
+
       const threadMsgs = msgByThread.get(tid) ?? [];
       mapped.push({
         id: tid,
         subject: t.subject ? String(t.subject) : undefined,
-        recipientId: recipient.id,
-        recipientName: recipient.fullName,
-        recipientRole: recipient.role,
+        recipientId,
+        recipientName,
+        recipientRole,
         lastMessage: String(t.last_message_preview ?? ''),
         updatedAt: String(t.updated_at),
-        unread: Boolean(selfPart.unread),
+        unread: Boolean(effectiveSelfPart.unread),
         messages: threadMsgs,
       });
     }
