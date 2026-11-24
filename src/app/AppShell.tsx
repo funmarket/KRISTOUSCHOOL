@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import type { CommunitySubTab, DirectorySubTab, HomePageKey, NotificationItem } from '../types';
+import type { AppTab, CommunitySubTab, DirectorySubTab, HomePageKey, NotificationItem } from '../types';
 import { Navbar } from '../components/Navbar';
+import { BottomNavBar } from '../components/BottomNavBar';
 import { AuthModal } from '../components/AuthModal';
 import { HomePageResolver } from '../components/homepages/HomePageResolver';
 import { PublicHomePage } from '../components/homepages/PublicHomePage';
@@ -28,7 +29,7 @@ import {
 
 export function AppShell() {
   const {
-    currentUser, language, classRosters, classesBackendStatus, classesError,
+    currentUser, language, t, classRosters, classesBackendStatus, classesError,
     setSelectedClassId, isHydratingSchoolData, refreshSchoolData,
   } = useApp();
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -145,6 +146,8 @@ export function AppShell() {
     />
   );
 
+  const showBottomNav = currentUser?.accountStatus === 'APPROVED';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] text-gray-900 dark:text-gray-100 flex flex-col transition-colors selection:bg-blue-600 selection:text-white">
       <Navbar
@@ -154,7 +157,11 @@ export function AppShell() {
         onNavigateToNotificationTarget={handleNotificationTarget}
       />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
+      <main
+        className={`flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8 ${
+          showBottomNav ? 'pb-24 sm:pb-24' : ''
+        }`}
+      >
         {activeTab === 'home' && (
           <HomePageResolver
             setActiveTab={handleSetTab}
@@ -323,6 +330,14 @@ export function AppShell() {
           </div>
         </div>
       )}
+
+      <BottomNavBar
+        activeTab={activeTab as AppTab}
+        currentUser={currentUser}
+        t={t}
+        onSelectTab={handleSetTab}
+        onNavigateToSubTab={handleNavigateToSubTab}
+      />
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>

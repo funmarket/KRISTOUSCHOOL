@@ -252,6 +252,7 @@ test('ARCH-03 Gate 3: AppShell orchestrates dirty attendance confirmation modal 
   globalThis.__ARCH03_APP_CTX__ = {
     currentUser: makeUser(),
     language: 'en',
+    t: (key) => key,
     classRosters: [],
     classesBackendStatus: 'READY',
     classesError: null,
@@ -270,6 +271,32 @@ test('ARCH-03 Gate 3: AppShell orchestrates dirty attendance confirmation modal 
 
   assert.equal(globalThis.__ARCH03_NAVBAR_PROPS__.activeTab, 'home');
   assert.equal(container.querySelector('footer'), null, 'AppShell must not render a bottom website footer');
+
+  // Approved logged-in user sees BottomNavBar and main bottom clearance
+  const bottomNav = container.querySelector('[data-testid="bottom-nav-bar"]');
+  assert.ok(bottomNav, 'AppShell must render BottomNavBar for approved logged-in users');
+  assert.ok(
+    container.querySelector('main')?.className.includes('pb-24'),
+    'AppShell <main> must include pb-24 clearance when BottomNavBar is active',
+  );
+
+  // Clicking Calendar and Teachers on BottomNavBar delegates through AppShell handleNavigateToSubTab
+  await act(async () => {
+    container.querySelector('[data-testid="bottom-nav-item-announcements"]').click();
+  });
+  assert.equal(globalThis.__ARCH03_NAVBAR_PROPS__.activeTab, 'announcements');
+  assert.equal(globalThis.__ARCH03_VIEW_PROPS__.GlobalAnnouncementsCalendarView.initialSubTab, 'calendar');
+
+  await act(async () => {
+    container.querySelector('[data-testid="bottom-nav-item-directory"]').click();
+  });
+  assert.equal(globalThis.__ARCH03_NAVBAR_PROPS__.activeTab, 'directory');
+  assert.equal(globalThis.__ARCH03_VIEW_PROPS__.DirectoryView.initialSubTab, 'teachers');
+
+  await act(async () => {
+    container.querySelector('[data-testid="bottom-nav-item-home"]').click();
+  });
+  assert.equal(globalThis.__ARCH03_NAVBAR_PROPS__.activeTab, 'home');
 
   // Navigate to attendance, mark dirty, and try to navigate to classes -> modal intercepts
   await act(async () => {
@@ -312,4 +339,45 @@ test('ARCH-03 Gate 3: AppShell orchestrates dirty attendance confirmation modal 
     root.unmount();
   });
   dom.document.body.removeChild(container);
+});
+
+test('UI-BOTTOM-NAV: AppShell hides BottomNavBar and pb-24 clearance when logged out or pending', async () => {
+  for (const user of [null, makeUser({ accountStatus: 'PENDING' })]) {
+    globalThis.__ARCH03_VIEW_PROPS__ = {};
+    globalThis.__ARCH03_APP_CTX__ = {
+      currentUser: user,
+      language: 'en',
+      t: (key) => key,
+      classRosters: [],
+      classesBackendStatus: 'READY',
+      classesError: null,
+      setSelectedClassId: () => {},
+      isHydratingSchoolData: false,
+      refreshSchoolData: async () => true,
+    };
+
+    const container = dom.document.createElement('div');
+    dom.document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(React.createElement(AppShell));
+    });
+
+    assert.equal(
+      container.querySelector('[data-testid="bottom-nav-bar"]'),
+      null,
+      `BottomNavBar must not render when user is ${user ? user.accountStatus : 'null'}`,
+    );
+    assert.equal(
+      container.querySelector('main')?.className.includes('pb-24'),
+      false,
+      `AppShell <main> must not add pb-24 when user is ${user ? user.accountStatus : 'null'}`,
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+    dom.document.body.removeChild(container);
+  }
 });
