@@ -67,19 +67,6 @@ async function bundleAppShellAndRoutes() {
               }
             `,
           }));
-          builder.onResolve({ filter: /components\/Footer(\.tsx)?$/ }, () => ({
-            path: 'mock-footer',
-            namespace: 'arch03',
-          }));
-          builder.onLoad({ filter: /^mock-footer$/, namespace: 'arch03' }, () => ({
-            contents: `
-              import React from 'react';
-              export function Footer(props) {
-                globalThis.__ARCH03_FOOTER_PROPS__ = props;
-                return React.createElement('footer', { 'data-testid': 'mock-footer' });
-              }
-            `,
-          }));
           builder.onResolve({ filter: /components\/AuthModal(\.tsx)?$/ }, () => ({
             path: 'mock-auth-modal',
             namespace: 'arch03',
@@ -282,6 +269,7 @@ test('ARCH-03 Gate 3: AppShell orchestrates dirty attendance confirmation modal 
   });
 
   assert.equal(globalThis.__ARCH03_NAVBAR_PROPS__.activeTab, 'home');
+  assert.equal(container.querySelector('footer'), null, 'AppShell must not render a bottom website footer');
 
   // Navigate to attendance, mark dirty, and try to navigate to classes -> modal intercepts
   await act(async () => {

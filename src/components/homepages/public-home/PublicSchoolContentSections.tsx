@@ -1,4 +1,5 @@
 import React from 'react';
+import { Globe, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import type { useApp } from '../../../context/AppContext';
 import { pickText } from '../../../i18n/homepages';
 import type { Announcement, Language } from '../../../types';
@@ -84,14 +85,7 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <strong className="font-extrabold">
-              {pickText(
-                {
-                  ar: 'إدارة المحتوى العام (قراءة فقط)',
-                  fr: 'Gestion du contenu public (lecture seule)',
-                  en: 'Public Content Management (Read-Only)',
-                },
-                language,
-              )}
+              {pickText({ ar: 'إدارة المحتوى العام (قراءة فقط)', fr: 'Gestion du contenu public (lecture seule)', en: 'Public Content Management (Read-Only)' }, language)}
             </strong>
             <div className="flex items-center gap-2">
               <span
@@ -99,40 +93,12 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
                 className="rounded-lg bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-[10px] font-extrabold uppercase"
               >
                 {publicContentStatus === 'READY'
-                  ? pickText(
-                      {
-                        ar: `منشور: ${publishedCmsSlugs.length}`,
-                        fr: `Publiés : ${publishedCmsSlugs.length}`,
-                        en: `Published: ${publishedCmsSlugs.length}`,
-                      },
-                      language,
-                    )
+                  ? pickText({ ar: `منشور: ${publishedCmsSlugs.length}`, fr: `Publiés : ${publishedCmsSlugs.length}`, en: `Published: ${publishedCmsSlugs.length}` }, language)
                   : publicContentStatus === 'ERROR'
-                  ? pickText(
-                      {
-                        ar: 'تعذر التحميل',
-                        fr: 'Échec du chargement',
-                        en: 'Loading Failed',
-                      },
-                      language,
-                    )
+                  ? pickText({ ar: 'تعذر التحميل', fr: 'Échec du chargement', en: 'Loading Failed' }, language)
                   : publicContentStatus === 'UNAUTHORIZED'
-                  ? pickText(
-                      {
-                        ar: 'غير مصرح',
-                        fr: 'Accès refusé',
-                        en: 'Access Denied',
-                      },
-                      language,
-                    )
-                  : pickText(
-                      {
-                        ar: 'غير متاح حالياً',
-                        fr: 'Service indisponible',
-                        en: 'Feature Unavailable',
-                      },
-                      language,
-                    )}
+                  ? pickText({ ar: 'غير مصرح', fr: 'Accès refusé', en: 'Access Denied' }, language)
+                  : pickText({ ar: 'غير متاح حالياً', fr: 'Service indisponible', en: 'Feature Unavailable' }, language)}
               </span>
               {publicContentStatus === 'ERROR' && typeof refreshSchoolData === 'function' && (
                 <button
@@ -148,57 +114,22 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
           </div>
           <p className="text-[11px] font-medium">
             {publicContentStatus === 'ERROR'
-              ? pickText(
-                  {
-                    ar: 'تعذر تحميل حالة المحتوى العام من الخادم. يمكنك إعادة المحاولة لتحديث العرض.',
-                    fr: 'Impossible de charger le contenu public depuis le serveur. Vous pouvez réessayer.',
-                    en: 'Could not load public content from the server. Please try again.',
-                  },
-                  language,
-                )
+              ? pickText({ ar: 'تعذر تحميل حالة المحتوى العام من الخادم. يمكنك إعادة المحاولة لتحديث العرض.', fr: 'Impossible de charger le contenu public depuis le serveur. Vous pouvez réessayer.', en: 'Could not load public content from the server. Please try again.' }, language)
               : publicContentStatus === 'UNAUTHORIZED'
-              ? pickText(
-                  {
-                    ar: 'تم رفض الوصول إلى إعدادات المحتوى العام لهذا الحساب.',
-                    fr: 'L’accès au contenu public a été refusé pour ce compte.',
-                    en: 'Access to public content management was denied for this account.',
-                  },
-                  language,
-                )
+              ? pickText({ ar: 'تم رفض الوصول إلى إعدادات المحتوى العام لهذا الحساب.', fr: 'L’accès au contenu public a été refusé pour ce compte.', en: 'Access to public content management was denied for this account.' }, language)
               : publicContentStatus === 'READY'
-              ? pickText(
-                  {
-                    ar: 'نصوص الصفحة الرئيسية معروضة حالياً للقراءة فقط؛ التعديل والنشر عبر الويب غير مفعّلين بعد.',
-                    fr: 'Le contenu public est affiché en lecture seule ; la modification et la publication en ligne ne sont pas encore activées.',
-                    en: 'Public homepage content is currently read-only; online editing and publishing are not yet enabled.',
-                  },
-                  language,
-                )
-              : pickText(
-                  {
-                    ar: 'ميزة تعديل ونشر نصوص الصفحة الرئيسية غير متاحة حالياً لأن خدمة النشر لم تُفعّل بعد.',
-                    fr: 'La modification et la publication du contenu public sont actuellement indisponibles car le service de publication n’est pas encore activé.',
-                    en: 'Public content editing and publishing are currently unavailable because the publishing service is not yet enabled.',
-                  },
-                  language,
-                )}
+              ? pickText({ ar: 'نصوص الصفحة الرئيسية معروضة حالياً للقراءة فقط؛ التعديل والنشر عبر الويب غير مفعّلين بعد.', fr: 'Le contenu public est affiché en lecture seule ; la modification et la publication en ligne ne sont pas encore activées.', en: 'Public homepage content is currently read-only; online editing and publishing are not yet enabled.' }, language)
+              : pickText({ ar: 'ميزة تعديل ونشر نصوص الصفحة الرئيسية غير متاحة حالياً لأن خدمة النشر لم تُفعّل بعد.', fr: 'La modification et la publication du contenu public sont actuellement indisponibles car le service de publication n’est pas encore activé.', en: 'Public content editing and publishing are currently unavailable because the publishing service is not yet enabled.' }, language)}
           </p>
         </div>
       )}
 
-      <div className="kh-info-panels">
-        <article className="kh-info-panel">
+      <div className="kh-info-panels" data-testid="about-kristou-section">
+        <article className="kh-info-panel" data-testid="about-kristou-intro-card">
           <div className="space-y-2">
             <h2 className="kh-info-panel-title">
               {pickPublicEntry('about', 'title') ??
-                pickText(
-                  {
-                    ar: 'حول مدرسة كريستو (KRISTOU)',
-                    fr: 'À propos de KRISTOU',
-                    en: 'About KRISTOU',
-                  },
-                  language,
-                )}
+                pickText({ ar: 'حول مدرسة كريستو (KRISTOU)', fr: 'À propos de KRISTOU', en: 'About KRISTOU' }, language)}
             </h2>
             <p className="kh-info-panel-body">
               {pickPublicEntry('about', 'body') ??
@@ -212,6 +143,7 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
                 )}
             </p>
           </div>
+          <span className="kh-info-chip">{t('school')}</span>
         </article>
 
         <article className="kh-info-panel">
@@ -219,14 +151,7 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
             <h2 className="kh-info-panel-title">
               {broadcastsStatus === 'READY' && publicAnnouncements[0]
                 ? publicAnnouncements[0].title
-                : pickText(
-                    {
-                      ar: 'أحدث إعلان عام',
-                      fr: 'Dernière annonce publique',
-                      en: 'Latest announcement',
-                    },
-                    language,
-                  )}
+                : pickText({ ar: 'أحدث إعلان عام', fr: 'Dernière annonce publique', en: 'Latest announcement' }, language)}
             </h2>
             <p className="kh-info-panel-body">
               {broadcastsStatus === 'READY' && publicAnnouncements[0]
@@ -244,6 +169,52 @@ export const PublicSchoolContentSections: React.FC<PublicSchoolContentSectionsPr
           <span className="kh-info-chip">
             {pickText({ ar: 'عام', fr: 'Public', en: 'Public' }, language)}
           </span>
+        </article>
+
+        <article className="kh-info-panel" data-testid="about-contact-location-card">
+          <div className="space-y-3">
+            <h3 className="kh-info-panel-title">{t('contactLocation')}</h3>
+            <ul className="space-y-2.5 text-xs text-[#526581] dark:text-zinc-400">
+              <li className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-k-brand shrink-0" />
+                <span>{t('tunis')}</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-k-brand shrink-0" />
+                <span>
+                  {pickText(
+                    {
+                      ar: 'هاتف الإدارة عند تأكيد الطلب',
+                      fr: 'Ligne secrétariat communiquée sur dossier',
+                      en: 'Office phone shared via admissions & parent portal',
+                    },
+                    language,
+                  )}
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-k-brand shrink-0" />
+                <span dir="ltr">contact@kristou.edu.tn</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+        <article className="kh-info-panel" data-testid="about-platform-security-card">
+          <div className="space-y-2">
+            <h3 className="kh-info-panel-title">{t('platformAccess')}</h3>
+            <p className="kh-info-panel-body">{t('platformDescription')}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="inline-flex items-center gap-1.5 bg-k-brand/10 dark:bg-k-brand/15 text-k-brand px-3 py-1.5 rounded-xl text-xs font-semibold">
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              <span>Web &amp; Telegram</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>{t('securityActive')}</span>
+            </span>
+          </div>
         </article>
       </div>
 

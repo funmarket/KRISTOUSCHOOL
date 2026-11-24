@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { CommunitySubTab, DirectorySubTab, HomePageKey, NotificationItem } from '../types';
 import { Navbar } from '../components/Navbar';
-import { Footer } from '../components/Footer';
 import { AuthModal } from '../components/AuthModal';
 import { HomePageResolver } from '../components/homepages/HomePageResolver';
 import { PublicHomePage } from '../components/homepages/PublicHomePage';
@@ -326,8 +325,6 @@ export function AppShell() {
       )}
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
-
-      <Footer onNavigate={handleSetTab} />
     </div>
   );
 }
