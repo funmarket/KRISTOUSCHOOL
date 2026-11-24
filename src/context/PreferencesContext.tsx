@@ -133,44 +133,70 @@ export const PreferencesProvider: React.FC<{
   }, [theme]);
 
   const syncPreferencesIdentity = useCallback((identity: AccountIdentityContext) => {
+    const prev = identityRef.current;
+    const changed =
+      prev.generation !== identity.generation ||
+      prev.userId !== identity.userId ||
+      prev.accountStatus !== identity.accountStatus;
     identityRef.current = identity;
+    if (changed) {
+      prefsGenRef.current += 1;
+      preferencesErrorRef.current = null;
+      setPreferencesError(null);
+      if (!identity.userId || identity.accountStatus !== 'APPROVED') {
+        setPreferencesSyncStatus('LOCAL_ONLY');
+      }
+    }
   }, []);
 
   const resetPreferencesState = useCallback(() => {
     prefsGenRef.current += 1;
+    preferencesErrorRef.current = null;
     setPreferencesError(null);
     setPreferencesSyncStatus('LOCAL_ONLY');
   }, []);
 
-  const hydratePreferencesForAccount = useCallback(async (origin: AccountIdentityContext) => {
-    if (!origin.userId || origin.accountStatus !== 'APPROVED') {
-      return;
-    }
-    identityRef.current = origin;
-    const prefsRes = await loadMyPreferences(origin.userId);
-    if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) {
-      return;
-    }
-    if (prefsRes.ok && prefsRes.data) {
-      setLanguageState(prefsRes.data.language);
-      writeStorage('kristou_lang', prefsRes.data.language);
-      setThemeState(prefsRes.data.theme);
-      writeStorage('kristou_theme', prefsRes.data.theme);
-      setNotificationSoundState(prefsRes.data.notificationSound);
-      writeStorage('kristou_notification_sound', prefsRes.data.notificationSound);
-      setSoundMutedState(prefsRes.data.soundMuted);
-      writeStorage('kristou_sound_muted', String(prefsRes.data.soundMuted));
-      setVibrationEnabledState(prefsRes.data.vibrationEnabled);
-      writeStorage('kristou_vibration_enabled', String(prefsRes.data.vibrationEnabled));
-      setPreferencesError(null);
-      setPreferencesSyncStatus('SAVED');
-    } else if (prefsRes.status === 'BLOCKED_BACKEND') {
-      setPreferencesSyncStatus('UNAVAILABLE');
-    } else if (!prefsRes.ok) {
-      setPreferencesSyncStatus('ERROR');
-      setPreferencesError(prefsRes.errorMessage || prefsRes.errorCode || 'Unable to load preferences.');
-    }
-  }, []);
+  const hydratePreferencesForAccount = useCallback(
+    async (origin: AccountIdentityContext) => {
+      if (!origin.userId || origin.accountStatus !== 'APPROVED') {
+        return;
+      }
+      syncPreferencesIdentity(origin);
+      const hydrateSeq = ++prefsGenRef.current;
+      const prefsRes = await loadMyPreferences(origin.userId);
+      if (
+        !isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current) ||
+        hydrateSeq !== prefsGenRef.current
+      ) {
+        return;
+      }
+      if (prefsRes.ok && prefsRes.data) {
+        setLanguageState(prefsRes.data.language);
+        writeStorage('kristou_lang', prefsRes.data.language);
+        setThemeState(prefsRes.data.theme);
+        writeStorage('kristou_theme', prefsRes.data.theme);
+        setNotificationSoundState(prefsRes.data.notificationSound);
+        writeStorage('kristou_notification_sound', prefsRes.data.notificationSound);
+        setSoundMutedState(prefsRes.data.soundMuted);
+        writeStorage('kristou_sound_muted', String(prefsRes.data.soundMuted));
+        setVibrationEnabledState(prefsRes.data.vibrationEnabled);
+        writeStorage('kristou_vibration_enabled', String(prefsRes.data.vibrationEnabled));
+        preferencesErrorRef.current = null;
+        setPreferencesError(null);
+        setPreferencesSyncStatus('SAVED');
+      } else if (prefsRes.ok && !prefsRes.data) {
+        preferencesErrorRef.current = null;
+        setPreferencesError(null);
+        setPreferencesSyncStatus('LOCAL_ONLY');
+      } else if (prefsRes.status === 'BLOCKED_BACKEND') {
+        setPreferencesSyncStatus('UNAVAILABLE');
+      } else if (!prefsRes.ok) {
+        setPreferencesSyncStatus('ERROR');
+        setPreferencesError(prefsRes.errorMessage || prefsRes.errorCode || 'Unable to load preferences.');
+      }
+    },
+    [syncPreferencesIdentity],
+  );
 
   const persistPreferencesUpdate = useCallback(
     (patch: {

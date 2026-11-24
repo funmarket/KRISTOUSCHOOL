@@ -63,11 +63,9 @@ export const NotificationProvider: React.FC<{
 
   const updateNotificationsState = useCallback(
     (updater: NotificationItem[] | ((prev: NotificationItem[]) => NotificationItem[])) => {
-      setNotifications((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        notificationsRef.current = next;
-        return next;
-      });
+      const next = typeof updater === 'function' ? updater(notificationsRef.current) : updater;
+      notificationsRef.current = next;
+      setNotifications(next);
     },
     [],
   );
@@ -99,14 +97,26 @@ export const NotificationProvider: React.FC<{
     setNotificationsError(null);
   }, [resetNotificationTracking, updateNotificationsState]);
 
-  const syncNotificationsIdentity = useCallback((identity: AccountIdentityContext) => {
-    identityRef.current = identity;
-  }, []);
+  const syncNotificationsIdentity = useCallback(
+    (identity: AccountIdentityContext) => {
+      const prev = identityRef.current;
+      const changed =
+        prev.generation !== identity.generation ||
+        prev.userId !== identity.userId ||
+        prev.accountStatus !== identity.accountStatus;
+      identityRef.current = identity;
+      if (changed) {
+        notifSeqRef.current += 1;
+        clearNotificationsState();
+      }
+    },
+    [clearNotificationsState],
+  );
 
   const hydrateNotificationsForAccount = useCallback(
     async (origin: AccountIdentityContext) => {
       if (!origin.userId || origin.accountStatus !== 'APPROVED') return;
-      identityRef.current = origin;
+      syncNotificationsIdentity(origin);
       setNotificationsError(null);
       const notifRes = await listMyNotifications();
       if (!isMatchingApprovedAccountContext(origin, identityRef.current, mountedRef.current)) return;
@@ -124,7 +134,7 @@ export const NotificationProvider: React.FC<{
         );
       }
     },
-    [mergeWithPending, updateNotificationsState],
+    [mergeWithPending, syncNotificationsIdentity, updateNotificationsState],
   );
 
   const reconcileNotificationsFromServer = useCallback(

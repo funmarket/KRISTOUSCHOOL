@@ -135,6 +135,9 @@ export function useSchoolDataHydration({
 
   const clearPrivateState = useCallback(() => {
     authHydrationGenRef.current += 1;
+    const currentIdent = getCurrentIdentity();
+    syncPreferencesIdentity(currentIdent);
+    syncNotificationsIdentity(currentIdent);
     clearNotificationsState();
     resetPreferencesState();
     setIsHydratingSchoolData(false);
@@ -158,7 +161,15 @@ export function useSchoolDataHydration({
     setEnrollmentsError(null);
     setPublicInquiries([]);
     setInquiriesStatus('BLOCKED_BACKEND');
-  }, [clearClassCommunityState, clearNotificationsState, clearParentNotesState, resetPreferencesState]);
+  }, [
+    clearClassCommunityState,
+    clearNotificationsState,
+    clearParentNotesState,
+    getCurrentIdentity,
+    resetPreferencesState,
+    syncNotificationsIdentity,
+    syncPreferencesIdentity,
+  ]);
 
   const hydrateAuthenticatedData = useCallback(
     async (user: User, activeClassFilter?: string): Promise<boolean> => {
