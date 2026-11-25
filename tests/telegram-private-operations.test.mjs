@@ -125,3 +125,28 @@ test('Telegram private adapters route reads and writes through the verified gate
   delete globalThis.window;
 });
 
+test('Telegram gateway failures fail closed without falling back to direct Supabase reads or RPCs', async () => {
+  globalThis.window = { Telegram: { WebApp: { initData: 'signed-fresh-init-data' } } };
+  const notifications = await bundleDomain('../src/lib/domains/notifications.ts', 'tg-private-notifications-fail-closed.cjs');
+  let directCalls = 0;
+  const client = {
+    functions: {
+      async invoke() {
+        return {
+          data: null,
+          error: {
+            message: 'gateway unavailable',
+            context: new Response(JSON.stringify({ error: 'backend_unavailable' }), { status: 503 }),
+          },
+        };
+      },
+    },
+    from() { directCalls += 1; throw new Error('must not fall back'); },
+    rpc() { directCalls += 1; throw new Error('must not fall back'); },
+  };
+  const result = await notifications.listMyNotifications(client);
+  assert.equal(result.ok, false);
+  assert.equal(directCalls, 0);
+  delete globalThis.window;
+});
+

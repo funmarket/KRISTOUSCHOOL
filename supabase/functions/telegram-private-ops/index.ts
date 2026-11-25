@@ -123,7 +123,7 @@ function parsePublishableKey(): string | undefined {
 }
 
 function getDependencies(overrides: GatewayDependencies): Required<Pick<GatewayDependencies, 'botToken' | 'allowedOrigins' | 'supabaseUrl' | 'fetcher'>> & GatewayDependencies {
-  const configuredOrigins = overrides.allowedOrigins ?? (env('ALLOWED_ORIGINS') ?? env('ALLOWED_ORIGIN') ?? 'http://localhost:3000')
+  const configuredOrigins = overrides.allowedOrigins ?? (env('ALLOWED_ORIGINS') ?? env('ALLOWED_ORIGIN') ?? 'https://kristouschool.vercel.app,http://localhost:3000')
     .split(',').map((origin) => origin.trim()).filter(Boolean);
   return {
     ...overrides,
