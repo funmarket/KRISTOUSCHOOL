@@ -100,12 +100,14 @@ test('invalid or expired Telegram signatures are rejected before database access
 });
 
 test('unapproved accounts and Telegram-to-account mismatch fail closed', async () => {
-  const pendingDb = fakeDatabase({ accountStatus: 'PENDING' });
-  const pending = await handleTelegramPrivateOps(makeRequest(null, {
-    initData: await initData(), operation: 'notifications.list', params: {},
-  }), deps(pendingDb));
-  assert.equal(pending.status, 403);
-  assert.deepEqual(await pending.json(), { error: 'account_not_approved' });
+  for (const accountStatus of ['PENDING', 'SUSPENDED', 'REVOKED']) {
+    const deniedDb = fakeDatabase({ accountStatus });
+    const denied = await handleTelegramPrivateOps(makeRequest(null, {
+      initData: await initData(), operation: 'notifications.list', params: {},
+    }), deps(deniedDb));
+    assert.equal(denied.status, 403, `${accountStatus} account must be rejected`);
+    assert.deepEqual(await denied.json(), { error: 'account_not_approved' });
+  }
 
   const mismatchDb = fakeDatabase();
   const mismatch = await handleTelegramPrivateOps(makeRequest(null, {
