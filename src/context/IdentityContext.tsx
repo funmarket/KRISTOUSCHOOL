@@ -90,6 +90,7 @@ export const IdentityProvider: React.FC<{
 
   const mountedRef = useRef<boolean>(true);
   const telegramIdentityUser = useRef<User | null>(null);
+  const telegramAuthInFlightRef = useRef<boolean>(false);
   const authGenerationRef = useRef<number>(1);
   const currentIdentityRef = useRef<AccountIdentityContext>({
     userId: null,
@@ -144,6 +145,39 @@ export const IdentityProvider: React.FC<{
     [],
   );
 
+  const rejectIdentityConflict = useCallback((isLinkAttempt = false) => {
+    telegramIdentityUser.current = null;
+    void signOutAccount();
+    setAuthError('telegram_identity_conflict');
+    syncAccountIdentity(null);
+    if (isLinkAttempt) setTelegramLinkNotice('error');
+  }, [syncAccountIdentity]);
+
+  const hydrateCanonicalUser = useCallback(async (
+    sessionUser: { id: string; email?: string | null },
+    shouldCommit: () => boolean,
+    opts?: { clearTelegramOnFail?: boolean; setTelegramIfLinked?: boolean },
+  ): Promise<User | null> => {
+    try {
+      const user = await loadCanonicalUser(sessionUser as any);
+      if (shouldCommit()) {
+        if (opts?.setTelegramIfLinked && user.telegramLinked) {
+          telegramIdentityUser.current = user;
+        }
+        setAuthError(null);
+        syncAccountIdentity(user);
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'account_not_approved') {
+        if (opts?.clearTelegramOnFail) telegramIdentityUser.current = null;
+        void signOutAccount();
+      }
+      if (shouldCommit()) syncAccountIdentity(null);
+      return null;
+    }
+  }, [syncAccountIdentity]);
+
   useEffect(() => {
     initializeTelegramWebApp();
     const initData = getTelegramWebAppInitData();
@@ -151,24 +185,43 @@ export const IdentityProvider: React.FC<{
     const isLinkAttempt = Boolean(new URLSearchParams(initData).get('start_param'));
 
     let active = true;
+    telegramAuthInFlightRef.current = true;
     void authenticateTelegramInitData(initData)
-      .then(({ user, linked }) => {
+      .then(async ({ user, linked }) => {
         if (!active || !mountedRef.current) return;
+        const webSessionUser = supabase
+          ? await supabase.auth.getSession().then((res) => res.data.session?.user ?? null).catch(() => null)
+          : null;
+        if (!active || !mountedRef.current) return;
+        if (webSessionUser && webSessionUser.id !== user.id) {
+          rejectIdentityConflict(isLinkAttempt);
+          return;
+        }
         telegramIdentityUser.current = user;
         setAuthError(null);
         syncAccountIdentity(user);
         if (isLinkAttempt && linked) setTelegramLinkNotice('success');
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active || !mountedRef.current) return;
         telegramIdentityUser.current = null;
+        if (error instanceof Error && error.message === 'telegram_identity_conflict') {
+          rejectIdentityConflict(isLinkAttempt);
+          return;
+        }
+        if (error instanceof Error && error.message === 'account_not_approved') void signOutAccount();
         syncAccountIdentity(null);
         if (isLinkAttempt) setTelegramLinkNotice('error');
+      })
+      .finally(() => {
+        telegramAuthInFlightRef.current = false;
+        if (active && mountedRef.current) setIsAuthLoading(false);
       });
     return () => {
       active = false;
+      telegramAuthInFlightRef.current = false;
     };
-  }, [syncAccountIdentity]);
+  }, [rejectIdentityConflict, syncAccountIdentity]);
 
   useEffect(() => {
     if (!supabase) {
@@ -176,97 +229,72 @@ export const IdentityProvider: React.FC<{
       return;
     }
     let active = true;
+    const canCommit = () => active && mountedRef.current && !telegramAuthInFlightRef.current;
 
     void supabase.auth
       .getSession()
       .then(async ({ data }) => {
-        if (!active || !mountedRef.current) return;
-        if (telegramIdentityUser.current) {
+        if (!active || !mountedRef.current || telegramAuthInFlightRef.current) return;
+        if (telegramIdentityUser.current && !data.session?.user) {
           syncAccountIdentity(telegramIdentityUser.current);
           return;
         }
         if (!data.session?.user) return;
-        try {
-          const user = await loadCanonicalUser(data.session.user);
-          if (active && mountedRef.current) {
-            setAuthError(null);
-            syncAccountIdentity(user);
-          }
-        } catch (error) {
-          if (error instanceof Error && error.message === 'account_not_approved') {
-            void signOutAccount();
-          }
-          if (active && mountedRef.current) {
-            syncAccountIdentity(null);
-          }
+        if (telegramIdentityUser.current && data.session.user.id !== telegramIdentityUser.current.id) {
+          rejectIdentityConflict();
+          return;
         }
+        await hydrateCanonicalUser(data.session.user, canCommit);
       })
       .finally(() => {
-        if (active && mountedRef.current) {
-          setIsAuthLoading(false);
-        }
+        if (canCommit()) setIsAuthLoading(false);
       });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!active || !mountedRef.current) return;
-      if (telegramIdentityUser.current) {
-        syncAccountIdentity(telegramIdentityUser.current);
-        return;
-      }
+      if (telegramAuthInFlightRef.current && event !== 'SIGNED_OUT') return;
       if (!session?.user) {
-        syncAccountIdentity(null);
-        return;
-      }
-      try {
-        const user = await loadCanonicalUser(session.user);
-        if (active && mountedRef.current) {
-          setAuthError(null);
-          syncAccountIdentity(user);
-        }
-      } catch (error) {
-        if (error instanceof Error && error.message === 'account_not_approved') {
-          void signOutAccount();
-        }
-        if (active && mountedRef.current) {
+        if (event === 'SIGNED_OUT' || !telegramIdentityUser.current) {
+          telegramIdentityUser.current = null;
           syncAccountIdentity(null);
         }
+        return;
       }
+      if (telegramIdentityUser.current && session.user.id !== telegramIdentityUser.current.id) {
+        rejectIdentityConflict();
+        return;
+      }
+      await hydrateCanonicalUser(session.user, canCommit, { clearTelegramOnFail: true, setTelegramIfLinked: true });
     });
 
     return () => {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [syncAccountIdentity]);
+  }, [hydrateCanonicalUser, rejectIdentityConflict, syncAccountIdentity]);
 
   const refreshCurrentUser = useCallback(async (): Promise<User | null> => {
-    if (telegramIdentityUser.current) {
-      syncAccountIdentity(telegramIdentityUser.current);
-      return telegramIdentityUser.current;
-    }
-    if (!supabase) return null;
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.user) {
-        syncAccountIdentity(null);
-        return null;
-      }
-      const user = await loadCanonicalUser(data.session.user);
-      if (mountedRef.current) {
-        setAuthError(null);
-        syncAccountIdentity(user);
-      }
-      return user;
-    } catch (error) {
-      if (error instanceof Error && error.message === 'account_not_approved') {
-        void signOutAccount();
-      }
-      if (mountedRef.current) {
-        syncAccountIdentity(null);
+    if (!supabase) {
+      if (telegramIdentityUser.current) {
+        syncAccountIdentity(telegramIdentityUser.current);
+        return telegramIdentityUser.current;
       }
       return null;
     }
-  }, [syncAccountIdentity]);
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    const targetUser =
+      data.session?.user ?? (getTelegramWebAppInitData() && telegramIdentityUser.current ? { id: telegramIdentityUser.current.id } : null);
+    if (!targetUser) {
+      telegramIdentityUser.current = null;
+      syncAccountIdentity(null);
+      return null;
+    }
+    if (data.session?.user && telegramIdentityUser.current && data.session.user.id !== telegramIdentityUser.current.id) {
+      rejectIdentityConflict();
+      return null;
+    }
+    return hydrateCanonicalUser(targetUser, () => mountedRef.current, { clearTelegramOnFail: true, setTelegramIfLinked: true });
+  }, [hydrateCanonicalUser, rejectIdentityConflict, syncAccountIdentity]);
 
   const login = useCallback(
     async (identifier: string, pass: string): Promise<SignInOutcome> => {

@@ -33,14 +33,140 @@ import type { Database } from './database.types';
 // Preserve the existing client type export with one generated schema owner.
 export type DatabaseSchema = Database;
 
+export interface TelegramApiAuthorization {
+  token: string;
+  userId: string;
+  exp: number;
+}
+
+let activeTelegramApiAuth: TelegramApiAuthorization | null = null;
+
+export function parseJwtPayload(token: string): Record<string, unknown> | null {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3 || !parts[1]) return null;
+  try {
+    const padded = parts[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(parts[1].length / 4) * 4, '=');
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const decoded = new TextDecoder().decode(bytes);
+    const parsed = JSON.parse(decoded);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setTelegramApiAuthorization(token: string, expectedUserId: string): TelegramApiAuthorization {
+  const trimmed = typeof token === 'string' ? token.trim() : '';
+  const claims = parseJwtPayload(trimmed);
+  const sub = typeof claims?.sub === 'string' ? claims.sub.trim() : '';
+  const role = typeof claims?.role === 'string' ? claims.role.trim() : '';
+  const exp = typeof claims?.exp === 'number' && Number.isFinite(claims.exp) ? claims.exp : 0;
+
+  if (!trimmed || !sub || sub !== expectedUserId || role !== 'authenticated' || exp * 1000 <= Date.now()) {
+    activeTelegramApiAuth = null;
+    throw new Error('telegram_api_authorization_invalid');
+  }
+
+  activeTelegramApiAuth = { token: trimmed, userId: expectedUserId, exp };
+  return activeTelegramApiAuth;
+}
+
+export function clearTelegramApiAuthorization(): void {
+  activeTelegramApiAuth = null;
+}
+
+export function getTelegramApiAuthorization(): TelegramApiAuthorization | null {
+  return activeTelegramApiAuth;
+}
+
+function buildJsonErrorResponse(status: number, code: string, message: string): Response {
+  return new Response(JSON.stringify({ code, message, details: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+export function createTelegramAuthorizedFetch(
+  baseUrl: string,
+  publishableKey: string,
+  baseFetch?: typeof fetch,
+): typeof fetch {
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const resolveFetcher = (): typeof fetch => baseFetch ?? globalThis.fetch.bind(globalThis);
+
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const fetcher = resolveFetcher();
+    const requestUrl =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+    if (!normalizedBase || !requestUrl.startsWith(normalizedBase)) {
+      return fetcher(input, init);
+    }
+
+    const relativePath = requestUrl.slice(normalizedBase.length);
+    if (relativePath.startsWith('/auth/v1/') || relativePath.startsWith('/functions/v1/telegram-auth')) {
+      return fetcher(input, init);
+    }
+
+    const currentTelegramAuth = activeTelegramApiAuth;
+    if (!currentTelegramAuth) {
+      return fetcher(input, init);
+    }
+
+    const headers = new Headers(
+      init?.headers ?? (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined),
+    );
+    const authHeader = headers.get('Authorization') || '';
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    const incomingToken = bearerMatch ? bearerMatch[1].trim() : null;
+    const hasWebUserToken = Boolean(incomingToken && incomingToken !== publishableKey);
+
+    if (hasWebUserToken) {
+      const claims = parseJwtPayload(incomingToken!);
+      const webSub = typeof claims?.sub === 'string' ? claims.sub.trim() : '';
+      if (!webSub || webSub !== currentTelegramAuth.userId) {
+        return buildJsonErrorResponse(403, '42501', 'telegram_identity_conflict');
+      }
+      return fetcher(input, init);
+    }
+
+    if (currentTelegramAuth.exp * 1000 <= Date.now()) {
+      return buildJsonErrorResponse(401, 'PGRST301', 'telegram_api_authorization_expired');
+    }
+
+    headers.set('Authorization', `Bearer ${currentTelegramAuth.token}`);
+    if (publishableKey && !headers.has('apikey')) {
+      headers.set('apikey', publishableKey);
+    }
+
+    return fetcher(input, { ...(init ?? {}), headers });
+  };
+}
+
 export const supabase = isSupabaseConfigured
   ? createClient<DatabaseSchema>(supabaseUrl, supabasePublishableKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
       },
+      global: {
+        fetch: createTelegramAuthorizedFetch(supabaseUrl, supabasePublishableKey),
+      },
     })
   : null;
+
+if (typeof supabase?.auth?.onAuthStateChange === 'function') {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') {
+      clearTelegramApiAuthorization();
+    }
+  });
+}
 
 export function requireSupabaseClient() {
   if (!supabase) {

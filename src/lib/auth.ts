@@ -1,6 +1,5 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, requireSupabaseClient } from './supabase.ts';
-import { createTelegramLinkUrl } from './telegram.ts';
 import {
   isValidPhoneInput,
   isValidUsername,
@@ -8,43 +7,36 @@ import {
   normalizeUsernameDisplay,
   normalizeUsernameKey,
 } from './username.ts';
+import {
+  AUTH_ROLE_MAP,
+  REGISTRATION_ROLES,
+  isRegistrationRole,
+  resolveCanonicalAccountRole,
+  type RegistrationRole,
+  type SignupRole,
+} from './authRoles.ts';
+import {
+  authenticateTelegramInitData,
+  clearTelegramAuthCache,
+  completeTelegramLinkFromInitData,
+  createTelegramLinkChallenge,
+  type TelegramAuthResult,
+} from './telegramAuth.ts';
 import type { AccountRole, User, UserRole } from '../types.ts';
 
-export const REGISTRATION_ROLES = [
-  'APP_ADMIN',
-  'MANAGER',
-  'PARENT',
-  'STUDENT',
-  'TEACHER',
-  'SCHOOL_STAFF',
-  'ADMINISTRATIVE_PERSONNEL',
-] as const satisfies readonly AccountRole[];
-
-export type RegistrationRole = (typeof REGISTRATION_ROLES)[number];
-export type SignupRole = RegistrationRole;
-
-export function isRegistrationRole(value: unknown): value is RegistrationRole {
-  return typeof value === 'string' && (REGISTRATION_ROLES as readonly string[]).includes(value);
-}
-
-const roleMap: Record<string, AccountRole> = {
-  APP_ADMIN: 'APP_ADMIN',
-  MANAGER: 'MANAGER',
-  PARENT: 'PARENT',
-  STUDENT: 'STUDENT',
-  TEACHER: 'TEACHER',
-  SCHOOL_STAFF: 'SCHOOL_STAFF',
-  ADMINISTRATIVE_PERSONNEL: 'ADMINISTRATIVE_PERSONNEL',
+export {
+  REGISTRATION_ROLES,
+  isRegistrationRole,
+  resolveCanonicalAccountRole,
+  authenticateTelegramInitData,
+  completeTelegramLinkFromInitData,
+  createTelegramLinkChallenge,
+  type RegistrationRole,
+  type SignupRole,
+  type TelegramAuthResult,
 };
 
-export function resolveCanonicalAccountRole(roles: readonly string[]): AccountRole | null {
-  if (roles.includes('APP_ADMIN')) return 'APP_ADMIN';
-  for (const candidate of roles) {
-    const mapped = roleMap[candidate];
-    if (mapped) return mapped;
-  }
-  return null;
-}
+const roleMap = AUTH_ROLE_MAP;
 
 export function isPhoneIdentifier(value: string): boolean {
   return isValidPhoneInput(value);
@@ -337,110 +329,8 @@ export async function loadCanonicalUser(authUser: SupabaseUser, clientOverride?:
   };
 }
 
-export async function createTelegramLinkChallenge() {
-  const client = requireSupabaseClient();
-  const { data, error } = await client.functions.invoke('telegram-link-challenge', { body: {} });
-  if (error || !data?.linkCode) throw error ?? new Error('Unable to start Telegram linking');
-  return {
-    linkUrl: createTelegramLinkUrl(data.linkCode as string),
-    expiresInSeconds: Number(data.expiresInSeconds) || 600,
-  };
-}
-
-export type TelegramAuthResult = { user: User; linked: boolean };
-
-let lastTelegramAuthAttempt: { initData: string; result: Promise<TelegramAuthResult> } | null = null;
-
-export function authenticateTelegramInitData(
-  initData: string,
-  clientOverride?: { functions: { invoke: (fn: string, opts: any) => Promise<{ data: any; error: any }> } },
-): Promise<TelegramAuthResult> {
-  if (!clientOverride && lastTelegramAuthAttempt?.initData === initData) {
-    return lastTelegramAuthAttempt.result;
-  }
-  const result = (async () => {
-    const client = clientOverride ?? requireSupabaseClient();
-    const { data, error } = await client.functions.invoke('telegram-auth', { body: { initData } });
-    if (error || !data?.user) throw new Error(data?.error || 'Telegram account is not linked');
-
-    const rawUser = data.user as {
-      id: string;
-      username: string;
-      fullName?: string;
-      email?: string | null;
-      avatarUrl?: string | null;
-      role?: string;
-      capabilities?: string[];
-      manager_capabilities?: string[];
-      managerCapabilities?: string[];
-      telegramLinked?: boolean;
-      accountStatus?: string;
-      account_status?: string;
-    };
-    const rawTgStatus =
-      typeof rawUser.accountStatus === 'string'
-        ? rawUser.accountStatus.trim()
-        : typeof rawUser.account_status === 'string'
-        ? rawUser.account_status.trim()
-        : '';
-    if (rawTgStatus !== 'APPROVED') {
-      throw new Error('account_not_approved');
-    }
-    const rawCapabilities = Array.isArray(rawUser.capabilities)
-      ? rawUser.capabilities.filter((c): c is string => typeof c === 'string' && c.trim().length > 0).map((c) => c.trim())
-      : [];
-    const candidateRoles = [
-      ...(typeof rawUser.role === 'string' ? [rawUser.role.trim()] : []),
-      ...rawCapabilities,
-    ];
-    const resolvedRole = resolveCanonicalAccountRole(candidateRoles);
-    if (!resolvedRole) {
-      throw new Error('account_not_approved');
-    }
-    const rawManagerCaps = Array.isArray(rawUser.manager_capabilities)
-      ? rawUser.manager_capabilities
-      : Array.isArray(rawUser.managerCapabilities)
-      ? rawUser.managerCapabilities
-      : [];
-    const mergedCaps = new Set<string>([resolvedRole]);
-    for (const candidate of rawCapabilities) {
-      if (roleMap[candidate] || (resolvedRole === 'MANAGER' && candidate !== 'GENERAL_USER' && candidate !== 'EMPLOYEE')) {
-        mergedCaps.add(candidate);
-      }
-    }
-    if (resolvedRole === 'MANAGER') {
-      for (const cap of rawManagerCaps) {
-        if (typeof cap === 'string' && cap.trim()) mergedCaps.add(cap.trim());
-      }
-    }
-    return {
-      linked: data.linked === true,
-      user: {
-        id: rawUser.id,
-        username: rawUser.username,
-        fullName: rawUser.fullName || rawUser.username,
-        email: rawUser.email ?? undefined,
-        avatarUrl: rawUser.avatarUrl ?? undefined,
-        role: resolvedRole,
-        accountStatus: 'APPROVED' as const,
-        capabilities: [...mergedCaps],
-        telegramLinked: rawUser.telegramLinked ?? true,
-      },
-    };
-  })();
-  if (!clientOverride) {
-    lastTelegramAuthAttempt = { initData, result };
-  }
-  return result;
-}
-
-export async function completeTelegramLinkFromInitData(initData: string): Promise<User> {
-  const result = await authenticateTelegramInitData(initData);
-  if (!result.linked) throw new Error('Telegram link could not be confirmed');
-  return result.user;
-}
-
 export async function signOutAccount() {
+  clearTelegramAuthCache();
   if (supabase) await supabase.auth.signOut();
 }
 
