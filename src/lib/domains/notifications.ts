@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import type { BackendOpResult } from '../../types.ts';
 
 export interface NotificationItem {
@@ -78,11 +79,14 @@ export async function listMyNotifications(
 ): Promise<BackendOpResult<NotificationItem[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client
-      .from('user_notifications')
-      .select('id, category, title, body, target_tab, target_ref_id, is_read, created_at')
-      .order('created_at', { ascending: false })
-      .limit(40);
+    const telegram = await invokeTelegramPrivateOperation<unknown[]>('notifications.list', {}, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client
+        .from('user_notifications')
+        .select('id, category, title, body, target_tab, target_ref_id, is_read, created_at')
+        .order('created_at', { ascending: false })
+        .limit(40);
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (!Array.isArray(data)) return invalidResponseResult();
 
@@ -116,9 +120,12 @@ export async function markNotificationReadOnServer(
   if (!client) return unavailableResult();
 
   try {
-    const { data, error } = await client.rpc('mark_user_notification_read', {
-      p_notification_id: cleanId,
-    });
+    const telegram = await invokeTelegramPrivateOperation<boolean>(
+      'notifications.markOne', { notificationId: cleanId }, client,
+    );
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('mark_user_notification_read', { p_notification_id: cleanId });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (typeof data !== 'boolean') return invalidResponseResult();
     return { ok: true, status: 'READY', data };
@@ -133,7 +140,10 @@ export async function markAllNotificationsReadOnServer(
 ): Promise<BackendOpResult<number>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('mark_all_user_notifications_read');
+    const telegram = await invokeTelegramPrivateOperation<number>('notifications.markAll', {}, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('mark_all_user_notifications_read');
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (typeof data !== 'number' || !Number.isInteger(data) || data < 0) {
       return invalidResponseResult();

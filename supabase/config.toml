@@ -19,5 +19,8 @@ verify_jwt = false
 [functions.telegram-auth]
 verify_jwt = false
 
+[functions.telegram-private-ops]
+verify_jwt = false
+
 [functions.telegram-link-challenge]
 verify_jwt = true

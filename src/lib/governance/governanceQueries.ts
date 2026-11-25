@@ -11,6 +11,7 @@ import {
   type PaginatedGovernanceList,
 } from './governanceTypes.ts';
 import { fetchManagerDelegations } from './governanceMutations.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 
 function resolveRpcClient(clientOverride?: GovernanceRpcClient | null): GovernanceRpcClient | null {
   if (clientOverride !== undefined) return clientOverride;
@@ -52,7 +53,10 @@ export async function fetchGovernanceActorScope(
     return { ok: false, errorCode: 'backend_unavailable', errorMessage: 'Supabase client is not configured in this build.' };
   }
   try {
-    const { data, error } = await client.rpc('governance_get_actor_scope');
+    const telegram = await invokeTelegramPrivateOperation<unknown>('governance.actorScope', {}, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('governance_get_actor_scope');
     if (error) {
       const classified = classifyGovernanceRpcError(error);
       return { ok: false, errorCode: classified.errorCode, errorMessage: classified.errorMessage };
@@ -98,12 +102,21 @@ export async function listPendingAccounts(
   try {
     const rawRole = opts.requestedRole ?? opts.role ?? null;
     const rawSearch = opts.searchQuery ?? opts.search ?? null;
-    const { data, error } = await client.rpc('governance_list_pending_accounts', {
-      p_limit: opts.limit ?? 25,
-      p_offset: opts.offset ?? 0,
-      p_requested_role: rawRole && rawRole !== 'ALL' ? rawRole : null,
-      p_search: rawSearch && rawSearch.trim() ? rawSearch.trim() : null,
-    });
+    const args = {
+      limit: opts.limit ?? 25,
+      offset: opts.offset ?? 0,
+      requestedRole: rawRole && rawRole !== 'ALL' ? rawRole : null,
+      search: rawSearch && rawSearch.trim() ? rawSearch.trim() : null,
+    };
+    const telegram = await invokeTelegramPrivateOperation<unknown>('governance.pendingAccounts', args, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('governance_list_pending_accounts', {
+        p_limit: args.limit,
+        p_offset: args.offset,
+        p_requested_role: args.requestedRole,
+        p_search: args.search,
+      });
     if (error) {
       const classified = classifyGovernanceRpcError(error);
       return { ok: false, errorCode: classified.errorCode, errorMessage: classified.errorMessage };
@@ -142,13 +155,23 @@ export async function listAccountDirectory(
     const rawStatus = opts.status ?? opts.statusFilter ?? null;
     const rawRole = opts.role ?? opts.roleFilter ?? null;
     const rawSearch = opts.searchQuery ?? opts.search ?? null;
-    const { data, error } = await client.rpc('governance_list_account_directory', {
-      p_limit: opts.limit ?? 25,
-      p_offset: opts.offset ?? 0,
-      p_status: rawStatus && rawStatus !== 'ALL' ? rawStatus : null,
-      p_role: rawRole && rawRole !== 'ALL' ? rawRole : null,
-      p_search: rawSearch && rawSearch.trim() ? rawSearch.trim() : null,
-    });
+    const args = {
+      limit: opts.limit ?? 25,
+      offset: opts.offset ?? 0,
+      status: rawStatus && rawStatus !== 'ALL' ? rawStatus : null,
+      role: rawRole && rawRole !== 'ALL' ? rawRole : null,
+      search: rawSearch && rawSearch.trim() ? rawSearch.trim() : null,
+    };
+    const telegram = await invokeTelegramPrivateOperation<unknown>('governance.accountDirectory', args, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('governance_list_account_directory', {
+        p_limit: args.limit,
+        p_offset: args.offset,
+        p_status: args.status,
+        p_role: args.role,
+        p_search: args.search,
+      });
     if (error) {
       const classified = classifyGovernanceRpcError(error);
       return { ok: false, errorCode: classified.errorCode, errorMessage: classified.errorMessage };
@@ -199,9 +222,12 @@ export async function fetchGovernanceAccountDetail(params: {
     return { ok: false, errorCode: 'backend_unavailable', errorMessage: 'Supabase client is not configured in this build.' };
   }
   try {
-    const { data, error } = await client.rpc('governance_get_account_detail', {
-      p_target_user_id: params.targetUserId,
-    });
+    const telegram = await invokeTelegramPrivateOperation<unknown>(
+      'governance.accountDetail', { targetUserId: params.targetUserId }, client,
+    );
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('governance_get_account_detail', { p_target_user_id: params.targetUserId });
     if (error) {
       const classified = classifyGovernanceRpcError(error);
       return { ok: false, errorCode: classified.errorCode, errorMessage: classified.errorMessage };
