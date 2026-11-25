@@ -31,7 +31,7 @@ async function initData({ authDate = Math.floor(Date.now() / 1000), userId = 900
   return params.toString();
 }
 
-function fakeDatabase({ accountStatus = 'APPROVED', role = 'PARENT' } = {}) {
+function fakeDatabase({ accountStatus = 'APPROVED', role = 'PARENT', banned = false } = {}) {
   const statements = [];
   const database = {
     statements,
@@ -41,6 +41,7 @@ function fakeDatabase({ accountStatus = 'APPROVED', role = 'PARENT' } = {}) {
         const text = strings.join('?').replace(/\s+/g, ' ').trim();
         statements.push({ text, values });
         if (text.startsWith('select user_id::text as user_id')) return [{ user_id: ACTOR }];
+        if (text.startsWith('select coalesce(banned_until > now()')) return [{ is_banned: banned }];
         if (text.includes("set_config('request.jwt.claim")) return [];
         if (text === 'set local role authenticated') { authenticatedRole = true; return []; }
         assert.equal(authenticatedRole, true, `database operation must execute as authenticated: ${text}`);
@@ -108,6 +109,14 @@ test('unapproved accounts and Telegram-to-account mismatch fail closed', async (
     assert.equal(denied.status, 403, `${accountStatus} account must be rejected`);
     assert.deepEqual(await denied.json(), { error: 'account_not_approved' });
   }
+
+  const bannedDb = fakeDatabase({ banned: true });
+  const banned = await handleTelegramPrivateOps(makeRequest(null, {
+    initData: await initData(), operation: 'notifications.list', params: {},
+  }), deps(bannedDb));
+  assert.equal(banned.status, 403, 'an Auth-banned account must be rejected before private work');
+  assert.deepEqual(await banned.json(), { error: 'account_not_approved' });
+  assert.equal(bannedDb.statements.some(({ text }) => text === 'set local role authenticated'), false);
 
   const mismatchDb = fakeDatabase();
   const mismatch = await handleTelegramPrivateOps(makeRequest(null, {

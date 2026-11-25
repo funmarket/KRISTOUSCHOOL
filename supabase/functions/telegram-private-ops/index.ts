@@ -244,6 +244,14 @@ async function withAuthenticatedTelegramActor<T>(
     const userId = identities[0].user_id;
     if (expectedUserId && expectedUserId !== userId) throw new GatewayError('telegram_identity_conflict', 409);
 
+    const authAccount = requireRow(await transaction`
+      select coalesce(banned_until > now(), false) as is_banned
+        from auth.users
+       where id = ${userId}::uuid
+       limit 1
+    `);
+    if (authAccount.is_banned === true) throw new GatewayError('account_not_approved', 403);
+
     await transaction`select set_config('request.jwt.claim.sub', ${userId}, true)`;
     await transaction`select set_config('request.jwt.claim.role', 'authenticated', true)`;
     await transaction`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: 'authenticated', aud: 'authenticated' })}, true)`;
