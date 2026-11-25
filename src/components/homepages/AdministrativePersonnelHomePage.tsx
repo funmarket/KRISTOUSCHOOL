@@ -41,10 +41,6 @@ export const AdministrativePersonnelHomePage: React.FC<
   const [deskFeedback, setDeskFeedback] = useState<string>('');
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  const capabilities = Array.isArray(currentUser?.capabilities) ? currentUser.capabilities : [];
-  const hasPickupAssist =
-    capabilities.includes('PICKUP_RELEASE') || capabilities.includes('PICKUP_DESK');
-
   const openCommunitySubTab = (subTab: string) => {
     if (onNavigateToSubTab) {
       onNavigateToSubTab('community', subTab);
@@ -415,11 +411,11 @@ export const AdministrativePersonnelHomePage: React.FC<
           }
         />
 
-        {hasPickupAssist && (
+        {canAccessAppTab(currentUser, 'pickup') && (
           <HomeShortcutCard
             id="admin-personnel-pickup-assist"
             title={pickText(
-              { ar: 'مساندة الاستلام المدرسي', fr: 'Assistance Sortie', en: 'Pickup Assistance' },
+              { ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' },
               language,
             )}
             actionLabel={openActionLabel}

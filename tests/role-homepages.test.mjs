@@ -449,3 +449,225 @@ test('Task 1.9 — Restored original KRISTOU homepage, Emploi du temps À venir 
   assert.match(publicSrc, /data-testid="announcements-preview-badge"/, 'Expected announcements preview badge on À la une de Kristou');
   assert.match(publicSrc, /data-testid="canteen-preview-badge"/, 'Expected canteen preview badge on À la cantine');
 });
+
+test('ADMIN-PICKUP-01 — ADMINISTRATIVE_PERSONNEL receives pickup tab access and AdministrativePersonnelHomePage shortcut while preserving fail-closed locks', async () => {
+  const { createRequire } = await import('node:module');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { build } = await import('esbuild');
+  const React = (await import('react')).default;
+  const { act } = await import('react');
+  const { createRoot } = await import('react-dom/client');
+  const { installNodeDomShim } = await import('./helpers/nodeDomShim.mjs');
+
+  const { canAccessAppTab, attemptPickupOperation } = await import('../src/components/homepages/access/appTabAccess.ts');
+
+  // 1. Approved ADMINISTRATIVE_PERSONNEL with standard, empty, and undefined capabilities all get pickup access
+  for (const capabilities of [['ADMINISTRATIVE_PERSONNEL'], [], undefined]) {
+    assert.equal(
+      canAccessAppTab(
+        {
+          id: 'office-1',
+          username: 'office.staff',
+          fullName: 'Office Staff',
+          role: 'ADMINISTRATIVE_PERSONNEL',
+          accountStatus: 'APPROVED',
+          capabilities,
+        },
+        'pickup',
+      ),
+      true,
+      `Expected APPROVED ADMINISTRATIVE_PERSONNEL with capabilities=${JSON.stringify(capabilities)} to access pickup`,
+    );
+  }
+
+  // 2. Non-approved ADMINISTRATIVE_PERSONNEL, null visitor, STUDENT, and SCHOOL_STAFF without pickup caps stay denied
+  for (const accountStatus of ['PENDING', 'SUSPENDED', 'REJECTED', 'REVOKED']) {
+    assert.equal(
+      canAccessAppTab(
+        {
+          id: `office-${accountStatus}`,
+          username: 'office.blocked',
+          fullName: 'Blocked Office',
+          role: 'ADMINISTRATIVE_PERSONNEL',
+          accountStatus,
+          capabilities: ['ADMINISTRATIVE_PERSONNEL'],
+        },
+        'pickup',
+      ),
+      false,
+      `Expected ${accountStatus} ADMINISTRATIVE_PERSONNEL to be denied pickup`,
+    );
+  }
+  assert.equal(canAccessAppTab(null, 'pickup'), false);
+  assert.equal(
+    canAccessAppTab(
+      { id: 'stu-1', username: 'stu', fullName: 'Student', role: 'STUDENT', accountStatus: 'APPROVED', capabilities: ['STUDENT'] },
+      'pickup',
+    ),
+    false,
+  );
+  assert.equal(
+    canAccessAppTab(
+      { id: 'st-no', username: 'st', fullName: 'Staff', role: 'SCHOOL_STAFF', accountStatus: 'APPROVED', capabilities: ['SCHOOL_STAFF'] },
+      'pickup',
+    ),
+    false,
+  );
+
+  // 3. SCHOOL_STAFF with pickup capabilities and MANAGER rules remain unchanged
+  for (const cap of ['PICKUP_RELEASE', 'PICKUP_DESK']) {
+    assert.equal(
+      canAccessAppTab(
+        { id: `st-${cap}`, username: 'st', fullName: 'Staff', role: 'SCHOOL_STAFF', accountStatus: 'APPROVED', capabilities: [cap] },
+        'pickup',
+      ),
+      true,
+    );
+  }
+  for (const caps of [[], ['PICKUP_RELEASE'], ['PICKUP_VIEW'], ['FULL_ACCESS']]) {
+    assert.equal(
+      canAccessAppTab(
+        { id: 'mgr-ok', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: caps },
+        'pickup',
+      ),
+      true,
+    );
+  }
+  assert.equal(
+    canAccessAppTab(
+      { id: 'mgr-no', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: ['MANAGER'] },
+      'pickup',
+    ),
+    false,
+  );
+
+  // 4. Render actual AdministrativePersonnelHomePage and verify shortcut visibility, i18n title, and setActiveTab('pickup')
+  const dom = installNodeDomShim();
+  const require = createRequire(import.meta.url);
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const outdir = path.join('/tmp', 'kristou-admin-pickup-tests');
+  fs.mkdirSync(outdir, { recursive: true });
+  const outfile = path.join(outdir, 'admin-home.cjs');
+
+  await build({
+    entryPoints: [path.resolve(__dirname, '../src/components/homepages/AdministrativePersonnelHomePage.tsx')],
+    outfile,
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    jsx: 'automatic',
+    loader: { '.css': 'empty' },
+    plugins: [
+      {
+        name: 'admin-pickup-test-mocks',
+        setup(builder) {
+          builder.onResolve({ filter: /context\/AppContext$/ }, () => ({
+            path: 'mock-app-ctx',
+            namespace: 'adminpickup',
+          }));
+          builder.onLoad({ filter: /^mock-app-ctx$/, namespace: 'adminpickup' }, () => ({
+            contents: `
+              export const useApp = () => globalThis.__ADMIN_PICKUP_APP_CTX__;
+            `,
+          }));
+          builder.onResolve({ filter: /lib\/schoolOperations$/ }, () => ({
+            path: 'mock-school-ops',
+            namespace: 'adminpickup',
+          }));
+          builder.onLoad({ filter: /^mock-school-ops$/, namespace: 'adminpickup' }, () => ({
+            contents: `
+              export const respondPublicInquiry = async () => ({ ok: true });
+            `,
+          }));
+          builder.onResolve({ filter: /^[^./]/ }, (args) => ({
+            path: require.resolve(args.path),
+            external: true,
+          }));
+        },
+      },
+    ],
+  });
+
+  const { AdministrativePersonnelHomePage } = require(outfile);
+  const container = dom.document.createElement('div');
+  dom.document.body.appendChild(container);
+  const root = createRoot(container);
+
+  const expectedTitles = { en: 'Pickup', fr: 'Sortie & Pickup', ar: 'الاستلام المدرسي' };
+  const tabCalls = [];
+
+  for (const [language, expectedTitle] of Object.entries(expectedTitles)) {
+    globalThis.__ADMIN_PICKUP_APP_CTX__ = {
+      language,
+      currentUser: {
+        id: 'office-1',
+        username: 'office.staff',
+        fullName: 'Office Staff',
+        role: 'ADMINISTRATIVE_PERSONNEL',
+        accountStatus: 'APPROVED',
+        capabilities: [],
+      },
+      operationalCounts: {},
+      operationalCountsLoaded: true,
+      schoolContextError: null,
+      publicInquiries: [],
+      inquiriesStatus: 'READY',
+      messages: [],
+      messagesStatus: 'READY',
+      refreshSchoolData: async () => {},
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(AdministrativePersonnelHomePage, {
+          setActiveTab: (tab) => tabCalls.push(tab),
+        }),
+      );
+    });
+
+    const pickupCard = container.querySelector('[data-testid="shortcut-card-admin-personnel-pickup-assist"]');
+    assert.ok(pickupCard, `Expected admin-personnel-pickup-assist card to render in ${language}`);
+    const titleEl = pickupCard.querySelector('.kh-shortcut-title');
+    assert.equal(titleEl?.textContent, expectedTitle);
+
+    if (language === 'en') {
+      await act(async () => {
+        pickupCard.click();
+      });
+    }
+  }
+  assert.deepEqual(tabCalls, ['pickup']);
+
+  // Non-approved ADMINISTRATIVE_PERSONNEL must not render the shortcut card
+  globalThis.__ADMIN_PICKUP_APP_CTX__ = {
+    ...globalThis.__ADMIN_PICKUP_APP_CTX__,
+    language: 'en',
+    currentUser: {
+      id: 'office-suspended',
+      username: 'office.suspended',
+      fullName: 'Suspended Office',
+      role: 'ADMINISTRATIVE_PERSONNEL',
+      accountStatus: 'SUSPENDED',
+      capabilities: ['ADMINISTRATIVE_PERSONNEL'],
+    },
+  };
+  await act(async () => {
+    root.render(React.createElement(AdministrativePersonnelHomePage, { setActiveTab: () => {} }));
+  });
+  assert.equal(container.querySelector('[data-testid="shortcut-card-admin-personnel-pickup-assist"]'), null);
+
+  await act(async () => {
+    root.unmount();
+  });
+  dom.document.body.removeChild(container);
+  fs.rmSync(outdir, { recursive: true, force: true });
+
+  // 5. Pickup backend safety lock remains enforced
+  const arrivalLock = attemptPickupOperation('ARRIVAL', 'child-1');
+  assert.equal(arrivalLock.allowed, false);
+  assert.equal(arrivalLock.status, 'BLOCKED_BACKEND');
+  const releaseLock = attemptPickupOperation('RELEASE', 'pick-1');
+  assert.equal(releaseLock.allowed, false);
+  assert.equal(releaseLock.status, 'BLOCKED_BACKEND');
+});

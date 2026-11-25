@@ -335,3 +335,57 @@ test('BottomNavBar hides on window scroll-down, reveals on scroll-up/bottom, and
   });
   dom.document.body.removeChild(container);
 });
+
+test('ADMIN-PICKUP-01 — BottomNavBar renders Pick-Up tab for approved ADMINISTRATIVE_PERSONNEL regardless of capabilities and denies non-approved', async () => {
+  const container = dom.document.createElement('div');
+  dom.document.body.appendChild(container);
+  const root = createRoot(container);
+  const tabCalls = [];
+
+  for (const capabilities of [['ADMINISTRATIVE_PERSONNEL'], [], undefined]) {
+    await act(async () => {
+      root.render(
+        React.createElement(BottomNavBar, {
+          activeTab: 'home',
+          currentUser: makeUser({ role: 'ADMINISTRATIVE_PERSONNEL', capabilities }),
+          t: makeTranslator('en'),
+          onSelectTab: (tab) => tabCalls.push(tab),
+          onNavigateToSubTab: () => {},
+        }),
+      );
+    });
+
+    const buttons = [...container.querySelectorAll('[data-testid="bottom-nav-bar"] button')];
+    assert.deepEqual(
+      buttons.map((b) => b.textContent),
+      ['Home', 'Pick-Up', 'Calendar', 'Teachers'],
+      `Expected Pick-Up tab for APPROVED ADMINISTRATIVE_PERSONNEL with capabilities=${JSON.stringify(capabilities)}`,
+    );
+    assert.ok(container.querySelector('[data-testid="bottom-nav-item-pickup"]'));
+  }
+
+  await act(async () => {
+    container.querySelector('[data-testid="bottom-nav-item-pickup"]').click();
+  });
+  assert.deepEqual(tabCalls, ['pickup']);
+
+  for (const accountStatus of ['PENDING', 'SUSPENDED', 'REJECTED', 'REVOKED']) {
+    await act(async () => {
+      root.render(
+        React.createElement(BottomNavBar, {
+          activeTab: 'home',
+          currentUser: makeUser({ role: 'ADMINISTRATIVE_PERSONNEL', accountStatus, capabilities: [] }),
+          t: makeTranslator('en'),
+          onSelectTab: () => {},
+          onNavigateToSubTab: () => {},
+        }),
+      );
+    });
+    assert.equal(container.querySelector('[data-testid="bottom-nav-bar"]'), null);
+  }
+
+  await act(async () => {
+    root.unmount();
+  });
+  dom.document.body.removeChild(container);
+});

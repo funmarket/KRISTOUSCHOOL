@@ -130,7 +130,8 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
       if (
         user.role === 'APP_ADMIN' ||
         user.role === 'PARENT' ||
-        user.role === 'TEACHER'
+        user.role === 'TEACHER' ||
+        user.role === 'ADMINISTRATIVE_PERSONNEL'
       ) {
         return true;
       }
@@ -142,7 +143,7 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
           caps.includes('FULL_ACCESS')
         );
       }
-      if (user.role === 'SCHOOL_STAFF' || user.role === 'ADMINISTRATIVE_PERSONNEL') {
+      if (user.role === 'SCHOOL_STAFF') {
         return caps.includes('PICKUP_RELEASE') || caps.includes('PICKUP_DESK');
       }
       return false;
