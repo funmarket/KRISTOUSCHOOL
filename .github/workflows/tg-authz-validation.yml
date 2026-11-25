@@ -1,0 +1,39 @@
+name: TG-AUTHZ-01 validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  application-and-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Type check
+        run: bun run lint
+      - name: Application and Telegram gateway tests
+        run: bun run test
+      - name: Production build
+        run: bun run build
+      - name: Start isolated local Supabase
+        run: bun run db:start
+      - name: Rebuild isolated database from migrations
+        run: bun run db:reset
+      - name: Run PostgreSQL authorization tests
+        run: bun run db:test
+      - name: Stop isolated local Supabase
+        if: always()
+        run: bun run db:stop

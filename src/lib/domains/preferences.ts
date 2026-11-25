@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import type { BackendOpResult, Language, ThemeMode, NotificationSoundOption } from '../../types.ts';
 
 export interface UserPreferencesState {
@@ -56,11 +57,16 @@ export async function loadMyPreferences(
 ): Promise<BackendOpResult<UserPreferencesState | null>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client
-      .from('user_preferences')
-      .select('language, theme, notification_sound, sound_muted, vibration_enabled')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const telegram = await invokeTelegramPrivateOperation<unknown>(
+      'preferences.load', { expectedUserId: userId }, client,
+    );
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client
+        .from('user_preferences')
+        .select('language, theme, notification_sound, sound_muted, vibration_enabled')
+        .eq('user_id', userId)
+        .maybeSingle();
     if (error) return { ok: false, ...classifySupabaseError(error) };
     if (!data) return { ok: true, status: 'READY', data: null };
     const preferences = parsePreferencesRow(data);
@@ -78,13 +84,23 @@ export async function saveMyPreferences(
 ): Promise<BackendOpResult<UserPreferencesState>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('upsert_my_preferences', {
-      p_language: prefs.language ?? null,
-      p_theme: prefs.theme ?? null,
-      p_notification_sound: prefs.notificationSound ?? null,
-      p_sound_muted: prefs.soundMuted ?? null,
-      p_vibration_enabled: prefs.vibrationEnabled ?? null,
-    });
+    const values = {
+      language: prefs.language ?? null,
+      theme: prefs.theme ?? null,
+      notificationSound: prefs.notificationSound ?? null,
+      soundMuted: prefs.soundMuted ?? null,
+      vibrationEnabled: prefs.vibrationEnabled ?? null,
+    };
+    const telegram = await invokeTelegramPrivateOperation<unknown>('preferences.save', values, client);
+    const { data, error } = telegram.handled
+      ? { data: telegram.data, error: null }
+      : await client.rpc('upsert_my_preferences', {
+        p_language: values.language,
+        p_theme: values.theme,
+        p_notification_sound: values.notificationSound,
+        p_sound_muted: values.soundMuted,
+        p_vibration_enabled: values.vibrationEnabled,
+      });
     if (error) return { ok: false, ...classifySupabaseError(error) };
     const preferences = parsePreferencesRow(data);
     if (!preferences) return invalidResponseResult();

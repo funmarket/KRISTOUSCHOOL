@@ -288,19 +288,24 @@ export const IdentityProvider: React.FC<{
       }
       return null;
     }
-    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-    const targetUser =
-      data.session?.user ?? (getTelegramWebAppInitData() && telegramIdentityUser.current ? { id: telegramIdentityUser.current.id } : null);
-    if (!targetUser) {
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } })); const telegramInitData = getTelegramWebAppInitData();
+    if (!data.session?.user && telegramInitData) {
+      try {
+        const { user } = await authenticateTelegramInitData(telegramInitData, supabase);
+        if (telegramIdentityUser.current && telegramIdentityUser.current.id !== user.id) { rejectIdentityConflict(); return null; }
+        telegramIdentityUser.current = user; setAuthError(null); syncAccountIdentity(user); return user;
+      } catch (error) {
+        telegramIdentityUser.current = null; syncAccountIdentity(null);
+        const errorCode = error instanceof Error && error.message.trim() ? error.message.trim() : 'telegram_auth_failed'; setAuthError(errorCode === 'telegram_not_linked' ? null : errorCode); return null;
+      }
+    }
+    if (!data.session?.user) {
       telegramIdentityUser.current = null;
       syncAccountIdentity(null);
       return null;
     }
-    if (data.session?.user && telegramIdentityUser.current && data.session.user.id !== telegramIdentityUser.current.id) {
-      rejectIdentityConflict();
-      return null;
-    }
-    return hydrateCanonicalUser(targetUser, () => mountedRef.current, { clearTelegramOnFail: true, setTelegramIfLinked: true });
+    if (telegramIdentityUser.current && data.session.user.id !== telegramIdentityUser.current.id) { rejectIdentityConflict(); return null; }
+    return hydrateCanonicalUser(data.session.user, () => mountedRef.current, { clearTelegramOnFail: true, setTelegramIfLinked: true });
   }, [hydrateCanonicalUser, rejectIdentityConflict, syncAccountIdentity]);
 
   const login = useCallback(
