@@ -43,47 +43,16 @@ function flushMicrotasks() {
   return new Promise((resolve) => setTimeout(resolve, 25));
 }
 
-const supabaseModule = await import('../src/lib/supabase.ts');
-const { createClient } = await import('@supabase/supabase-js');
-
-const TEST_JWT_SECRET = 'tg-parity-01-test-postgrest-jwt-secret-32b';
-
-function decodeJwtForTest(token) {
-  const parts = token.split('.');
-  assert.equal(parts.length, 3, 'Expected 3-part JWT');
-  const [headerB64, payloadB64, sigB64] = parts;
-  const header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
-  const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
-  return { header, payload, signingInput: `${headerB64}.${payloadB64}`, sigB64 };
-}
-
-function verifyHs256JwtForTest(token, secret) {
-  const { header, payload, signingInput, sigB64 } = decodeJwtForTest(token);
-  assert.equal(header.alg, 'HS256');
-  const expectedSig = crypto.createHmac('sha256', secret).update(signingInput).digest('base64url');
-  assert.equal(sigB64, expectedSig, 'JWT signature must verify with server HS256 secret');
-  return payload;
-}
-
-function makeTestHs256Jwt(claims, secret = TEST_JWT_SECRET) {
-  const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payloadB64 = Buffer.from(JSON.stringify(claims)).toString('base64url');
-  const signingInput = `${headerB64}.${payloadB64}`;
-  const sigB64 = crypto.createHmac('sha256', secret).update(signingInput).digest('base64url');
-  return `${signingInput}.${sigB64}`;
-}
-
-test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API bearer without calling setSession, validates claims, and rejects unapproved/conflicting states', async () => {
-  supabaseModule.clearTelegramApiAuthorization();
+test('TG-RECOVERY-01 (Client): authenticateTelegramInitData accepts v10 payload without apiToken/setSession, enforces approvals/conflicts, and evicts rejected attempts (TG-12)', async () => {
   authModule.clearTelegramAuthCache?.();
 
-  const futureExp = Math.floor(Date.now() / 1000) + 900;
   const makeClient = (returnedUser, extra = {}) => ({
     functions: {
       invoke: async (fnName) => {
         assert.equal(fnName, 'telegram-auth');
         return {
           data: {
+            ok: true,
             linked: true,
             user: returnedUser,
             ...extra,
@@ -111,7 +80,6 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
         ),
       /account_not_approved/,
     );
-    assert.equal(supabaseModule.getTelegramApiAuthorization(), null);
   }
 
   // Approved account with GENERAL_USER fallback must fail closed
@@ -130,41 +98,6 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
     /account_not_approved/,
   );
 
-  // Missing or invalid apiToken when apiToken is required fails closed without anon fallback
-  await assert.rejects(
-    () =>
-      authModule.authenticateTelegramInitData('init_missing_api_token', {
-        requireApiToken: true,
-        functions: {
-          invoke: async () => ({
-            data: {
-              linked: false,
-              user: { id: 'u-1', username: 'u1', role: 'PARENT', account_status: 'APPROVED', capabilities: ['PARENT'] },
-            },
-            error: null,
-          }),
-        },
-      }),
-    /telegram_api_authorization_unavailable/,
-  );
-
-  await assert.rejects(
-    () =>
-      authModule.authenticateTelegramInitData('init_wrong_sub_token', {
-        functions: {
-          invoke: async () => ({
-            data: {
-              linked: false,
-              apiToken: makeTestHs256Jwt({ sub: 'other-user', role: 'authenticated', exp: futureExp }),
-              user: { id: 'u-1', username: 'u1', role: 'PARENT', account_status: 'APPROVED', capabilities: ['PARENT'] },
-            },
-            error: null,
-          }),
-        },
-      }),
-    /telegram_api_authorization_unavailable/,
-  );
-
   // Conflict: active Web session belonging to another canonical user must fail closed
   await assert.rejects(
     () =>
@@ -172,8 +105,8 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
         functions: {
           invoke: async () => ({
             data: {
+              ok: true,
               linked: false,
-              apiToken: makeTestHs256Jwt({ sub: 'u-tg', role: 'authenticated', exp: futureExp }),
               user: { id: 'u-tg', username: 'u_tg', role: 'PARENT', account_status: 'APPROVED', capabilities: ['PARENT'] },
             },
             error: null,
@@ -185,17 +118,15 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
       }),
     /telegram_identity_conflict/,
   );
-  assert.equal(supabaseModule.getTelegramApiAuthorization(), null);
 
-  // Valid approved user attaches in-memory bearer token and NEVER invokes auth.setSession
+  // Valid approved user succeeds WITHOUT apiToken and NEVER invokes auth.setSession
   let setSessionCalled = false;
-  const validPhoneToken = makeTestHs256Jwt({ sub: 'u-phone-1', role: 'authenticated', exp: futureExp });
   const phoneResult = await authModule.authenticateTelegramInitData('init_phone_approved', {
     functions: {
       invoke: async () => ({
         data: {
+          ok: true,
           linked: false,
-          apiToken: validPhoneToken,
           user: {
             id: 'u-phone-1',
             username: 'karim_parent',
@@ -219,28 +150,22 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
     },
   });
   assert.equal(setSessionCalled, false, 'Telegram auth must never call supabase.auth.setSession');
-  assert.equal(phoneResult.apiToken, validPhoneToken);
   assert.equal(phoneResult.user.id, 'u-phone-1');
-  assert.equal(supabaseModule.getTelegramApiAuthorization()?.userId, 'u-phone-1');
-  assert.equal(supabaseModule.getTelegramApiAuthorization()?.token, validPhoneToken);
+  assert.equal(phoneResult.linked, false);
 
   // Approved MANAGER preserves MANAGER role and delegated manager_capabilities
-  const mgrToken = makeTestHs256Jwt({ sub: 'u-mgr-1', role: 'authenticated', exp: futureExp });
   const managerResult = await authModule.authenticateTelegramInitData(
     'init_mgr_1',
-    makeClient(
-      {
-        id: 'u-mgr-1',
-        username: 'salma.manager',
-        fullName: 'Salma Ben Salah',
-        role: 'MANAGER',
-        account_status: 'APPROVED',
-        capabilities: ['GENERAL_USER', 'MANAGER'],
-        manager_capabilities: ['OVERSIGHT:TEACHER_HOME', 'CLASSES_MANAGE'],
-        telegramLinked: true,
-      },
-      { apiToken: mgrToken },
-    ),
+    makeClient({
+      id: 'u-mgr-1',
+      username: 'salma.manager',
+      fullName: 'Salma Ben Salah',
+      role: 'MANAGER',
+      account_status: 'APPROVED',
+      capabilities: ['GENERAL_USER', 'MANAGER'],
+      manager_capabilities: ['OVERSIGHT:TEACHER_HOME', 'CLASSES_MANAGE'],
+      telegramLinked: true,
+    }),
   );
 
   assert.equal(managerResult.linked, true);
@@ -263,20 +188,96 @@ test('TG-PARITY-01 (Client): authenticateTelegramInitData attaches in-memory API
   const deniedOwner = homeResolutionModule.resolveHomePage(managerResult.user, 'OWNER_HOME');
   assert.equal(deniedOwner.allowed, false);
 
-  supabaseModule.clearTelegramApiAuthorization();
+  // TG-12: Test real cache path (without clientOverride): transient failure is evicted so retry succeeds,
+  // and resolved response stays cached so start_param is not replayed.
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  const tgAuthOutfile = path.join(TEMP_DIR, 'tg-auth-cache.cjs');
+  await build({
+    entryPoints: [path.resolve(__dirname, '../src/lib/telegramAuth.ts')],
+    outfile: tgAuthOutfile,
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    plugins: [
+      {
+        name: 'tg12-supabase-mock',
+        setup(builder) {
+          builder.onResolve({ filter: /(?:^|\/)supabase(\.ts)?$/ }, () => ({
+            path: 'mock-supa-tg12',
+            namespace: 'tg12',
+          }));
+          builder.onLoad({ filter: /^mock-supa-tg12$/, namespace: 'tg12' }, () => ({
+            contents: `
+              export const requireSupabaseClient = () => globalThis.__TG12_CLIENT__;
+            `,
+          }));
+          builder.onResolve({ filter: /^[^./]/ }, (args) => ({
+            path: require.resolve(args.path),
+            external: true,
+          }));
+        },
+      },
+    ],
+  });
+  const tgAuthBundled = require(tgAuthOutfile);
+  tgAuthBundled.clearTelegramAuthCache();
+
+  let invokeCount = 0;
+  globalThis.__TG12_CLIENT__ = {
+    functions: {
+      invoke: async () => {
+        invokeCount += 1;
+        if (invokeCount === 1) {
+          return { data: null, error: new Error('Failed to send a request to the Edge Function') };
+        }
+        return {
+          data: {
+            ok: true,
+            linked: true,
+            user: {
+              id: 'u-tg12',
+              username: 'tg12.parent',
+              fullName: 'Parent TG12',
+              role: 'PARENT',
+              account_status: 'APPROVED',
+              capabilities: ['PARENT'],
+              telegramLinked: true,
+            },
+          },
+          error: null,
+        };
+      },
+    },
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+    },
+  };
+
+  await assert.rejects(
+    () => tgAuthBundled.authenticateTelegramInitData('init_with_start_param=abc'),
+    /Failed to send a request to the Edge Function/,
+  );
+  assert.equal(invokeCount, 1);
+
+  const retrySuccess = await tgAuthBundled.authenticateTelegramInitData('init_with_start_param=abc');
+  assert.equal(retrySuccess.linked, true);
+  assert.equal(retrySuccess.user.id, 'u-tg12');
+  assert.equal(invokeCount, 2, 'Evicted transient failure must allow retry');
+
+  const cachedReplay = await tgAuthBundled.authenticateTelegramInitData('init_with_start_param=abc');
+  assert.equal(cachedReplay.user.id, 'u-tg12');
+  assert.equal(invokeCount, 2, 'Resolved result must stay cached so start_param is not replayed');
 });
 
-test('TG-PARITY-01 (Edge Function): telegram-auth supports email & phone-only approved accounts, explicit link claim, signing-secret guard, and rejects invalid/unlinked/suspended/revoked/banned', async () => {
+test('TG-RECOVERY-01 (Edge Function): telegram-auth follows v10 contract without JWT signing secrets and supports email & phone-only approved accounts', async () => {
   const previousDeno = globalThis.Deno;
   const previousCreateClient = globalThis.__KRISTOU_TEST_TG_CREATE_CLIENT__;
-  supabaseModule.clearTelegramApiAuthorization();
 
   const mockEnv = {
     ALLOWED_ORIGIN: 'http://localhost:3000',
     TELEGRAM_BOT_TOKEN: TEST_BOT_TOKEN,
     SUPABASE_URL: 'https://ofppapwofhovhroyjtkc.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
-    APP_JWT_SECRET: TEST_JWT_SECRET,
   };
 
   let mockDbState = {
@@ -399,7 +400,6 @@ test('TG-PARITY-01 (Edge Function): telegram-auth supports email & phone-only ap
       const rejectedRes = await invoke();
       assert.equal(rejectedRes.status, 403);
       assert.equal(rejectedRes.body.error, 'account_not_approved');
-      assert.equal(rejectedRes.body.apiToken, undefined);
     }
 
     // Case 4: APPROVED profile without canonical active role rejected 403
@@ -446,7 +446,7 @@ test('TG-PARITY-01 (Edge Function): telegram-auth supports email & phone-only ap
     assert.equal(bannedRes.status, 403);
     assert.equal(bannedRes.body.error, 'account_not_approved');
 
-    // Case 6: APPROVED phone-only account WITHOUT email succeeds 200 with signed apiToken and NO session object
+    // Case 6: APPROVED phone-only account WITHOUT email succeeds 200 with v10 payload (NO session, NO apiToken)
     mockDbState = {
       identity: { user_id: 'phone-only-1' },
       profile: {
@@ -469,17 +469,15 @@ test('TG-PARITY-01 (Edge Function): telegram-auth supports email & phone-only ap
     };
     const phoneOnlyRes = await invoke();
     assert.equal(phoneOnlyRes.status, 200);
+    assert.equal(phoneOnlyRes.body.ok, true);
+    assert.equal(phoneOnlyRes.body.linked, false);
     assert.equal(phoneOnlyRes.body.session, undefined, 'Must never issue a GoTrue session object');
-    assert.equal(typeof phoneOnlyRes.body.apiToken, 'string');
-    const phoneJwtClaims = verifyHs256JwtForTest(phoneOnlyRes.body.apiToken, TEST_JWT_SECRET);
-    assert.equal(phoneJwtClaims.sub, 'phone-only-1');
-    assert.equal(phoneJwtClaims.role, 'authenticated');
-    assert.equal(phoneJwtClaims.aud, 'authenticated');
+    assert.equal('apiToken' in phoneOnlyRes.body, false, 'Must not include apiToken in v10 payload');
     assert.equal(phoneOnlyRes.body.user.id, 'phone-only-1');
     assert.equal(phoneOnlyRes.body.user.role, 'APP_ADMIN');
     assert.equal(phoneOnlyRes.body.user.accountStatus, 'APPROVED');
 
-    // Case 7: Explicit linking with start_param claims challenge atomically and issues apiToken for linked MANAGER
+    // Case 7: Explicit linking with start_param claims challenge atomically and returns { ok: true, linked: true, user }
     const linkInitData = buildSignedTelegramInitData(TEST_BOT_TOKEN, {
       auth_date: String(nowSec),
       query_id: 'AAHdF6IQAAAAAN0XohDhrOrc',
@@ -507,93 +505,31 @@ test('TG-PARITY-01 (Edge Function): telegram-auth supports email & phone-only ap
     };
     const okRes = await invoke(linkInitData);
     assert.equal(okRes.status, 200);
+    assert.equal(okRes.body.ok, true);
     assert.equal(okRes.body.linked, true);
     assert.equal(mockDbState.rpcCalls[0]?.fnName, 'claim_telegram_account_link');
     assert.equal(okRes.body.session, undefined);
-    const mgrClaims = verifyHs256JwtForTest(okRes.body.apiToken, TEST_JWT_SECRET);
-    assert.equal(mgrClaims.sub, 'mgr-1');
-    assert.equal(mgrClaims.role, 'authenticated');
+    assert.equal('apiToken' in okRes.body, false);
     assert.equal(okRes.body.user.role, 'MANAGER');
     assert.deepEqual(okRes.body.user.manager_capabilities, ['OVERSIGHT:TEACHER_HOME', 'CLASSES_MANAGE']);
     assert.deepEqual(okRes.body.user.capabilities, ['MANAGER', 'OVERSIGHT:TEACHER_HOME', 'CLASSES_MANAGE']);
 
-    // Case 8: Client roundtrip attaches exact apiToken and verifies real @supabase/supabase-js transport for all 9 operations
+    // Case 8: Client roundtrip accepts v10 response cleanly
     const clientRes = await authModule.authenticateTelegramInitData('edge_roundtrip', {
       functions: {
         invoke: async () => ({ data: okRes.body, error: null }),
       },
     });
+    assert.equal(clientRes.linked, true);
     assert.equal(clientRes.user.accountStatus, 'APPROVED');
     assert.deepEqual(clientRes.user.capabilities, ['MANAGER', 'OVERSIGHT:TEACHER_HOME', 'CLASSES_MANAGE']);
-    assert.equal(supabaseModule.getTelegramApiAuthorization()?.token, okRes.body.apiToken);
-
-    const capturedRequests = [];
-    const transportUrl = 'https://ofppapwofhovhroyjtkc.supabase.co';
-    const transportAnonKey = 'sb_anon_public_key_example';
-    const spyFetch = async (input, init) => {
-      const reqUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      const headers = new Headers(init?.headers);
-      capturedRequests.push({
-        url: reqUrl,
-        authorization: headers.get('Authorization'),
-        apikey: headers.get('apikey'),
-      });
-      if (reqUrl.includes('/rest/v1/user_notifications')) {
-        return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-      if (reqUrl.includes('/rest/v1/user_preferences')) {
-        return new Response(JSON.stringify(null), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    };
-
-    const realSupa = createClient(transportUrl, transportAnonKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      global: { fetch: supabaseModule.createTelegramAuthorizedFetch(transportUrl, transportAnonKey, spyFetch) },
-    });
-
-    await realSupa.rpc('governance_get_actor_scope');
-    await realSupa.rpc('governance_list_pending_accounts', { p_limit: 25, p_offset: 0 });
-    await realSupa.rpc('governance_list_account_directory', { p_limit: 25, p_offset: 0 });
-    await realSupa.rpc('governance_get_account_detail', { p_target_user_id: 'u-2' });
-    await realSupa.from('user_notifications').select('id,category,title,body,target_tab,target_ref_id,is_read,created_at');
-    await realSupa.rpc('mark_user_notification_read', { p_notification_id: 'n-1' });
-    await realSupa.rpc('mark_all_user_notifications_read');
-    await realSupa.from('user_preferences').select('language,theme,notification_sound,sound_muted,vibration_enabled').maybeSingle();
-    await realSupa.rpc('upsert_my_preferences', { p_language: 'fr' });
-
-    assert.equal(capturedRequests.length, 9);
-    for (const req of capturedRequests) {
-      assert.equal(req.authorization, `Bearer ${okRes.body.apiToken}`, `Expected Telegram bearer JWT on ${req.url}`);
-      assert.notEqual(req.authorization, `Bearer ${transportAnonKey}`, `Must never fall back to anon on ${req.url}`);
-      assert.equal(req.apikey, transportAnonKey);
-    }
-
-    // Conflict protection in transport: Web session for another user ID fails closed 403 before network call
-    const conflictReqCountBefore = capturedRequests.length;
-    const conflictingWebJwt = makeTestHs256Jwt({ sub: 'different-web-user', role: 'authenticated', exp: nowSec + 600 });
-    const conflictRes = await supabaseModule.createTelegramAuthorizedFetch(transportUrl, transportAnonKey, spyFetch)(
-      `${transportUrl}/rest/v1/user_preferences`,
-      { headers: { Authorization: `Bearer ${conflictingWebJwt}`, apikey: transportAnonKey } },
-    );
-    assert.equal(conflictRes.status, 403);
-    assert.equal(capturedRequests.length, conflictReqCountBefore, 'Conflicting web vs Telegram identity must not hit network');
-
-    // Missing signing secret fails closed 503 BEFORE claim_telegram_account_link runs
-    mockDbState.rpcCalls = [];
-    delete mockEnv.APP_JWT_SECRET;
-    const unconfiguredRes = await invoke(linkInitData);
-    assert.equal(unconfiguredRes.status, 503);
-    assert.equal(unconfiguredRes.body.error, 'telegram_auth_signing_unconfigured');
-    assert.equal(mockDbState.rpcCalls.length, 0, 'Must not consume link challenge when signing secret is missing');
   } finally {
-    supabaseModule.clearTelegramApiAuthorization();
     globalThis.Deno = previousDeno;
     globalThis.__KRISTOU_TEST_TG_CREATE_CLIENT__ = previousCreateClient;
   }
 });
 
-test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates without setSession, survives INITIAL_SESSION/refreshCurrentUser, rejects Web conflict, and clears on SIGNED_OUT', async () => {
+test('TG-RECOVERY-01 (IdentityContext handoff & TG-13): Telegram startup authenticates without setSession, survives INITIAL_SESSION, surfaces server/network authError, and keeps unlinked 404 silent', async () => {
   const dom = installNodeDomShim();
   const classSet = new Set();
   dom.document.documentElement.classList = {
@@ -627,12 +563,6 @@ test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates wit
                 get(_, prop) { return globalThis.__REPAIR01_SUPA__?.[prop]; }
               });
               export const requireSupabaseClient = () => supabase;
-              export const clearTelegramApiAuthorization = () => { globalThis.__REPAIR01_TG_TOKEN__ = null; };
-              export const setTelegramApiAuthorization = (tok, uid) => {
-                globalThis.__REPAIR01_TG_TOKEN__ = { token: tok, userId: uid };
-                return globalThis.__REPAIR01_TG_TOKEN__;
-              };
-              export const getTelegramApiAuthorization = () => globalThis.__REPAIR01_TG_TOKEN__ || null;
               export const classifySupabaseError = (err) => ({ status: 'ERROR', errorCode: err?.code || 'error', errorMessage: err?.message || 'Error' });
             `,
           }));
@@ -658,14 +588,11 @@ test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates wit
 
   const { IdentityProvider, useIdentity } = require(outfile);
 
-  const expFuture = Math.floor(Date.now() / 1000) + 900;
-  const tgToken = makeTestHs256Jwt({ sub: 'tg-parent-approved', role: 'authenticated', exp: expFuture });
   let activeWebSession = null;
   let authListener = null;
-  let tokenSnapshotWhenAuthenticated = null;
   let signOutCount = 0;
+  let invokeBehavior = 'approved';
 
-  globalThis.__REPAIR01_TG_TOKEN__ = null;
   globalThis.__REPAIR01_TG_INIT__ = 'auth_date=1700000000&user=approved_parent';
   globalThis.__REPAIR01_SUPA__ = {
     auth: {
@@ -708,33 +635,53 @@ test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates wit
       return { select: () => chain };
     },
     functions: {
-      invoke: async () => ({
-        data: {
-          linked: false,
-          apiToken: tgToken,
-          expiresInSeconds: 900,
-          user: {
-            id: 'tg-parent-approved',
-            username: 'nadia.parent',
-            fullName: 'Nadia Ben Youssef',
-            email: null,
-            role: 'PARENT',
-            account_status: 'APPROVED',
-            capabilities: ['PARENT'],
-            telegramLinked: true,
+      invoke: async () => {
+        if (invokeBehavior === 'server_error') {
+          return {
+            data: null,
+            error: {
+              context: new Response(JSON.stringify({ error: 'telegram_unavailable' }), {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              }),
+            },
+          };
+        }
+        if (invokeBehavior === 'unlinked_404') {
+          return {
+            data: null,
+            error: {
+              context: new Response(JSON.stringify({ error: 'telegram_not_linked' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' },
+              }),
+            },
+          };
+        }
+        return {
+          data: {
+            ok: true,
+            linked: false,
+            user: {
+              id: 'tg-parent-approved',
+              username: 'nadia.parent',
+              fullName: 'Nadia Ben Youssef',
+              email: null,
+              role: 'PARENT',
+              account_status: 'APPROVED',
+              capabilities: ['PARENT'],
+              telegramLinked: true,
+            },
           },
-        },
-        error: null,
-      }),
+          error: null,
+        };
+      },
     },
   };
 
   let latestCtx = null;
   function Probe() {
     latestCtx = useIdentity();
-    if (latestCtx.currentUser && !tokenSnapshotWhenAuthenticated) {
-      tokenSnapshotWhenAuthenticated = globalThis.__REPAIR01_TG_TOKEN__?.token ?? null;
-    }
     return React.createElement('div', null, latestCtx.currentUser?.id ?? 'none');
   }
 
@@ -745,11 +692,11 @@ test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates wit
     await flushMicrotasks();
   });
 
-  assert.equal(tokenSnapshotWhenAuthenticated, tgToken, 'Telegram API bearer must be active BEFORE currentUser is committed');
   assert.equal(latestCtx.currentUser?.id, 'tg-parent-approved');
   assert.equal(latestCtx.currentUser?.accountStatus, 'APPROVED');
   assert.equal(latestCtx.isAuthenticated, true);
   assert.equal(latestCtx.currentRole, 'PARENT');
+  assert.equal(latestCtx.authError, null);
 
   // INITIAL_SESSION with null GoTrue session MUST NOT wipe Telegram-authenticated user
   await act(async () => {
@@ -775,11 +722,40 @@ test('TG-PARITY-01 (IdentityContext handoff): Telegram startup authenticates wit
   assert.equal(latestCtx.currentUser, null);
   assert.equal(latestCtx.isAuthenticated, false);
   assert.equal(latestCtx.authError, 'telegram_identity_conflict');
-  assert.equal(globalThis.__REPAIR01_TG_TOKEN__, null);
   assert.ok(signOutCount >= 1);
 
   await act(async () => {
     root.unmount();
+  });
+
+  // TG-13 Case A: Server/network error (not 404) surfaces error code via authError
+  invokeBehavior = 'server_error';
+  globalThis.__REPAIR01_TG_INIT__ = 'auth_date=1700000001&start_param=link123&user=err';
+  const rootErr = createRoot(container);
+  await act(async () => {
+    rootErr.render(React.createElement(IdentityProvider, { languageOverride: 'en' }, React.createElement(Probe)));
+    await flushMicrotasks();
+  });
+  assert.equal(latestCtx.currentUser, null);
+  assert.equal(latestCtx.authError, 'telegram_unavailable');
+  assert.equal(latestCtx.telegramLinkNotice, 'error');
+  await act(async () => {
+    rootErr.unmount();
+  });
+
+  // TG-13 Case B: Unlinked 404 (telegram_not_linked) without start_param stays silent anonymous state
+  invokeBehavior = 'unlinked_404';
+  globalThis.__REPAIR01_TG_INIT__ = 'auth_date=1700000002&user=anon_tg';
+  const rootAnon = createRoot(container);
+  await act(async () => {
+    rootAnon.render(React.createElement(IdentityProvider, { languageOverride: 'en' }, React.createElement(Probe)));
+    await flushMicrotasks();
+  });
+  assert.equal(latestCtx.currentUser, null);
+  assert.equal(latestCtx.authError, null);
+  assert.equal(latestCtx.telegramLinkNotice, null);
+  await act(async () => {
+    rootAnon.unmount();
   });
 });
 

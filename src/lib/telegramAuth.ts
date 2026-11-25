@@ -3,30 +3,12 @@ import { createTelegramLinkUrl } from './telegram.ts';
 import { AUTH_ROLE_MAP, resolveCanonicalAccountRole } from './authRoles.ts';
 import type { User } from '../types.ts';
 
-export type TelegramAuthResult = { user: User; linked: boolean; apiToken?: string | null };
+export type TelegramAuthResult = { user: User; linked: boolean };
 
 let lastTelegramAuthAttempt: { initData: string; result: Promise<TelegramAuthResult> } | null = null;
 
-function clearTelegramApiAuthState() {
-  const clearFn = (supabaseModule as { clearTelegramApiAuthorization?: () => void }).clearTelegramApiAuthorization;
-  clearFn?.();
-}
-
-function attachTelegramApiAuthState(token: string, userId: string): string {
-  const setFn = (
-    supabaseModule as {
-      setTelegramApiAuthorization?: (tok: string, uid: string) => { token: string };
-    }
-  ).setTelegramApiAuthorization;
-  if (typeof setFn !== 'function') {
-    throw new Error('telegram_api_authorization_unavailable');
-  }
-  return setFn(token, userId).token;
-}
-
 export function clearTelegramAuthCache() {
   lastTelegramAuthAttempt = null;
-  clearTelegramApiAuthState();
 }
 
 async function readFunctionsErrorCode(error: any): Promise<string | null> {
@@ -63,7 +45,6 @@ export function authenticateTelegramInitData(
       getSession?: () => Promise<{ data?: { session?: { user?: { id?: string } } | null }; error?: any }>;
       signOut?: () => Promise<any>;
     };
-    requireApiToken?: boolean;
   },
 ): Promise<TelegramAuthResult> {
   if (!clientOverride && lastTelegramAuthAttempt?.initData === initData) {
@@ -73,9 +54,16 @@ export function authenticateTelegramInitData(
     const client = clientOverride ?? supabaseModule.requireSupabaseClient();
     const { data, error } = await client.functions.invoke('telegram-auth', { body: { initData } });
     if (error || !data?.user) {
-      clearTelegramApiAuthState();
       const errorCode = error ? await readFunctionsErrorCode(error) : null;
-      throw new Error(errorCode || data?.error || 'Telegram account is not linked');
+      const status = typeof error?.context?.status === 'number' ? error.context.status : null;
+      const dataError = typeof data?.error === 'string' && data.error.trim() ? data.error.trim() : null;
+      const rawErrorMessage =
+        typeof error?.message === 'string' && error.message.trim() ? error.message.trim() : null;
+      const resolvedError =
+        errorCode ||
+        dataError ||
+        (status === 404 || !error ? 'telegram_not_linked' : rawErrorMessage || 'telegram_auth_failed');
+      throw new Error(resolvedError);
     }
 
     const rawUser = data.user as {
@@ -99,7 +87,6 @@ export function authenticateTelegramInitData(
         ? rawUser.account_status.trim()
         : '';
     if (rawTgStatus !== 'APPROVED') {
-      clearTelegramApiAuthState();
       throw new Error('account_not_approved');
     }
     const rawCapabilities = Array.isArray(rawUser.capabilities)
@@ -111,7 +98,6 @@ export function authenticateTelegramInitData(
     ];
     const resolvedRole = resolveCanonicalAccountRole(candidateRoles);
     if (!resolvedRole) {
-      clearTelegramApiAuthState();
       throw new Error('account_not_approved');
     }
     const rawManagerCaps = Array.isArray(rawUser.manager_capabilities)
@@ -135,30 +121,12 @@ export function authenticateTelegramInitData(
       const sessionResult = await (client as any).auth.getSession().catch(() => null);
       const webUserId = sessionResult?.data?.session?.user?.id;
       if (typeof webUserId === 'string' && webUserId && webUserId !== rawUser.id) {
-        clearTelegramApiAuthState();
         throw new Error('telegram_identity_conflict');
       }
     }
 
-    const hasApiTokenField = Object.prototype.hasOwnProperty.call(data, 'apiToken');
-    const requireApiToken = !clientOverride || hasApiTokenField || Boolean(clientOverride.requireApiToken);
-    let attachedToken: string | null = null;
-
-    if (typeof data.apiToken === 'string' && data.apiToken.trim().length > 0) {
-      try {
-        attachedToken = attachTelegramApiAuthState(data.apiToken, rawUser.id);
-      } catch {
-        clearTelegramApiAuthState();
-        throw new Error('telegram_api_authorization_unavailable');
-      }
-    } else if (requireApiToken) {
-      clearTelegramApiAuthState();
-      throw new Error('telegram_api_authorization_unavailable');
-    }
-
     return {
       linked: data.linked === true,
-      apiToken: attachedToken,
       user: {
         id: rawUser.id,
         username: rawUser.username,
@@ -173,7 +141,14 @@ export function authenticateTelegramInitData(
     };
   })();
   if (!clientOverride) {
-    lastTelegramAuthAttempt = { initData, result };
+    const trackedResult = result.catch((error) => {
+      if (lastTelegramAuthAttempt?.result === trackedResult) {
+        lastTelegramAuthAttempt = null;
+      }
+      throw error;
+    });
+    lastTelegramAuthAttempt = { initData, result: trackedResult };
+    return trackedResult;
   }
   return result;
 }

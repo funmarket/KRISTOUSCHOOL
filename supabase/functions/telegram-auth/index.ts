@@ -19,8 +19,6 @@ const CANONICAL_ROLES = new Set([
   'STUDENT',
 ]);
 
-const DEFAULT_API_TOKEN_TTL_SECONDS = 900;
-
 function getEnv(key: string): string | undefined {
   if (typeof Deno !== 'undefined' && Deno?.env && typeof Deno.env.get === 'function') {
     return Deno.env.get(key);
@@ -38,70 +36,6 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   status,
   headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
 });
-
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-async function signTelegramApiJwt(params: {
-  userId: string;
-  supabaseUrl: string;
-  ttlSeconds: number;
-  hs256Secret?: string;
-  es256JwkJson?: string;
-}): Promise<string> {
-  const encoder = new TextEncoder();
-  const nowSec = Math.floor(Date.now() / 1000);
-  const issuer = `${params.supabaseUrl.replace(/\/+$/, '')}/auth/v1`;
-  const payload = {
-    aud: 'authenticated',
-    exp: nowSec + params.ttlSeconds,
-    iat: nowSec,
-    iss: issuer,
-    sub: params.userId,
-    role: 'authenticated',
-    amr: [{ method: 'telegram', timestamp: nowSec }],
-  };
-
-  if (params.es256JwkJson) {
-    const jwk = JSON.parse(params.es256JwkJson) as JsonWebKey & { kid?: string };
-    const header: Record<string, string> = { alg: 'ES256', typ: 'JWT' };
-    if (typeof jwk.kid === 'string' && jwk.kid.trim()) {
-      header.kid = jwk.kid.trim();
-    }
-    const key = await crypto.subtle.importKey(
-      'jwk',
-      jwk,
-      { name: 'ECDSA', namedCurve: 'P-256' },
-      false,
-      ['sign'],
-    );
-    const signingInput = `${toBase64Url(encoder.encode(JSON.stringify(header)))}.${toBase64Url(encoder.encode(JSON.stringify(payload)))}`;
-    const signature = await crypto.subtle.sign(
-      { name: 'ECDSA', hash: 'SHA-256' },
-      key,
-      encoder.encode(signingInput),
-    );
-    return `${signingInput}.${toBase64Url(new Uint8Array(signature))}`;
-  }
-
-  const secret = params.hs256Secret ?? '';
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signingInput = `${toBase64Url(encoder.encode(JSON.stringify(header)))}.${toBase64Url(encoder.encode(JSON.stringify(payload)))}`;
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signingInput));
-  return `${signingInput}.${toBase64Url(new Uint8Array(signature))}`;
-}
 
 export async function handleTelegramAuth(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
@@ -124,19 +58,6 @@ export async function handleTelegramAuth(request: Request): Promise<Response> {
     const url = getEnv('SUPABASE_URL');
     const serviceKey = getEnv('SERVICE_ROLE_KEY') ?? getEnv('SUPABASE_SERVICE_ROLE_KEY');
     if (!botToken || !url || !serviceKey) return json({ error: 'telegram_unavailable' }, 503);
-
-    const es256JwkJson = getEnv('APP_JWT_PRIVATE_JWK')?.trim() || '';
-    const hs256Secret =
-      (
-        getEnv('APP_JWT_SECRET') ??
-        getEnv('POSTGREST_JWT_SECRET') ??
-        getEnv('JWT_SECRET') ??
-        getEnv('SUPABASE_JWT_SECRET') ??
-        ''
-      ).trim();
-    if (!es256JwkJson && !hs256Secret) {
-      return json({ error: 'telegram_auth_signing_unconfigured' }, 503);
-    }
 
     const validated = await validateInitData(body.initData, botToken);
     if (!validated) return json({ error: 'invalid_telegram_auth' }, 401);
@@ -222,29 +143,10 @@ export async function handleTelegramAuth(request: Request): Promise<Response> {
       }
     }
 
-    const rawTtl = Number(getEnv('TELEGRAM_API_TOKEN_TTL_SECONDS') ?? DEFAULT_API_TOKEN_TTL_SECONDS);
-    const expiresInSeconds = Number.isFinite(rawTtl)
-      ? Math.min(Math.max(Math.trunc(rawTtl), 300), 1800)
-      : DEFAULT_API_TOKEN_TTL_SECONDS;
-
-    let apiToken: string;
-    try {
-      apiToken = await signTelegramApiJwt({
-        userId: identity.user_id,
-        supabaseUrl: url,
-        ttlSeconds: expiresInSeconds,
-        hs256Secret,
-        es256JwkJson: es256JwkJson || undefined,
-      });
-    } catch {
-      return json({ error: 'telegram_auth_signing_unconfigured' }, 503);
-    }
-
     const capabilities = [...new Set([...roleCapabilities, ...managerCapabilities])];
     return json({
+      ok: true,
       linked,
-      apiToken,
-      expiresInSeconds,
       user: {
         id: profile.id,
         username: profile.username,

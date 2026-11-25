@@ -205,11 +205,18 @@ export const IdentityProvider: React.FC<{
       .catch((error) => {
         if (!active || !mountedRef.current) return;
         telegramIdentityUser.current = null;
-        if (error instanceof Error && error.message === 'telegram_identity_conflict') {
+        const errorCode =
+          error instanceof Error && error.message.trim() ? error.message.trim() : 'telegram_auth_failed';
+        if (errorCode === 'telegram_identity_conflict') {
           rejectIdentityConflict(isLinkAttempt);
           return;
         }
-        if (error instanceof Error && error.message === 'account_not_approved') void signOutAccount();
+        if (errorCode === 'account_not_approved') void signOutAccount();
+        if (errorCode !== 'telegram_not_linked') {
+          setAuthError(errorCode);
+        } else {
+          setAuthError(null);
+        }
         syncAccountIdentity(null);
         if (isLinkAttempt) setTelegramLinkNotice('error');
       })
