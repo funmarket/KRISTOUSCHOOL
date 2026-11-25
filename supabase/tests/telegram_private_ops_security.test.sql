@@ -19,10 +19,10 @@ insert into public.role_assignments (user_id, role, active) values
   ('00000000-0000-4000-8000-000000000201', 'PARENT', true),
   ('00000000-0000-4000-8000-000000000202', 'PARENT', true);
 
-insert into public.user_notifications (recipient_user_id, category, title, body)
+insert into public.user_notifications (id, recipient_user_id, category, title, body)
 values
-  ('00000000-0000-4000-8000-000000000201', 'system', 'Own notification', 'Owner row'),
-  ('00000000-0000-4000-8000-000000000202', 'system', 'Other notification', 'Other row');
+  ('00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000201', 'system', 'Own notification', 'Owner row'),
+  ('00000000-0000-4000-8000-000000000302', '00000000-0000-4000-8000-000000000202', 'system', 'Other notification', 'Other row');
 
 insert into public.user_preferences (user_id, language, theme)
 values
@@ -41,9 +41,8 @@ select extensions.is(current_user, 'authenticated', 'database work runs as authe
 select extensions.is((select count(*)::integer from public.user_notifications), 1, 'notification RLS reveals only the linked account rows');
 select extensions.is((select count(*)::integer from public.user_preferences), 1, 'preference RLS reveals only the linked account row');
 select extensions.is((select language from public.user_preferences where user_id = auth.uid()), 'fr', 'own preferences remain readable');
-select extensions.is(public.mark_user_notification_read((select id from public.user_notifications where title = 'Own notification')), true, 'existing mark-own RPC succeeds');
-select extensions.is(public.mark_user_notification_read((select id from public.user_notifications where title = 'Other notification')), false, 'existing mark RPC cannot change another account notification');
-select extensions.is((select is_read from public.user_notifications where title = 'Other notification'), false, 'other account notification remains unchanged');
+select extensions.is(public.mark_user_notification_read('00000000-0000-4000-8000-000000000301'::uuid), true, 'existing mark-own RPC succeeds');
+select extensions.is(public.mark_user_notification_read('00000000-0000-4000-8000-000000000302'::uuid), false, 'existing mark RPC cannot change another account notification');
 select extensions.is((public.upsert_my_preferences('ar', null, null, null, null)).language, 'ar', 'existing preference RPC writes for authenticated Telegram actor');
 select extensions.throws_ok(
   $$select public.governance_list_pending_accounts()$$,
@@ -51,9 +50,13 @@ select extensions.throws_ok(
   'ordinary PARENT role cannot access governance operations'
 );
 
+reset role;
+select extensions.is((select is_read from public.user_notifications where id = '00000000-0000-4000-8000-000000000302'::uuid), false, 'other account notification remains unchanged');
+
 -- Pending account status is checked from live canonical rows in the authenticated context.
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000203', true);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000203","role":"authenticated","aud":"authenticated"}', true);
+set local role authenticated;
 select extensions.is((select count(*)::integer from public.user_notifications), 0, 'unapproved account sees no notification rows');
 
 select * from extensions.finish();
