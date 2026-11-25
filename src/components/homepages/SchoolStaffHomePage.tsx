@@ -6,6 +6,7 @@ import { HomeCardGrid } from './shared/HomeCardGrid';
 import { HomeSection } from './shared/HomeSection';
 import { EmptyFeatureState } from './shared/EmptyFeatureState';
 import { HOMEPAGE_BADGE_LABELS, HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
+import { canAccessAppTab } from './homepageAccess';
 import { countUnreadThreads } from '../../lib/schoolContent';
 
 export interface SchoolStaffHomePageProps {
@@ -24,9 +25,7 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
     description: string;
   } | null>(null);
 
-  const capabilities = Array.isArray(currentUser?.capabilities) ? currentUser.capabilities : [];
-  const hasPickupCapability =
-    capabilities.includes('PICKUP_RELEASE') || capabilities.includes('PICKUP_DESK');
+  const canViewPickupDesk = canAccessAppTab(currentUser, 'pickup');
 
   const openDirectorySubTab = (subTab: string) => {
     if (onNavigateToSubTab) {
@@ -180,11 +179,11 @@ export const SchoolStaffHomePage: React.FC<SchoolStaffHomePageProps> = ({
         )}
       >
         <HomeCardGrid ariaLabel="School staff capability modules">
-          {hasPickupCapability && (
+          {canViewPickupDesk && (
             <HomeShortcutCard
               id="staff-pickup-desk"
               title={pickText(
-                { ar: 'مكتب الاستلام المدرسي', fr: 'Poste de sortie (Pickup)', en: 'Pickup Desk' },
+                { ar: 'متابعة الاستلام المدرسي', fr: 'Suivi des sorties (Pickup)', en: 'Pickup Desk' },
                 language,
               )}
               actionLabel={openActionLabel}

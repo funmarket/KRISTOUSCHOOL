@@ -18,6 +18,7 @@ import {
   type AppContextType,
 } from './appContextTypes';
 import { useParentNotesState } from './useParentNotesState';
+import { usePickupState } from './usePickupState';
 import { useSchoolDataHydration } from './useSchoolDataHydration';
 import { useCommunityAndNotesActions } from './useCommunityAndNotesActions';
 
@@ -59,6 +60,13 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }, []);
 
   const parentNotesState = useParentNotesState({
+    currentUser,
+    identityContext,
+    getCurrentIdentity,
+    mountedRef,
+  });
+
+  const pickupState = usePickupState({
     currentUser,
     identityContext,
     getCurrentIdentity,
@@ -138,6 +146,7 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const logout = () => {
     identityLogout();
     hydration.clearPrivateState();
+    pickupState.clearPickupState();
   };
 
   return (
@@ -182,7 +191,15 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
         messages: hydration.messages,
         messagesStatus: hydration.messagesStatus,
         messagesError: hydration.messagesError,
-        pickupRecords: hydration.pickupRecords,
+        pickupCycles: pickupState.pickupCycles,
+        pickupRecords: pickupState.pickupRecords,
+        pickupStatus: pickupState.pickupStatus,
+        pickupAvailability: pickupState.pickupAvailability,
+        pickupError: pickupState.pickupError,
+        pickupErrorCode: pickupState.pickupErrorCode,
+        pickupLastSyncedAt: pickupState.pickupLastSyncedAt,
+        pickupMutationState: pickupState.pickupMutationState,
+        isLoadingPickup: pickupState.isLoadingPickup,
         foodMenu: localizedFoodMenu,
         foodMenuStatus: hydration.foodMenuStatus,
         foodMenuError: hydration.foodMenuError,
@@ -211,8 +228,9 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
         addClassQuestion: actions.addClassQuestion,
         replyClassQuestion: actions.replyClassQuestion,
         moderateClassQuestion: actions.moderateClassQuestion,
-        markPickupArrived: actions.markPickupArrived,
-        confirmPickupRelease: actions.confirmPickupRelease,
+        refreshPickupBoard: pickupState.refreshPickupBoard,
+        markPickupArrived: pickupState.markPickupArrived,
+        confirmPickupRelease: pickupState.confirmPickupRelease,
         markNotificationRead, markAllNotificationsRead,
         notificationSound, setNotificationSound, soundMuted, setSoundMuted,
         vibrationEnabled, setVibrationEnabled,

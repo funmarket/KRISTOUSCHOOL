@@ -129,22 +129,19 @@ export function canAccessAppTab(user: User | null | undefined, tab: AppTab): boo
     case 'pickup': {
       if (
         user.role === 'APP_ADMIN' ||
+        user.role === 'MANAGER' ||
         user.role === 'PARENT' ||
         user.role === 'TEACHER' ||
         user.role === 'ADMINISTRATIVE_PERSONNEL'
       ) {
         return true;
       }
-      if (user.role === 'MANAGER') {
-        return (
-          caps.length === 0 ||
-          caps.includes('PICKUP_RELEASE') ||
-          caps.includes('PICKUP_VIEW') ||
-          caps.includes('FULL_ACCESS')
-        );
-      }
       if (user.role === 'SCHOOL_STAFF') {
-        return caps.includes('PICKUP_RELEASE') || caps.includes('PICKUP_DESK');
+        return (
+          caps.includes('PICKUP_VIEW') ||
+          caps.includes('PICKUP_DESK') ||
+          caps.includes('PICKUP_RELEASE')
+        );
       }
       return false;
     }
@@ -184,21 +181,4 @@ export function resolveStudentAssignedClass<T extends { id: string }>(
   return allClasses.find((cls) => user.assignedClassIds?.includes(cls.id)) ?? null;
 }
 
-export function attemptPickupOperation(
-  operation: 'ARRIVAL' | 'RELEASE',
-  targetId: string,
-): {
-  allowed: false;
-  status: 'BLOCKED_BACKEND';
-  operation: 'ARRIVAL' | 'RELEASE';
-  targetId: string;
-  reason: string;
-} {
-  return {
-    allowed: false,
-    status: 'BLOCKED_BACKEND',
-    operation,
-    targetId,
-    reason: 'pickup_backend_unavailable',
-  };
-}
+export { attemptPickupOperation } from '../../../lib/domains/pickup.ts';

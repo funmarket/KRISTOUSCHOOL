@@ -190,14 +190,16 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           onClick={() => setShowControlCenter((prev) => !prev)}
         />
 
-        <HomeShortcutCard
-          id="manager-pickup"
-          title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' }, language)}
-          actionLabel={openActionLabel}
-          icon="🚸"
-          tone="green"
-          onClick={() => setActiveTab('pickup')}
-        />
+        {canAccessAppTab(currentUser, 'pickup') && (
+          <HomeShortcutCard
+            id="manager-pickup"
+            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' }, language)}
+            actionLabel={openActionLabel}
+            icon="🚸"
+            tone="green"
+            onClick={() => setActiveTab('pickup')}
+          />
+        )}
 
         <HomeShortcutCard
           id="manager-registration"

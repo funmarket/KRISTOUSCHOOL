@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import type React from 'react';
 import type {
   BackendOpResult,
@@ -213,25 +212,11 @@ export function useCommunityAndNotesActions({
     return res;
   };
 
-  const markPickupArrived = (_childId: string) => ({
-    success: false,
-    error: 'pickup_backend_unavailable',
-  });
-  const confirmPickupRelease = (_recordId: string) => ({
-    success: false,
-    error: 'pickup_backend_unavailable',
-  });
-
-  // Unused ref guard placeholder if needed; keeps signature stable
-  void useRef;
-
   return {
     addParentNote,
     replyParentNote,
     addClassQuestion,
     replyClassQuestion,
     moderateClassQuestion,
-    markPickupArrived,
-    confirmPickupRelease,
   };
 }

@@ -19,6 +19,11 @@ import type {
   NotificationSoundOption,
   OperationalCounts,
   ParentNote,
+  PickupAvailabilityStatus,
+  PickupCycleRecord,
+  PickupMutationEntry,
+  PickupReadResult,
+  PickupReasonCode,
   PickupRecord,
   PublicContentEntry,
   PublicInquiryItem,
@@ -32,6 +37,8 @@ import type { SignInErrorCode, SignUpErrorCode } from '../i18n/authMessages';
 import type { SignupRole } from '../lib/auth';
 import type { SchoolClassWithRoster } from '../lib/schoolOperations';
 import type { PreferencesSyncStatus } from '../lib/appStateGuards';
+import type { AnnounceArrivalInput, ConfirmReleaseInput } from '../lib/domains/pickup';
+import type { PickupMutationResponse } from './usePickupState';
 import type { SignupInput, SignupOutcome } from './IdentityContext';
 import { MOCK_ANNOUNCEMENTS, MOCK_FOOD_MENU } from '../data/mockData';
 import { contentT } from '../i18n/content';
@@ -94,7 +101,15 @@ export interface AppContextType {
   messages: MessageThread[];
   messagesStatus: BackendOpStatus;
   messagesError: string | null;
+  pickupCycles: PickupCycleRecord[];
   pickupRecords: PickupRecord[];
+  pickupStatus: BackendOpStatus;
+  pickupAvailability: PickupAvailabilityStatus;
+  pickupError: string | null;
+  pickupErrorCode: PickupReasonCode | null;
+  pickupLastSyncedAt: string | null;
+  pickupMutationState: Record<string, PickupMutationEntry>;
+  isLoadingPickup: boolean;
   foodMenu: FoodMenuWeek;
   foodMenuStatus: BackendOpStatus;
   foodMenuError: string | null;
@@ -159,8 +174,14 @@ export interface AppContextType {
   ) => Promise<{ success: boolean; error?: string; errorCode?: string; status?: BackendOpStatus }>;
   replyClassQuestion: (questionId: string, content: string) => Promise<BackendOpResult<unknown>>;
   moderateClassQuestion: (questionId: string, hidden: boolean) => Promise<BackendOpResult<unknown>>;
-  markPickupArrived: (childId: string) => { success: boolean; error?: string };
-  confirmPickupRelease: (recordId: string) => { success: boolean; error?: string };
+  refreshPickupBoard: () => Promise<PickupReadResult>;
+  markPickupArrived: (
+    inputOrChildId: AnnounceArrivalInput | string,
+    collectorId?: string,
+  ) => Promise<PickupMutationResponse>;
+  confirmPickupRelease: (
+    inputOrRecordId: ConfirmReleaseInput | string,
+  ) => Promise<PickupMutationResponse>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   notificationSound: NotificationSoundOption;

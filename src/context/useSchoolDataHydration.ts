@@ -7,7 +7,6 @@ import type {
   EnrollmentApplication,
   MessageThread,
   OperationalCounts,
-  PickupRecord,
   PublicContentEntry,
   PublicInquiryItem,
   User,
@@ -104,7 +103,6 @@ export function useSchoolDataHydration({
   const [messages, setMessages] = useState<MessageThread[]>([]);
   const [messagesStatus, setMessagesStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
   const [messagesError, setMessagesError] = useState<string | null>(null);
-  const [pickupRecords] = useState<PickupRecord[]>([]);
 
   const [enrollmentApplications, setEnrollmentApplications] = useState<EnrollmentApplication[]>([]);
   const [enrollmentsStatus, setEnrollmentsStatus] = useState<BackendOpStatus>('BLOCKED_BACKEND');
@@ -335,7 +333,7 @@ export function useSchoolDataHydration({
     selectedClassId, setSelectedClassId, selectedChildId, setSelectedChildId,
     operationalCounts, operationalCountsLoaded, isHydratingSchoolData,
     schoolContextError, messages, messagesStatus, messagesError,
-    pickupRecords, enrollmentApplications, enrollmentsStatus, enrollmentsError,
+    enrollmentApplications, enrollmentsStatus, enrollmentsError,
     publicInquiries, inquiriesStatus, clearPrivateState, refreshSchoolData,
   };
 }

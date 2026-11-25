@@ -129,20 +129,15 @@ export interface OperationalCounts {
   openInquiries?: number;
 }
 
-export type PickupState = 'WAITING' | 'PARENT_ARRIVED' | 'RELEASED';
-
-export interface PickupRecord {
-  id: string;
-  childId: string;
-  childName: string;
-  classId: string;
-  className: string;
-  state: PickupState;
-  parentArrivedAt?: string;
-  releasedAt?: string;
-  releasedBy?: string;
-  authorizedPerson: string;
-}
+export type {
+  PickupDurableState, PickupPresentationState, PickupWindowStatus,
+  PickupAttendanceEligibility, PickupRevocationStatus, PickupOutboxStatus,
+  PickupAvailabilityStatus, PickupBackendStatus, PickupReasonCode,
+  PickupAuthorizedCollectorSummary, PickupCycleRecord, PickupReadResult,
+  AnnounceArrivalInput, ConfirmReleaseInput, PickupCommandOutcome,
+  PickupMutationEntry, PickupRecord,
+} from './lib/domains/pickup';
+export type { PickupDurableState as PickupState } from './lib/domains/pickup';
 
 export type {
   TeacherSubjectComponentSummary,

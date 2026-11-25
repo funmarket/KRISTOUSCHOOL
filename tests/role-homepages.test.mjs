@@ -515,8 +515,8 @@ test('ADMIN-PICKUP-01 — ADMINISTRATIVE_PERSONNEL receives pickup tab access an
     false,
   );
 
-  // 3. SCHOOL_STAFF with pickup capabilities and MANAGER rules remain unchanged
-  for (const cap of ['PICKUP_RELEASE', 'PICKUP_DESK']) {
+  // 3. SCHOOL_STAFF with delegated pickup capabilities and MANAGER default access (Addendum Sec 01)
+  for (const cap of ['PICKUP_RELEASE', 'PICKUP_DESK', 'PICKUP_VIEW']) {
     assert.equal(
       canAccessAppTab(
         { id: `st-${cap}`, username: 'st', fullName: 'Staff', role: 'SCHOOL_STAFF', accountStatus: 'APPROVED', capabilities: [cap] },
@@ -525,7 +525,7 @@ test('ADMIN-PICKUP-01 — ADMINISTRATIVE_PERSONNEL receives pickup tab access an
       true,
     );
   }
-  for (const caps of [[], ['PICKUP_RELEASE'], ['PICKUP_VIEW'], ['FULL_ACCESS']]) {
+  for (const caps of [[], ['MANAGER'], ['BROADCAST_MANAGE'], ['PICKUP_RELEASE'], ['PICKUP_VIEW'], ['FULL_ACCESS']]) {
     assert.equal(
       canAccessAppTab(
         { id: 'mgr-ok', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: caps },
@@ -536,7 +536,7 @@ test('ADMIN-PICKUP-01 — ADMINISTRATIVE_PERSONNEL receives pickup tab access an
   }
   assert.equal(
     canAccessAppTab(
-      { id: 'mgr-no', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'APPROVED', capabilities: ['MANAGER'] },
+      { id: 'mgr-pending', username: 'mgr', fullName: 'Manager', role: 'MANAGER', accountStatus: 'PENDING', capabilities: ['FULL_ACCESS'] },
       'pickup',
     ),
     false,
