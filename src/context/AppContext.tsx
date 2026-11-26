@@ -114,6 +114,7 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
     onPublicContentHydrationError,
     hydrateParentNotesForUser: parentNotesState.hydrateParentNotesForUser,
     clearParentNotesState: parentNotesState.clearParentNotesState,
+    refreshPickupBoardForUser: pickupState.refreshPickupBoardForUser,
     mountedRef,
   });
 
@@ -229,6 +230,7 @@ const AppCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
         replyClassQuestion: actions.replyClassQuestion,
         moderateClassQuestion: actions.moderateClassQuestion,
         refreshPickupBoard: pickupState.refreshPickupBoard,
+        verifyPickupOperationReceipt: pickupState.verifyPickupOperationReceipt,
         markPickupArrived: pickupState.markPickupArrived,
         confirmPickupRelease: pickupState.confirmPickupRelease,
         markNotificationRead, markAllNotificationsRead,

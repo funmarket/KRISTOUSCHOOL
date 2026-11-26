@@ -174,7 +174,8 @@ export interface AppContextType {
   ) => Promise<{ success: boolean; error?: string; errorCode?: string; status?: BackendOpStatus }>;
   replyClassQuestion: (questionId: string, content: string) => Promise<BackendOpResult<unknown>>;
   moderateClassQuestion: (questionId: string, hidden: boolean) => Promise<BackendOpResult<unknown>>;
-  refreshPickupBoard: () => Promise<PickupReadResult>;
+  refreshPickupBoard: (classId?: string | null) => Promise<PickupReadResult>;
+  verifyPickupOperationReceipt: (cycleId: string) => Promise<PickupMutationResponse>;
   markPickupArrived: (
     inputOrChildId: AnnounceArrivalInput | string,
     collectorId?: string,

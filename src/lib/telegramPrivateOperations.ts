@@ -10,14 +10,17 @@ export type TelegramPrivateOperation =
   | 'notifications.markOne'
   | 'notifications.markAll'
   | 'preferences.load'
-  | 'preferences.save';
+  | 'preferences.save'
+  | 'pickup.board'
+  | 'pickup.arrive'
+  | 'pickup.receipt';
 
 export interface TelegramPrivateOperationResult<T = unknown> {
   handled: boolean;
   data?: T;
 }
 
-const GOVERNANCE_ERROR_CODES = new Set([
+const PRESERVED_REMOTE_ERROR_CODES = new Set([
   'actor_unauthenticated',
   'actor_not_approved',
   'insufficient_governance_authority',
@@ -25,6 +28,31 @@ const GOVERNANCE_ERROR_CODES = new Set([
   'owner_only_operation',
   'target_not_found',
   'backend_unavailable',
+  'invalid_request',
+  'version_conflict',
+  'idempotency_conflict',
+  'pickup_parent_required',
+  'pickup_parent_child_link_required',
+  'collector_or_parent_not_authorized',
+  'insufficient_pickup_scope',
+  'pickup_receipt_unavailable',
+  'pickup_cycle_not_found',
+  'invalid_pickup_request',
+  'pickup_crypto_unavailable',
+  'schedule_unavailable',
+  'outside_dismissal_window',
+  'attendance_absent',
+  'attendance_excused',
+  'attendance_mark_missing',
+  'attendance_mark_unknown',
+  'attendance_entry_missing_or_conflicting',
+  'register_missing',
+  'register_not_submitted',
+  'conflicting_registers',
+  'conflicting_effective_memberships',
+  'responsible_teacher_unavailable',
+  'attendance_unavailable',
+  'eligibility_unavailable',
 ]);
 
 async function getRemoteError(error: any): Promise<Error> {
@@ -49,7 +77,7 @@ async function getRemoteError(error: any): Promise<Error> {
     ? 'actor_unauthenticated'
     : rawCode === 'account_not_approved'
       ? 'actor_not_approved'
-      : GOVERNANCE_ERROR_CODES.has(rawCode)
+      : PRESERVED_REMOTE_ERROR_CODES.has(rawCode)
         ? rawCode
         : context?.status === 503
           ? 'backend_unavailable'
@@ -57,6 +85,7 @@ async function getRemoteError(error: any): Promise<Error> {
   return Object.assign(new Error(code), {
     code,
     status: typeof context?.status === 'number' ? context.status : undefined,
+    isTransportError: !context || typeof context.status !== 'number',
   });
 }
 
