@@ -32,6 +32,14 @@ jobs:
         run: bun run db:start
       - name: Rebuild isolated database from migrations
         run: bun run db:reset
+      - name: Generate TypeScript types from isolated schema
+        run: npx --yes supabase@3.1.0 gen types typescript --local > /tmp/pickup-g3-database.types.ts
+      - name: Upload isolated schema types for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: pickup-g3-database-types
+          path: /tmp/pickup-g3-database.types.ts
+          if-no-files-found: error
       - name: Run PostgreSQL authorization tests
         run: bun run db:test
       - name: Stop isolated local Supabase
