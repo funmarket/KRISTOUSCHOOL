@@ -498,15 +498,15 @@ test('Regression: Defects B, C, F contracts, targeted level broadcasts, and SQL 
 
   // Static SQL migration regression assertions (Defects A-F)
   const mig11 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114110000_people_family_academics_enrollment.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115005910_people_family_academics_enrollment.sql', import.meta.url),
     'utf8',
   );
   const mig12 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114120000_broadcasts_calendar_class_community.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115010521_broadcasts_calendar_class_community.sql', import.meta.url),
     'utf8',
   );
   const mig13 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114130000_parent_notes_and_messaging.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115011519_parent_notes_and_messaging.sql', import.meta.url),
     'utf8',
   );
 
@@ -547,11 +547,11 @@ test('Regression: Defects B, C, F contracts, targeted level broadcasts, and SQL 
 
   // Finding G & H static SQL source guards only (do NOT establish live PostgreSQL execution)
   const mig10 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114100000_gov02_manager_delegation_and_preferences.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115005628_gov02_manager_delegation_and_preferences.sql', import.meta.url),
     'utf8',
   );
   const mig14 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114140000_directory_food_menu_public_content.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115011625_directory_food_menu_public_content.sql', import.meta.url),
     'utf8',
   );
   assert.match(mig10, /account_governance_audit_logs_action_check/);
