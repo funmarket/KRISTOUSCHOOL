@@ -186,7 +186,7 @@ set local role authenticated;
 select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','true','reinstated Manager regains default release authority');
 reset role;
 
-select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009904');
+select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009902');
 set local role authenticated;
 select extensions.is((select eligibility from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')),'UNAVAILABLE','null mark fails closed');
 reset role;
