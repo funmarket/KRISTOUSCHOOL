@@ -1992,8 +1992,21 @@ isOneToOne: false
 "get_pickup_actor_authority":
 { Args: { "p_collector_id"?: string,"p_school_date"?: string,"p_student_id": string }; Returns: Json
                            },
+"get_pickup_operation_receipt":
+{ Args: { "p_cycle_id"?: string,"p_request_id": string }; Returns: Json
+                           },
+"get_pickup_parent_board":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
+            }[]
+                           },
 "get_pickup_schedule":
 { Args: { "p_school_date": string,"p_student_id": string }; Returns: Json
+                           },
+"get_pickup_staff_board":
+{ Args: { "p_class_id"?: string }; Returns: {
+              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
+            }[]
                            },
 "get_pickup_student_eligibility":
 { Args: { "p_school_date": string,"p_student_id": string }; Returns: {
@@ -2141,6 +2154,9 @@ isOneToOne: false
                            },
 "normalize_username_key":
 { Args: { "input": string }; Returns: string
+                           },
+"parent_arrived":
+{ Args: { "p_collector_id": string,"p_cycle_id": string,"p_expected_version": number,"p_request_id": string }; Returns: Json
                            },
 "pickup_actor_can_confirm_release":
 { Args: Record<PropertyKey, never>; Returns: boolean

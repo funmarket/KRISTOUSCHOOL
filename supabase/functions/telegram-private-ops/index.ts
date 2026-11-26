@@ -54,7 +54,10 @@ type GatewayOperation =
   | 'notifications.markOne'
   | 'notifications.markAll'
   | 'preferences.load'
-  | 'preferences.save';
+  | 'preferences.save'
+  | 'pickup.board'
+  | 'pickup.arrive'
+  | 'pickup.receipt';
 
 type RequestBody = {
   initData?: unknown;
@@ -363,6 +366,42 @@ async function executeOperation(
         )
       `);
     }
+    case 'pickup.board': {
+      const requestedClassId = params.classId === undefined || params.classId === null
+        ? null
+        : requireUuid(params.classId);
+      const roleRows = await transaction`
+        select role::text as role
+          from public.role_assignments
+         where user_id = auth.uid() and active = true
+      `;
+      const isParent = roleRows.some((row) => row.role === 'PARENT');
+      if (isParent && requestedClassId) throw new GatewayError('invalid_request', 400);
+      return isParent
+        ? transaction`select * from public.get_pickup_parent_board()`
+        : transaction`select * from public.get_pickup_staff_board(${requestedClassId}::uuid)`;
+    }
+    case 'pickup.arrive': {
+      const cycleId = requireUuid(params.cycleId);
+      const collectorId = requireUuid(params.collectorId);
+      const requestId = requireUuid(params.requestId);
+      const expectedVersion = integer(params.expectedVersion, -1, 1);
+      if (expectedVersion < 1) throw new GatewayError('invalid_request', 400);
+      return requireRow(await transaction`
+        select public.parent_arrived(
+          ${cycleId}::uuid, ${collectorId}::uuid, ${requestId}::uuid, ${expectedVersion}
+        ) as data
+      `).data;
+    }
+    case 'pickup.receipt': {
+      const requestId = requireUuid(params.requestId);
+      const cycleId = params.cycleId === undefined || params.cycleId === null
+        ? null
+        : requireUuid(params.cycleId);
+      return requireRow(await transaction`
+        select public.get_pickup_operation_receipt(${requestId}::uuid, ${cycleId}::uuid) as data
+      `).data;
+    }
     default:
       throw new GatewayError('invalid_request', 400);
   }
@@ -408,6 +447,7 @@ export async function handleTelegramPrivateOps(
       'governance.actorScope', 'governance.pendingAccounts', 'governance.accountDirectory',
       'governance.accountDetail', 'notifications.list', 'notifications.markOne',
       'notifications.markAll', 'preferences.load', 'preferences.save',
+      'pickup.board', 'pickup.arrive', 'pickup.receipt',
     ]);
     if (!knownOperations.has(operation)) throw new GatewayError('invalid_request', 400);
     if (!dependencies.botToken) throw new GatewayError('backend_unavailable', 503);
@@ -454,6 +494,20 @@ export async function handleTelegramPrivateOps(
     }
     if (message.includes('owner_only_operation')) return json({ error: 'owner_only_operation' }, 403, origin, allowedOrigin);
     if (message.includes('target_not_found')) return json({ error: 'target_not_found' }, 404, origin, allowedOrigin);
+    const pickupConflictCodes = new Set(['version_conflict', 'idempotency_conflict']);
+    const pickupDeniedCodes = new Set([
+      'pickup_parent_required', 'pickup_parent_child_link_required', 'collector_or_parent_not_authorized',
+      'insufficient_pickup_scope', 'pickup_receipt_unavailable',
+    ]);
+    const pickupUnavailableCodes = new Set([
+      'schedule_unavailable', 'outside_dismissal_window', 'attendance_absent', 'attendance_excused',
+      'attendance_mark_missing', 'attendance_mark_unknown', 'attendance_entry_missing_or_conflicting',
+      'register_missing', 'register_not_submitted', 'conflicting_registers',
+      'conflicting_effective_memberships', 'responsible_teacher_unavailable',
+    ]);
+    if (pickupConflictCodes.has(message)) return json({ error: message }, 409, origin, allowedOrigin);
+    if (pickupDeniedCodes.has(message)) return json({ error: message }, 403, origin, allowedOrigin);
+    if (pickupUnavailableCodes.has(message)) return json({ error: message }, 422, origin, allowedOrigin);
     return json({ error: 'operation_failed' }, 500, origin, allowedOrigin);
   }
 }

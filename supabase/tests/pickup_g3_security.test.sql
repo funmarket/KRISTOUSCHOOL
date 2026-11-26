@@ -3,7 +3,7 @@
 -- Synthetic fixtures only; run only on an isolated Supabase db reset.
 
 begin;
-select extensions.plan(68);
+select extensions.plan(69);
 
 select extensions.ok((select relrowsecurity from pg_class where oid='public.dismissal_policies'::regclass),'dismissal policy RLS enabled');
 select extensions.ok((select relrowsecurity from pg_class where oid='public.authorized_pickup_persons'::regclass),'authorized collectors RLS enabled');
@@ -128,8 +128,9 @@ reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009904');
 set local role authenticated;
-select extensions.throws_ok($$select public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922')$$,'P0001','insufficient_pickup_scope','TEACHER has no Pickup board or release authority');
-select extensions.throws_ok($$select * from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')$$,'P0001','insufficient_pickup_scope','TEACHER has no Pickup eligibility projection scope');
+select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','false','TEACHER has no release authority');
+select extensions.is((select eligibility from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')),'ELIGIBLE_CANDIDATE','assigned TEACHER receives only the narrow eligibility projection');
+select extensions.is((select eligibility from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009923','2026-11-26')),'ELIGIBLE_CANDIDATE','assigned TEACHER can see another pupil only within the assigned class');
 reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009905');
