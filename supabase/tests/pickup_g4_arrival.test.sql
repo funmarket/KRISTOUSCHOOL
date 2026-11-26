@@ -162,13 +162,14 @@ begin
   perform dblink_send_query('pickup_g4_a',v_sql);
   perform dblink_send_query('pickup_g4_b',v_sql);
   v_waiters:=0;
-  for i in 1..100 loop
-    select count(*) into v_waiters from pg_stat_activity
-      where datname=current_database() and wait_event_type='Lock' and query like '%pickup_g4_same_request%';
+  for i in 1..200 loop
+    -- dblink_is_busy observes each independent backend without relying on
+    -- pg_stat_activity visibility across the test runner's database role.
+    v_waiters:=dblink_is_busy('pickup_g4_a')+dblink_is_busy('pickup_g4_b');
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;
-  if v_waiters<>2 then raise exception 'pickup_g4_same_request_sessions_not_both_waiting'; end if;
+  if v_waiters<>2 then raise exception 'pickup_g4_same_request_sessions_not_both_busy'; end if;
   perform dblink_exec('pickup_g4_blocker','commit');
   select result into v_result from dblink_get_result('pickup_g4_a') as t(result jsonb);
   insert into pickup_g4_race_results values('same_request','a',v_result);
@@ -188,13 +189,12 @@ begin
   perform dblink_send_query('pickup_g4_a',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009971'));
   perform dblink_send_query('pickup_g4_b',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009972'));
   v_waiters:=0;
-  for i in 1..100 loop
-    select count(*) into v_waiters from pg_stat_activity
-      where datname=current_database() and wait_event_type='Lock' and query like '%pickup_g4_distinct_request%';
+  for i in 1..200 loop
+    v_waiters:=dblink_is_busy('pickup_g4_a')+dblink_is_busy('pickup_g4_b');
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;
-  if v_waiters<>2 then raise exception 'pickup_g4_distinct_request_sessions_not_both_waiting'; end if;
+  if v_waiters<>2 then raise exception 'pickup_g4_distinct_request_sessions_not_both_busy'; end if;
   perform dblink_exec('pickup_g4_blocker','commit');
   select result into v_result from dblink_get_result('pickup_g4_a') as t(result jsonb);
   insert into pickup_g4_race_results values('distinct_request','a',v_result);
