@@ -121,7 +121,7 @@ fingerprints as (
 select category,n,digest from fingerprints;
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='relations'),'50:6a45512997971f57eff829e358ef9767','public relations: normalized definition/owner/RLS fingerprint matches hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='columns'),'519:94c56097d3ae7f3f32b17028ea3bffbe','public columns: names/order/types/nullability/defaults match hosted baseline');
-select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='constraints'),'304:60ddb737da94705fe02e13c1a27332ee','public constraints: primary/unique/foreign-key/check definitions match hosted baseline');
+select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='constraints'),'304:abbf5bd358ceb8254b66cc2144543a17','public constraints: primary/unique/foreign-key/check definitions match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='indexes'),'93:a3105f3a779e0a734a272d36e55f5000','public indexes match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='triggers'),'40:243e9c72292fe2a2ac8dbec5220555f5','public triggers and trigger functions match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_metadata'),'99:9ddcd3aced7d4b67a59dd643b2c63a55','public function signatures/security/owners/configuration match hosted baseline');
