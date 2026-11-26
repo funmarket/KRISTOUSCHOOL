@@ -133,9 +133,9 @@ begin
   -- Supabase's isolated local database uses its documented local `postgres`
   -- role/password. dblink requires an explicit password when opened by the
   -- pgTAP session's non-superuser role, even when the target is this database.
-  perform dblink_connect('pickup_g4_blocker','dbname='||current_database()||' user=postgres password=postgres');
-  perform dblink_connect('pickup_g4_a','dbname='||current_database()||' user=postgres password=postgres');
-  perform dblink_connect('pickup_g4_b','dbname='||current_database()||' user=postgres password=postgres');
+  perform dblink_connect('pickup_g4_blocker','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
+  perform dblink_connect('pickup_g4_a','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
+  perform dblink_connect('pickup_g4_b','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
   select pid into v_pid from dblink('pickup_g4_blocker','select pg_backend_pid()') as t(pid integer);
   insert into pickup_g4_session_pids values(v_pid);
   select pid into v_pid from dblink('pickup_g4_a','select pg_backend_pid()') as t(pid integer);
