@@ -64,8 +64,12 @@ begin
   end if;
   return query
   select c.cycle_id,c.student_id,s.full_name,c.class_id,cl.name,c.state,c.version,c.school_date,
-    case when sched.sch->>'status'='AVAILABLE' then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
-    case when sched.sch->>'status'='AVAILABLE' then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
     coalesce(el.eligible,false),coalesce(el.reason_code,'eligibility_unavailable'),
     coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'displayName',p.display_name,'relationshipLabel',p.relationship_label,'validUntil',p.valid_until) order by p.display_name,p.id)
       from public.authorized_pickup_persons p where p.student_id=c.student_id and p.verified_by is not null
@@ -73,6 +77,9 @@ begin
     c.arrival_at,coalesce(arr.full_name,arr.username),coalesce(person.display_name,''),
     c.release_at,coalesce(rel.full_name,rel.username),
     (c.state='WAITING' and coalesce(el.eligible,false) and sched.sch->>'status'='AVAILABLE'
+      and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id
       and clock_timestamp() >= ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis')
       and clock_timestamp() < ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis')
       and exists(select 1 from public.authorized_pickup_persons p where p.student_id=c.student_id
@@ -82,7 +89,9 @@ begin
         (select p.id from public.authorized_pickup_persons p where p.student_id=c.student_id
           and p.verified_by is not null and p.verified_at is not null and p.valid_from<=v_date
           and p.valid_until>=v_date and p.revoked_at is null order by p.display_name,p.id limit 1),v_date)),
-    false,sched.sch->>'status'='AVAILABLE'
+    false,(sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id)
   from public.pickup_cycles c
   join public.students s on s.id=c.student_id and s.status='ACTIVE'
   join public.school_classes cl on cl.id=c.class_id
@@ -125,11 +134,18 @@ begin
   end if;
   return query
   select c.cycle_id,c.student_id,s.full_name,c.class_id,cl.name,c.state,c.version,c.school_date,
-    case when sched.sch->>'status'='AVAILABLE' then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
-    case when sched.sch->>'status'='AVAILABLE' then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
     coalesce(el.eligible,false),coalesce(el.reason_code,'eligibility_unavailable'),
     '[]'::jsonb,c.arrival_at,coalesce(arr.full_name,arr.username),coalesce(person.display_name,''),
-    c.release_at,coalesce(rel.full_name,rel.username),false,false,sched.sch->>'status'='AVAILABLE'
+    c.release_at,coalesce(rel.full_name,rel.username),false,false,
+    (sched.sch->>'status'='AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid=c.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer=c.policy_revision and (sched.sch->>'membershipId')::uuid=c.membership_id
+      and (sched.sch->>'classId')::uuid=c.class_id)
   from public.pickup_cycles c join public.students s on s.id=c.student_id and s.status='ACTIVE'
   join public.school_classes cl on cl.id=c.class_id
   left join public.profiles arr on arr.id=c.arrival_actor_user_id
@@ -154,7 +170,7 @@ as $$
 declare
   v_actor uuid:=auth.uid(); v_cycle public.pickup_cycles%rowtype; v_hash text;
   v_saved public.pickup_requests%rowtype; v_now timestamptz:=clock_timestamp();
-  v_payload jsonb; v_digest_schema text;
+  v_payload jsonb; v_digest_schema text; v_link_id uuid;
   v_date date:=(v_now at time zone 'Africa/Tunis')::date; v_schedule jsonb; v_elig record; v_result jsonb;
 begin
   if v_actor is null then raise exception 'actor_unauthenticated' using errcode='P0001'; end if;
@@ -176,9 +192,10 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('pickup-request:'||v_actor::text||':'||p_request_id::text,0));
   select * into v_cycle from public.pickup_cycles where cycle_id=p_cycle_id for update;
   if not found then raise exception 'pickup_cycle_not_found' using errcode='P0001'; end if;
-  if not exists(select 1 from public.parent_child_links l join public.students s on s.id=l.student_id
+  select l.id into v_link_id from public.parent_child_links l join public.students s on s.id=l.student_id
     where l.parent_user_id=v_actor and l.student_id=v_cycle.student_id and l.active
-      and l.verified_by is not null and s.status='ACTIVE') then
+      and l.verified_by is not null and s.status='ACTIVE' for share of l;
+  if not found then
     raise exception 'pickup_parent_child_link_required' using errcode='P0001';
   end if;
   select * into v_saved from public.pickup_requests r where r.actor_user_id=v_actor and r.request_id=p_request_id;
@@ -208,9 +225,24 @@ begin
      or v_now >= ((v_cycle.school_date + (v_schedule->>'closesAt')::time) at time zone 'Africa/Tunis') then
     raise exception 'outside_dismissal_window' using errcode='P0001';
   end if;
-  if not public.pickup_parent_can_announce_arrival(v_cycle.student_id,p_collector_id,v_date) then
+  perform 1 from public.authorized_pickup_persons person
+    where person.id=p_collector_id and person.student_id=v_cycle.student_id
+      and person.verified_by is not null and person.verified_at is not null
+      and person.valid_from<=v_date and person.valid_until>=v_date and person.revoked_at is null
+    for share;
+  if not found or not public.pickup_parent_can_announce_arrival(v_cycle.student_id,p_collector_id,v_date) then
     raise exception 'collector_or_parent_not_authorized' using errcode='P0001';
   end if;
+  select * into v_elig from public.get_pickup_student_eligibility(v_cycle.student_id,v_date);
+  if not coalesce(v_elig.eligible,false) then
+    raise exception '%',coalesce(v_elig.reason_code,'attendance_unavailable') using errcode='P0001';
+  end if;
+  perform 1 from public.attendance_registers ar where ar.id=v_elig.register_id and ar.status='SUBMITTED' for share;
+  if not found then raise exception 'register_not_submitted' using errcode='P0001'; end if;
+  perform 1 from public.attendance_entries ae where ae.register_id=v_elig.register_id
+    and ae.student_id=v_cycle.student_id and ae.membership_id=v_cycle.membership_id
+    and ae.mark in ('PRESENT','LATE') for share;
+  if not found then raise exception 'attendance_entry_missing_or_conflicting' using errcode='P0001'; end if;
   select * into v_elig from public.get_pickup_student_eligibility(v_cycle.student_id,v_date);
   if not coalesce(v_elig.eligible,false) then
     raise exception '%',coalesce(v_elig.reason_code,'attendance_unavailable') using errcode='P0001';
