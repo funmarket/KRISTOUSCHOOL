@@ -130,9 +130,12 @@ declare
   v_waiters integer; v_sql text; v_result jsonb; v_locked_cycle uuid; i integer;
   v_pid integer;
 begin
-  perform dblink_connect('pickup_g4_blocker','dbname='||current_database());
-  perform dblink_connect('pickup_g4_a','dbname='||current_database());
-  perform dblink_connect('pickup_g4_b','dbname='||current_database());
+  -- Supabase's isolated local database uses its documented local `postgres`
+  -- role/password. dblink requires an explicit password when opened by the
+  -- pgTAP session's non-superuser role, even when the target is this database.
+  perform dblink_connect('pickup_g4_blocker','dbname='||current_database()||' user=postgres password=postgres');
+  perform dblink_connect('pickup_g4_a','dbname='||current_database()||' user=postgres password=postgres');
+  perform dblink_connect('pickup_g4_b','dbname='||current_database()||' user=postgres password=postgres');
   select pid into v_pid from dblink('pickup_g4_blocker','select pg_backend_pid()') as t(pid integer);
   insert into pickup_g4_session_pids values(v_pid);
   select pid into v_pid from dblink('pickup_g4_a','select pg_backend_pid()') as t(pid integer);
