@@ -28,7 +28,7 @@ insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,r
  ('00000000-0000-4000-9000-000000010108','authenticated','authenticated','g5-student@example.invalid','',now(),'{}','{"username":"g5_student","full_name":"G5 Student","requested_role":"STUDENT"}',now(),now()),
  ('00000000-0000-4000-9000-000000010109','authenticated','authenticated','g5-pending@example.invalid','',now(),'{}','{"username":"g5_pending","full_name":"G5 Pending","requested_role":"MANAGER"}',now(),now()),
  ('00000000-0000-4000-9000-000000010110','authenticated','authenticated','g5-suspended@example.invalid','',now(),'{}','{"username":"g5_suspended","full_name":"G5 Suspended","requested_role":"MANAGER"}',now(),now()),
- ('00000000-0000-4000-9000-000000010111','authenticated','authenticated','g5-general@example.invalid','',now(),'{}','{"username":"g5_general","full_name":"G5 General","requested_role":"GENERAL_USER"}',now(),now());
+ ('00000000-0000-4000-9000-000000010111','authenticated','authenticated','g5-no-role@example.invalid','',now(),'{}','{"username":"g5_no_role","full_name":"G5 Account Without Role"}',now(),now());
 update public.profiles set account_status='APPROVED' where id between '00000000-0000-4000-9000-000000010101'::uuid and '00000000-0000-4000-9000-000000010108'::uuid;
 update public.profiles set account_status='PENDING' where id='00000000-0000-4000-9000-000000010109';
 update public.profiles set account_status='SUSPENDED' where id='00000000-0000-4000-9000-000000010110';
@@ -44,8 +44,7 @@ insert into public.role_assignments(user_id,role,active) values
  ('00000000-0000-4000-9000-000000010107','PARENT',true),
  ('00000000-0000-4000-9000-000000010108','STUDENT',true),
  ('00000000-0000-4000-9000-000000010109','MANAGER',true),
- ('00000000-0000-4000-9000-000000010110','MANAGER',true),
- ('00000000-0000-4000-9000-000000010111','GENERAL_USER',true);
+ ('00000000-0000-4000-9000-000000010110','MANAGER',true);
 insert into public.manager_capability_grants(manager_user_id,capability,active,granted_by)
 values('00000000-0000-4000-9000-000000010103','G5_UNRELATED_CAPABILITY',true,'00000000-0000-4000-9000-000000010101');
 
@@ -229,7 +228,7 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010111',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010111","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010416',2,true,null)$$,'P0001','pickup_release_authority_required','GENERAL_USER cannot release');
+select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010416',2,true,null)$$,'P0001','pickup_release_authority_required','approved account without an active school role cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010105',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010105","role":"authenticated"}',true);
