@@ -1,7 +1,7 @@
 -- G4 arrival contract: synthetic fixtures only; run after an isolated db reset.
 create extension if not exists dblink;
 begin;
-select extensions.plan(37);
+select extensions.plan(58);
 
 select extensions.ok(has_function_privilege('authenticated','public.get_pickup_parent_board()','EXECUTE'),'authenticated can call parent board');
 select extensions.ok(has_function_privilege('authenticated','public.get_pickup_staff_board(uuid)','EXECUTE'),'authenticated can call staff board');
@@ -17,15 +17,23 @@ insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,r
  ('00000000-0000-4000-9000-000000009941','authenticated','authenticated','pickup-g4-parent@example.invalid','',now(),'{}','{"username":"pickup_g4_parent","full_name":"G4 Parent","requested_role":"PARENT"}',now(),now()),
  ('00000000-0000-4000-9000-000000009942','authenticated','authenticated','pickup-g4-teacher@example.invalid','',now(),'{}','{"username":"pickup_g4_teacher","full_name":"G4 Teacher","requested_role":"TEACHER"}',now(),now()),
  ('00000000-0000-4000-9000-000000009943','authenticated','authenticated','pickup-g4-admin@example.invalid','',now(),'{}','{"username":"pickup_g4_admin","full_name":"G4 Admin","requested_role":"APP_ADMIN"}',now(),now()),
+ ('00000000-0000-4000-9000-000000009979','authenticated','authenticated','pickup-g4-manager@example.invalid','',now(),'{}','{"username":"pickup_g4_manager","full_name":"G4 Manager","requested_role":"MANAGER"}',now(),now()),
+ ('00000000-0000-4000-9000-000000009980','authenticated','authenticated','pickup-g4-office@example.invalid','',now(),'{}','{"username":"pickup_g4_office","full_name":"G4 Office","requested_role":"ADMINISTRATIVE_PERSONNEL"}',now(),now()),
+ ('00000000-0000-4000-9000-000000009981','authenticated','authenticated','pickup-g4-schoolstaff@example.invalid','',now(),'{}','{"username":"pickup_g4_schoolstaff","full_name":"G4 School Staff","requested_role":"SCHOOL_STAFF"}',now(),now()),
  ('00000000-0000-4000-9000-000000009961','authenticated','authenticated','pickup-g4-unlinked@example.invalid','',now(),'{}','{"username":"pickup_g4_unlinked","full_name":"G4 Unlinked","requested_role":"PARENT"}',now(),now());
 update public.profiles set account_status='APPROVED' where id in (
- '00000000-0000-4000-9000-000000009941','00000000-0000-4000-9000-000000009942','00000000-0000-4000-9000-000000009943','00000000-0000-4000-9000-000000009961');
+ '00000000-0000-4000-9000-000000009941','00000000-0000-4000-9000-000000009942','00000000-0000-4000-9000-000000009943',
+ '00000000-0000-4000-9000-000000009979','00000000-0000-4000-9000-000000009980','00000000-0000-4000-9000-000000009981','00000000-0000-4000-9000-000000009961');
 delete from public.role_assignments where user_id in (
- '00000000-0000-4000-9000-000000009941','00000000-0000-4000-9000-000000009942','00000000-0000-4000-9000-000000009943','00000000-0000-4000-9000-000000009961');
+ '00000000-0000-4000-9000-000000009941','00000000-0000-4000-9000-000000009942','00000000-0000-4000-9000-000000009943',
+ '00000000-0000-4000-9000-000000009979','00000000-0000-4000-9000-000000009980','00000000-0000-4000-9000-000000009981','00000000-0000-4000-9000-000000009961');
 insert into public.role_assignments(user_id,role,active) values
  ('00000000-0000-4000-9000-000000009941','PARENT',true),
  ('00000000-0000-4000-9000-000000009942','TEACHER',true),
  ('00000000-0000-4000-9000-000000009943','APP_ADMIN',true),
+ ('00000000-0000-4000-9000-000000009979','MANAGER',true),
+ ('00000000-0000-4000-9000-000000009980','ADMINISTRATIVE_PERSONNEL',true),
+ ('00000000-0000-4000-9000-000000009981','SCHOOL_STAFF',true),
  ('00000000-0000-4000-9000-000000009961','PARENT',true);
 
 insert into public.school_classes(id,academic_year_id,level_code,name,capacity,created_by)
@@ -117,6 +125,122 @@ insert into public.pickup_cycles(cycle_id,student_id,school_date,class_id,academ
 select '00000000-0000-4000-9000-000000009967','00000000-0000-4000-9000-000000009965',(now() at time zone 'Africa/Tunis')::date,
  '00000000-0000-4000-9000-000000009944',m.academic_year_id,m.id,'00000000-0000-4000-9000-000000009947',1
 from public.student_class_memberships m where m.id='00000000-0000-4000-9000-000000009966';
+
+-- Negative authority and policy matrix runs against a second WAITING cycle so
+-- each failed attempt can be followed by the real two-session race tests.
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009941',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009941","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.is((public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009982',2)->>'code'),'version_conflict','stale expected version returns authoritative conflict without transition');
+reset role;
+
+update public.profiles set account_status='PENDING' where id='00000000-0000-4000-9000-000000009941';
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009941',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009941","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009983',1)$$,'P0001','pickup_parent_required','pending parent account cannot announce arrival');
+reset role;
+update public.profiles set account_status='SUSPENDED' where id='00000000-0000-4000-9000-000000009941';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009984',1)$$,'P0001','pickup_parent_required','suspended parent account cannot announce arrival');
+reset role;
+update public.profiles set account_status='APPROVED' where id='00000000-0000-4000-9000-000000009941';
+
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009943',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009943","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009985',1)$$,'P0001','pickup_parent_required','unlinked APP_ADMIN cannot announce arrival');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009979',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009979","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009986',1)$$,'P0001','pickup_parent_required','unlinked MANAGER cannot announce arrival');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009980',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009980","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009987',1)$$,'P0001','pickup_parent_required','unlinked ADMINISTRATIVE_PERSONNEL cannot announce arrival');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009942',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009942","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009988',1)$$,'P0001','pickup_parent_required','unlinked TEACHER cannot announce arrival');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009981',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009981","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009989',1)$$,'P0001','pickup_parent_required','unlinked SCHOOL_STAFF cannot announce arrival');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009941',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009941","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009969','00000000-0000-4000-9000-000000009990',1)$$,'P0001','collector_or_parent_not_authorized','collector belonging to another child is denied');
+reset role;
+update public.authorized_pickup_persons set valid_from=(now() at time zone 'Africa/Tunis')::date-2,valid_until=(now() at time zone 'Africa/Tunis')::date-1 where id='00000000-0000-4000-9000-000000009968';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009991',1)$$,'P0001','collector_or_parent_not_authorized','expired verified collector is denied');
+reset role;
+update public.authorized_pickup_persons set valid_from=(now() at time zone 'Africa/Tunis')::date,valid_until=(now() at time zone 'Africa/Tunis')::date,revoked_at=now() where id='00000000-0000-4000-9000-000000009968';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009992',1)$$,'P0001','collector_or_parent_not_authorized','revoked verified collector is denied');
+reset role;
+update public.authorized_pickup_persons set revoked_at=null where id='00000000-0000-4000-9000-000000009968';
+
+update public.dismissal_policies set opens_at=((now() at time zone 'Africa/Tunis')::time + interval '1 minute')::time,
+ closes_at=((now() at time zone 'Africa/Tunis')::time + interval '2 minutes')::time where id='00000000-0000-4000-9000-000000009947';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009993',1)$$,'P0001','outside_dismissal_window','arrival before the configured opening is denied');
+reset role;
+update public.dismissal_policies set opens_at=((now() at time zone 'Africa/Tunis')::time - interval '2 minutes')::time,
+ closes_at=((now() at time zone 'Africa/Tunis')::time - interval '1 minute')::time where id='00000000-0000-4000-9000-000000009947';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009994',1)$$,'P0001','outside_dismissal_window','arrival after the configured closing is denied');
+reset role;
+update public.dismissal_policies set opens_at='00:00',closes_at='23:59:59' where id='00000000-0000-4000-9000-000000009947';
+update public.dismissal_policies set opens_at='00:00',closes_at='23:59:59',active=false where id='00000000-0000-4000-9000-000000009947';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009995',1)$$,'P0001','schedule_unavailable','missing active dismissal policy blocks arrival');
+reset role;
+update public.dismissal_policies set active=true where id='00000000-0000-4000-9000-000000009947';
+insert into public.school_calendar_events(id,class_id,title,category,start_date,end_date,audience_mode,created_by)
+values('00000000-0000-4000-9000-000000009996',null,'G4 test closure','CLOSURE',(now() at time zone 'Africa/Tunis')::date,(now() at time zone 'Africa/Tunis')::date,'WHOLE_SCHOOL','00000000-0000-4000-9000-000000009943');
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009997',1)$$,'P0001','schedule_unavailable','active whole-school closure blocks arrival');
+reset role;
+delete from public.school_calendar_events where id='00000000-0000-4000-9000-000000009996';
+
+update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000009948' and student_id='00000000-0000-4000-9000-000000009962';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009998',1)$$,'P0001','attendance_absent','ABSENT attendance blocks arrival');
+reset role;
+update public.attendance_entries set mark='EXCUSED' where register_id='00000000-0000-4000-9000-000000009948' and student_id='00000000-0000-4000-9000-000000009962';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009999',1)$$,'P0001','attendance_excused','EXCUSED attendance blocks arrival by default');
+reset role;
+update public.attendance_entries set mark=null where register_id='00000000-0000-4000-9000-000000009948' and student_id='00000000-0000-4000-9000-000000009962';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000010000',1)$$,'P0001','attendance_mark_missing','null Attendance mark blocks arrival');
+reset role;
+update public.attendance_entries set mark='PRESENT' where register_id='00000000-0000-4000-9000-000000009948' and student_id='00000000-0000-4000-9000-000000009962';
+update public.attendance_registers set status='DRAFT',submitted_at=null,submitted_by=null where id='00000000-0000-4000-9000-000000009948';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000010001',1)$$,'P0001','register_not_submitted','persisted DRAFT Attendance blocks arrival');
+reset role;
+update public.attendance_registers set status='SUBMITTED',submitted_at=now(),submitted_by='00000000-0000-4000-9000-000000009942' where id='00000000-0000-4000-9000-000000009948';
+update public.attendance_registers set teacher_user_id='00000000-0000-4000-9000-000000009943' where id='00000000-0000-4000-9000-000000009948';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000010002',1)$$,'P0001','register_missing','missing designated responsible-teacher register blocks arrival');
+reset role;
+update public.attendance_registers set teacher_user_id='00000000-0000-4000-9000-000000009942' where id='00000000-0000-4000-9000-000000009948';
+insert into public.attendance_registers(id,academic_year_id,class_id,teacher_user_id,school_date,status,version,submitted_at,submitted_by)
+select '00000000-0000-4000-9000-000000010003',academic_year_id,class_id,'00000000-0000-4000-9000-000000009943',school_date,'SUBMITTED',1,now(),'00000000-0000-4000-9000-000000009943'
+from public.attendance_registers where id='00000000-0000-4000-9000-000000009948';
+set local role authenticated;
+select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000010004',1)$$,'P0001','conflicting_registers','conflicting class/date registers fail closed');
+reset role;
+delete from public.attendance_registers where id='00000000-0000-4000-9000-000000010003';
+
 create temporary table pickup_g4_race_results(case_name text,session_name text,result jsonb) on commit preserve rows;
 create temporary table pickup_g4_session_pids(pid integer) on commit preserve rows;
 commit;
