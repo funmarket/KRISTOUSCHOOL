@@ -224,7 +224,7 @@ reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009901');
 set local role authenticated;
-select extensions.is(public.revoke_authorized_pickup_person((select ref_id from pg_temp.pickup_refs where ref_key='collector'),'Verification no longer valid') ->> 'id',(select ref_id from pg_temp.pickup_refs where ref_key='collector'),'APP_ADMIN can revoke a collector');
+select extensions.is(public.revoke_authorized_pickup_person((select ref_id from pg_temp.pickup_refs where ref_key='collector'),'Verification no longer valid') ->> 'id',(select ref_id::text from pg_temp.pickup_refs where ref_key='collector'),'APP_ADMIN can revoke a collector');
 reset role;
 select extensions.is((select count(*)::integer from public.pickup_person_audit_logs where authorized_person_id=(select ref_id from pg_temp.pickup_refs where ref_key='collector') and action='REVOKED'),1,'collector revocation is audited');
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009906');
