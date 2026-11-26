@@ -92,12 +92,23 @@ select ('00000000-0000-4000-9000-'||lpad((10180+n)::text,12,'0'))::uuid,
        (now() at time zone 'Africa/Tunis')::date,(now() at time zone 'Africa/Tunis')::date
   from generate_series(0,14) as n;
 
+-- Narrow test helper reads the opaque cycle UUID for fixture pupils without
+-- granting clients direct access to pickup_cycles.
+create function public.pickup_g5_test_cycle_id(p_student_id uuid)
+returns uuid language sql security definer set search_path=public,pg_temp as $$
+  select c.cycle_id from public.pickup_cycles c where c.student_id=p_student_id
+$$;
+revoke all on function public.pickup_g5_test_cycle_id(uuid) from public,anon;
+grant execute on function public.pickup_g5_test_cycle_id(uuid) to authenticated;
+
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.ok((public.provision_pickup_cycles()->>'provisionedCount')::integer>=15,'APP_ADMIN provisions cycles for all test pupils with effective memberships and active windows');
+reset role;
 select extensions.ok((select count(*)::integer=15 from public.pickup_cycles where student_id between '00000000-0000-4000-9000-000000010130'::uuid and '00000000-0000-4000-9000-000000010144'::uuid),'provisioning creates exactly one cycle per test pupil');
 select extensions.ok((select count(*)::integer=15 from public.pickup_events where action='CYCLE_PROVISIONED' and student_id between '00000000-0000-4000-9000-000000010130'::uuid and '00000000-0000-4000-9000-000000010144'::uuid),'every provisioned cycle has an append-only audit event');
+set local role authenticated;
 select extensions.is((public.provision_pickup_cycles()->>'provisionedCount')::integer,0,'repeated provisioning is idempotent and does not create cycles');
 select extensions.throws_ok($$select public.provision_pickup_cycles((now() at time zone 'Africa/Tunis')::date+1)$$,
   'P0001','schedule_unavailable','provisioning fails closed when no active target-date schedule exists');
@@ -117,7 +128,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010105'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010105","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.throws_ok($$select public.provision_pickup_cycles()$$,'P0001','pickup_provision_authority_required','assigned TEACHER cannot provision cycles');
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010140'),'00000000-0000-4000-9000-000000010190','00000000-0000-4000-9000-000000010401',2,true,null)$$,'P0001','pickup_release_authority_required','assigned TEACHER cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010140'),'00000000-0000-4000-9000-000000010190','00000000-0000-4000-9000-000000010401',2,true,null)$$,'P0001','pickup_release_authority_required','assigned TEACHER cannot release');
 reset role;
 
 -- Activate the actual G4 arrival transition for all but one cycle, which remains WAITING.
@@ -128,11 +139,9 @@ select extensions.ok((
   select count(*)::integer=14
     from (select n from generate_series(0,14) as n where n<>3) filtered_n
     cross join lateral (
-      select public.parent_arrived(c.cycle_id,
+       select public.parent_arrived(public.pickup_g5_test_cycle_id(('00000000-0000-4000-9000-'||lpad((10130+filtered_n.n)::text,12,'0'))::uuid),
         ('00000000-0000-4000-9000-'||lpad((10180+filtered_n.n)::text,12,'0'))::uuid,
         ('00000000-0000-4000-9000-'||lpad((10200+filtered_n.n)::text,12,'0'))::uuid,1) as result
-        from public.pickup_cycles c
-       where c.student_id=('00000000-0000-4000-9000-'||lpad((10130+filtered_n.n)::text,12,'0'))::uuid
     ) arrived
    where arrived.result->>'code'='parent_arrived'
 ),'G4 parent-arrival command creates realistic PARENT_ARRIVED release fixtures');
@@ -142,25 +151,27 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130'),
   '00000000-0000-4000-9000-000000010180','00000000-0000-4000-9000-000000010300',2,true,'Handed to verified collector')->>'code'),
   'pupil_released','APP_ADMIN confirms physical handoff');
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130'),
   '00000000-0000-4000-9000-000000010180','00000000-0000-4000-9000-000000010300',2,true,'Handed to verified collector')->>'replayed'),
   'true','same actor and request payload replays the durable release result');
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),'00000000-0000-4000-9000-000000010180','00000000-0000-4000-9000-000000010300',2,true,'Different handoff')$$,
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130'),'00000000-0000-4000-9000-000000010180','00000000-0000-4000-9000-000000010300',2,true,'Different handoff')$$,
   'P0001','idempotency_conflict','same request UUID with a different payload is rejected');
 select extensions.is((public.get_pickup_operation_receipt('00000000-0000-4000-9000-000000010300',
-  (select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'))->>'state'),
+  public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130'))->>'state'),
   'RELEASED','timeout recovery returns authoritative release state');
-select extensions.is((select count(*)::integer from public.pickup_events where cycle_id=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130') and action='CHILD_RELEASED'),1,'release replay appends no duplicate event');
-select extensions.is((select count(*)::integer from public.notification_outbox where source_id=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130') and event_type='pickup.child_released'),1,'release replay enqueues exactly one outbox row');
+reset role;
+select extensions.is((select count(*)::integer from public.pickup_events where cycle_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130') and action='CHILD_RELEASED'),1,'release replay appends no duplicate event');
+select extensions.is((select count(*)::integer from public.notification_outbox where source_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130') and event_type='pickup.child_released'),1,'release replay enqueues exactly one outbox row');
 select extensions.is((select state from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),'RELEASED','physical release commits terminal RELEASED state');
 select extensions.is((select version from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),3,'release increments cycle version exactly once');
 select extensions.is((select release_actor_user_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),'00000000-0000-4000-9000-000000010101','release records actual actor');
 select extensions.is((select collector_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),'00000000-0000-4000-9000-000000010180','release retains verified collector attribution');
-select extensions.is((select reason from public.pickup_events where cycle_id=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130') and action='CHILD_RELEASED'),'Handed to verified collector','handoff notes are recorded in restricted audit history');
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010130'),
+select extensions.is((select reason from public.pickup_events where cycle_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130') and action='CHILD_RELEASED'),'Handed to verified collector','handoff notes are recorded in restricted audit history');
+set local role authenticated;
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010130'),
   '00000000-0000-4000-9000-000000010180','00000000-0000-4000-9000-000000010402',3,true,null)->>'code'),
   'already_released','a new request cannot release an already terminal cycle');
 reset role;
@@ -168,7 +179,7 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010103',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010103","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010131'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010131'),
   '00000000-0000-4000-9000-000000010181','00000000-0000-4000-9000-000000010301',2,true,null)->>'code'),
   'pupil_released','MANAGER releases without relying on unrelated manager capabilities');
 select extensions.is((select can_confirm_release from public.get_pickup_staff_board() where student_id='00000000-0000-4000-9000-000000010132'),true,'unrevoked MANAGER board exposes release capability only for arrived eligible cycle');
@@ -176,7 +187,7 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010104',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010104","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010132'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010132'),
   '00000000-0000-4000-9000-000000010182','00000000-0000-4000-9000-000000010302',2,true,null)->>'code'),
   'pupil_released','ADMINISTRATIVE_PERSONNEL releases under default authority');
 reset role;
@@ -185,50 +196,50 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010133'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010133'),
   '00000000-0000-4000-9000-000000010183','00000000-0000-4000-9000-000000010403',1,true,null)->>'code'),
   'arrival_required','WAITING cycle cannot be physically released');
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010134'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010134'),
   '00000000-0000-4000-9000-000000010184','00000000-0000-4000-9000-000000010404',1,true,null)->>'code'),
   'version_conflict','stale expected version returns version_conflict');
-select extensions.is((public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010134'),
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010134'),
   '00000000-0000-4000-9000-000000010184','00000000-0000-4000-9000-000000010405',1,true,null)->>'version'),
   '2','version conflict contains authoritative current cycle version');
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),null,null,null,false,null)$$,
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),null,null,null,false,null)$$,
   'P0001','attestation_required','false physical attestation is rejected before other argument checks');
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),null,null,null,null,null)$$,
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),null,null,null,null,null)$$,
   'P0001','attestation_required','null physical attestation is rejected before other argument checks');
 reset role;
 
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010106',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010106","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010410',2,true,null)$$,'P0001','pickup_release_authority_required','SCHOOL_STAFF cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010410',2,true,null)$$,'P0001','pickup_release_authority_required','SCHOOL_STAFF cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010107',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010107","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010411',2,true,null)$$,'P0001','pickup_release_authority_required','PARENT cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010411',2,true,null)$$,'P0001','pickup_release_authority_required','PARENT cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010108',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010108","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010412',2,true,null)$$,'P0001','pickup_release_authority_required','STUDENT cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010412',2,true,null)$$,'P0001','pickup_release_authority_required','STUDENT cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010109',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010109","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010413',2,true,null)$$,'P0001','pickup_release_authority_required','unapproved account cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010413',2,true,null)$$,'P0001','pickup_release_authority_required','unapproved account cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010110',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010110","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010414',2,true,null)$$,'P0001','pickup_release_authority_required','suspended account cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010414',2,true,null)$$,'P0001','pickup_release_authority_required','suspended account cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010111',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010111","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010416',2,true,null)$$,'P0001','pickup_release_authority_required','approved account without an active school role cannot release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010416',2,true,null)$$,'P0001','pickup_release_authority_required','approved account without an active school role cannot release');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010105',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010105","role":"authenticated"}',true);
@@ -246,19 +257,22 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.is((public.revoke_pickup_release_authority('00000000-0000-4000-9000-000000010103','G5 revocation test')->>'isRevoked'),'true','APP_ADMIN revokes an individual manager');
+reset role;
 select extensions.is((select version from public.pickup_release_revocations where target_user_id='00000000-0000-4000-9000-000000010103'),1,'revocation version increments to one');
 select extensions.is((select count(*)::integer from public.pickup_authority_audit_logs where target_user_id='00000000-0000-4000-9000-000000010103' and action='REVOKE_RELEASE' and version=1),1,'revocation writes immutable audit history');
+set local role authenticated;
 select extensions.is((select can_confirm_release from public.get_pickup_staff_board() where student_id='00000000-0000-4000-9000-000000010139'),false,'staff board removes release capability immediately after revocation');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010103',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010103","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010415',2,true,null)$$,'P0001','pickup_release_authority_revoked','revoked Manager is denied on a fresh server command');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010415',2,true,null)$$,'P0001','pickup_release_authority_revoked','revoked Manager is denied on a fresh server command');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.is((public.reinstate_pickup_release_authority('00000000-0000-4000-9000-000000010103','G5 reinstate test')->>'isRevoked'),'false','APP_ADMIN reinstates a revoked account');
+reset role;
 select extensions.is((select version from public.pickup_release_revocations where target_user_id='00000000-0000-4000-9000-000000010103'),2,'reinstatement advances monotonic version');
 select extensions.is((select count(*)::integer from public.pickup_authority_audit_logs where target_user_id='00000000-0000-4000-9000-000000010103'),2,'revoke and reinstate audit rows are preserved');
 reset role;
@@ -268,33 +282,33 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
 select public.revoke_authorized_pickup_person('00000000-0000-4000-9000-000000010185','collector revoked after arrival');
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010135'),'00000000-0000-4000-9000-000000010185','00000000-0000-4000-9000-000000010420',2,true,null)$$,'P0001','collector_invalid','collector revoked after arrival cannot be released');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010135'),'00000000-0000-4000-9000-000000010185','00000000-0000-4000-9000-000000010420',2,true,null)$$,'P0001','collector_invalid','collector revoked after arrival cannot be released');
 reset role;
 update public.authorized_pickup_persons set valid_from=(now() at time zone 'Africa/Tunis')::date-2,
  valid_until=(now() at time zone 'Africa/Tunis')::date-1 where id='00000000-0000-4000-9000-000000010186';
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010136'),'00000000-0000-4000-9000-000000010186','00000000-0000-4000-9000-000000010421',2,true,null)$$,'P0001','collector_invalid','expired collector cannot be released');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010136'),'00000000-0000-4000-9000-000000010186','00000000-0000-4000-9000-000000010421',2,true,null)$$,'P0001','collector_invalid','expired collector cannot be released');
 reset role;
 update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010136';
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010136'),'00000000-0000-4000-9000-000000010186','00000000-0000-4000-9000-000000010422',2,true,null)$$,'P0001','attendance_ineligible','Attendance corrected to ABSENT after arrival blocks release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010136'),'00000000-0000-4000-9000-000000010186','00000000-0000-4000-9000-000000010422',2,true,null)$$,'P0001','attendance_ineligible','Attendance corrected to ABSENT after arrival blocks release');
 reset role;
 update public.attendance_entries set mark='EXCUSED' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010137';
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010137'),'00000000-0000-4000-9000-000000010187','00000000-0000-4000-9000-000000010423',2,true,null)$$,'P0001','attendance_ineligible','Attendance corrected to EXCUSED after arrival blocks release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010137'),'00000000-0000-4000-9000-000000010187','00000000-0000-4000-9000-000000010423',2,true,null)$$,'P0001','attendance_ineligible','Attendance corrected to EXCUSED after arrival blocks release');
 reset role;
 update public.attendance_entries set mark='PRESENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010137';
 update public.attendance_registers set status='DRAFT',submitted_at=null,submitted_by=null where id='00000000-0000-4000-9000-000000010171';
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
 set local role authenticated;
-select extensions.throws_ok($$select public.release_pupil((select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010137'),'00000000-0000-4000-9000-000000010187','00000000-0000-4000-9000-000000010424',2,true,null)$$,'P0001','attendance_ineligible','Attendance changed to persisted DRAFT after arrival blocks release');
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010137'),'00000000-0000-4000-9000-000000010187','00000000-0000-4000-9000-000000010424',2,true,null)$$,'P0001','attendance_ineligible','Attendance changed to persisted DRAFT after arrival blocks release');
 reset role;
 update public.attendance_registers set status='SUBMITTED',submitted_at=now(),submitted_by='00000000-0000-4000-9000-000000010105' where id='00000000-0000-4000-9000-000000010171';
 
@@ -339,7 +353,7 @@ begin
   perform dblink_exec('g5_staff_b','set request.jwt.claim.sub=''00000000-0000-4000-9000-000000010103''');
   perform dblink_exec('g5_staff_b','set request.jwt.claims=''{"sub":"00000000-0000-4000-9000-000000010103","role":"authenticated"}''');
   perform dblink_exec('g5_staff_b','set role authenticated');
-  v_cycle:=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010140');
+  v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010140');
   v_collector:='00000000-0000-4000-9000-000000010190';
   perform dblink_exec('g5_blocker','begin');
   perform 1 from dblink('g5_blocker',format('select cycle_id from public.pickup_cycles where cycle_id=%L::uuid for update',v_cycle)) as t(cycle_id uuid);
@@ -370,8 +384,8 @@ $$;
 select extensions.ok((select count(distinct pid)=3 from pickup_g5_session_pids),'release race used three distinct PostgreSQL sessions');
 select extensions.is((select count(*)::integer from pickup_g5_race_results where case_name='two_staff_release' and result->>'code'='pupil_released'),1,'exactly one simultaneous authorized release wins');
 select extensions.ok((select count(*)::integer from pickup_g5_race_results where case_name='two_staff_release' and result->>'code' in ('already_released','version_conflict'))=1,'losing release receives authoritative already-released/version conflict');
-select extensions.is((select count(*)::integer from public.pickup_events where cycle_id=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010140') and action='CHILD_RELEASED'),1,'two-session release race appends exactly one event');
-select extensions.is((select count(*)::integer from public.notification_outbox where source_id=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010140') and event_type='pickup.child_released'),1,'two-session release race enqueues exactly one outbox row');
+select extensions.is((select count(*)::integer from public.pickup_events where cycle_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010140') and action='CHILD_RELEASED'),1,'two-session release race appends exactly one event');
+select extensions.is((select count(*)::integer from public.notification_outbox where source_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010140') and event_type='pickup.child_released'),1,'two-session release race enqueues exactly one outbox row');
 
 -- Queue a real G3 revocation RPC ahead of release on the target profile lock.
 do $$
@@ -393,7 +407,7 @@ begin
   if dblink_send_query('g5_revoker',$$select public.revoke_pickup_release_authority('00000000-0000-4000-9000-000000010103','Concurrent G5 revoke')$$)<>1 then raise exception 'g5_revoke_query_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_revoker'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
   if v_waiters<>1 then raise exception 'g5_revoke_session_not_queued'; end if;
-  v_cycle:=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010141');
+  v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010141');
   if dblink_send_query('g5_rev_release',format('select public.pickup_g5_test_capture_release(%L::uuid,%L::uuid,%L::uuid,2,true,null)',v_cycle,'00000000-0000-4000-9000-000000010191','00000000-0000-4000-9000-000000010432'))<>1 then raise exception 'g5_rev_race_release_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_revoker')+dblink_is_busy('g5_rev_release'); exit when v_waiters=2; perform pg_sleep(0.05); end loop;
   if v_waiters<>2 then raise exception 'g5_revocation_and_release_not_both_queued'; end if;
@@ -426,7 +440,7 @@ begin
   if dblink_send_query('g5_att_correct',$$update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010142' returning mark$$)<>1 then raise exception 'g5_attendance_correction_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_att_correct'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
   if v_waiters<>1 then raise exception 'g5_attendance_correction_not_queued'; end if;
-  v_cycle:=(select cycle_id from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010142');
+  v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010142');
   if dblink_send_query('g5_att_release',format('select public.pickup_g5_test_capture_release(%L::uuid,%L::uuid,%L::uuid,2,true,null)',v_cycle,'00000000-0000-4000-9000-000000010192','00000000-0000-4000-9000-000000010433'))<>1 then raise exception 'g5_attendance_race_release_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_att_correct')+dblink_is_busy('g5_att_release'); exit when v_waiters=2; perform pg_sleep(0.05); end loop;
   if v_waiters<>2 then raise exception 'g5_attendance_correction_and_release_not_both_queued'; end if;
@@ -443,4 +457,5 @@ select extensions.is((select mark from public.attendance_entries where register_
 select extensions.is((select state from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010142'),'PARENT_ARRIVED','Attendance race preserves arrival but does not falsely confirm release');
 
 drop function public.pickup_g5_test_capture_release(uuid,uuid,uuid,integer,boolean,text);
+drop function public.pickup_g5_test_cycle_id(uuid);
 select * from extensions.finish();
