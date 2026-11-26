@@ -397,8 +397,8 @@ begin
   v_conn:=format('host=%s port=%s dbname=%s user=postgres password=postgres',host(inet_server_addr()),inet_server_port(),current_database());
   perform dblink_connect('g5_rev_blocker',v_conn); perform dblink_connect('g5_revoker',v_conn); perform dblink_connect('g5_rev_release',v_conn);
   select pid into v_pid from dblink('g5_rev_blocker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_revoker','select pg_backend_pid()') as t(pid); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_rev_release','select pg_backend_pid()') as t(pid); insert into pickup_g5_session_pids values(v_pid);
+  select pid into v_pid from dblink('g5_revoker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
+  select pid into v_pid from dblink('g5_rev_release','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
   perform dblink_exec('g5_revoker','set request.jwt.claim.sub=''00000000-0000-4000-9000-000000010101''');
   perform dblink_exec('g5_revoker','set request.jwt.claims=''{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}''');
   perform dblink_exec('g5_revoker','set role authenticated');
