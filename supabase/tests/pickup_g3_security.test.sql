@@ -186,6 +186,7 @@ set local role authenticated;
 select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','true','reinstated Manager regains default release authority');
 reset role;
 
+update public.attendance_entries set mark=null where register_id='00000000-0000-4000-9000-000000009926' and student_id='00000000-0000-4000-9000-000000009922';
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009902');
 set local role authenticated;
 select extensions.is((select eligibility from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')),'UNAVAILABLE','null mark fails closed');
@@ -210,7 +211,7 @@ select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009902');
 set local role authenticated;
 select extensions.is((select reason_code from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')),'register_not_submitted','persisted DRAFT is unavailable');
 select extensions.is((select reason_code from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-27')),'register_missing','missing register is unavailable');
-select extensions.is(pg_get_function_result('public.get_pickup_student_eligibility(uuid,date)'::regprocedure) !~* 'internal_comment','Attendance internal_comment is not exposed');
+select extensions.ok(pg_get_function_result('public.get_pickup_student_eligibility(uuid,date)'::regprocedure) !~* 'internal_comment','Attendance internal_comment is not exposed');
 reset role;
 
 insert into public.attendance_registers(id,academic_year_id,class_id,teacher_user_id,school_date,status,version,submitted_at,submitted_by)
