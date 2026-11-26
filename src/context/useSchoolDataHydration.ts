@@ -52,6 +52,7 @@ interface UseSchoolDataHydrationParams {
     isStillValid: () => boolean,
   ) => Promise<void>;
   clearParentNotesState: () => void;
+  refreshPickupBoardForUser?: (user: User, classId?: string | null) => Promise<unknown>;
   mountedRef: React.MutableRefObject<boolean>;
 }
 
@@ -71,6 +72,7 @@ export function useSchoolDataHydration({
   onPublicContentHydrationError,
   hydrateParentNotesForUser,
   clearParentNotesState,
+  refreshPickupBoardForUser,
   mountedRef,
 }: UseSchoolDataHydrationParams) {
   const pub = usePublicDataHydration({
@@ -298,6 +300,17 @@ export function useSchoolDataHydration({
         } else {
           setInquiriesStatus('UNAUTHORIZED'); setPublicInquiries([]);
         }
+        if (
+          refreshPickupBoardForUser &&
+          (user.role === 'PARENT' ||
+            user.role === 'TEACHER' ||
+            user.role === 'MANAGER' ||
+            user.role === 'APP_ADMIN' ||
+            user.role === 'ADMINISTRATIVE_PERSONNEL')
+        ) {
+          await refreshPickupBoardForUser(user);
+          if (!isStillValid()) return false;
+        }
         return true;
       } catch (err) {
         if (isStillValid()) setSchoolContextError(err instanceof Error ? err.message : 'Unable to load school data.');
@@ -308,7 +321,7 @@ export function useSchoolDataHydration({
         }
       }
     },
-    [clearPrivateState, getCurrentIdentity, hydrateClassCommunityForUser, hydrateNotificationsForAccount, hydrateParentNotesForUser, hydratePreferencesForAccount, mountedRef, patchCurrentUserAssignments, selectedClassId],
+    [clearPrivateState, getCurrentIdentity, hydrateClassCommunityForUser, hydrateNotificationsForAccount, hydrateParentNotesForUser, hydratePreferencesForAccount, mountedRef, patchCurrentUserAssignments, refreshPickupBoardForUser, selectedClassId],
   );
 
   const refreshSchoolData = useCallback(async (): Promise<boolean> => {

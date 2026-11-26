@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Lock, AlertTriangle, AlertCircle } from 'lucide-react';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
 import {
   PickupParentSection,
@@ -14,18 +14,33 @@ export const PickupBoardView: React.FC = () => {
     currentUser,
     currentRole,
     childrenList,
+    classesList,
     pickupCycles,
     pickupAvailability,
+    pickupError,
     pickupErrorCode,
     pickupLastSyncedAt,
     pickupMutationState,
     isLoadingPickup,
     refreshPickupBoard,
+    verifyPickupOperationReceipt,
     markPickupArrived,
     confirmPickupRelease,
     language,
     t,
   } = useApp();
+
+  useEffect(() => {
+    if (
+      currentUser?.id &&
+      currentUser.accountStatus === 'APPROVED' &&
+      currentRole &&
+      currentRole !== 'STUDENT' &&
+      currentRole !== 'SCHOOL_STAFF'
+    ) {
+      void refreshPickupBoard();
+    }
+  }, [currentUser?.id, currentUser?.accountStatus, currentRole, refreshPickupBoard]);
 
   const userChildren =
     currentUser?.linkedChildrenIds && currentUser.linkedChildrenIds.length > 0
@@ -34,7 +49,10 @@ export const PickupBoardView: React.FC = () => {
 
   const pendingBackendLabel = pickText(HOMEPAGE_COMMON_TEXT.backendBlockedBadge, language);
   const isBackendUnavailable =
-    pickupAvailability !== 'READY' || pickupErrorCode === PICKUP_FAIL_CLOSED_REASON;
+    pickupAvailability === 'UNAVAILABLE' || pickupErrorCode === PICKUP_FAIL_CLOSED_REASON;
+  const isBoardReadFailure =
+    !isBackendUnavailable &&
+    (pickupAvailability === 'ERROR' || pickupAvailability === 'UNAUTHORIZED');
 
   return (
     <div className="space-y-6 pb-12" data-testid="pickup-board-view">
@@ -114,6 +132,22 @@ export const PickupBoardView: React.FC = () => {
         </div>
       )}
 
+      {/* Read Failure / Unauthorized Banner */}
+      {isBoardReadFailure && (
+        <div
+          data-testid="pickup-error-banner"
+          className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-4 rounded-3xl flex items-start gap-3 text-xs text-red-800 dark:text-red-300"
+        >
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold">
+              {pickupAvailability === 'UNAUTHORIZED' ? t('pickupStateDenied') : t('pickupStateUnknown')}
+            </p>
+            {pickupError && <p>{pickupError}</p>}
+          </div>
+        </div>
+      )}
+
       {/* Parent Perspective */}
       {currentRole === 'PARENT' && (
         <PickupParentSection
@@ -132,6 +166,13 @@ export const PickupBoardView: React.FC = () => {
           onAnnounceArrival={(input) => {
             void markPickupArrived(input);
           }}
+          onVerifyReceipt={
+            verifyPickupOperationReceipt
+              ? (cycleId) => {
+                  void verifyPickupOperationReceipt(cycleId);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -148,18 +189,25 @@ export const PickupBoardView: React.FC = () => {
           t={t}
           currentRole={currentRole}
           pickupCycles={pickupCycles}
+          classesList={classesList}
           pickupAvailability={pickupAvailability}
           pickupMutationState={pickupMutationState}
           isLoadingPickup={isLoadingPickup}
-          onRefresh={() => {
-            void refreshPickupBoard();
+          onRefresh={(classId) => {
+            void refreshPickupBoard(classId);
           }}
           onConfirmRelease={(input) => {
             void confirmPickupRelease(input);
           }}
+          onVerifyReceipt={
+            verifyPickupOperationReceipt
+              ? (cycleId) => {
+                  void verifyPickupOperationReceipt(cycleId);
+                }
+              : undefined
+          }
         />
       )}
     </div>
   );
 };
-

@@ -1,205 +1,48 @@
-export type PickupDurableState = 'WAITING' | 'PARENT_ARRIVED' | 'RELEASED';
+import type { AccountRole } from '../../types.ts';
+import {
+  announcePickupArrivalTransport,
+  fetchPickupBoardCyclesTransport,
+  readPickupOperationReceiptTransport,
+} from './pickupTransport.ts';
+import type {
+  AnnounceArrivalInput,
+  ConfirmReleaseInput,
+  PickupAvailabilityStatus,
+  PickupCommandOutcome,
+  PickupCycleRecord,
+  PickupMutationEntry,
+  PickupNotificationDeliveryStatus,
+  PickupPresentationState,
+  PickupReadResult,
+  PickupReasonCode,
+  PickupRecord,
+} from './pickupTypes.ts';
 
-export type PickupPresentationState =
-  | PickupDurableState
-  | 'UNKNOWN'
-  | 'UNAVAILABLE'
-  | 'PENDING_RETRY'
-  | 'CONFLICT'
-  | 'INELIGIBLE'
-  | 'CLOSED_WINDOW'
-  | 'DENIED';
-
-export type PickupWindowStatus =
-  | 'OPEN'
-  | 'NOT_STARTED'
-  | 'CLOSED'
-  | 'NO_WINDOW_CONFIGURED'
-  | 'UNAVAILABLE';
-
-export type PickupAttendanceEligibility = 'ELIGIBLE' | 'INELIGIBLE' | 'UNAVAILABLE';
-
-export type PickupRevocationStatus = 'NONE' | 'REVOKED' | 'UNKNOWN';
-
-export type PickupOutboxStatus = 'NONE' | 'PENDING_RETRY' | 'DELIVERED' | 'FAILED';
-
-export type PickupNotificationDeliveryStatus =
-  | 'NONE'
-  | 'QUEUED'
-  | 'RETRYING'
-  | 'DELIVERED'
-  | 'UNAVAILABLE';
-
-export type PickupAvailabilityStatus = 'READY' | 'UNAVAILABLE' | 'UNAUTHORIZED' | 'ERROR';
-
-export type PickupBackendStatus = 'READY' | 'BLOCKED_BACKEND' | 'UNAUTHORIZED' | 'ERROR';
-
-export type PickupReasonCode =
-  | 'pickup_backend_unavailable'
-  | 'schedule_unavailable'
-  | 'attendance_unavailable'
-  | 'attendance_ineligible'
-  | 'window_closed'
-  | 'window_not_started'
-  | 'actor_not_authorized'
-  | 'release_authority_revoked'
-  | 'collector_not_authorized'
-  | 'collector_revoked'
-  | 'handoff_attestation_required'
-  | 'version_conflict'
-  | 'already_arrived'
-  | 'already_released'
-  | 'outbox_pending_retry'
-  | 'unknown_outcome_verify_required'
-  | 'session_changed';
-
-export interface PickupAuthorizedCollectorSummary {
-  collectorId: string;
-  fullName: string;
-  relationshipLabel: string;
-  status: 'ACTIVE' | 'REVOKED';
-}
-
-export interface PickupCycleRecord {
-  cycleId: string;
-  studentId: string;
-  studentName: string;
-  studentPhotoUrl?: string | null;
-  classId: string;
-  className: string;
-  schoolDate: string;
-  windowId: string | null;
-  windowLabel: string | null;
-  windowStatus: PickupWindowStatus;
-  attendanceEligibility: PickupAttendanceEligibility;
-  attendanceReasonCode?: PickupReasonCode | null;
-  state: PickupDurableState;
-  version: number;
-  parentArrivedAt: string | null;
-  arrivedByUserId: string | null;
-  intendedCollectorId: string | null;
-  intendedCollectorName: string | null;
-  authorizedCollectors: PickupAuthorizedCollectorSummary[];
-  releasedAt: string | null;
-  releasedByUserId: string | null;
-  releasedByName: string | null;
-  releasedToCollectorId: string | null;
-  releasedToCollectorName: string | null;
-  actorCanAnnounceArrival: boolean;
-  actorCanConfirmRelease: boolean;
-  revocationStatus: PickupRevocationStatus;
-  outboxStatus?: PickupOutboxStatus;
-  lastSyncedAt: string;
-}
-
-export interface PickupRecord {
-  id: string;
-  childId: string;
-  childName: string;
-  classId: string;
-  className: string;
-  state: PickupDurableState;
-  parentArrivedAt?: string;
-  releasedAt?: string;
-  releasedBy?: string;
-  authorizedPerson: string;
-}
-
-export interface PickupReadResult {
-  ok: boolean;
-  status: PickupBackendStatus;
-  availability: PickupAvailabilityStatus;
-  records: PickupCycleRecord[];
-  lastSyncedAt: string | null;
-  errorCode?: PickupReasonCode;
-  errorMessage?: string;
-}
-
-export interface AnnounceArrivalInput {
-  cycleId: string;
-  studentId: string;
-  collectorId: string;
-  requestId: string;
-  expectedVersion: number;
-}
-
-export interface ConfirmReleaseInput {
-  cycleId: string;
-  collectorId: string;
-  requestId: string;
-  expectedVersion: number;
-  physicalHandoffAttested: true;
-  collectorVerifiedInPerson: true;
-}
-
-export interface PickupCommandSuccess<T = PickupCycleRecord> {
-  ok: true;
-  outcome: 'SUCCESS';
-  operationId: string;
-  cycleId: string;
-  state: PickupDurableState;
-  version: number;
-  updatedRecord?: T;
-  outboxEnqueued: boolean;
-}
-
-export interface PickupCommandUnavailable {
-  ok: false;
-  outcome: 'UNAVAILABLE';
-  reasonCode: PickupReasonCode;
-  message: string;
-  retryable: true;
-}
-
-export interface PickupCommandDenied {
-  ok: false;
-  outcome: 'DENIED';
-  reasonCode: PickupReasonCode;
-  message: string;
-}
-
-export interface PickupCommandConflict<T = PickupCycleRecord> {
-  ok: false;
-  outcome: 'CONFLICT';
-  reasonCode: 'version_conflict' | 'already_arrived' | 'already_released';
-  serverRecord?: T;
-  message: string;
-}
-
-export interface PickupCommandUnknownOutcome {
-  ok: false;
-  outcome: 'UNKNOWN_OUTCOME';
-  requestId: string;
-  cycleId: string;
-  reasonCode: 'unknown_outcome_verify_required';
-  message: string;
-  requiresAuthoritativeReadback: true;
-}
-
-export type PickupCommandOutcome<T = PickupCycleRecord> =
-  | PickupCommandSuccess<T>
-  | PickupCommandUnavailable
-  | PickupCommandDenied
-  | PickupCommandConflict<T>
-  | PickupCommandUnknownOutcome;
-
-export interface PickupMutationEntry {
-  status:
-    | 'IDLE'
-    | 'SUBMITTING'
-    | 'PENDING_RETRY'
-    | 'UNKNOWN_OUTCOME'
-    | 'CONFLICT'
-    | 'DENIED'
-    | 'UNAVAILABLE';
-  requestId?: string;
-  operation?: 'ARRIVAL' | 'RELEASE';
-  payload?: AnnounceArrivalInput | ConfirmReleaseInput;
-  reasonCode?: PickupReasonCode;
-  message?: string;
-  serverRecord?: PickupCycleRecord;
-  notificationDeliveryStatus?: PickupNotificationDeliveryStatus;
-}
+export type {
+  AnnounceArrivalInput,
+  ConfirmReleaseInput,
+  PickupAttendanceEligibility,
+  PickupAuthorizedCollectorSummary,
+  PickupAvailabilityStatus,
+  PickupBackendStatus,
+  PickupCommandConflict,
+  PickupCommandDenied,
+  PickupCommandOutcome,
+  PickupCommandSuccess,
+  PickupCommandUnavailable,
+  PickupCommandUnknownOutcome,
+  PickupCycleRecord,
+  PickupDurableState,
+  PickupMutationEntry,
+  PickupNotificationDeliveryStatus,
+  PickupOutboxStatus,
+  PickupPresentationState,
+  PickupReadResult,
+  PickupReasonCode,
+  PickupRecord,
+  PickupRevocationStatus,
+  PickupWindowStatus,
+} from './pickupTypes.ts';
 
 export const PICKUP_BACKEND_UNAVAILABLE_CODE: PickupReasonCode = 'pickup_backend_unavailable';
 
@@ -223,14 +66,28 @@ export function attemptPickupOperation(
 }
 
 export function createPickupRequestId(
-  operation: 'arrival' | 'release',
-  cycleId: string,
+  _operation?: 'arrival' | 'release',
+  _cycleId?: string,
 ): string {
-  const safeId = cycleId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'cycle';
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `pickup_${operation}_${safeId}_${crypto.randomUUID()}`;
+    return crypto.randomUUID();
   }
-  return `pickup_${operation}_${safeId}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let hex = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      hex += bytes[i].toString(16).padStart(2, '0');
+    }
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 export function getChildAvatarInitials(fullName: string | null | undefined): string {
@@ -277,6 +134,38 @@ export function deriveNotificationDeliveryStatus(
   return 'NONE';
 }
 
+export function deriveSuccessDeliveryStatus(
+  outboxEnqueued: boolean,
+  record?: PickupCycleRecord,
+): PickupNotificationDeliveryStatus {
+  if (record?.outboxStatus === 'DELIVERED') return 'DELIVERED';
+  if (record?.outboxStatus === 'PENDING_RETRY') return 'RETRYING';
+  if (record?.outboxStatus === 'FAILED') return 'UNAVAILABLE';
+  return outboxEnqueued ? 'QUEUED' : 'UNAVAILABLE';
+}
+
+export function hasCommittedPickupTransition(
+  record: PickupCycleRecord | undefined,
+  cycleId: string,
+  op: 'ARRIVAL' | 'RELEASE',
+): record is PickupCycleRecord {
+  if (!record || record.cycleId !== cycleId) return false;
+  return op === 'ARRIVAL' ? (record.state === 'PARENT_ARRIVED' || record.state === 'RELEASED') : record.state === 'RELEASED';
+}
+
+export function hasServerSupersededPending(
+  records: PickupCycleRecord[],
+  cycleId: string,
+  entry: PickupMutationEntry,
+): boolean {
+  if (entry.status !== 'UNKNOWN_OUTCOME' || !entry.payload) return false;
+  const serverCycle = records.find((r) => r.cycleId === cycleId);
+  if (!serverCycle) return false;
+  if (serverCycle.version > entry.payload.expectedVersion) return true;
+  if (entry.operation === 'ARRIVAL') return serverCycle.state === 'PARENT_ARRIVED' || serverCycle.state === 'RELEASED';
+  return entry.operation === 'RELEASE' ? serverCycle.state === 'RELEASED' : false;
+}
+
 export function derivePickupPresentationState(
   cycle: PickupCycleRecord | null | undefined,
   options?: {
@@ -287,18 +176,10 @@ export function derivePickupPresentationState(
   const availability = options?.readAvailability ?? 'UNAVAILABLE';
   const mutation = options?.mutation ?? null;
 
-  if (mutation?.status === 'UNKNOWN_OUTCOME') {
-    return 'UNKNOWN';
-  }
-  if (mutation?.status === 'CONFLICT') {
-    return 'CONFLICT';
-  }
-  if (mutation?.status === 'DENIED') {
-    return 'DENIED';
-  }
-  if (mutation?.status === 'UNAVAILABLE') {
-    return 'UNAVAILABLE';
-  }
+  if (mutation?.status === 'UNKNOWN_OUTCOME') return 'UNKNOWN';
+  if (mutation?.status === 'CONFLICT') return 'CONFLICT';
+  if (mutation?.status === 'DENIED') return 'DENIED';
+  if (mutation?.status === 'UNAVAILABLE') return 'UNAVAILABLE';
 
   if (availability !== 'READY') {
     if (availability === 'UNAUTHORIZED') return 'DENIED';
@@ -306,26 +187,11 @@ export function derivePickupPresentationState(
     return 'UNAVAILABLE';
   }
 
-  if (!cycle) {
-    return 'UNKNOWN';
-  }
-
-  if (cycle.state === 'RELEASED') {
-    return 'RELEASED';
-  }
-
-  if (cycle.state === 'PARENT_ARRIVED') {
-    return 'PARENT_ARRIVED';
-  }
-
-  if (cycle.windowStatus === 'UNAVAILABLE' || cycle.attendanceEligibility === 'UNAVAILABLE') {
-    return 'UNAVAILABLE';
-  }
-
-  if (cycle.attendanceEligibility === 'INELIGIBLE') {
-    return 'INELIGIBLE';
-  }
-
+  if (!cycle) return 'UNKNOWN';
+  if (cycle.state === 'RELEASED') return 'RELEASED';
+  if (cycle.state === 'PARENT_ARRIVED') return 'PARENT_ARRIVED';
+  if (cycle.windowStatus === 'UNAVAILABLE' || cycle.attendanceEligibility === 'UNAVAILABLE') return 'UNAVAILABLE';
+  if (cycle.attendanceEligibility === 'INELIGIBLE') return 'INELIGIBLE';
   if (
     cycle.windowStatus === 'CLOSED' ||
     cycle.windowStatus === 'NOT_STARTED' ||
@@ -333,7 +199,6 @@ export function derivePickupPresentationState(
   ) {
     return 'CLOSED_WINDOW';
   }
-
   return cycle.state;
 }
 
@@ -343,12 +208,7 @@ export function canActorTriggerArrivalUi(
   mutation?: PickupMutationEntry | null,
 ): boolean {
   if (readAvailability !== 'READY' || !cycle) return false;
-  if (
-    mutation?.status === 'SUBMITTING' ||
-    mutation?.status === 'UNKNOWN_OUTCOME'
-  ) {
-    return false;
-  }
+  if (mutation?.status === 'SUBMITTING' || mutation?.status === 'UNKNOWN_OUTCOME') return false;
   if (!cycle.actorCanAnnounceArrival) return false;
   if (cycle.state !== 'WAITING') return false;
   if (cycle.windowStatus !== 'OPEN') return false;
@@ -362,12 +222,7 @@ export function canActorTriggerReleaseUi(
   mutation?: PickupMutationEntry | null,
 ): boolean {
   if (readAvailability !== 'READY' || !cycle) return false;
-  if (
-    mutation?.status === 'SUBMITTING' ||
-    mutation?.status === 'UNKNOWN_OUTCOME'
-  ) {
-    return false;
-  }
+  if (mutation?.status === 'SUBMITTING' || mutation?.status === 'UNKNOWN_OUTCOME') return false;
   if (cycle.revocationStatus !== 'NONE') return false;
   if (!cycle.actorCanConfirmRelease) return false;
   if (cycle.state !== 'PARENT_ARRIVED') return false;
@@ -376,28 +231,36 @@ export function canActorTriggerReleaseUi(
   return cycle.authorizedCollectors.some((c) => c.status === 'ACTIVE');
 }
 
-export async function fetchPickupBoardCycles(): Promise<PickupReadResult> {
-  return {
-    ok: false,
-    status: 'BLOCKED_BACKEND',
-    availability: 'UNAVAILABLE',
-    records: [],
-    lastSyncedAt: null,
-    errorCode: PICKUP_BACKEND_UNAVAILABLE_CODE,
-    errorMessage: 'Pickup board backend contract is not deployed yet.',
-  };
+export const deniedPickupOutcome = (reasonCode: PickupReasonCode, message: string): PickupCommandOutcome =>
+  ({ ok: false, outcome: 'DENIED', reasonCode, message });
+
+export const unavailablePickupOutcome = (reasonCode: PickupReasonCode, message: string): PickupCommandOutcome =>
+  ({ ok: false, outcome: 'UNAVAILABLE', reasonCode, message, retryable: true });
+
+export const unknownPickupOutcomeFor = (requestId: string, cycleId: string, message: string): PickupCommandOutcome => ({
+  ok: false,
+  outcome: 'UNKNOWN_OUTCOME',
+  requestId,
+  cycleId,
+  reasonCode: 'unknown_outcome_verify_required',
+  message,
+  requiresAuthoritativeReadback: true,
+});
+
+export async function fetchPickupBoardCycles(
+  options?: { role?: AccountRole | null; classId?: string | null },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupReadResult> {
+  return fetchPickupBoardCyclesTransport(options, clientOverride);
 }
 
 export async function announcePickupArrival(
-  _input: AnnounceArrivalInput,
+  input: AnnounceArrivalInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
 ): Promise<PickupCommandOutcome> {
-  return {
-    ok: false,
-    outcome: 'UNAVAILABLE',
-    reasonCode: PICKUP_BACKEND_UNAVAILABLE_CODE,
-    message: 'Pickup arrival backend contract is not deployed yet.',
-    retryable: true,
-  };
+  return announcePickupArrivalTransport(input, clientOverride);
 }
 
 export async function confirmPickupRelease(
@@ -407,20 +270,16 @@ export async function confirmPickupRelease(
     ok: false,
     outcome: 'UNAVAILABLE',
     reasonCode: PICKUP_BACKEND_UNAVAILABLE_CODE,
-    message: 'Pickup release backend contract is not deployed yet.',
+    message: 'Pickup physical release backend contract (G5) is not deployed yet.',
     retryable: true,
   };
 }
 
 export async function readPickupOperationReceipt(
-  _requestId: string,
-  _cycleId: string,
+  requestId: string,
+  cycleId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
 ): Promise<PickupCommandOutcome> {
-  return {
-    ok: false,
-    outcome: 'UNAVAILABLE',
-    reasonCode: PICKUP_BACKEND_UNAVAILABLE_CODE,
-    message: 'Pickup operation receipt lookup backend contract is not deployed yet.',
-    retryable: true,
-  };
+  return readPickupOperationReceiptTransport(requestId, cycleId, clientOverride);
 }
