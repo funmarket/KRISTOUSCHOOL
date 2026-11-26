@@ -154,6 +154,7 @@ as $$
 declare
   v_actor uuid:=auth.uid(); v_cycle public.pickup_cycles%rowtype; v_hash text;
   v_saved public.pickup_requests%rowtype; v_now timestamptz:=clock_timestamp();
+  v_payload jsonb; v_digest_schema text;
   v_date date:=(v_now at time zone 'Africa/Tunis')::date; v_schedule jsonb; v_elig record; v_result jsonb;
 begin
   if v_actor is null then raise exception 'actor_unauthenticated' using errcode='P0001'; end if;
@@ -164,7 +165,12 @@ begin
     where p.id=v_actor and p.account_status='APPROVED' and r.active and r.role='PARENT'::public.app_role) then
     raise exception 'pickup_parent_required' using errcode='P0001';
   end if;
-  v_hash:=encode(public.digest(convert_to(jsonb_build_object('cycleId',p_cycle_id,'collectorId',p_collector_id,'expectedVersion',p_expected_version)::text,'UTF8'),'sha256'),'hex');
+  v_payload:=jsonb_build_object('cycleId',p_cycle_id,'collectorId',p_collector_id,'expectedVersion',p_expected_version);
+  select n.nspname into v_digest_schema from pg_extension e
+    join pg_namespace n on n.oid=e.extnamespace where e.extname='pgcrypto';
+  if v_digest_schema is null then raise exception 'pickup_crypto_unavailable' using errcode='P0001'; end if;
+  execute format('select encode(%I.digest($1, $2), ''hex'')',v_digest_schema)
+    into v_hash using convert_to(v_payload::text,'UTF8'),'sha256';
   -- Serialize request identity across cycles, then lock the cycle. This prevents
   -- a reused request UUID on two cycles from deadlocking or recording twice.
   perform pg_advisory_xact_lock(hashtextextended('pickup-request:'||v_actor::text||':'||p_request_id::text,0));
