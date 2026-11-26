@@ -102,8 +102,8 @@ select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-
 select extensions.ok(pg_temp.save_pickup_ref('collector',(public.create_authorized_pickup_person('00000000-0000-4000-9000-000000009922','Approved Collector','Aunt','Photo ID checked','G3-VERIFY-001','2026-11-26','2026-11-26','Identity and relationship verified') ->> 'id')::uuid) is not null,'APP_ADMIN can register a verified collector');
 select extensions.is(public.get_pickup_schedule('00000000-0000-4000-9000-000000009922','2026-11-26') ->> 'status','UNAVAILABLE','missing schedule blocks Pickup by default');
 select extensions.is(public.create_pickup_dismissal_policy(null,extract(dow from date '2026-11-26')::smallint,'14:00','16:00','2026-11-26',null,'Initial approved dismissal window') ->> 'timezone','Africa/Tunis','APP_ADMIN can create an Africa/Tunis dismissal policy');
-select extensions.is((select count(*)::integer from public.pickup_dismissal_policy_audit_logs where actor_user_id='00000000-0000-4000-9000-000000009901' and action='CREATED'),1,'dismissal schedule creation is audited');
 reset role;
+select extensions.is((select count(*)::integer from public.pickup_dismissal_policy_audit_logs where actor_user_id='00000000-0000-4000-9000-000000009901' and action='CREATED'),1,'dismissal schedule creation is audited');
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009902');
 set local role authenticated;
@@ -224,8 +224,8 @@ reset role;
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009901');
 set local role authenticated;
 select extensions.is(public.revoke_authorized_pickup_person((select ref_id from pg_temp.pickup_refs where ref_key='collector'),'Verification no longer valid') ->> 'id',(select ref_id from pg_temp.pickup_refs where ref_key='collector'),'APP_ADMIN can revoke a collector');
-select extensions.is((select count(*)::integer from public.pickup_person_audit_logs where authorized_person_id=(select ref_id from pg_temp.pickup_refs where ref_key='collector') and action='REVOKED'),1,'collector revocation is audited');
 reset role;
+select extensions.is((select count(*)::integer from public.pickup_person_audit_logs where authorized_person_id=(select ref_id from pg_temp.pickup_refs where ref_key='collector') and action='REVOKED'),1,'collector revocation is audited');
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009906');
 set local role authenticated;
 select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922',(select ref_id from pg_temp.pickup_refs where ref_key='collector'),'2026-11-26') ->> 'canAnnounceArrival','false','revoked collector cannot support parent arrival');

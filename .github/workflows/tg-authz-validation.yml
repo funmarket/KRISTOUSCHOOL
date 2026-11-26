@@ -40,6 +40,8 @@ jobs:
           name: pickup-g3-database-types
           path: /tmp/pickup-g3-database.types.ts
           if-no-files-found: error
+      - name: Verify committed types match isolated schema
+        run: diff -u src/lib/database.types.ts /tmp/pickup-g3-database.types.ts
       - name: Run PostgreSQL authorization tests
         run: bun run db:test
       - name: Stop isolated local Supabase
