@@ -1,7 +1,7 @@
 -- G4 arrival contract: synthetic fixtures only; run after an isolated db reset.
 create extension if not exists dblink;
 begin;
-select extensions.plan(58);
+select extensions.plan(64);
 
 select extensions.ok(has_function_privilege('authenticated','public.get_pickup_parent_board()','EXECUTE'),'authenticated can call parent board');
 select extensions.ok(has_function_privilege('authenticated','public.get_pickup_staff_board(uuid)','EXECUTE'),'authenticated can call staff board');
@@ -128,6 +128,33 @@ from public.student_class_memberships m where m.id='00000000-0000-4000-9000-0000
 
 -- Negative authority and policy matrix runs against a second WAITING cycle so
 -- each failed attempt can be followed by the real two-session race tests.
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009943',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009943","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.is((select count(*)::integer from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944')),3,'APP_ADMIN can read the scoped school staff board');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009979',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009979","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.is((select count(*)::integer from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944')),3,'MANAGER can read the scoped school staff board');
+select extensions.ok(not exists(select 1 from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944') where can_confirm_release),'G4 staff board never grants physical release');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009980',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009980","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.is((select count(*)::integer from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944')),3,'ADMINISTRATIVE_PERSONNEL can read the scoped school staff board');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009981',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009981","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select * from public.get_pickup_staff_board(null)$$,'P0001','insufficient_pickup_scope','SCHOOL_STAFF has no unapproved implicit Pickup board scope');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009941',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009941","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.ok((select not (to_jsonb(b) ? 'internal_comment' or to_jsonb(b) ? 'safety_note') from public.get_pickup_parent_board() b limit 1),'parent board omits internal Attendance comments and safety notes');
+reset role;
+
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009941',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009941","role":"authenticated"}',true);
 set local role authenticated;
