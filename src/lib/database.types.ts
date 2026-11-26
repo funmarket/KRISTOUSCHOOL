@@ -2,7 +2,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
-  
+
   "graphql_public": {
           Tables: {
             [_ in never]: never
@@ -75,7 +75,7 @@ isOneToOne: false
                     "code"?: string,"created_at"?: string,"ends_on"?: string,"id"?: string,"is_active"?: boolean,"label"?: string,"starts_on"?: string,"updated_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"account_governance_audit_logs": {
                   Row: {
@@ -489,7 +489,7 @@ isOneToOne: false
                     "code"?: string,"created_at"?: string,"cycle_scope"?: string,"evidence_status"?: string,"label_ar"?: string,"label_en"?: string,"label_fr"?: string,"observed_source_label"?: string | null,"observed_source_lang"?: string | null,"sort_order"?: number,"source_document"?: string | null,"source_url"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
-                    
+
                   ]
                 },"directory_entries": {
                   Row: {
@@ -723,7 +723,7 @@ isOneToOne: false
                     "created_at"?: string,"dispatched_at"?: string | null,"event_type"?: string,"id"?: string,"payload"?: NonNullable<Json>,"source_id"?: string | null
                   }
                   Relationships: [
-                    
+
                   ]
                 },"parent_child_links": {
                   Row: {
@@ -1289,7 +1289,7 @@ isOneToOne: false
                     "code"?: string,"label_ar"?: string,"label_en"?: string,"label_fr"?: string,"sort_order"?: number
                   }
                   Relationships: [
-                    
+
                   ]
                 },"school_public_content": {
                   Row: {
@@ -2512,7 +2512,7 @@ export type CompositeTypes<
 export const Constants = {
   "graphql_public": {
           Enums: {
-            
+
           }
         },"public": {
           Enums: {

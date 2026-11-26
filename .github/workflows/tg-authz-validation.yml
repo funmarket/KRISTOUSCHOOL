@@ -34,6 +34,8 @@ jobs:
         run: bun run db:reset
       - name: Generate TypeScript types from isolated schema
         run: npx --yes supabase@3.1.0 gen types typescript --local > /tmp/pickup-g3-database.types.ts
+      - name: Normalize generated TypeScript whitespace
+        run: python3 -c "from pathlib import Path; p=Path('/tmp/pickup-g3-database.types.ts'); p.write_text('\\n'.join(line.rstrip() for line in p.read_text().splitlines())+'\\n')"
       - name: Upload isolated schema types for review
         uses: actions/upload-artifact@v4
         with:

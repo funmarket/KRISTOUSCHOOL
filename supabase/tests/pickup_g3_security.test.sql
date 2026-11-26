@@ -128,13 +128,13 @@ reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009904');
 set local role authenticated;
-select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','false','TEACHER has no default release authority');
+select extensions.throws_ok($$select public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922')$$,'P0001','insufficient_pickup_scope','TEACHER has no Pickup board or release authority');
 select extensions.throws_ok($$select * from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')$$,'P0001','insufficient_pickup_scope','TEACHER has no Pickup eligibility projection scope');
 reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009905');
 set local role authenticated;
-select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','false','SCHOOL_STAFF has no default release authority');
+select extensions.throws_ok($$select public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922')$$,'P0001','insufficient_pickup_scope','SCHOOL_STAFF has no Pickup board or release authority');
 reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009906');
