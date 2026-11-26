@@ -174,6 +174,10 @@ begin
   insert into pickup_g4_race_results values('same_request','a',v_result);
   select result into v_result from dblink_get_result('pickup_g4_b') as t(result jsonb);
   insert into pickup_g4_race_results values('same_request','b',v_result);
+  -- libpq async-query connections must be drained through the terminal empty
+  -- result before they can accept a second query.
+  perform result from dblink_get_result('pickup_g4_a') as t(result jsonb);
+  perform result from dblink_get_result('pickup_g4_b') as t(result jsonb);
 
   -- Different request UUIDs: one transition wins; the waiter receives the
   -- authoritative PARENT_ARRIVED/version conflict without another outbox event.
@@ -196,6 +200,8 @@ begin
   insert into pickup_g4_race_results values('distinct_request','a',v_result);
   select result into v_result from dblink_get_result('pickup_g4_b') as t(result jsonb);
   insert into pickup_g4_race_results values('distinct_request','b',v_result);
+  perform result from dblink_get_result('pickup_g4_a') as t(result jsonb);
+  perform result from dblink_get_result('pickup_g4_b') as t(result jsonb);
 
   perform dblink_disconnect('pickup_g4_a');
   perform dblink_disconnect('pickup_g4_b');
