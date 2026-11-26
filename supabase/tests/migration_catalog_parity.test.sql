@@ -1,7 +1,8 @@
 -- Normalized public-catalog parity gate for the installed 20-migration baseline.
 -- Expected fingerprints were captured read-only from ofppapwofhovhroyjtkc.
 -- This test runs against the clean isolated database built by `supabase db reset`.
--- It compares stable catalog definitions and grants, not OIDs or row data.
+-- It compares the G2 baseline only, not OIDs or row data. Later feature-stage
+-- objects are excluded explicitly so this regression gate remains meaningful.
 
 begin;
 
@@ -9,10 +10,34 @@ select extensions.plan(11);
 
 create temporary table migration_catalog_fingerprints on commit drop as
 with
+pickup_relations(relname) as (
+  values
+    ('dismissal_policies'),('pickup_dismissal_policy_audit_logs'),('authorized_pickup_persons'),
+    ('pickup_release_revocations'),('pickup_authority_audit_logs'),('pickup_cycles'),
+    ('pickup_requests'),('pickup_events'),('early_departure_requests'),
+    ('pickup_audit_export_logs'),('pickup_person_audit_logs'),
+    ('pickup_events_id_seq'),('pickup_authority_audit_logs_id_seq'),
+    ('pickup_audit_export_logs_id_seq'),('pickup_person_audit_logs_id_seq'),
+    ('pickup_dismissal_policy_audit_logs_id_seq')
+),
+pickup_routines(proname) as (
+  values
+    ('pickup_immutable_audit_row'),('pickup_protect_cycle_identity'),
+    ('pickup_touch_early_departure_request'),('pickup_validate_new_cycle'),
+    ('pickup_actor_is_app_admin'),('pickup_actor_can_confirm_release'),
+    ('pickup_actor_can_view_student'),('pickup_parent_can_announce_arrival'),
+    ('get_pickup_actor_authority'),('get_pickup_student_eligibility'),
+    ('revoke_user_pickup_release_authority'),('reinstate_user_pickup_release_authority'),
+    ('create_pickup_dismissal_policy'),('replace_pickup_dismissal_policy'),
+    ('pickup_resolve_schedule'),('get_pickup_schedule'),
+    ('create_authorized_pickup_person'),('revoke_authorized_pickup_person'),
+    ('list_authorized_pickup_persons'),('export_pickup_events')
+),
 rel as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,c.relpersistence,c.relispartition) s
   from pg_class c join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='public' and c.relkind in ('r','p','v','m','f','S')
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 cols as (
   select format('%s.%s.%s|%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,a.attname,a.attnum,format_type(a.atttypid,a.atttypmod),a.attnotnull,coalesce(pg_get_expr(d.adbin,d.adrelid),''),a.attidentity,a.attgenerated,coalesce(coll.collname,'')) s
@@ -20,35 +45,42 @@ cols as (
   left join pg_attrdef d on d.adrelid=c.oid and d.adnum=a.attnum
   left join pg_collation coll on coll.oid=a.attcollation and a.attcollation<>0
   where n.nspname='public' and c.relkind in ('r','p','v','m','f') and a.attnum>0 and not a.attisdropped
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 cons as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,co.conname,co.contype,co.convalidated,co.condeferrable,co.condeferred,pg_get_constraintdef(co.oid,true)) s
   from pg_constraint co join pg_class c on c.oid=co.conrelid join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='public'
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 idx as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,ic.relname,i.indisunique,i.indisprimary,i.indisvalid,i.indisready,pg_get_indexdef(i.indexrelid)) s
   from pg_index i join pg_class c on c.oid=i.indrelid join pg_namespace n on n.oid=c.relnamespace join pg_class ic on ic.oid=i.indexrelid
   where n.nspname='public'
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 trig as (
   select format('%s.%s|%s|%s|%s|%s',n.nspname,c.relname,t.tgname,t.tgenabled,pg_get_triggerdef(t.oid,true),t.tgfoid::regprocedure::text) s
   from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='public' and not t.tgisinternal
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 proc_meta as (
   select format('%s|%s|%s|%s|%s|%s|%s|%s|%s',p.oid::regprocedure::text,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),l.lanname,pg_get_userbyid(p.proowner),p.prosecdef,p.provolatile,p.proisstrict,coalesce(array_to_string(p.proconfig,','),'')) s
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
   where n.nspname='public' and p.prokind in ('f','p')
+    and not exists (select 1 from pickup_routines x where x.proname=p.proname)
 ),
 proc_source as (
   select format('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s',p.oid::regprocedure::text,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),l.lanname,pg_get_userbyid(p.proowner),p.prosecdef,p.provolatile,p.proisstrict,coalesce(array_to_string(p.proconfig,','),''),regexp_replace(p.prosrc,'\s+',' ','g')) s
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
   where n.nspname='public' and p.prokind in ('f','p')
+    and not exists (select 1 from pickup_routines x where x.proname=p.proname)
 ),
 pol as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',schemaname,tablename,policyname,cmd,permissive,array_to_string(roles,','),coalesce(qual,''),coalesce(with_check,'')) s
   from pg_policies where schemaname='public'
+    and not exists (select 1 from pickup_relations x where x.relname=tablename)
 ),
 table_grants as (
   select format('%s.%s|%s|%s|%s|%s',n.nspname,c.relname,case when x.grantee=0 then 'PUBLIC' else gr.rolname end,go.rolname,x.privilege_type,x.is_grantable) s
@@ -56,6 +88,7 @@ table_grants as (
   cross join lateral aclexplode(coalesce(c.relacl,acldefault(case when c.relkind='S' then 'S'::"char" else 'r'::"char" end,c.relowner))) x
   left join pg_roles gr on gr.oid=x.grantee left join pg_roles go on go.oid=x.grantor
   where n.nspname='public' and c.relkind in ('r','p','v','m','f','S')
+    and not exists (select 1 from pickup_relations x where x.relname=c.relname)
 ),
 routine_grants as (
   select format('%s|%s|%s|%s|%s',p.oid::regprocedure::text,case when x.grantee=0 then 'PUBLIC' else gr.rolname end,go.rolname,x.privilege_type,x.is_grantable) s
@@ -63,6 +96,7 @@ routine_grants as (
   cross join lateral aclexplode(coalesce(p.proacl,acldefault('f'::"char",p.proowner))) x
   left join pg_roles gr on gr.oid=x.grantee left join pg_roles go on go.oid=x.grantor
   where n.nspname='public' and p.prokind in ('f','p')
+    and not exists (select 1 from pickup_routines x where x.proname=p.proname)
 ),
 types as (
   select format('%s|%s|%s|%s|%s|%s',n.nspname||'.'||t.typname,t.typtype,pg_get_userbyid(t.typowner),t.typcategory,
