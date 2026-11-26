@@ -84,6 +84,9 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
                   ar: 'بوابة التسجيل بانتظار تفعيل جدول طلبات الالتحاق في Supabase. لم يتم تسجيل أي طلب وهمي.',
                   fr: 'Le service d’inscription en ligne attend le déploiement du contrat Supabase. Aucune demande fictive enregistrée.',
                   en: 'Enrollment submission is awaiting verified Supabase backend deployment. No fake request was stored.',
+                  es: 'El envío de matrículas espera el despliegue verificado en Supabase. No se guardó ninguna solicitud ficticia.',
+                  de: 'Die Einschreibungsübermittlung wartet auf die bestätigte Supabase-Bereitstellung. Es wurde kein Scheinantrag gespeichert.',
+                  pt: 'A submissão de inscrições aguarda a implantação verificada no Supabase. Não foi guardado qualquer pedido fictício.',
                 },
                 language,
               )
@@ -139,7 +142,14 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
       setReviewFeedback({
         type: 'success',
         text: pickText(
-          { ar: 'تم تحديث حالة ملف التسجيل بنجاح.', fr: 'Dossier mis à jour.', en: 'Enrollment application updated.' },
+          {
+            ar: 'تم تحديث حالة ملف التسجيل بنجاح.',
+            fr: 'Dossier mis à jour.',
+            en: 'Enrollment application updated.',
+            es: 'Solicitud de matrícula actualizada.',
+            de: 'Einschreibungsantrag aktualisiert.',
+            pt: 'Pedido de inscrição atualizado.',
+          },
           language,
         ),
       });
@@ -292,7 +302,7 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                {pickText({ ar: 'ملاحظات إضافية (اختياري)', fr: 'Remarques complémentaires (optionnel)', en: 'Additional Notes (optional)' }, language)}
+                {pickText({ ar: 'ملاحظات إضافية (اختياري)', fr: 'Remarques complémentaires (optionnel)', en: 'Additional Notes (optional)', es: 'Notas adicionales (opcional)', de: 'Zusätzliche Hinweise (optional)', pt: 'Notas adicionais (opcional)' }, language)}
               </label>
               <textarea
                 rows={2}

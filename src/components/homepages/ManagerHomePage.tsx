@@ -75,6 +75,9 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
             ar: 'لوحة التسيير العملياتي للمدير المساعد ضمن الصلاحيات المفوضة من طرف مالك المدرسة (APP_ADMIN).',
             fr: 'Pilotage opérationnel de la direction dans le cadre des délégations accordées par le fondateur (APP_ADMIN).',
             en: 'Operational management dashboard scoped to capabilities delegated by the School Owner (APP_ADMIN).',
+            es: 'Panel de gestión operativa limitado a las facultades delegadas por el propietario de la escuela (APP_ADMIN).',
+            de: 'Operatives Leitungs-Dashboard im Rahmen der vom Schulinhaber (APP_ADMIN) übertragenen Befugnisse.',
+            pt: 'Painel de gestão operacional no âmbito das competências delegadas pelo proprietário da escola (APP_ADMIN).',
           },
           language,
         )}
@@ -100,7 +103,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="kh-info-panel-title">
               {pickText(
-                { ar: 'مركز متابعة المسير والصلاحيات المفوضة', fr: 'Périmètre opérationnel Manager', en: 'Manager Operational Control Center' },
+                { ar: 'مركز متابعة المسير والصلاحيات المفوضة', fr: 'Périmètre opérationnel Manager', en: 'Manager Operational Control Center', es: 'Centro de control operativo de gestión', de: 'Operatives Manager-Kontrollzentrum', pt: 'Centro de controlo operacional de gestão' },
                 language,
               )}
             </h2>
@@ -109,7 +112,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
               onClick={() => setShowControlCenter(false)}
               className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold"
             >
-              {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close' }, language)}
+              {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close', es: 'Cerrar', de: 'Schließen', pt: 'Fechar' }, language)}
             </button>
           </div>
           {schoolContextError && (
@@ -123,25 +126,25 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
                 onClick={() => void refreshSchoolData()}
                 className="rounded-lg bg-red-600 px-2.5 py-1 text-white text-[11px] font-bold hover:bg-red-700"
               >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
               </button>
             </div>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'الأقسام', fr: 'Classes', en: 'Classes' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'الأقسام', fr: 'Classes', en: 'Classes', es: 'Clases', de: 'Klassen', pt: 'Turmas' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeClasses ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'التلاميذ', fr: 'Élèves', en: 'Students' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'التلاميذ', fr: 'Élèves', en: 'Students', es: 'Estudiantes', de: 'Schüler', pt: 'Alunos' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeStudents ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'التسجيلات المعلقة', fr: 'Admissions', en: 'Pending Admissions' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'التسجيلات المعلقة', fr: 'Admissions', en: 'Pending Admissions', es: 'Admisiones pendientes', de: 'Ausstehende Aufnahmen', pt: 'Admissões pendentes' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.pendingAdmissions ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'الاستفسارات', fr: 'Demandes', en: 'Open Inquiries' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'الاستفسارات', fr: 'Demandes', en: 'Open Inquiries', es: 'Consultas abiertas', de: 'Offene Anfragen', pt: 'Pedidos em aberto' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.openInquiries ?? 0) : '—'}</div>
             </div>
           </div>
@@ -152,6 +155,9 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
                     ar: `الصلاحيات المفوضة من الخادم: ${capabilities.join('، ')}`,
                     fr: `Habilitations actives déléguées : ${capabilities.join(', ')}`,
                     en: `Server-verified delegated capabilities: ${capabilities.join(', ')}`,
+                    es: `Facultades delegadas verificadas por el servidor: ${capabilities.join(', ')}`,
+                    de: `Servergeprüfte übertragene Befugnisse: ${capabilities.join(', ')}`,
+                    pt: `Competências delegadas verificadas pelo servidor: ${capabilities.join(', ')}`,
                   },
                   language,
                 )
@@ -160,6 +166,9 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
                     ar: 'لا توجد صلاحيات إضافية مفوضة حالياً؛ يمكنك متابعة التشغيل اليومي ضمن دورك الأساسي.',
                     fr: 'Aucune délégation additionnelle active ; vous disposez des vues opérationnelles de base.',
                     en: 'No extra Owner capability grants active yet; standard operational modules are enabled.',
+                    es: 'No hay facultades adicionales delegadas aún; los módulos operativos estándar están habilitados.',
+                    de: 'Noch keine zusätzlichen Inhaber-Befugnisse aktiv; Standard-Betriebsmodule sind aktiviert.',
+                    pt: 'Ainda não existem delegações adicionais ativas; os módulos operacionais padrão estão ativos.',
                   },
                   language,
                 )}
@@ -181,7 +190,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
         <HomeShortcutCard
           id="manager-control-center"
           title={pickText(
-            { ar: 'مركز المتابعة', fr: 'Centre de contrôle', en: 'Control Center' },
+            { ar: 'مركز المتابعة', fr: 'Centre de contrôle', en: 'Control Center', es: 'Centro de control', de: 'Kontrollzentrum', pt: 'Centro de controlo' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -193,7 +202,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
         {canAccessAppTab(currentUser, 'pickup') && (
           <HomeShortcutCard
             id="manager-pickup"
-            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' }, language)}
+            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup', es: 'Recogida', de: 'Abholung', pt: 'Recolha' }, language)}
             actionLabel={openActionLabel}
             icon="🚸"
             tone="green"
@@ -204,7 +213,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
         <HomeShortcutCard
           id="manager-registration"
           title={pickText(
-            { ar: 'التسجيل والمراجعات', fr: 'Inscriptions & Dossiers', en: 'Registration' },
+            { ar: 'التسجيل والمراجعات', fr: 'Inscriptions & Dossiers', en: 'Registration', es: 'Inscripciones', de: 'Anmeldungen', pt: 'Inscrições' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -217,7 +226,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           <HomeShortcutCard
             id="manager-students"
             title={pickText(
-              { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
+              { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students', es: 'Gestión de alumnos', de: 'Schülerverwaltung', pt: 'Gestão de alunos' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -229,7 +238,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
 
         <HomeShortcutCard
           id="manager-broadcasts"
-          title={pickText({ ar: 'البلاغات العامة', fr: 'Diffusions & Annonces', en: 'Broadcasts' }, language)}
+          title={pickText({ ar: 'البلاغات العامة', fr: 'Diffusions & Annonces', en: 'Broadcasts', es: 'Difusiones y anuncios', de: 'Mitteilungen', pt: 'Comunicados e anúncios' }, language)}
           actionLabel={openActionLabel}
           icon="📢"
           tone="red"
@@ -238,7 +247,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
 
         <HomeShortcutCard
           id="manager-food-menu"
-          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu', es: 'Menú del comedor', de: 'Speiseplan', pt: 'Ementa da cantina' }, language)}
           actionLabel={openActionLabel}
           icon="🍽️"
           tone="yellow"
@@ -248,7 +257,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
         <HomeShortcutCard
           id="manager-public-content"
           title={pickText(
-            { ar: 'المحتوى العام', fr: 'Contenu public', en: 'Public content' },
+            { ar: 'المحتوى العام', fr: 'Contenu public', en: 'Public content', es: 'Contenido público', de: 'Öffentlicher Inhalt', pt: 'Conteúdo público' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -265,6 +274,9 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
             ar: 'الإشراف التربوي والدليل المدرسي',
             fr: 'Supervision pédagogique & Annuaires',
             en: 'Directory, Calendar & Class Moderation',
+            es: 'Directorio, calendario y moderación',
+            de: 'Verzeichnis, Kalender & Klassenmoderation',
+            pt: 'Diretório, calendário e moderação',
           },
           language,
         )}
@@ -273,7 +285,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           <HomeShortcutCard
             id="manager-teacher-directory"
             title={pickText(
-              { ar: 'دليل المربين', fr: 'Annuaire des enseignants', en: 'Teacher Directory' },
+              { ar: 'دليل المربين', fr: 'Annuaire des enseignants', en: 'Teacher Directory', es: 'Directorio docente', de: 'Lehrkräfteverzeichnis', pt: 'Diretório de docentes' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -285,7 +297,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           <HomeShortcutCard
             id="manager-admin-directory"
             title={pickText(
-              { ar: 'دليل الإدارة', fr: 'Annuaire administratif', en: 'Admin Directory' },
+              { ar: 'دليل الإدارة', fr: 'Annuaire administratif', en: 'Admin Directory', es: 'Directorio administrativo', de: 'Verwaltungsverzeichnis', pt: 'Diretório administrativo' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -296,7 +308,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
 
           <HomeShortcutCard
             id="manager-calendar"
-            title={pickText({ ar: 'الروزنامة المدرسية', fr: 'Calendrier', en: 'Calendar' }, language)}
+            title={pickText({ ar: 'الروزنامة المدرسية', fr: 'Calendrier', en: 'Calendar', es: 'Calendario', de: 'Kalender', pt: 'Calendário' }, language)}
             actionLabel={openActionLabel}
             icon="📅"
             tone="teal"
@@ -310,7 +322,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
           <HomeShortcutCard
             id="manager-moderation"
             title={pickText(
-              { ar: 'إشراف النقاشات', fr: 'Modération des classes', en: 'Moderation' },
+              { ar: 'إشراف النقاشات', fr: 'Modération des classes', en: 'Moderation', es: 'Moderación', de: 'Moderation', pt: 'Moderação' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -321,7 +333,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
 
           <HomeShortcutCard
             id="manager-messages"
-            title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
+            title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages', es: 'Mensajes', de: 'Nachrichten', pt: 'Mensagens' }, language)}
             actionLabel={openActionLabel}
             statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
             icon="💬"
@@ -333,7 +345,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
             <HomeShortcutCard
               id="manager-classes"
               title={pickText(
-                { ar: 'الأقسام وقوائم التلاميذ', fr: 'Classes & Élèves', en: 'Classes & Rosters' },
+                { ar: 'الأقسام وقوائم التلاميذ', fr: 'Classes & Élèves', en: 'Classes & Rosters', es: 'Clases y listas', de: 'Klassen & Listen', pt: 'Turmas e listas' },
                 language,
               )}
               actionLabel={openActionLabel}
@@ -347,7 +359,7 @@ export const ManagerHomePage: React.FC<ManagerHomePageProps> = ({
             <HomeShortcutCard
               id="manager-pending-approvals"
               title={pickText(
-                { ar: 'مراجعة الحسابات المفوضة', fr: 'Approbations déléguées', en: 'Delegated Account Review' },
+                { ar: 'مراجعة الحسابات المفوضة', fr: 'Approbations déléguées', en: 'Delegated Account Review', es: 'Revisión delegada de cuentas', de: 'Delegierte Kontoprüfung', pt: 'Revisão delegada de contas' },
                 language,
               )}
               actionLabel={openActionLabel}

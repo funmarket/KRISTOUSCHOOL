@@ -77,7 +77,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             onClick={goToToday}
             className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200"
           >
-            {pickText({ ar: 'اليوم', fr: 'Aujourd’hui', en: 'Today' }, language)}
+            {pickText({ ar: 'اليوم', fr: 'Aujourd’hui', en: 'Today', es: 'Hoy', de: 'Heute', pt: 'Hoje' }, language)}
           </button>
           <button
             type="button"
@@ -109,7 +109,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200"
           >
             <option value="ALL">
-              {pickText({ ar: 'كل الفئات', fr: 'Toutes catégories', en: 'All categories' }, language)}
+              {pickText({ ar: 'كل الفئات', fr: 'Toutes catégories', en: 'All categories', es: 'Todas las categorías', de: 'Alle Kategorien', pt: 'Todas as categorias' }, language)}
             </option>
             {CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>
@@ -127,7 +127,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             >
               <Plus className="w-3.5 h-3.5" />
               <span>
-                {pickText({ ar: 'إضافة حدث', fr: 'Ajouter un événement', en: 'Add Event' }, language)}
+                {pickText({ ar: 'إضافة حدث', fr: 'Ajouter un événement', en: 'Add Event', es: 'Añadir evento', de: 'Eintrag hinzufügen', pt: 'Adicionar evento' }, language)}
               </span>
             </button>
           )}
@@ -147,6 +147,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
                 ar: 'لا يوجد أي قسم مسند لحسابك كأستاذ حالياً. لا يمكنك إضافة أحداث في الروزنامة قبل إسناد قسم من الإدارة.',
                 fr: 'Aucune classe active n’est attribuée à votre compte enseignant. Création d’événements indisponible sans classe attribuée.',
                 en: 'No active class is assigned to your teacher account yet. Calendar event creation stays disabled until administration assigns a class.',
+                es: 'Aún no hay ninguna clase activa asignada a su cuenta de docente. La creación de eventos permanece deshabilitada hasta que la administración asigne una clase.',
+                de: 'Ihrem Lehrkraftkonto ist noch keine aktive Klasse zugewiesen. Das Erstellen von Kalendereinträgen bleibt bis zur Zuweisung deaktiviert.',
+                pt: 'Ainda não existe nenhuma turma ativa atribuída à sua conta de professor. A criação de eventos no calendário permanece desativada até a administração atribuir uma turma.',
               },
               language,
             )}
@@ -171,7 +174,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             className="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
             {pickText(
-              { ar: 'إعادة تحميل العرض فقط', fr: 'Recharger l’affichage', en: 'Retry Reload' },
+              { ar: 'إعادة تحميل العرض فقط', fr: 'Recharger l’affichage', en: 'Retry Reload', es: 'Reintentar recarga', de: 'Neu laden', pt: 'Recarregar vista' },
               language,
             )}
           </button>
@@ -246,6 +249,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
                     ar: 'غير مصرح بعرض أو تعديل أحداث هذا التقويم.',
                     fr: 'Accès non autorisé à ce calendrier.',
                     en: 'Not authorized to view or modify calendar events.',
+                    es: 'No autorizado para ver o modificar los eventos del calendario.',
+                    de: 'Nicht berechtigt, Kalenderereignisse anzuzeigen oder zu ändern.',
+                    pt: 'Sem autorização para ver ou modificar eventos do calendário.',
                   },
                   language,
                 )}
@@ -256,7 +262,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             onClick={() => void onRefresh()}
             className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -276,6 +282,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
                     ar: 'تعذر تحميل أحداث التقويم.',
                     fr: 'Impossible de charger les événements du calendrier.',
                     en: 'Failed to load calendar events.',
+                    es: 'No se pudieron cargar los eventos del calendario.',
+                    de: 'Kalendereinträge konnten nicht geladen werden.',
+                    pt: 'Falha ao carregar os eventos do calendário.',
                   },
                   language,
                 )}
@@ -286,7 +295,7 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
             onClick={() => void onRefresh()}
             className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -299,6 +308,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
               ar: 'التقويم المدرسي غير متاح حالياً',
               fr: 'Calendrier scolaire indisponible',
               en: 'School Calendar Unavailable',
+              es: 'Calendario escolar no disponible',
+              de: 'Schulkalender nicht verfügbar',
+              pt: 'Calendário escolar indisponível',
             },
             language,
           )}
@@ -307,6 +319,9 @@ export const SchoolCalendarPanel: React.FC<SchoolCalendarPanelProps> = (props) =
               ar: 'خدمة التقويم المدرسي غير مفعلة بعد في المدرسة.',
               fr: 'Le service de calendrier scolaire n’est pas encore activé.',
               en: 'The school calendar service is not active yet.',
+              es: 'El servicio de calendario escolar aún no está activo.',
+              de: 'Der Schulkalenderdienst ist noch nicht aktiv.',
+              pt: 'O serviço de calendário escolar ainda não está ativo.',
             },
             language,
           )}

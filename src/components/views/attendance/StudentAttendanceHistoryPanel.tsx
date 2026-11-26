@@ -137,14 +137,7 @@ export const StudentAttendanceHistoryPanel: React.FC<StudentAttendanceHistoryPan
         toDate: snap.toDate,
         status: 'ERROR',
         items: [],
-        errorMessage: pickText(
-          {
-            ar: 'يرجى تحديد نطاق زمني صالح بحد أقصى 366 يوماً.',
-            fr: 'Veuillez sélectionner une période valide (366 jours maximum).',
-            en: 'Please select a valid date range (366 days maximum).',
-          },
-          language,
-        ),
+        errorMessage: pickText({ ar: 'يرجى تحديد نطاق زمني صالح بحد أقصى 366 يوماً.', fr: 'Veuillez sélectionner une période valide (366 jours maximum).', en: 'Please select a valid date range (366 days maximum).', es: 'Seleccione un rango de fechas válido (máximo 366 días).', de: 'Bitte wählen Sie einen gültigen Datumsbereich (maximal 366 Tage).', pt: 'Selecione um intervalo de datas válido (máximo de 366 dias).' }, language),
       });
       return;
     }
@@ -263,14 +256,7 @@ export const StudentAttendanceHistoryPanel: React.FC<StudentAttendanceHistoryPan
         <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-zinc-300">
           <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <span>
-            {pickText(
-              {
-                ar: 'سجل الحضور غير متاح لهذا الحساب أو القسم.',
-                fr: 'L’historique des présences n’est pas autorisé pour ce périmètre.',
-                en: 'Attendance history is not authorized for this account or class scope.',
-              },
-              language,
-            )}
+            {pickText({ ar: 'سجل الحضور غير متاح لهذا الحساب أو القسم.', fr: 'L’historique des présences n’est pas autorisé pour ce périmètre.', en: 'Attendance history is not authorized for this account or class scope.', es: 'El historial de asistencia no está autorizado para esta cuenta o clase.', de: 'Der Anwesenheitsverlauf ist für dieses Konto oder diese Klasse nicht autorisiert.', pt: 'O histórico de assiduidade não está autorizado para esta conta ou turma.' }, language)}
           </span>
         </div>
       </section>
@@ -288,40 +274,19 @@ export const StudentAttendanceHistoryPanel: React.FC<StudentAttendanceHistoryPan
           <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>
-              {pickText(
-                {
-                  ar: `سجل الحضور المعتمد — ${studentName}`,
-                  fr: `Présences soumises — ${studentName}`,
-                  en: `Submitted Attendance History — ${studentName}`,
-                },
-                language,
-              )}
+              {pickText({ ar: `سجل الحضور المعتمد — ${studentName}`, fr: `Présences soumises — ${studentName}`, en: `Submitted Attendance History — ${studentName}`, es: `Asistencia enviada — ${studentName}`, de: `Eingereichte Anwesenheit — ${studentName}`, pt: `Assiduidade submetida — ${studentName}` }, language)}
             </span>
           </h4>
           <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
             {isTeacher
-              ? pickText(
-                  {
-                    ar: 'يعرض السجلات المعتمدة التي قمت بتسجيلها لهذا التلميذ فقط (366 يوماً كحد أقصى).',
-                    fr: 'Affiche uniquement vos registres soumis autorisés pour cet élève (366 jours max).',
-                    en: 'Shows only your currently authorized submitted registers for this pupil (max 366 days).',
-                  },
-                  language,
-                )
-              : pickText(
-                  {
-                    ar: 'سجلات الحضور المعتمدة رسمياً من المدرسة (بتوقيت تونس).',
-                    fr: 'Enregistrements de présence officiellement soumis par l’école (heure de Tunis).',
-                    en: 'Officially submitted school attendance observations (Africa/Tunis).',
-                  },
-                  language,
-                )}
+              ? pickText({ ar: 'يعرض السجلات المعتمدة التي قمت بتسجيلها لهذا التلميذ فقط (366 يوماً كحد أقصى).', fr: 'Affiche uniquement vos registres soumis autorisés pour cet élève (366 jours max).', en: 'Shows only your currently authorized submitted registers for this pupil (max 366 days).', es: 'Muestra solo sus registros enviados autorizados para este alumno (máx. 366 días).', de: 'Zeigt nur Ihre autorisierten eingereichten Register für diesen Schüler (max. 366 Tage).', pt: 'Mostra apenas os seus registos submetidos autorizados para este aluno (máx. 366 dias).' }, language)
+              : pickText({ ar: 'سجلات الحضور المعتمدة رسمياً من المدرسة (بتوقيت تونس).', fr: 'Enregistrements de présence officiellement soumis par l’école (heure de Tunis).', en: 'Officially submitted school attendance observations (Africa/Tunis).', es: 'Registros de asistencia escolar enviados oficialmente (Africa/Tunis).', de: 'Offiziell eingereichte Schulanwesenheitsdaten (Africa/Tunis).', pt: 'Registos de assiduidade escolar oficialmente submetidos (Africa/Tunis).' }, language)}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <label className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-zinc-300">
-            <span>{pickText({ ar: 'من', fr: 'Du', en: 'From' }, language)}</span>
+            <span>{pickText({ ar: 'من', fr: 'Du', en: 'From', es: 'Desde', de: 'Von', pt: 'De' }, language)}</span>
             <input
               type="date"
               value={fromDate}
@@ -330,7 +295,7 @@ export const StudentAttendanceHistoryPanel: React.FC<StudentAttendanceHistoryPan
             />
           </label>
           <label className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-zinc-300">
-            <span>{pickText({ ar: 'إلى', fr: 'Au', en: 'To' }, language)}</span>
+            <span>{pickText({ ar: 'إلى', fr: 'Au', en: 'To', es: 'Hasta', de: 'Bis', pt: 'Até' }, language)}</span>
             <input
               type="date"
               value={toDate}
@@ -344,7 +309,7 @@ export const StudentAttendanceHistoryPanel: React.FC<StudentAttendanceHistoryPan
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>{pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh' }, language)}</span>
+            <span>{pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh', es: 'Actualizar', de: 'Aktualisieren', pt: 'Atualizar' }, language)}</span>
           </button>
         </div>
       </div>

@@ -52,6 +52,9 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
                   ar: `قسمك الدراسي: ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
                   fr: `Votre classe : ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
                   en: `Assigned class: ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
+                  es: `Clase asignada: ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
+                  de: `Zugewiesene Klasse: ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
+                  pt: `Turma atribuída: ${assignedClass.name} (${assignedClass.level}) — ${assignedClass.teacherName}`,
                 },
                 language,
               )
@@ -60,6 +63,9 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
                   ar: 'فضاء التلميذ للمتابعة اليومية للواجبات، الإعلانات، والوثائق المدرسية.',
                   fr: 'Votre espace élève pour les annonces, devoirs, questions de classe et documents.',
                   en: 'Your student workspace for class announcements, homework, questions, and documents.',
+                  es: 'Tu espacio de alumno para anuncios de clase, deberes, preguntas y documentos.',
+                  de: 'Ihr Schülerbereich für Klassenankündigungen, Hausaufgaben, Fragen und Dokumente.',
+                  pt: 'O seu espaço de aluno para anúncios da turma, trabalhos de casa, perguntas e documentos.',
                 },
                 language,
               )
@@ -81,6 +87,9 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
                   ar: 'لم يتم ربط حسابك بقسم دراسي بعد — يرجى مراجعة إدارة المدرسة لتأكيد تسجيلك في القسم.',
                   fr: 'Aucune classe liée à votre compte élève pour le moment — contactez l’administration pour l’affectation de classe.',
                   en: 'No class is linked to your student account yet — please contact school administration for class enrollment.',
+                  es: 'Aún no hay una clase vinculada a tu cuenta de alumno — contacta con la administración para tu asignación.',
+                  de: 'Ihrem Schülerkonto ist noch keine Klasse zugewiesen — bitte wenden Sie sich an die Schulverwaltung.',
+                  pt: 'Ainda não existe turma associada à sua conta de aluno — contacte a administração escolar.',
                 },
                 language,
               )}
@@ -93,7 +102,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
       <HomeCardGrid ariaLabel="Student shortcuts">
         <HomeShortcutCard
           id="student-announcements"
-          title={pickText({ ar: 'الإعلانات', fr: 'Annonces', en: 'Announcements' }, language)}
+          title={pickText({ ar: 'الإعلانات', fr: 'Annonces', en: 'Announcements', es: 'Anuncios', de: 'Ankündigungen', pt: 'Anúncios' }, language)}
           actionLabel={openActionLabel}
           icon="📢"
           tone="blue"
@@ -103,7 +112,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
         <HomeShortcutCard
           id="student-homework"
           title={pickText(
-            { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork' },
+            { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork', es: 'Deberes y tareas', de: 'Hausaufgaben & Aufgaben', pt: 'Trabalhos de casa e aula' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -115,7 +124,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
         <HomeShortcutCard
           id="student-questions"
           title={pickText(
-            { ar: 'أسئلة القسم', fr: 'Questions de classe', en: 'Class Questions' },
+            { ar: 'أسئلة القسم', fr: 'Questions de classe', en: 'Class Questions', es: 'Preguntas de clase', de: 'Klassenfragen', pt: 'Perguntas da turma' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -126,7 +135,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
 
         <HomeShortcutCard
           id="student-food-menu"
-          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu', es: 'Menú del comedor', de: 'Speiseplan', pt: 'Ementa da cantina' }, language)}
           actionLabel={openActionLabel}
           icon="🍽️"
           tone="green"
@@ -135,7 +144,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
 
         <HomeShortcutCard
           id="student-calendar"
-          title={pickText({ ar: 'الروزنامة', fr: 'Calendrier', en: 'Calendar' }, language)}
+          title={pickText({ ar: 'الروزنامة', fr: 'Calendrier', en: 'Calendar', es: 'Calendario', de: 'Kalender', pt: 'Calendário' }, language)}
           actionLabel={openActionLabel}
           icon="📅"
           tone="yellow"
@@ -144,7 +153,7 @@ export const StudentHomePage: React.FC<StudentHomePageProps> = ({
 
         <HomeShortcutCard
           id="student-documents"
-          title={pickText({ ar: 'الوثائق', fr: 'Documents', en: 'Documents' }, language)}
+          title={pickText({ ar: 'الوثائق', fr: 'Documents', en: 'Documents', es: 'Documentos', de: 'Dokumente', pt: 'Documentos' }, language)}
           actionLabel={openActionLabel}
           icon="📄"
           tone="slate"

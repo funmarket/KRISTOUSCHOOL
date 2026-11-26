@@ -126,6 +126,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
               ar: 'حوكمة الحسابات بانتظار نشر عقد الخادم (Supabase Migration)',
               fr: 'Gouvernance des comptes en attente du déploiement Supabase',
               en: 'Account Governance Awaiting Verified Supabase Migration Deployment',
+              es: 'Gobernanza de cuentas en espera del despliegue de migración Supabase',
+              de: 'Kontoverwaltung wartet auf verifizierte Supabase-Migration',
+              pt: 'Governação de contas a aguardar implementação da migração Supabase',
             },
             language,
           )}
@@ -135,6 +138,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
               ar: 'إعادة فحص اتصال الخادم',
               fr: 'Réessayer la vérification serveur',
               en: 'Retry server verification',
+              es: 'Reintentar verificación del servidor',
+              de: 'Serverprüfung wiederholen',
+              pt: 'Repetir verificação do servidor',
             },
             language,
           )}
@@ -155,6 +161,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
               ar: 'غير مصرح بالوصول إلى وحدة الحوكمة',
               fr: 'Accès gouvernance refusé par le serveur',
               en: 'Server Denied Account Governance Access',
+              es: 'El servidor denegó el acceso a gobernanza',
+              de: 'Server verweigert Zugriff auf Kontoverwaltung',
+              pt: 'O servidor recusou o acesso à governação',
             },
             language,
           )}
@@ -188,6 +197,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
                 ar: 'عقد حوكمة الخادم متصل (Supabase RPC)',
                 fr: 'Contrat RPC Supabase vérifié',
                 en: 'Server-Verified Supabase Governance Contract',
+                es: 'Contrato de gobernanza Supabase verificado',
+                de: 'Servergeprüfter Supabase-Governance-Vertrag',
+                pt: 'Contrato de governação Supabase verificado',
               },
               language,
             )}
@@ -198,6 +210,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
                 ar: 'حوكمة الحسابات والتحكم في الصلاحيات — مدرسة كريستو',
                 fr: 'Gouvernance des comptes & contrôle d’accès — KRISTOU School',
                 en: 'KRISTOU School — Account Governance & Access Control',
+                es: 'KRISTOU School — Gobernanza de cuentas y control de acceso',
+                de: 'KRISTOU School — Kontoverwaltung & Zugriffskontrolle',
+                pt: 'KRISTOU School — Governação de contas e controlo de acesso',
               },
               language,
             )}
@@ -217,14 +232,14 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
             }}
             className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold hover:bg-slate-100 dark:hover:bg-zinc-900"
           >
-            ↻ {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh' }, language)}
+            ↻ {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh', es: 'Actualizar', de: 'Aktualisieren', pt: 'Atualizar' }, language)}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold hover:bg-slate-100 dark:hover:bg-zinc-900"
           >
-            ✕ {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close' }, language)}
+            ✕ {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close', es: 'Cerrar', de: 'Schließen', pt: 'Fechar' }, language)}
           </button>
         </div>
       </div>
@@ -272,6 +287,9 @@ export const OwnerGovernanceWorkspace: React.FC<OwnerGovernanceWorkspaceProps> =
               ar: 'جاري التحقق من صلاحيات الحوكمة عبر الخادم...',
               fr: 'Vérification serveur des droits de gouvernance...',
               en: 'Verifying governance authority with server...',
+              es: 'Verificando autoridad de gobernanza en el servidor...',
+              de: 'Governance-Berechtigungen werden vom Server geprüft...',
+              pt: 'A verificar autoridade de governação no servidor...',
             },
             language,
           )}

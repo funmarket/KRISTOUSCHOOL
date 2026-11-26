@@ -50,7 +50,7 @@ export const ParentNotesHistorySection: React.FC<ParentNotesHistorySectionProps>
                 <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-800 space-y-2">
                   <input
                     type="text"
-                    placeholder={pickText({ ar: 'اكتب رد المدرسة...', fr: 'Répondre en tant qu’école...', en: 'Write school reply...' }, language as any)}
+                    placeholder={pickText({ ar: 'اكتب رد المدرسة...', fr: 'Répondre en tant qu’école...', en: 'Write school reply...', es: 'Escribe la respuesta de la escuela...', de: 'Schulantwort schreiben...', pt: 'Escreva a resposta da escola...' }, language as any)}
                     value={replyTextMap[note.id] || ''}
                     onChange={(e) => setReplyTextMap((prev) => ({ ...prev, [note.id]: e.target.value }))}
                     className="w-full p-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs"

@@ -9,7 +9,7 @@ export type AccountRole =
 
 export type UserRole = AccountRole;
 
-export type Language = 'ar' | 'fr' | 'en';
+export type Language = 'ar' | 'fr' | 'en' | 'es' | 'de' | 'pt';
 export type ThemeMode = 'light' | 'pitch-black';
 export type NotificationSoundOption =
   | 'Kristou Bell'

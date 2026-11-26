@@ -90,6 +90,9 @@ export const PickupBoardView: React.FC = () => {
                   ar: 'حماية سلامة التلاميذ: إشعار الوصول وتسليم التلميذ متوقفان بانتظار ربط الخادم (Pending Backend)',
                   fr: 'Sécurité des élèves : signalement d’arrivée et confirmation de remise en attente du contrat serveur (Pending Backend)',
                   en: 'Student Safety Lock: Pickup arrival and physical release confirmation are Pending Backend',
+                  es: 'Bloqueo de seguridad escolar: la llegada y la confirmación de entrega están pendientes del servidor',
+                  de: 'Schülersicherheitssperre: Ankunftsmeldung und Abholbestätigung warten auf das Server-Backend',
+                  pt: 'Bloqueio de segurança escolar: o aviso de chegada e a confirmação de entrega aguardam o servidor',
                 },
                 language,
               )}
@@ -100,6 +103,9 @@ export const PickupBoardView: React.FC = () => {
                   ar: 'إعلان وصول الولي (PARENT_ARRIVED) وتأكيد تسليم التلميذ الفعلي (RELEASED) عمليتان منفصلتان تماماً. لمنع أي إشعار محلي مضلل، تم تعطيل أزرار الإرسال والتسليم في المتصفح إلى حين تفعيل جدول الاستلام والدوال الذرية في قاعدة بيانات Supabase.',
                   fr: 'L’annonce d’arrivée du parent (PARENT_ARRIVED) et la remise physique de l’enfant par le personnel autorisé (RELEASED) sont strictement distinctes. Aucune mutation locale fictive n’est exécutée tant que la table et les RPC Supabase ne sont pas déployées.',
                   en: 'Parent arrival announcement (PARENT_ARRIVED) and staff physical child release (RELEASED) are strictly distinct safety transitions. Browser-only state mutations are disabled so no parent or staff member receives a false operational confirmation before the Supabase pickup contract is deployed.',
+                  es: 'El aviso de llegada del padre/tutor (PARENT_ARRIVED) y la entrega física por el personal autorizado (RELEASED) son transiciones de seguridad estrictamente distintas. Se desactivan los cambios locales sin servidor hasta desplegar el contrato de recogida en Supabase.',
+                  de: 'Die Ankunftsmeldung der Eltern (PARENT_ARRIVED) und die physische Übergabe durch autorisiertes Personal (RELEASED) sind strikt getrennte Sicherheitsübergänge. Lokale Änderungen im Browser sind deaktiviert, bis der Supabase-Abholvertrag bereitgestellt ist.',
+                  pt: 'O aviso de chegada do encarregado (PARENT_ARRIVED) e a entrega física pela equipa autorizada (RELEASED) são transições de segurança estritamente distintas. As alterações apenas no navegador estão desativadas até à implantação do contrato de recolha no Supabase.',
                 },
                 language,
               )}

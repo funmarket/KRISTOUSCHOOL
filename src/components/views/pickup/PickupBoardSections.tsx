@@ -112,11 +112,7 @@ export const PickupParentSection: React.FC<PickupParentSectionProps> = ({
 
       {userChildren.length === 0 ? (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm text-xs text-gray-600 dark:text-gray-400">
-          {pickText({
-            ar: 'لا يوجد أطفال مرتبطون بحسابك حالياً لعرض بطاقة الاستلام المدرسي.',
-            fr: 'Aucun enfant lié à votre compte pour le moment. Le suivi de sortie s’affichera après liaison serveur du dossier élève.',
-            en: 'No linked children are assigned to your parent account yet. Pickup cards will appear once child records are linked on the server.',
-          }, language)}
+          {pickText({ ar: 'لا يوجد أطفال مرتبطون بحسابك حالياً لعرض بطاقة الاستلام المدرسي.', fr: 'Aucun enfant lié à votre compte pour le moment. Le suivi de sortie s’affichera après liaison serveur du dossier élève.', en: 'No linked children are assigned to your parent account yet. Pickup cards will appear once child records are linked on the server.', es: 'Aún no hay hijos vinculados a su cuenta. Las tarjetas de recogida aparecerán cuando los registros se vinculen en el servidor.', de: 'Ihrem Elternkonto sind noch keine Kinder zugeordnet. Abholkarten erscheinen, sobald die Datensätze auf dem Server verknüpft sind.', pt: 'Ainda não existem crianças associadas à sua conta. Os cartões de recolha aparecerão quando os registos forem associados no servidor.' }, language)}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -296,18 +292,10 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
       {pickupAvailability !== 'READY' ? (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3">
           <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold">
-            {pickText({
-              ar: 'لوحة الاستلام الفوري في انتظار تفعيل خدمة الخادم (Supabase Pickup Queue).',
-              fr: 'File d’attente de sortie en attente d’activation du service serveur (Supabase Pickup Queue).',
-              en: 'Real-time pickup queue is awaiting the server-verified Supabase pickup contract.',
-            }, language)}
+            {pickText({ ar: 'لوحة الاستلام الفوري في انتظار تفعيل خدمة الخادم (Supabase Pickup Queue).', fr: 'File d’attente de sortie en attente d’activation du service serveur (Supabase Pickup Queue).', en: 'Real-time pickup queue is awaiting the server-verified Supabase pickup contract.', es: 'La cola de recogida en tiempo real espera la activación del contrato de recogida verificado en Supabase.', de: 'Die Echtzeit-Abholwarteschlange wartet auf die Freischaltung des servergeprüften Supabase-Abholvertrags.', pt: 'A fila de recolha em tempo real aguarda a ativação do contrato de recolha verificado no Supabase.' }, language)}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-            {pickText({
-              ar: 'لا يتم عرض أي سجلات تلاميذ تجريبية أو أزرار تسليم غير متصلة بالخادم. عند تفعيل العقد الخلفي، سيظهر هنا فقط التلاميذ الفعليون مع التحقق الإلزامي من هوية المستلم المخول وصلاحية الموظف قبل الانتقال الذري إلى حالة RELEASED.',
-              fr: 'Aucun élève fictif ni bouton de remise non connecté au serveur n’est affiché. Dès le déploiement backend, seuls les élèves réels et les personnes autorisées vérifiées apparaîtront ici.',
-              en: 'No mock student records or unverified release buttons are displayed in authenticated mode. Once the backend contract is deployed, only verified student pickup events and atomic staff release transitions will appear here.',
-            }, language)}
+            {pickText({ ar: 'لا يتم عرض أي سجلات تلاميذ تجريبية أو أزرار تسليم غير متصلة بالخادم. عند تفعيل العقد الخلفي، سيظهر هنا فقط التلاميذ الفعليون مع التحقق الإلزامي من هوية المستلم المخول وصلاحية الموظف قبل الانتقال الذري إلى حالة RELEASED.', fr: 'Aucun élève fictif ni bouton de remise non connecté au serveur n’est affiché. Dès le déploiement backend, seuls les élèves réels et les personnes autorisées vérifiées apparaîtront ici.', en: 'No mock student records or unverified release buttons are displayed in authenticated mode. Once the backend contract is deployed, only verified student pickup events and atomic staff release transitions will appear here.', es: 'No se muestran alumnos ficticios ni botones de entrega sin conexión al servidor. Una vez desplegado el contrato backend, aquí solo aparecerán eventos de recogida verificados y entregas atómicas del personal.', de: 'Im authentifizierten Modus werden keine fiktiven Schülerdatensätze oder ungeprüften Freigabe-Schaltflächen angezeigt. Nach Bereitstellung des Backends erscheinen hier nur verifizierte Abholereignisse.', pt: 'Não são apresentados registos fictícios de alunos nem botões de entrega não verificados. Após a implantação no servidor, apenas surgirão aqui eventos de recolha verificados e entregas atómicas.' }, language)}
           </p>
         </div>
       ) : (

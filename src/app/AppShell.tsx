@@ -280,24 +280,10 @@ export function AppShell() {
             className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#111111] p-6 shadow-xl space-y-4"
           >
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-              {pickText(
-                {
-                  ar: 'تغييرات غير محفوظة في الحضور',
-                  fr: 'Modifications non enregistrées',
-                  en: 'Unsaved Attendance Changes',
-                },
-                language,
-              )}
+              {pickText({ ar: 'تغييرات غير محفوظة في الحضور', fr: 'Modifications non enregistrées', en: 'Unsaved Attendance Changes', es: 'Cambios de asistencia sin guardar', de: 'Ungespeicherte Anwesenheitsänderungen', pt: 'Alterações de presenças não guardadas' }, language)}
             </h3>
             <p className="text-xs font-medium text-slate-600 dark:text-zinc-300 leading-relaxed">
-              {pickText(
-                {
-                  ar: 'لديك تعديلات غير محفوظة في سجل الحضور. هل تريد تجاهلها ومغادرة الصفحة؟',
-                  fr: 'Vous avez des modifications non enregistrées dans le registre. Voulez-vous quitter et les annuler ?',
-                  en: 'You have unsaved changes in the attendance register. Do you want to discard them and leave this page?',
-                },
-                language,
-              )}
+              {pickText({ ar: 'لديك تعديلات غير محفوظة في سجل الحضور. هل تريد تجاهلها ومغادرة الصفحة؟', fr: 'Vous avez des modifications non enregistrées dans le registre. Voulez-vous quitter et les annuler ?', en: 'You have unsaved changes in the attendance register. Do you want to discard them and leave this page?', es: 'Tienes cambios sin guardar en el registro de asistencia. ¿Quieres descartarlos y salir de esta página?', de: 'Sie haben ungespeicherte Änderungen im Anwesenheitsregister. Möchten Sie diese verwerfen und die Seite verlassen?', pt: 'Tem alterações não guardadas no registo de presenças. Deseja descartá-las e sair desta página?' }, language)}
             </p>
             <div className="flex flex-wrap justify-end gap-2 pt-2">
               <button
@@ -306,10 +292,7 @@ export function AppShell() {
                 onClick={() => setPendingAttendanceLeave(null)}
                 className="rounded-xl border border-slate-200 dark:border-zinc-700 px-4 py-2 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900"
               >
-                {pickText(
-                  { ar: 'البقاء في الحضور', fr: 'Rester ici', en: 'Stay on Attendance' },
-                  language,
-                )}
+                {pickText({ ar: 'البقاء في الحضور', fr: 'Rester ici', en: 'Stay on Attendance', es: 'Permanecer aquí', de: 'Auf Seite bleiben', pt: 'Permanecer aqui' }, language)}
               </button>
               <button
                 type="button"
@@ -317,14 +300,7 @@ export function AppShell() {
                 onClick={confirmLeaveDirtyAttendance}
                 className="rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2 text-xs font-bold text-white"
               >
-                {pickText(
-                  {
-                    ar: 'تجاهل التغييرات والمغادرة',
-                    fr: 'Ignorer et quitter',
-                    en: 'Discard Changes & Leave',
-                  },
-                  language,
-                )}
+                {pickText({ ar: 'تجاهل التغييرات والمغادرة', fr: 'Ignorer et quitter', en: 'Discard Changes & Leave', es: 'Descartar y salir', de: 'Verwerfen & verlassen', pt: 'Descartar e sair' }, language)}
               </button>
             </div>
           </div>

@@ -68,7 +68,7 @@ export const DirectoryProfileDialog: React.FC<DirectoryProfileDialogProps> = ({
             type="button"
             data-testid="directory-detail-close"
             onClick={onClose}
-            aria-label={pickText({ ar: 'إغلاق التفاصيل', fr: 'Fermer le profil', en: 'Close profile' }, language)}
+            aria-label={pickText({ ar: 'إغلاق التفاصيل', fr: 'Fermer le profil', en: 'Close profile', es: 'Cerrar perfil', de: 'Profil schließen', pt: 'Fechar perfil' }, language)}
             className="rounded-xl p-2 shrink-0 text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800"
           >
             <X className="w-5 h-5" />
@@ -80,6 +80,9 @@ export const DirectoryProfileDialog: React.FC<DirectoryProfileDialogProps> = ({
               ar: 'معاينة إدارية — هذه البطاقة غير منشورة للزوار.',
               fr: 'Aperçu de gestion — cette fiche n’est pas publique.',
               en: 'Management preview — this profile is not published to visitors.',
+              es: 'Vista de gestión — este perfil no está publicado para visitantes.',
+              de: 'Verwaltungsvorschau — dieses Profil ist für Besucher nicht veröffentlicht.',
+              pt: 'Pré-visualização de gestão — este perfil não está publicado para visitantes.',
             }, language)}
           </p>
         )}
@@ -98,7 +101,7 @@ export const DirectoryProfileDialog: React.FC<DirectoryProfileDialogProps> = ({
             {selectedMember.title && <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 break-words">{selectedMember.title}</p>}
             {detailLanguages.length > 0 && (
               <p className="mt-3 text-xs leading-relaxed">
-                <strong>{pickText({ ar: 'اللغات', fr: 'Langues', en: 'Languages' }, language)}: </strong>
+                <strong>{pickText({ ar: 'اللغات', fr: 'Langues', en: 'Languages', es: 'Idiomas', de: 'Sprachen', pt: 'Idiomas' }, language)}: </strong>
                 {detailLanguages.join(' · ')}
               </p>
             )}
@@ -109,8 +112,8 @@ export const DirectoryProfileDialog: React.FC<DirectoryProfileDialogProps> = ({
           <section className="space-y-2">
             <h3 className="text-xs font-bold">
               {selectedTeacher
-                ? pickText({ ar: 'الأقسام والمواد', fr: 'Classes et disciplines', en: 'Classes and subjects' }, language)
-                : pickText({ ar: 'المسؤوليات', fr: 'Responsabilités', en: 'Responsibilities' }, language)}
+                ? pickText({ ar: 'الأقسام والمواد', fr: 'Classes et disciplines', en: 'Classes and subjects', es: 'Clases y asignaturas', de: 'Klassen und Fächer', pt: 'Turmas e disciplinas' }, language)
+                : pickText({ ar: 'المسؤوليات', fr: 'Responsabilités', en: 'Responsibilities', es: 'Responsabilidades', de: 'Zuständigkeiten', pt: 'Responsabilidades' }, language)}
             </h3>
             <div className="flex flex-wrap gap-2">
               {detailTags.map((item, index) => (

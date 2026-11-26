@@ -25,6 +25,9 @@ export const OwnerOversightSelector: React.FC<{
           ar: 'معاينة فضاءات الأدوار (إشراف المالك دون انتحال هوية):',
           fr: 'Inspecter un espace de rôle (supervision sans changement d’identité) :',
           en: 'View role workspace (non-impersonating Owner oversight):',
+          es: 'Ver espacio de rol (supervisión del Propietario sin suplantación):',
+          de: 'Rollenbereich ansehen (Inhaber-Aufsicht ohne Identitätswechsel):',
+          pt: 'Ver espaço de função (supervisão do Proprietário sem personificação):',
         },
         language,
       )}
@@ -76,7 +79,7 @@ export const OwnerGovernanceSurfacePanel: React.FC<OwnerGovernanceSurfacePanelPr
         ref={governanceSurfaceRef}
         tabIndex={-1}
         role="region"
-        aria-label={pickText({ ar: 'مساحة إدارة المدرسة', fr: 'Espace de gestion scolaire', en: 'School management workspace' }, language)}
+        aria-label={pickText({ ar: 'مساحة إدارة المدرسة', fr: 'Espace de gestion scolaire', en: 'School management workspace', es: 'Espacio de gestión escolar', de: 'Schulverwaltungsbereich', pt: 'Espaço de gestão escolar' }, language)}
         className="scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-3xl"
         data-testid="owner-governance-surface"
       >
@@ -105,6 +108,9 @@ export const OwnerGovernanceSurfacePanel: React.FC<OwnerGovernanceSurfacePanelPr
               ar: 'تعذر التحقق من جاهزية وحدة حوكمة الحسابات عبر الخادم.',
               fr: 'Impossible de vérifier la disponibilité du module de gouvernance.',
               en: 'Unable to verify Account Governance backend readiness from server.',
+              es: 'No se pudo verificar la disponibilidad del módulo de gobernanza en el servidor.',
+              de: 'Server-Verfügbarkeit der Kontoverwaltung konnte nicht geprüft werden.',
+              pt: 'Não foi possível verificar a disponibilidade do módulo de governação no servidor.',
             },
             language,
           )}
@@ -114,7 +120,7 @@ export const OwnerGovernanceSurfacePanel: React.FC<OwnerGovernanceSurfacePanelPr
           onClick={onRetryReadiness}
           className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     )}

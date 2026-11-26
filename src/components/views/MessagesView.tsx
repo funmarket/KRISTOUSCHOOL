@@ -167,14 +167,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
       <EmptyFeatureState
         state="UNAUTHORIZED"
         title={t('unauthorized')}
-        description={pickText(
-          {
-            ar: 'الرسائل التشغيلية المباشرة متاحة للأولياء والفريق المدرسي فقط (غير متاحة لحسابات التلاميذ).',
-            fr: 'La messagerie opérationnelle est réservée aux parents et au personnel autorisé (exclue pour les comptes élèves).',
-            en: 'Operational short messaging is available to parents and approved staff only (students are excluded).',
-          },
-          language,
-        )}
+        description={pickText({ ar: 'الرسائل التشغيلية المباشرة متاحة للأولياء والفريق المدرسي فقط (غير متاحة لحسابات التلاميذ).', fr: 'La messagerie opérationnelle est réservée aux parents et au personnel autorisé (exclue pour les comptes élèves).', en: 'Operational short messaging is available to parents and approved staff only (students are excluded).', es: 'La mensajería operativa está disponible solo para padres y personal aprobado (excluye alumnos).', de: 'Betriebliche Kurznachrichten sind nur für Eltern und genehmigtes Personal verfügbar.', pt: 'As mensagens operacionais estão disponíveis apenas para pais e pessoal aprovado (alunos excluídos).' }, language)}
       />
     );
   }
@@ -250,19 +243,12 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
                 className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-extrabold"
               >
                 {unreadCount}{' '}
-                {pickText({ ar: 'غير مقروءة', fr: 'non lu(s)', en: 'unread' }, language)}
+                {pickText({ ar: 'غير مقروءة', fr: 'non lu(s)', en: 'unread', es: 'sin leer', de: 'ungelesen', pt: 'por ler' }, language)}
               </span>
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {pickText(
-              {
-                ar: 'رسائل تشغيلية قصيرة (بحد أقصى 200 حرف) بين الأولياء والمربين والإدارة.',
-                fr: 'Messages opérationnels courts (200 caractères max) entre parents, enseignants et administration.',
-                en: 'Short operational messages (200 chars max) between parents, teachers, and administration.',
-              },
-              language,
-            )}
+            {pickText({ ar: 'رسائل تشغيلية قصيرة (بحد أقصى 200 حرف) بين الأولياء والمربين والإدارة.', fr: 'Messages opérationnels courts (200 caractères max) entre parents, enseignants et administration.', en: 'Short operational messages (200 chars max) between parents, teachers, and administration.', es: 'Mensajes operativos cortos (máx. 200 caracteres) entre padres, docentes y administración.', de: 'Kurze betriebliche Nachrichten (max. 200 Zeichen) zwischen Eltern, Lehrkräften und Verwaltung.', pt: 'Mensagens operacionais curtas (máx. 200 carateres) entre pais, professores e administração.' }, language)}
           </p>
         </div>
         <button
@@ -272,13 +258,13 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>{pickText({ ar: 'رسالة جديدة', fr: 'Nouveau message', en: 'New message' }, language)}</span>
+          <span>{pickText({ ar: 'رسالة جديدة', fr: 'Nouveau message', en: 'New message', es: 'Nuevo mensaje', de: 'Neue Nachricht', pt: 'Nova mensagem' }, language)}</span>
         </button>
       </div>
 
       {notificationIntent && notificationResolution.state === 'unavailable' && (
         <p role="status" data-testid="notification-target-unavailable" className="rounded-xl border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs font-semibold text-amber-900 dark:text-amber-200">
-          {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.' }, language)}
+          {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.', es: 'El elemento solicitado no está disponible o no tienes acceso.', de: 'Das angeforderte Element ist nicht verfügbar oder Sie haben keinen Zugriff.', pt: 'O item pedido está indisponível ou não tem acesso.' }, language)}
         </p>
       )}
       {feedback && (
@@ -324,10 +310,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
             <Lock className="w-4 h-4 shrink-0" />
             <span>
               {messagesError ||
-                pickText(
-                  { ar: 'غير مصرح بالوصول إلى المحادثات التشغيلية. تم مسح البيانات الخاصة.', fr: 'Accès non autorisé à la messagerie opérationnelle. Données masquées.', en: 'Not authorized to access operational messages. Private threads cleared.' },
-                  language,
-                )}
+                pickText({ ar: 'غير مصرح بالوصول إلى المحادثات التشغيلية. تم مسح البيانات الخاصة.', fr: 'Accès non autorisé à la messagerie opérationnelle. Données masquées.', en: 'Not authorized to access operational messages. Private threads cleared.', es: 'No autorizado para acceder a mensajes operativos. Hilos privados ocultos.', de: 'Kein Zugriff auf betriebliche Nachrichten. Private Verläufe ausgeblendet.', pt: 'Sem autorização para mensagens operacionais. Conversas privadas limpas.' }, language)}
             </span>
           </div>
           <button
@@ -335,7 +318,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
             onClick={() => void refreshSchoolData()}
             className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -350,10 +333,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
               {messagesError ||
-                pickText(
-                  { ar: 'تعذر تحميل المحادثات التشغيلية من الخادم.', fr: 'Impossible de charger les conversations depuis le serveur.', en: 'Failed to load operational message threads from server.' },
-                  language,
-                )}
+                pickText({ ar: 'تعذر تحميل المحادثات التشغيلية من الخادم.', fr: 'Impossible de charger les conversations depuis le serveur.', en: 'Failed to load operational message threads from server.', es: 'No se pudieron cargar los hilos de mensajes del servidor.', de: 'Nachrichtenverläufe konnten nicht vom Server geladen werden.', pt: 'Falha ao carregar conversas operacionais do servidor.' }, language)}
             </span>
           </div>
           <button
@@ -361,7 +341,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
             onClick={() => void refreshSchoolData()}
             className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -376,14 +356,8 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
       ) : !isBackendUnauthorized && messagesStatus === 'BLOCKED_BACKEND' && messages.length === 0 ? (
         <EmptyFeatureState
           state="BLOCKED_BACKEND"
-          title={pickText(
-            { ar: 'خدمة الرسائل بانتظار التفعيل في الخادم', fr: 'Messagerie en attente du contrat serveur', en: 'Operational Messaging Pending Backend Deployment' },
-            language,
-          )}
-          description={pickText(
-            { ar: 'جداول message_threads و thread_messages غير منشورة بعد في Supabase.', fr: 'Les tables message_threads et thread_messages ne sont pas encore déployées sur Supabase.', en: 'public.message_threads and public.thread_messages are awaiting deployment on Supabase.' },
-            language,
-          )}
+          title={pickText({ ar: 'خدمة الرسائل بانتظار التفعيل في الخادم', fr: 'Messagerie en attente du contrat serveur', en: 'Operational Messaging Pending Backend Deployment', es: 'Mensajería operativa pendiente de despliegue en servidor', de: 'Nachrichtendienst wartet auf Server-Bereitstellung', pt: 'Mensagens operacionais a aguardar servidor' }, language)}
+          description={pickText({ ar: 'جداول message_threads و thread_messages غير منشورة بعد في Supabase.', fr: 'Les tables message_threads et thread_messages ne sont pas encore déployées sur Supabase.', en: 'public.message_threads and public.thread_messages are awaiting deployment on Supabase.', es: 'Las tablas public.message_threads y public.thread_messages esperan despliegue en Supabase.', de: 'public.message_threads und public.thread_messages warten auf Bereitstellung in Supabase.', pt: 'As tabelas public.message_threads e public.thread_messages aguardam implementação no Supabase.' }, language)}
         />
       ) : !isBackendUnauthorized ? (
         <MessageThreadWorkspace
@@ -399,14 +373,7 @@ export const MessagesView: React.FC<{ notificationTarget?: NotificationTargetInt
                 data-testid="messages-unread-sync-notice"
                 className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2 text-[11px] font-medium text-amber-900 dark:text-amber-200"
               >
-                {pickText(
-                  {
-                    ar: 'تُدار حالة الرسائل غير المقروءة من الخادم، ولا يتوفر حالياً تأكيد تلقائي لتغييرها عند فتح المحادثة.',
-                    fr: 'Le statut « non lu » est géré par le serveur ; le marquage automatique comme lu à l’ouverture n’est pas encore disponible.',
-                    en: 'Unread status is managed by the school server; marking threads as read upon opening is not yet available.',
-                  },
-                  language,
-                )}
+                {pickText({ ar: 'تُدار حالة الرسائل غير المقروءة من الخادم، ولا يتوفر حالياً تأكيد تلقائي لتغييرها عند فتح المحادثة.', fr: 'Le statut « non lu » est géré par le serveur ; le marquage automatique comme lu à l’ouverture n’est pas encore disponible.', en: 'Unread status is managed by the school server; marking threads as read upon opening is not yet available.', es: 'El estado no leído lo gestiona el servidor; el marcado automático al abrir aún no está disponible.', de: 'Der Ungelesen-Status wird vom Server verwaltet; automatisches Markieren beim Öffnen ist noch nicht verfügbar.', pt: 'O estado por ler é gerido pelo servidor; a marcação automática ao abrir ainda não está disponível.' }, language)}
               </div>
             ) : null
           }

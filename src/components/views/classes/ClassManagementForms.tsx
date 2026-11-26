@@ -84,46 +84,24 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
           {visibleCreation.outcome === 'failed' && <p>{visibleCreation.error || t('error')}</p>}
           {visibleCreation.outcome === 'unknown' && (
             <p>
-              {pickText(
-                {
-                  ar: 'تعذر التأكد من إنشاء القسم. تحقق من قائمة الأقسام قبل المحاولة مجدداً لتجنب التكرار.',
-                  fr: 'Création non confirmée. Vérifiez la liste des classes avant de réessayer pour éviter un doublon.',
-                  en: 'Creation could not be confirmed. Check the class list before trying again to avoid a duplicate.',
-                },
-                language,
-              )}
+              {pickText({ ar: 'تعذر التأكد من إنشاء القسم. تحقق من قائمة الأقسام قبل المحاولة مجدداً لتجنب التكرار.', fr: 'Création non confirmée. Vérifiez la liste des classes avant de réessayer pour éviter un doublon.', en: 'Creation could not be confirmed. Check the class list before trying again to avoid a duplicate.', es: 'No se pudo confirmar la creación. Compruebe la lista de clases antes de reintentar para evitar duplicados.', de: 'Erstellung nicht bestätigt. Prüfen Sie die Klassenliste vor einem erneuten Versuch, um Duplikate zu vermeiden.', pt: 'Não foi possível confirmar a criação. Verifique a lista de turmas antes de tentar novamente para evitar duplicados.' }, language)}
             </p>
           )}
           {visibleCreation.outcome === 'confirmed' && (
             <>
               <p data-testid="class-creation-confirmed">
-                {pickText(
-                  { ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created successfully.' },
-                  language,
-                )}{' '}
+                {pickText({ ar: 'تم إنشاء القسم بنجاح.', fr: 'Classe créée avec succès.', en: 'Class created successfully.', es: 'Clase creada correctamente.', de: 'Klasse erfolgreich erstellt.', pt: 'Turma criada com sucesso.' }, language)}{' '}
                 {visibleCreation.receipt?.name}
               </p>
               <p data-testid="class-creation-readback">
                 {pickText(
                   classReadback === 'pending'
-                    ? { ar: 'جارٍ تحديث قائمة الأقسام…', fr: 'Actualisation de la liste…', en: 'Refreshing the class list…' }
+                    ? { ar: 'جارٍ تحديث قائمة الأقسام…', fr: 'Actualisation de la liste…', en: 'Refreshing the class list…', es: 'Actualizando la lista de clases…', de: 'Klassenliste wird aktualisiert…', pt: 'A atualizar a lista de turmas…' }
                     : classReadback === 'failed'
-                      ? {
-                          ar: 'تعذر تحديث القائمة. القسم محفوظ؛ أعد تحديث القائمة فقط.',
-                          fr: 'Actualisation impossible. La classe est enregistrée ; actualisez seulement la liste.',
-                          en: 'List refresh failed. The class is saved; retry refreshing the list only.',
-                        }
+                      ? { ar: 'تعذر تحديث القائمة. القسم محفوظ؛ أعد تحديث القائمة فقط.', fr: 'Actualisation impossible. La classe est enregistrée ; actualisez seulement la liste.', en: 'List refresh failed. The class is saved; retry refreshing the list only.', es: 'Error al actualizar la lista. La clase se guardó; reintente solo actualizar la lista.', de: 'Aktualisierung der Liste fehlgeschlagen. Die Klasse ist gespeichert; aktualisieren Sie nur die Liste neu.', pt: 'Falha ao atualizar a lista. A turma foi guardada; tente atualizar apenas a lista.' }
                       : classReadback === 'confirmed'
-                        ? {
-                            ar: 'القسم المحفوظ ظاهر الآن في القائمة.',
-                            fr: 'La classe enregistrée est maintenant dans la liste.',
-                            en: 'The saved class is now visible in the list.',
-                          }
-                        : {
-                            ar: 'لم يتم التأكد بعد من ظهور القسم المحفوظ في القائمة.',
-                            fr: 'La présence de la classe enregistrée dans la liste reste à vérifier.',
-                            en: 'The saved class has not yet been confirmed in the list.',
-                          },
+                        ? { ar: 'القسم المحفوظ ظاهر الآن في القائمة.', fr: 'La classe enregistrée est maintenant dans la liste.', en: 'The saved class is now visible in the list.', es: 'La clase guardada ya es visible en la lista.', de: 'Die gespeicherte Klasse ist jetzt in der Liste sichtbar.', pt: 'A turma guardada já está visível na lista.' }
+                        : { ar: 'لم يتم التأكد بعد من ظهور القسم المحفوظ في القائمة.', fr: 'La présence de la classe enregistrée dans la liste reste à vérifier.', en: 'The saved class has not yet been confirmed in the list.', es: 'Aún no se ha confirmado que la clase guardada aparezca en la lista.', de: 'Das Erscheinen der gespeicherten Klasse in der Liste wurde noch nicht bestätigt.', pt: 'A presença da turma guardada na lista ainda não foi confirmada.' },
                   language,
                 )}
               </p>
@@ -135,10 +113,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                   onClick={() => void handleRetryRefreshOnly()}
                   className="px-3 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold disabled:opacity-50"
                 >
-                  {pickText(
-                    { ar: 'تحديث قائمة الأقسام فقط', fr: 'Actualiser seulement la liste', en: 'Refresh class list only' },
-                    language,
-                  )}
+                  {pickText({ ar: 'تحديث قائمة الأقسام فقط', fr: 'Actualiser seulement la liste', en: 'Refresh class list only', es: 'Actualizar solo la lista de clases', de: 'Nur Klassenliste aktualisieren', pt: 'Atualizar apenas a lista de turmas' }, language)}
                 </button>
               )}
             </>
@@ -152,7 +127,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
           className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
         >
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-            {pickText({ ar: 'قسم دراسي جديد', fr: 'Nouvelle classe scolaire', en: 'New School Class' }, language)}
+            {pickText({ ar: 'قسم دراسي جديد', fr: 'Nouvelle classe scolaire', en: 'New School Class', es: 'Nueva clase escolar', de: 'Neue Schulklasse', pt: 'Nova turma escolar' }, language)}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <select
@@ -182,7 +157,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
               required
               value={className}
               onChange={(e) => setClassName(e.target.value)}
-              placeholder={pickText({ ar: 'اسم القسم (مثال: 1 أ)', fr: 'Nom (ex: 1ère A)', en: 'Class name (e.g. 1A)' }, language)}
+              placeholder={pickText({ ar: 'اسم القسم (مثال: 1 أ)', fr: 'Nom (ex: 1ère A)', en: 'Class name (e.g. 1A)', es: 'Nombre de clase (ej. 1A)', de: 'Klassenname (z. B. 1A)', pt: 'Nome da turma (ex: 1A)' }, language)}
               className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
             />
             <input
@@ -198,7 +173,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
               type="text"
               value={roomLabel}
               onChange={(e) => setRoomLabel(e.target.value)}
-              placeholder={pickText({ ar: 'القاعة', fr: 'Salle', en: 'Room' }, language)}
+              placeholder={pickText({ ar: 'القاعة', fr: 'Salle', en: 'Room', es: 'Aula', de: 'Raum', pt: 'Sala' }, language)}
               className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
             />
           </div>
@@ -219,11 +194,11 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
           className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-emerald-200 dark:border-emerald-900 shadow-sm space-y-4"
         >
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-            {pickText({ ar: 'إضافة وتسجيل تلميذ في قسم', fr: 'Créer et inscrire un élève', en: 'Create & Enroll Student' }, language)}
+            {pickText({ ar: 'إضافة وتسجيل تلميذ في قسم', fr: 'Créer et inscrire un élève', en: 'Create & Enroll Student', es: 'Crear y matricular alumno', de: 'Schüler anlegen & einschreiben', pt: 'Criar e inscrever aluno' }, language)}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <input type="text" required value={studentCode} onChange={(e) => setStudentCode(e.target.value)} placeholder="KS-2026-001" className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs" />
-            <input type="text" required value={studentFullName} onChange={(e) => setStudentFullName(e.target.value)} placeholder={pickText({ ar: 'الاسم الكامل للتلميذ', fr: 'Nom complet', en: 'Full name' }, language)} className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs" />
+            <input type="text" required value={studentFullName} onChange={(e) => setStudentFullName(e.target.value)} placeholder={pickText({ ar: 'الاسم الكامل للتلميذ', fr: 'Nom complet', en: 'Full name', es: 'Nombre completo', de: 'Vollständiger Name', pt: 'Nome completo' }, language)} className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs" />
             <input type="date" required value={studentBirthDate} onChange={(e) => setStudentBirthDate(e.target.value)} className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs" />
             <select required value={enrollClassId} onChange={(e) => setEnrollClassId(e.target.value)} className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs">
               {initialClasses.length === 0 ? (
@@ -240,7 +215,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                {pickText({ ar: 'ربط حساب الولي (اختياري)', fr: 'Lier un compte Parent (optionnel)', en: 'Link Parent Account (optional)' }, language)}
+                {pickText({ ar: 'ربط حساب الولي (اختياري)', fr: 'Lier un compte Parent (optionnel)', en: 'Link Parent Account (optional)', es: 'Vincular cuenta de padre/tutor (opcional)', de: 'Elternkonto verknüpfen (optional)', pt: 'Associar conta de encarregado (opcional)' }, language)}
               </label>
               {parentAccounts.length > 0 && (
                 <select
@@ -249,7 +224,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                   onChange={(e) => setParentUserId(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 >
-                  <option value="">{pickText({ ar: '— دون ربط ولي —', fr: '— Aucun parent sélectionné —', en: '— No parent account —' }, language)}</option>
+                  <option value="">{pickText({ ar: '— دون ربط ولي —', fr: '— Aucun parent sélectionné —', en: '— No parent account —', es: '— Sin cuenta de padre/tutor —', de: '— Kein Elternkonto —', pt: '— Sem conta de encarregado —' }, language)}</option>
                   {parentAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>{acc.fullName} (@{acc.username})</option>
                   ))}
@@ -259,14 +234,14 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                 type="text"
                 value={parentUserId}
                 onChange={(e) => setParentUserId(e.target.value)}
-                placeholder={pickText({ ar: 'معرف حساب الولي (UUID اختياري)', fr: 'UUID compte parent (optionnel)', en: 'Parent User UUID (optional)' }, language)}
+                placeholder={pickText({ ar: 'معرف حساب الولي (UUID اختياري)', fr: 'UUID compte parent (optionnel)', en: 'Parent User UUID (optional)', es: 'UUID cuenta padre/tutor (opcional)', de: 'Eltern-Benutzer-UUID (optional)', pt: 'UUID conta encarregado (opcional)' }, language)}
                 className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                {pickText({ ar: 'ربط حساب التلميذ (اختياري)', fr: 'Lier un compte Élève (optionnel)', en: 'Link Student Account (optional)' }, language)}
+                {pickText({ ar: 'ربط حساب التلميذ (اختياري)', fr: 'Lier un compte Élève (optionnel)', en: 'Link Student Account (optional)', es: 'Vincular cuenta de alumno (opcional)', de: 'Schülerkonto verknüpfen (optional)', pt: 'Associar conta de aluno (opcional)' }, language)}
               </label>
               {studentAccounts.length > 0 && (
                 <select
@@ -275,7 +250,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                   onChange={(e) => setLinkedProfileId(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 >
-                  <option value="">{pickText({ ar: '— دون ربط حساب تلميذ —', fr: '— Aucun compte élève —', en: '— No student account —' }, language)}</option>
+                  <option value="">{pickText({ ar: '— دون ربط حساب تلميذ —', fr: '— Aucun compte élève —', en: '— No student account —', es: '— Sin cuenta de alumno —', de: '— Kein Schülerkonto —', pt: '— Sem conta de aluno —' }, language)}</option>
                   {studentAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>{acc.fullName} (@{acc.username})</option>
                   ))}
@@ -285,7 +260,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                 type="text"
                 value={linkedProfileId}
                 onChange={(e) => setLinkedProfileId(e.target.value)}
-                placeholder={pickText({ ar: 'معرف حساب التلميذ (UUID اختياري)', fr: 'UUID compte élève (optionnel)', en: 'Linked Student Profile UUID (optional)' }, language)}
+                placeholder={pickText({ ar: 'معرف حساب التلميذ (UUID اختياري)', fr: 'UUID compte élève (optionnel)', en: 'Linked Student Profile UUID (optional)', es: 'UUID perfil de alumno (opcional)', de: 'Schülerprofil-UUID (optional)', pt: 'UUID perfil de aluno (opcional)' }, language)}
                 className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs font-mono"
               />
             </div>
@@ -293,14 +268,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
 
           {!canLoadAccounts && (
             <p data-testid="assignable-accounts-blocked-notice" className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
-              {pickText(
-                {
-                  ar: 'قوائم اختيار الأولياء والتلاميذ بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال المعرف (UUID) يدوياً لربط الحساب.',
-                  fr: 'Les listes nominatives de parents et d’élèves ne sont pas encore disponibles pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.',
-                  en: 'Named parent and student selection lists are not yet available for this delegated role; you can still enter the account UUID directly.',
-                },
-                language,
-              )}
+              {pickText({ ar: 'قوائم اختيار الأولياء والتلاميذ بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال المعرف (UUID) يدوياً لربط الحساب.', fr: 'Les listes nominatives de parents et d’élèves ne sont pas encore disponibles pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.', en: 'Named parent and student selection lists are not yet available for this delegated role; you can still enter the account UUID directly.', es: 'Las listas nominativas de padres y alumnos aún no están disponibles para este rol delegado; puede introducir el UUID de la cuenta directamente.', de: 'Namentliche Eltern- und Schülerauswahllisten sind für diese delegierte Rolle noch nicht verfügbar; Sie können die Konto-UUID direkt eingeben.', pt: 'As listas nominais de encarregados e alunos ainda não estão disponíveis para este perfil delegado; pode introduzir o UUID da conta diretamente.' }, language)}
             </p>
           )}
           {accountsError && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>}
@@ -322,7 +290,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
           className="bg-white dark:bg-[#111111] p-5 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4"
         >
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-            {pickText({ ar: 'تعيين أو سحب مربي للقسم', fr: 'Affecter ou retirer un enseignant', en: 'Assign or Unassign Class Teacher' }, language)}
+            {pickText({ ar: 'تعيين أو سحب مربي للقسم', fr: 'Affecter ou retirer un enseignant', en: 'Assign or Unassign Class Teacher', es: 'Asignar o retirar docente de clase', de: 'Klassenlehrkraft zuweisen oder entfernen', pt: 'Atribuir ou remover docente da turma' }, language)}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
             <div className="space-y-1.5 sm:col-span-2">
@@ -333,7 +301,7 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
                   onChange={(e) => setTeacherUserId(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 >
-                  <option value="">{pickText({ ar: '— اختر مربياً معتمداً —', fr: '— Sélectionner un enseignant —', en: '— Select approved teacher —' }, language)}</option>
+                  <option value="">{pickText({ ar: '— اختر مربياً معتمداً —', fr: '— Sélectionner un enseignant —', en: '— Select approved teacher —', es: '— Seleccionar docente aprobado —', de: '— Zugelassene Lehrkraft wählen —', pt: '— Selecionar docente aprovado —' }, language)}</option>
                   {teacherAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>{acc.fullName} (@{acc.username})</option>
                   ))}
@@ -353,24 +321,17 @@ export const ClassManagementForms: React.FC<ClassManagementFormsProps> = ({
             <div className="flex flex-col gap-1.5">
               <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
                 <input type="checkbox" checked={isHomeroom} onChange={(e) => setIsHomeroom(e.target.checked)} />
-                <span>{pickText({ ar: 'مربي رئيسي', fr: 'Enseignant principal', en: 'Homeroom teacher' }, language)}</span>
+                <span>{pickText({ ar: 'مربي رئيسي', fr: 'Enseignant principal', en: 'Homeroom teacher', es: 'Docente tutor', de: 'Klassenlehrkraft', pt: 'Docente titular' }, language)}</span>
               </label>
               <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
                 <input type="checkbox" checked={teacherActive} onChange={(e) => setTeacherActive(e.target.checked)} />
-                <span>{pickText({ ar: 'تعيين نشط (إزالة التحديد للسحب)', fr: 'Affectation active (décocher pour retirer)', en: 'Active assignment (uncheck to unassign)' }, language)}</span>
+                <span>{pickText({ ar: 'تعيين نشط (إزالة التحديد للسحب)', fr: 'Affectation active (décocher pour retirer)', en: 'Active assignment (uncheck to unassign)', es: 'Asignación activa (desmarcar para retirar)', de: 'Aktive Zuweisung (abwählen zum Entfernen)', pt: 'Atribuição ativa (desmarcar para remover)' }, language)}</span>
               </label>
             </div>
           </div>
           {!canLoadAccounts && (
             <p data-testid="assignable-accounts-blocked-notice" className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
-              {pickText(
-                {
-                  ar: 'قائمة اختيار المربين بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال معرف المربي (UUID) يدوياً.',
-                  fr: 'La liste nominative des enseignants n’est pas encore disponible pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.',
-                  en: 'The named teacher selection list is not yet available for this delegated role; you can still enter the teacher UUID directly.',
-                },
-                language,
-              )}
+              {pickText({ ar: 'قائمة اختيار المربين بالاسم غير متاحة لهذا الحساب المفوض حالياً؛ يمكنك إدخال معرف المربي (UUID) يدوياً.', fr: 'La liste nominative des enseignants n’est pas encore disponible pour ce rôle délégué ; vous pouvez saisir l’identifiant (UUID) directement.', en: 'The named teacher selection list is not yet available for this delegated role; you can still enter the teacher UUID directly.', es: 'La lista nominativa de docentes aún no está disponible para este rol delegado; puede introducir el UUID del docente directamente.', de: 'Die namentliche Lehrkräfte-Auswahlliste ist für diese delegierte Rolle noch nicht verfügbar; Sie können die Lehrkraft-UUID direkt eingeben.', pt: 'A lista nominal de docentes ainda não está disponível para este perfil delegado; pode introduzir o UUID do docente diretamente.' }, language)}
             </p>
           )}
           {accountsError && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{accountsError}</p>}

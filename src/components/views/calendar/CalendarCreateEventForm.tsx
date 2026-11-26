@@ -80,7 +80,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
     >
       <h4 className="font-bold text-sm text-gray-900 dark:text-white">
         {pickText(
-          { ar: 'إنشاء حدث في التقويم المدرسي', fr: 'Nouvel événement scolaire', en: 'New Calendar Event' },
+          { ar: 'إنشاء حدث في التقويم المدرسي', fr: 'Nouvel événement scolaire', en: 'New Calendar Event', es: 'Nuevo evento del calendario', de: 'Neuer Kalendereintrag', pt: 'Novo evento do calendário' },
           language,
         )}
       </h4>
@@ -88,7 +88,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="space-y-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
           <span>
-            {pickText({ ar: 'الجمهور المستهدف', fr: 'Public cible', en: 'Event audience' }, language)}
+            {pickText({ ar: 'الجمهور المستهدف', fr: 'Public cible', en: 'Event audience', es: 'Público del evento', de: 'Zielgruppe', pt: 'Público do evento' }, language)}
           </span>
           <select
             data-testid="calendar-audience-select"
@@ -107,7 +107,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
         {audienceMode === 'SINGLE_CLASS' && (
           <label className="space-y-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
             <span>
-              {pickText({ ar: 'القسم المستهدف', fr: 'Classe cible', en: 'Target class' }, language)}
+              {pickText({ ar: 'القسم المستهدف', fr: 'Classe cible', en: 'Target class', es: 'Clase objetivo', de: 'Zielklasse', pt: 'Turma de destino' }, language)}
             </span>
             <select
               data-testid="calendar-target-class-select"
@@ -118,7 +118,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
               {audiencePlan.selectableClasses.length === 0 ? (
                 <option value="">
                   {pickText(
-                    { ar: 'لا توجد أقسام متاحة', fr: 'Aucune classe disponible', en: 'No active classes available' },
+                    { ar: 'لا توجد أقسام متاحة', fr: 'Aucune classe disponible', en: 'No active classes available', es: 'No hay clases activas disponibles', de: 'Keine aktiven Klassen verfügbar', pt: 'Nenhuma turma ativa disponível' },
                     language,
                   )}
                 </option>
@@ -137,7 +137,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
         {audienceMode === 'TEACHER_CLASSES' && (
           <label className="space-y-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
             <span>
-              {pickText({ ar: 'الأستاذ المستهدف', fr: 'Enseignant cible', en: 'Target teacher' }, language)}
+              {pickText({ ar: 'الأستاذ المستهدف', fr: 'Enseignant cible', en: 'Target teacher', es: 'Docente objetivo', de: 'Ziellehrkraft', pt: 'Professor de destino' }, language)}
             </span>
             {loadingTeachers ? (
               <div
@@ -164,6 +164,9 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
                           ar: 'اختيار الأستاذ غير متاح لهذا الحساب حالياً. يمكنك استخدام خيار «كامل المدرسة» أو «قسم واحد محدد».',
                           fr: 'La sélection d’un enseignant n’est pas disponible pour ce compte actuellement. Utilisez « Toute l’école » ou « Une classe sélectionnée ».',
                           en: 'Selecting a teacher is unavailable for this account right now. Use "Whole school" or "One selected class" instead.',
+                          es: 'La selección de docente no está disponible para esta cuenta en este momento. Use "Toda la escuela" o "Una clase seleccionada".',
+                          de: 'Die Lehrkraftauswahl ist für dieses Konto derzeit nicht verfügbar. Nutzen Sie „Ganze Schule“ oder „Eine ausgewählte Klasse“.',
+                          pt: 'A seleção de professor não está disponível para esta conta neste momento. Use "Toda a escola" ou "Uma turma selecionada".',
                         },
                         language,
                       )
@@ -172,6 +175,9 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
                           ar: 'لا يوجد أساتذة معتمدون متاحون للاختيار حالياً.',
                           fr: 'Aucun enseignant approuvé n’est disponible pour le moment.',
                           en: 'No approved teachers are available to select right now.',
+                          es: 'No hay docentes aprobados disponibles para seleccionar ahora.',
+                          de: 'Derzeit sind keine genehmigten Lehrkräfte zur Auswahl verfügbar.',
+                          pt: 'Não há professores aprovados disponíveis para selecionar neste momento.',
                         },
                         language,
                       )}
@@ -214,6 +220,9 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
                     ar: `سيظهر هذا الحدث في جميع أقسامك المسندة: ${resolvedAssignedClasses.map((c) => c.name).join('، ')}`,
                     fr: `Cet événement sera visible dans toutes vos classes attribuées : ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
                     en: `This event will appear across all of your assigned classes: ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
+                    es: `Este evento aparecerá en todas sus clases asignadas: ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
+                    de: `Dieser Eintrag erscheint in allen Ihren zugewiesenen Klassen: ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
+                    pt: `Este evento aparecerá em todas as suas turmas atribuídas: ${resolvedAssignedClasses.map((c) => c.name).join(', ')}`,
                   },
                   language,
                 )
@@ -222,6 +231,9 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
                     ar: 'لا توجد أقسام مسندة لحسابك حالياً.',
                     fr: 'Aucune classe active n’est attribuée à votre compte actuellement.',
                     en: 'No active assigned classes are available for your account.',
+                    es: 'No hay clases activas asignadas para su cuenta.',
+                    de: 'Für Ihr Konto sind keine aktiven zugewiesenen Klassen verfügbar.',
+                    pt: 'Não existem turmas ativas atribuídas à sua conta.',
                   },
                   language,
                 )}
@@ -236,7 +248,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
           data-testid="calendar-title-input"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={pickText({ ar: 'عنوان الحدث', fr: 'Titre', en: 'Event title' }, language)}
+          placeholder={pickText({ ar: 'عنوان الحدث', fr: 'Titre', en: 'Event title', es: 'Título del evento', de: 'Veranstaltungstitel', pt: 'Título do evento' }, language)}
           className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
         />
         <select
@@ -277,7 +289,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={2}
-        placeholder={pickText({ ar: 'التفاصيل', fr: 'Description', en: 'Description' }, language)}
+        placeholder={pickText({ ar: 'التفاصيل', fr: 'Description', en: 'Description', es: 'Descripción', de: 'Beschreibung', pt: 'Descrição' }, language)}
         className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
       />
       <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
@@ -288,6 +300,9 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
               ar: 'تُحفظ الأحداث ليوم كامل بتوقيت تونس. الأوقات المحددة وتعديل الأحداث والموقع والصور وإحصائيات الحضور غير متاحة حالياً.',
               fr: 'Les événements sont enregistrés sur la journée entière (Africa/Tunis). Les horaires précis, la modification, le lieu, les photos et les totaux de réponses ne sont pas encore disponibles.',
               en: 'Events save as all-day entries (Africa/Tunis). Specific time slots, editing, locations, photos, and attendance totals are not yet available.',
+              es: 'Los eventos se guardan para todo el día (Africa/Tunis). Horarios exactos, edición, ubicaciones, fotos y totales de asistencia aún no están disponibles.',
+              de: 'Einträge werden ganztägig gespeichert (Africa/Tunis). Uhrzeiten, Bearbeitung, Orte, Fotos und Teilnahmesummen sind noch nicht verfügbar.',
+              pt: 'Os eventos são guardados para o dia inteiro (Africa/Tunis). Horários específicos, edição, locais, fotos e totais de presença ainda não estão disponíveis.',
             },
             language,
           )}
@@ -303,7 +318,7 @@ export const CalendarCreateEventForm: React.FC<CalendarCreateEventFormProps> = (
           />
           <span>
             {pickText(
-              { ar: 'مرئي في الموقع العام', fr: 'Visible sur le site public', en: 'Visible on public homepage' },
+              { ar: 'مرئي في الموقع العام', fr: 'Visible sur le site public', en: 'Visible on public homepage', es: 'Visible en la portada pública', de: 'Auf öffentlicher Startseite sichtbar', pt: 'Visível na página pública' },
               language,
             )}
           </span>

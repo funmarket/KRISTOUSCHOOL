@@ -40,6 +40,36 @@ export const telegramLinkCopy: Record<Language, {
     failed: 'The link could not be confirmed. It may have expired or already been used.',
     close: 'Close',
   },
+  es: {
+    title: 'Conectar Telegram',
+    instructions: 'Abre KRISTOU en Telegram para confirmar la vinculación de esta cuenta. El enlace caduca en 10 minutos.',
+    open: 'Abrir KRISTOU en Telegram',
+    expires: 'Después de confirmar, vuelve a la aplicación y actualiza la página.',
+    startFailed: 'No se pudo iniciar la vinculación con Telegram. Inicia sesión e inténtalo de nuevo.',
+    complete: 'Cuenta de Telegram vinculada. Puedes volver a la aplicación.',
+    failed: 'No se pudo confirmar la vinculación. Es posible que haya caducado o ya se haya utilizado.',
+    close: 'Cerrar',
+  },
+  de: {
+    title: 'Telegram verbinden',
+    instructions: 'Öffnen Sie KRISTOU in Telegram, um die Verknüpfung dieses Kontos zu bestätigen. Der Link läuft in 10 Minuten ab.',
+    open: 'KRISTOU in Telegram öffnen',
+    expires: 'Kehren Sie nach der Bestätigung zur App zurück und laden Sie die Seite neu.',
+    startFailed: 'Telegram-Verknüpfung konnte nicht gestartet werden. Melden Sie sich an und versuchen Sie es erneut.',
+    complete: 'Telegram-Konto verknüpft. Sie können zur App zurückkehren.',
+    failed: 'Die Verknüpfung konnte nicht bestätigt werden. Der Link ist möglicherweise abgelaufen oder bereits verwendet worden.',
+    close: 'Schließen',
+  },
+  pt: {
+    title: 'Ligar Telegram',
+    instructions: 'Abra a KRISTOU no Telegram para confirmar a associação desta conta. A ligação expira em 10 minutos.',
+    open: 'Abrir KRISTOU no Telegram',
+    expires: 'Após confirmar, regresse à aplicação e atualize a página.',
+    startFailed: 'Não foi possível iniciar a ligação ao Telegram. Inicie sessão e tente novamente.',
+    complete: 'Conta Telegram associada. Pode voltar à aplicação.',
+    failed: 'Não foi possível confirmar a associação. A ligação pode ter expirado ou já ter sido utilizada.',
+    close: 'Fechar',
+  },
 };
 
 export function getTelegramLinkCopy(language: Language) {

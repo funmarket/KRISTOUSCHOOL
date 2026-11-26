@@ -594,7 +594,14 @@ test('ADMIN-PICKUP-01 — ADMINISTRATIVE_PERSONNEL receives pickup tab access an
   dom.document.body.appendChild(container);
   const root = createRoot(container);
 
-  const expectedTitles = { en: 'Pickup', fr: 'Sortie & Pickup', ar: 'الاستلام المدرسي' };
+  const expectedTitles = {
+    en: 'Pickup',
+    fr: 'Sortie & Pickup',
+    ar: 'الاستلام المدرسي',
+    es: 'Recogida',
+    de: 'Abholung',
+    pt: 'Recolha',
+  };
   const tabCalls = [];
 
   for (const [language, expectedTitle] of Object.entries(expectedTitles)) {

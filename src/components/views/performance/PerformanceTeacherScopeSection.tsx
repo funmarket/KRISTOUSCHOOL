@@ -68,6 +68,9 @@ export const PerformanceTeacherScopeSection: React.FC<PerformanceTeacherScopeSec
                 ar: 'نطاق التدريس المخوّل (الأقسام، التلاميذ، والمواد المسندة)',
                 fr: 'Périmètre enseignant autorisé (classes, élèves et matières attribuées)',
                 en: 'Authorized Teaching Scope (Assigned Classes, Class Students & Subjects)',
+                es: 'Ámbito docente autorizado (clases asignadas, alumnos y asignaturas)',
+                de: 'Autorisierter Unterrichtsbereich (zugewiesene Klassen, Schüler & Fächer)',
+                pt: 'Âmbito docente autorizado (turmas atribuídas, alunos e disciplinas)',
               },
               language,
             )}
@@ -120,6 +123,9 @@ export const PerformanceTeacherScopeSection: React.FC<PerformanceTeacherScopeSec
               ar: 'لا توجد أقسام مسندة لحسابك حالياً. عند إسناد قسم لك ستظهر قائمة التلاميذ والمواد المسندة هنا.',
               fr: 'Aucune classe assignée à votre compte pour le moment. Vos classes, élèves et matières attribuées apparaîtront ici après affectation.',
               en: 'No classes are currently assigned to your teacher account. Assigned classes, class students, and subject allocations will appear once assigned.',
+              es: 'Actualmente no hay clases asignadas a su cuenta docente. Las clases, alumnos y asignaturas asignadas aparecerán tras su asignación.',
+              de: 'Ihrem Lehrkräftekonto sind derzeit keine Klassen zugewiesen. Klassen, Schüler und Fächer erscheinen nach der Zuweisung.',
+              pt: 'Atualmente não existem turmas atribuídas à sua conta docente. As turmas, alunos e disciplinas atribuídas aparecerão após a atribuição.',
             },
             language,
           )}
@@ -165,6 +171,9 @@ export const PerformanceTeacherScopeSection: React.FC<PerformanceTeacherScopeSec
                     ar: 'لا يوجد تلاميذ مسجلون في هذا القسم.',
                     fr: 'Aucun élève inscrit dans cette classe.',
                     en: 'No enrolled students in this class.',
+                    es: 'No hay alumnos matriculados en esta clase.',
+                    de: 'Keine Schüler in dieser Klasse eingeschrieben.',
+                    pt: 'Não há alunos inscritos nesta turma.',
                   },
                   language,
                 )}
@@ -192,7 +201,7 @@ export const PerformanceTeacherScopeSection: React.FC<PerformanceTeacherScopeSec
               className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide"
             >
               {pickText(
-                { ar: 'المادة المسندة', fr: 'Matière attribuée', en: 'Allocated Subject' },
+                { ar: 'المادة المسندة', fr: 'Matière attribuée', en: 'Allocated Subject', es: 'Asignatura asignada', de: 'Zugewiesenes Fach', pt: 'Disciplina atribuída' },
                 language,
               )}
             </label>
@@ -249,6 +258,9 @@ export const PerformanceTeacherScopeSection: React.FC<PerformanceTeacherScopeSec
                     ar: 'لا توجد مواد مسندة لك في هذا القسم.',
                     fr: 'Aucune matière attribuée dans cette classe.',
                     en: 'No subjects allocated to you in this class.',
+                    es: 'No tiene asignaturas asignadas en esta clase.',
+                    de: 'Ihnen sind in dieser Klasse keine Fächer zugewiesen.',
+                    pt: 'Não tem disciplinas atribuídas nesta turma.',
                   },
                   language,
                 )}

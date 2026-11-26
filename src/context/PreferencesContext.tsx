@@ -70,7 +70,7 @@ export const PreferencesProvider: React.FC<{
 }> = ({ children, initialIdentity }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = readStorage('kristou_lang');
-    return saved === 'ar' || saved === 'fr' || saved === 'en' ? saved : 'fr';
+    return saved === 'ar' || saved === 'fr' || saved === 'en' || saved === 'es' || saved === 'de' || saved === 'pt' ? saved : 'fr';
   });
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     const saved = readStorage('kristou_theme');

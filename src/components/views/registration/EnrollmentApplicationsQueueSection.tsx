@@ -61,7 +61,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
   >
     {notificationUnavailable && (
       <p role="status" data-testid="notification-target-unavailable" className="rounded-xl border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs font-semibold text-amber-900 dark:text-amber-200">
-        {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.' }, language)}
+        {pickText({ ar: 'العنصر المطلوب غير متاح أو ليس لديك إذن بالوصول إليه.', fr: 'Cet élément est indisponible ou vous n’avez pas le droit d’y accéder.', en: 'Requested item is unavailable or you do not have access.', es: 'El elemento solicitado no está disponible o no tiene acceso.', de: 'Das angeforderte Element ist nicht verfügbar oder Sie haben keinen Zugriff.', pt: 'O item solicitado está indisponível ou não tem permissão de acesso.' }, language)}
       </p>
     )}
     <div className="flex items-center justify-between gap-2">
@@ -70,11 +70,11 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
         <h2 className="font-extrabold text-base text-gray-900 dark:text-white">
           {canReview
             ? pickText(
-                { ar: 'ملفات طلبات التسجيل للمراجعة', fr: 'Dossiers d’inscription à traiter', en: 'Enrollment Applications Review Queue' },
+                { ar: 'ملفات طلبات التسجيل للمراجعة', fr: 'Dossiers d’inscription à traiter', en: 'Enrollment Applications Review Queue', es: 'Cola de revisión de solicitudes de matrícula', de: 'Prüfliste der Einschreibungsanträge', pt: 'Fila de revisão dos pedidos de inscrição' },
                 language,
               )
             : pickText(
-                { ar: 'طلبات التسجيل المقدمة من حسابك', fr: 'Vos demandes d’inscription', en: 'Your Submitted Enrollment Applications' },
+                { ar: 'طلبات التسجيل المقدمة من حسابك', fr: 'Vos demandes d’inscription', en: 'Your Submitted Enrollment Applications', es: 'Sus solicitudes de matrícula enviadas', de: 'Ihre eingereichten Einschreibungsanträge', pt: 'Os seus pedidos de inscrição enviados' },
                 language,
               )}
         </h2>
@@ -109,7 +109,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
           <span>
             {enrollmentsError ||
               pickText(
-                { ar: 'غير مصرح بالوصول إلى ملفات طلبات التسجيل.', fr: 'Accès non autorisé aux dossiers d’inscription.', en: 'Not authorized to access enrollment applications.' },
+                { ar: 'غير مصرح بالوصول إلى ملفات طلبات التسجيل.', fr: 'Accès non autorisé aux dossiers d’inscription.', en: 'Not authorized to access enrollment applications.', es: 'No autorizado para acceder a las solicitudes de matrícula.', de: 'Nicht berechtigt, auf Einschreibungsanträge zuzugreifen.', pt: 'Sem autorização para aceder aos pedidos de inscrição.' },
                 language,
               )}
           </span>
@@ -119,7 +119,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
           onClick={onRefresh}
           className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     )}
@@ -135,7 +135,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
           <span>
             {enrollmentsError ||
               pickText(
-                { ar: 'تعذر تحميل ملفات التسجيل من الخادم.', fr: 'Impossible de charger les dossiers d’inscription.', en: 'Failed to load enrollment applications from server.' },
+                { ar: 'تعذر تحميل ملفات التسجيل من الخادم.', fr: 'Impossible de charger les dossiers d’inscription.', en: 'Failed to load enrollment applications from server.', es: 'No se pudieron cargar las solicitudes de matrícula desde el servidor.', de: 'Einschreibungsanträge konnten nicht vom Server geladen werden.', pt: 'Falha ao carregar os pedidos de inscrição do servidor.' },
                 language,
               )}
           </span>
@@ -145,7 +145,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
           onClick={onRefresh}
           className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     )}
@@ -160,18 +160,18 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
           <EmptyFeatureState
             state="BLOCKED_BACKEND"
             title={pickText(
-              { ar: 'سجل طلبات التسجيل بانتظار التفعيل في الخادم', fr: 'Suivi des inscriptions en attente du serveur', en: 'Enrollment Queue Pending Backend Deployment' },
+              { ar: 'سجل طلبات التسجيل بانتظار التفعيل في الخادم', fr: 'Suivi des inscriptions en attente du serveur', en: 'Enrollment Queue Pending Backend Deployment', es: 'Cola de matrícula pendiente de despliegue en servidor', de: 'Einschreibewarteschlange wartet auf Server-Bereitstellung', pt: 'Fila de inscrição pendente da implantação no servidor' },
               language,
             )}
             description={pickText(
-              { ar: 'الجدول enrollment_applications غير منشور بعد في Supabase.', fr: 'La table enrollment_applications n’est pas encore déployée sur Supabase.', en: 'public.enrollment_applications is awaiting deployment on Supabase.' },
+              { ar: 'الجدول enrollment_applications غير منشور بعد في Supabase.', fr: 'La table enrollment_applications n’est pas encore déployée sur Supabase.', en: 'public.enrollment_applications is awaiting deployment on Supabase.', es: 'public.enrollment_applications está pendiente de despliegue en Supabase.', de: 'public.enrollment_applications wartet auf die Bereitstellung in Supabase.', pt: 'public.enrollment_applications aguarda implantação no Supabase.' },
               language,
             )}
           />
         ) : enrollmentApplications.length === 0 && enrollmentsStatus === 'READY' ? (
           <p data-testid="enrollments-empty-state" className="text-xs text-gray-500 py-4 text-center">
             {pickText(
-              { ar: 'لا توجد طلبات تسجيل مسجلة حالياً.', fr: 'Aucune demande d’inscription enregistrée.', en: 'No enrollment applications found.' },
+              { ar: 'لا توجد طلبات تسجيل مسجلة حالياً.', fr: 'Aucune demande d’inscription enregistrée.', en: 'No enrollment applications found.', es: 'No se encontraron solicitudes de matrícula.', de: 'Keine Einschreibungsanträge gefunden.', pt: 'Não foram encontrados pedidos de inscrição.' },
               language,
             )}
           </p>
@@ -206,7 +206,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                   {app.notes && <p className="text-xs text-gray-600 dark:text-gray-400">{app.notes}</p>}
                   {app.reviewNote && (
                     <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                      {pickText({ ar: 'ملاحظة الإدارة:', fr: 'Note administrative :', en: 'Review note:' }, language)} {app.reviewNote}
+                      {pickText({ ar: 'ملاحظة الإدارة:', fr: 'Note administrative :', en: 'Review note:', es: 'Nota de revisión:', de: 'Prüfvermerk:', pt: 'Nota de revisão:' }, language)} {app.reviewNote}
                     </p>
                   )}
 
@@ -232,7 +232,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                         onChange={(e) =>
                           setReviewNoteMap((prev) => ({ ...prev, [app.id]: e.target.value }))
                         }
-                        placeholder={pickText({ ar: 'ملاحظة المراجعة...', fr: 'Note de décision...', en: 'Decision note...' }, language)}
+                        placeholder={pickText({ ar: 'ملاحظة المراجعة...', fr: 'Note de décision...', en: 'Decision note...', es: 'Nota de decisión...', de: 'Entscheidungsnotiz...', pt: 'Nota de decisão...' }, language)}
                         className="p-2 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs"
                       />
                       <button

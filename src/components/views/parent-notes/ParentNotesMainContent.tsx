@@ -171,7 +171,7 @@ export const ParentNotesMainContent: React.FC<ParentNotesMainContentProps> = ({
     setErrorMsg('');
     setSuccessMsg('');
     if (!isWithinParentNotesTunisWindow()) {
-      setErrorMsg(pickText({ ar: 'الإرسال مغلق خارج 08:00–18:00 بتوقيت تونس.', fr: 'Envoi fermé.', en: 'Parent notes can only be sent between 08:00 and 18:00 Africa/Tunis.' }, language));
+      setErrorMsg(pickText({ ar: 'الإرسال مغلق خارج 08:00–18:00 بتوقيت تونس.', fr: 'Envoi fermé.', en: 'Parent notes can only be sent between 08:00 and 18:00 Africa/Tunis.', es: 'Las notas solo pueden enviarse entre las 08:00 y las 18:00 (hora de Túnez).', de: 'Elternnotizen können nur zwischen 08:00 und 18:00 Uhr (Tunis) gesendet werden.', pt: 'As notas de pais só podem ser enviadas entre as 08:00 e as 18:00 (Tunes).' }, language));
       return;
     }
     if (!effectiveChildId) {

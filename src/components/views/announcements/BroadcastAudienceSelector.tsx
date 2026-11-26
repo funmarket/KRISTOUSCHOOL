@@ -42,6 +42,9 @@ export const BroadcastAudienceSelector: React.FC<BroadcastAudienceSelectorProps>
               ar: 'اختر المستويات المستهدفة:',
               fr: 'Sélectionnez les niveaux ciblés :',
               en: 'Select target school levels:',
+              es: 'Selecciona los niveles escolares objetivo:',
+              de: 'Zielklassenstufen auswählen:',
+              pt: 'Selecione os níveis escolares pretendidos:',
             },
             language,
           )}
@@ -85,6 +88,9 @@ export const BroadcastAudienceSelector: React.FC<BroadcastAudienceSelectorProps>
             ar: 'اختر الأقسام المستهدفة:',
             fr: 'Sélectionnez les classes ciblées :',
             en: 'Select target classes:',
+            es: 'Selecciona las clases objetivo:',
+            de: 'Zielklassen auswählen:',
+            pt: 'Selecione as turmas pretendidas:',
           },
           language,
         )}
@@ -96,6 +102,9 @@ export const BroadcastAudienceSelector: React.FC<BroadcastAudienceSelectorProps>
               ar: 'لا توجد أقسام متاحة حالياً.',
               fr: 'Aucune classe active disponible.',
               en: 'No active classes loaded.',
+              es: 'No hay clases activas disponibles.',
+              de: 'Keine aktiven Klassen verfügbar.',
+              pt: 'Nenhuma turma ativa disponível.',
             },
             language,
           )}

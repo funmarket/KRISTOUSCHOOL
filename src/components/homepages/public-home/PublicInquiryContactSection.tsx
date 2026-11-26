@@ -38,6 +38,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
               ar: `معلومات الاتصال — ${t('school')}`,
               fr: `Coordonnées — ${t('school')}`,
               en: `Contact & Location — ${t('school')}`,
+              es: `Contacto y ubicación — ${t('school')}`,
+              de: `Kontakt & Standort — ${t('school')}`,
+              pt: `Contacto e localização — ${t('school')}`,
             },
             language,
           )
@@ -47,7 +50,7 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <strong className="block text-[#1E3A6D] dark:text-white mb-1">
-                📍 {pickText({ ar: 'الموقع', fr: 'Localisation', en: 'Location' }, language)}
+                📍 {pickText({ ar: 'الموقع', fr: 'Localisation', en: 'Location', es: 'Ubicación', de: 'Standort', pt: 'Localização' }, language)}
               </strong>
               <span className="kh-info-panel-body">
                 {t('school')} — {t('tunis')}
@@ -61,6 +64,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                     ar: 'الاستقبال والإدارة',
                     fr: 'Accueil & Secrétariat',
                     en: 'Reception & Office',
+                    es: 'Recepción y secretaría',
+                    de: 'Empfang & Sekretariat',
+                    pt: 'Receção e secretaria',
                   },
                   language,
                 )}
@@ -72,6 +78,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                       ar: 'بيانات الهاتف والعنوان التفصيلي تُنشر بعد التحديث الرسمي من إدارة المدرسة.',
                       fr: 'Les coordonnées téléphoniques et l’adresse précise sont publiées après validation officielle par la direction.',
                       en: 'Official street address and reception telephone details are published upon school administration verification.',
+                      es: 'La dirección y el teléfono de recepción se publican tras la validación oficial de la dirección escolar.',
+                      de: 'Die offizielle Adresse und Telefonnummer werden nach Bestätigung durch die Schulleitung veröffentlicht.',
+                      pt: 'O endereço e telefone da receção são publicados após validação oficial da direção escolar.',
                     },
                     language,
                   )}
@@ -81,7 +90,7 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
               <strong className="block text-[#1E3A6D] dark:text-white mb-1">
                 📋{' '}
                 {pickText(
-                  { ar: 'القبول والتسجيل', fr: 'Inscriptions', en: 'Admissions' },
+                  { ar: 'القبول والتسجيل', fr: 'Inscriptions', en: 'Admissions', es: 'Admisiones', de: 'Aufnahme', pt: 'Admissões' },
                   language,
                 )}
               </strong>
@@ -99,6 +108,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                   ar: 'إرسال استفسار لإدارة المدرسة',
                   fr: 'Envoyer une demande d’information au secrétariat',
                   en: 'Send a Public School Inquiry',
+                  es: 'Enviar una consulta a la escuela',
+                  de: 'Anfrage an die Schule senden',
+                  pt: 'Enviar um pedido à escola',
                 },
                 language,
               )}
@@ -124,7 +136,7 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                 value={inquiryForm.senderName}
                 onChange={(e) => setInquiryForm((p) => ({ ...p, senderName: e.target.value }))}
                 placeholder={pickText(
-                  { ar: 'الاسم الكامل', fr: 'Nom complet', en: 'Your full name' },
+                  { ar: 'الاسم الكامل', fr: 'Nom complet', en: 'Your full name', es: 'Tu nombre completo', de: 'Ihr vollständiger Name', pt: 'O seu nome completo' },
                   language,
                 )}
                 className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
@@ -138,6 +150,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                     ar: 'رقم الهاتف (اختياري)',
                     fr: 'Téléphone (optionnel)',
                     en: 'Phone (optional)',
+                    es: 'Teléfono (opcional)',
+                    de: 'Telefon (optional)',
+                    pt: 'Telefone (opcional)',
                   },
                   language,
                 )}
@@ -152,6 +167,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                     ar: 'البريد الإلكتروني (اختياري)',
                     fr: 'E-mail (optionnel)',
                     en: 'Email (optional)',
+                    es: 'Correo (opcional)',
+                    de: 'E-Mail (optional)',
+                    pt: 'E-mail (opcional)',
                   },
                   language,
                 )}
@@ -164,7 +182,7 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
               value={inquiryForm.subject}
               onChange={(e) => setInquiryForm((p) => ({ ...p, subject: e.target.value }))}
               placeholder={pickText(
-                { ar: 'الموضوع', fr: 'Objet de la demande', en: 'Subject' },
+                { ar: 'الموضوع', fr: 'Objet de la demande', en: 'Subject', es: 'Asunto', de: 'Betreff', pt: 'Assunto' },
                 language,
               )}
               className="w-full rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs"
@@ -179,6 +197,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                   ar: 'نص الاستفسار...',
                   fr: 'Votre message...',
                   en: 'Your question or message...',
+                  es: 'Tu pregunta o mensaje...',
+                  de: 'Ihre Frage oder Nachricht...',
+                  pt: 'A sua pergunta ou mensagem...',
                 },
                 language,
               )}
@@ -196,6 +217,9 @@ export const PublicInquiryContactSection: React.FC<PublicInquiryContactSectionPr
                       ar: 'إرسال الاستفسار',
                       fr: 'Envoyer la demande',
                       en: 'Submit Inquiry',
+                      es: 'Enviar consulta',
+                      de: 'Anfrage absenden',
+                      pt: 'Enviar pedido',
                     },
                     language,
                   )}

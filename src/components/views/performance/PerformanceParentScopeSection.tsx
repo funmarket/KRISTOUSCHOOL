@@ -42,6 +42,9 @@ export const PerformanceParentScopeSection: React.FC<PerformanceParentScopeSecti
                 ar: 'أطفالك المرتبطون بالحساب',
                 fr: 'Vos enfants liés au compte',
                 en: 'Linked Children',
+                es: 'Hijos vinculados',
+                de: 'Verknüpfte Kinder',
+                pt: 'Crianças associadas',
               },
               language,
             )}
@@ -104,7 +107,7 @@ export const PerformanceParentScopeSection: React.FC<PerformanceParentScopeSecti
           <div className="space-y-1.5">
             <span className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
               {pickText(
-                { ar: 'مواد الطفل', fr: 'Matières de l’élève', en: 'Student Subjects' },
+                { ar: 'مواد الطفل', fr: 'Matières de l’élève', en: 'Student Subjects', es: 'Asignaturas del alumno', de: 'Schülerfächer', pt: 'Disciplinas do aluno' },
                 language,
               )}
             </span>

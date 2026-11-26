@@ -29,7 +29,8 @@ export function formatSafeEnrollmentDate(rawDate: string | null | undefined, lan
     return trimmed;
   }
   try {
-    const locale = language === 'ar' ? 'ar-TN' : language === 'fr' ? 'fr-FR' : 'en-US';
+    const localeMap: Record<string, string> = { ar: 'ar-TN', fr: 'fr-FR', en: 'en-US', es: 'es-ES', de: 'de-DE', pt: 'pt-PT' };
+    const locale = localeMap[language] ?? 'en-US';
     return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',

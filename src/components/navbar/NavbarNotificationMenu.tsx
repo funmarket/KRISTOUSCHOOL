@@ -6,14 +6,16 @@ import { AppTab, NotificationItem } from '../../types';
 import { filterLoadedNotifications, NOTIFICATION_CATEGORIES, type NotificationFilter } from '../../lib/notificationFilters';
 import { useApp } from '../../context/AppContext';
 
-const NOTIFICATION_FILTER_LABELS: Record<NotificationFilter, { ar: string; fr: string; en: string }> = {
-  all: { ar: 'الكل', fr: 'Tout', en: 'All' },
-  pickup: { ar: 'الاستلام', fr: 'Sortie', en: 'Pickup' },
-  note: { ar: 'ملاحظات', fr: 'Notes', en: 'Notes' },
-  announcement: { ar: 'الإعلانات', fr: 'Annonces', en: 'Announcements' },
-  message: { ar: 'الرسائل', fr: 'Messages', en: 'Messages' },
-  calendar: { ar: 'التقويم', fr: 'Calendrier', en: 'Calendar' },
-  system: { ar: 'النظام', fr: 'Système', en: 'System' },
+import type { LocalizedText } from '../../i18n/homepages';
+
+const NOTIFICATION_FILTER_LABELS: Record<NotificationFilter, LocalizedText> = {
+  all: { ar: 'الكل', fr: 'Tout', en: 'All', es: 'Todo', de: 'Alle', pt: 'Tudo' },
+  pickup: { ar: 'الاستلام', fr: 'Sortie', en: 'Pickup', es: 'Recogida', de: 'Abholung', pt: 'Saída' },
+  note: { ar: 'ملاحظات', fr: 'Notes', en: 'Notes', es: 'Notas', de: 'Mitteilungen', pt: 'Notas' },
+  announcement: { ar: 'الإعلانات', fr: 'Annonces', en: 'Announcements', es: 'Anuncios', de: 'Meldungen', pt: 'Anúncios' },
+  message: { ar: 'الرسائل', fr: 'Messages', en: 'Messages', es: 'Mensajes', de: 'Nachrichten', pt: 'Mensagens' },
+  calendar: { ar: 'التقويم', fr: 'Calendrier', en: 'Calendar', es: 'Calendario', de: 'Kalender', pt: 'Calendário' },
+  system: { ar: 'النظام', fr: 'Système', en: 'System', es: 'Sistema', de: 'System', pt: 'Sistema' },
 };
 
 export interface NavbarNotificationMenuProps {
@@ -100,7 +102,7 @@ export const NavbarNotificationMenu: React.FC<NavbarNotificationMenuProps> = ({
                     disabled={markingAllNotifications}
                     onClick={markAllNotificationsRead}
                     title={pickText(
-                      { ar: 'تحديد الكل كمقروء', fr: 'Tout lire', en: 'Mark all read' },
+                      { ar: 'تحديد الكل كمقروء', fr: 'Tout lire', en: 'Mark all read', es: 'Marcar todo leído', de: 'Alle als gelesen markieren', pt: 'Marcar tudo lido' },
                       language,
                     )}
                     className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40"
@@ -110,7 +112,7 @@ export const NavbarNotificationMenu: React.FC<NavbarNotificationMenuProps> = ({
                 )}
               </div>
             </div>
-            <div className="px-3 pt-2" aria-label={pickText({ ar: 'تصفية الإشعارات', fr: 'Filtrer les notifications', en: 'Filter notifications' }, language)} role="group">
+            <div className="px-3 pt-2" aria-label={pickText({ ar: 'تصفية الإشعارات', fr: 'Filtrer les notifications', en: 'Filter notifications', es: 'Filtrar notificaciones', de: 'Benachrichtigungen filtern', pt: 'Filtrar notificações' }, language)} role="group">
               <div className="flex gap-1.5 overflow-x-auto pb-1" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                 {(['all', ...NOTIFICATION_CATEGORIES] as NotificationFilter[]).map((category) => (
                   <button
@@ -127,7 +129,7 @@ export const NavbarNotificationMenu: React.FC<NavbarNotificationMenuProps> = ({
                 ))}
               </div>
               <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
-                {pickText({ ar: 'التصفية تشمل آخر 40 إشعاراً محمّلاً كحد أقصى', fr: 'Filtres sur les 40 dernières notifications chargées au maximum', en: 'Filters apply to up to 40 most recent loaded notifications' }, language)}
+                {pickText({ ar: 'التصفية تشمل آخر 40 إشعاراً محمّلاً كحد أقصى', fr: 'Filtres sur les 40 dernières notifications chargées au maximum', en: 'Filters apply to up to 40 most recent loaded notifications', es: 'Los filtros aplican a las últimas 40 notificaciones cargadas como máximo', de: 'Filter gelten für bis zu 40 zuletzt geladene Benachrichtigungen', pt: 'Os filtros aplicam-se até às 40 notificações mais recentes carregadas' }, language)}
               </p>
             </div>
             {notificationsError && (
@@ -142,7 +144,7 @@ export const NavbarNotificationMenu: React.FC<NavbarNotificationMenuProps> = ({
                   onClick={() => void refreshSchoolData()}
                   className="rounded-md bg-red-700 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-red-800 shrink-0"
                 >
-                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
                 </button>
               </div>
             )}
@@ -150,10 +152,10 @@ export const NavbarNotificationMenu: React.FC<NavbarNotificationMenuProps> = ({
               {filteredNotifications.length === 0 ? (
                 <div className="p-4 text-center text-sm text-gray-500">
                   {notificationsError
-                    ? pickText({ ar: 'تعذر تحميل الإشعارات', fr: 'Notifications indisponibles', en: 'Notifications unavailable' }, language)
+                    ? pickText({ ar: 'تعذر تحميل الإشعارات', fr: 'Notifications indisponibles', en: 'Notifications unavailable', es: 'Notificaciones no disponibles', de: 'Benachrichtigungen nicht verfügbar', pt: 'Notificações indisponíveis' }, language)
                     : notifications.length === 0
                       ? t('noNotifications')
-                      : pickText({ ar: 'لا توجد إشعارات في هذه الفئة ضمن العناصر المحمّلة', fr: 'Aucune notification de cette catégorie parmi les éléments chargés', en: 'No notifications in this category among loaded items' }, language)}
+                      : pickText({ ar: 'لا توجد إشعارات في هذه الفئة ضمن العناصر المحمّلة', fr: 'Aucune notification de cette catégorie parmi les éléments chargés', en: 'No notifications in this category among loaded items', es: 'No hay notificaciones en esta categoría entre los elementos cargados', de: 'Keine Benachrichtigungen in dieser Kategorie unter den geladenen Einträgen', pt: 'Sem notificações nesta categoria entre os itens carregados' }, language)}
                 </div>
               ) : (
                 filteredNotifications.map((n) => {

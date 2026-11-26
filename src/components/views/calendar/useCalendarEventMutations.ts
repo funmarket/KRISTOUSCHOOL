@@ -173,14 +173,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
     capturedScope: string,
     successMessage: string,
   ) => {
-    const warnMsg = pickText(
-      {
-        ar: 'تم حفظ التغيير، لكن تعذر تحديث الروزنامة. أعد تحميل العرض دون إعادة الإرسال.',
-        fr: 'Enregistré, mais l’actualisation du calendrier a échoué. Rechargez sans renvoyer.',
-        en: 'Saved, but the calendar could not refresh. Retry reload without resubmitting.',
-      },
-      language,
-    );
+    const warnMsg = pickText({ ar: 'تم حفظ التغيير، لكن تعذر تحديث الروزنامة. أعد تحميل العرض دون إعادة الإرسال.', fr: 'Enregistré, mais l’actualisation du calendrier a échoué. Rechargez sans renvoyer.', en: 'Saved, but the calendar could not refresh. Retry reload without resubmitting.', es: 'Guardado, pero falló la actualización del calendario. Recargue sin reenviar.', de: 'Gespeichert, aber Kalender-Aktualisierung fehlgeschlagen. Ohne erneutes Senden neu laden.', pt: 'Guardado, mas a atualização do calendário falhou. Recarregue sem reenviar.' }, language);
     try {
       const refreshed = await onRefresh();
       if (!isContextStillActive(capturedGen, capturedScope)) return;
@@ -197,14 +190,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
 
   const handleRetryRefreshOnly = async () => {
     setRefreshWarning(null);
-    const retryWarn = pickText(
-      {
-        ar: 'لا يزال تحديث الروزنامة متعثراً.',
-        fr: 'L’actualisation du calendrier reste indisponible.',
-        en: 'Calendar refresh still failed. Try again.',
-      },
-      language,
-    );
+    const retryWarn = pickText({ ar: 'لا يزال تحديث الروزنامة متعثراً.', fr: 'L’actualisation du calendrier reste indisponible.', en: 'Calendar refresh still failed. Try again.', es: 'Sigue fallando la actualización del calendario. Inténtelo de nuevo.', de: 'Kalender-Aktualisierung weiter fehlgeschlagen. Erneut versuchen.', pt: 'A atualização do calendário ainda falhou. Tente novamente.' }, language);
     try {
       const refreshed = await onRefresh();
       if (refreshed === false) setRefreshWarning(retryWarn);
@@ -242,14 +228,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
       if (!res.ok) {
         const errMsg =
           res.errorCode === 'calendar_no_eligible_classes'
-            ? pickText(
-                {
-                  ar: 'لا توجد أقسام نشطة مؤهلة لهذا الحدث في الروزنامة.',
-                  fr: 'Aucune classe active éligible n’est disponible pour cet événement.',
-                  en: 'No active eligible classes are available for this calendar event.',
-                },
-                language,
-              )
+            ? pickText({ ar: 'لا توجد أقسام نشطة مؤهلة لهذا الحدث في الروزنامة.', fr: 'Aucune classe active éligible n’est disponible pour cet événement.', en: 'No active eligible classes are available for this calendar event.', es: 'No hay clases activas elegibles para este evento del calendario.', de: 'Für diesen Kalendereintrag sind keine aktiven berechtigten Klassen verfügbar.', pt: 'Não há turmas ativas elegíveis para este evento do calendário.' }, language)
             : res.errorMessage || t('error');
         setFeedback({ type: 'error', text: errMsg });
         return;
@@ -260,14 +239,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
       setIsPublic(false);
       setShowCreateForm(false);
       setSelectedDate(startDate);
-      const committedMsg = pickText(
-        {
-          ar: 'تم حفظ الحدث في التقويم بنجاح.',
-          fr: 'Événement enregistré dans le calendrier.',
-          en: 'Calendar event saved.',
-        },
-        language,
-      );
+      const committedMsg = pickText({ ar: 'تم حفظ الحدث في التقويم بنجاح.', fr: 'Événement enregistré dans le calendrier.', en: 'Calendar event saved.', es: 'Evento del calendario guardado.', de: 'Kalendereintrag gespeichert.', pt: 'Evento do calendário guardado.' }, language);
       setFeedback({ type: 'success', text: committedMsg });
       await runPostCommitRefresh(capturedGen, capturedScope, committedMsg);
     } catch {
@@ -299,10 +271,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
         setFeedback({ type: 'error', text: res.errorMessage || t('error') });
         return;
       }
-      const committedMsg = pickText(
-        { ar: 'تم تسجيل ردك على الحدث.', fr: 'Réponse enregistrée.', en: 'RSVP saved.' },
-        language,
-      );
+      const committedMsg = pickText({ ar: 'تم تسجيل ردك على الحدث.', fr: 'Réponse enregistrée.', en: 'RSVP saved.', es: 'Confirmación guardada.', de: 'Rückmeldung gespeichert.', pt: 'Confirmação guardada.' }, language);
       setFeedback({ type: 'success', text: committedMsg });
       await runPostCommitRefresh(capturedGen, capturedScope, committedMsg);
     } catch {
@@ -353,14 +322,7 @@ export function useCalendarEventMutations(params: UseCalendarEventMutationsParam
 
       setCancellingId(null);
       setCancelReason('');
-      const committedMsg = pickText(
-        {
-          ar: 'تم إلغاء الحدث في الروزنامة دون حذفه.',
-          fr: 'Événement marqué annulé dans le calendrier.',
-          en: 'Event marked cancelled.',
-        },
-        language,
-      );
+      const committedMsg = pickText({ ar: 'تم إلغاء الحدث في الروزنامة دون حذفه.', fr: 'Événement marqué annulé dans le calendrier.', en: 'Event marked cancelled.', es: 'Evento marcado como cancelado.', de: 'Veranstaltung als abgesagt markiert.', pt: 'Evento marcado como cancelado.' }, language);
       setFeedback({ type: 'success', text: committedMsg });
       await runPostCommitRefresh(capturedGen, capturedScope, committedMsg);
     } catch {

@@ -66,6 +66,9 @@ export const PerformanceView: React.FC = () => {
               ar: 'مساحة الأداء الدراسي مخصّصة فقط لحسابات المربين والأولياء المعتمدة.',
               fr: 'L’espace Performance est réservé aux comptes Enseignant et Parent approuvés.',
               en: 'Academic Performance viewing is restricted to approved Teacher and Parent accounts.',
+              es: 'La consulta del rendimiento académico está restringida a cuentas aprobadas de docentes y padres.',
+              de: 'Die Leistungsansicht ist auf genehmigte Lehrkräfte- und Elternkonten beschränkt.',
+              pt: 'A consulta do desempenho académico é restrita a contas aprovadas de docentes e encarregados.',
             },
             language,
           )}
@@ -88,11 +91,11 @@ export const PerformanceView: React.FC = () => {
               <span>
                 {isTeacher
                   ? pickText(
-                      { ar: 'فضاء المربي', fr: 'Espace Enseignant', en: 'Teacher Scope' },
+                      { ar: 'فضاء المربي', fr: 'Espace Enseignant', en: 'Teacher Scope', es: 'Ámbito docente', de: 'Lehrkräftebereich', pt: 'Espaço docente' },
                       language,
                     )
                   : pickText(
-                      { ar: 'فضاء الولي', fr: 'Espace Parent', en: 'Parent Scope' },
+                      { ar: 'فضاء الولي', fr: 'Espace Parent', en: 'Parent Scope', es: 'Ámbito familiar', de: 'Elternbereich', pt: 'Espaço encarregado' },
                       language,
                     )}
               </span>
@@ -116,6 +119,9 @@ export const PerformanceView: React.FC = () => {
                     ar: 'استعراض أقسامك وتلاميذك والمواد المسندة إليك، مع حالة إتاحة النتائج والمنحنيات والتقييمات.',
                     fr: 'Consultez vos classes assignées, leurs élèves et vos matières attribuées, ainsi que la disponibilité des notes, graphiques et appréciations.',
                     en: 'View your assigned classes, class students, and allocated subjects alongside the availability of grades, progress charts, and subject feedback.',
+                    es: 'Consulte sus clases asignadas, alumnos y asignaturas junto con la disponibilidad de calificaciones, gráficos y observaciones.',
+                    de: 'Sehen Sie Ihre zugewiesenen Klassen, Schüler und Fächer sowie die Verfügbarkeit von Noten, Diagrammen und Rückmeldungen.',
+                    pt: 'Consulte as suas turmas atribuídas, alunos e disciplinas juntamente com a disponibilidade de notas, gráficos e observações.',
                   },
                   language,
                 )
@@ -124,6 +130,9 @@ export const PerformanceView: React.FC = () => {
                     ar: 'متابعة أطفالك المرتبطين بحسابك وحالة إتاحة النتائج والمنحنيات البيانية وملاحظات المربين حسب المادة.',
                     fr: 'Consultez vos enfants liés et la disponibilité des notes, graphiques de progression et appréciations par matière.',
                     en: 'View your linked children and the availability of published subject grades, academic progress charts, and teacher feedback.',
+                    es: 'Consulte a sus hijos vinculados y la disponibilidad de calificaciones, gráficos de progreso y observaciones docentes.',
+                    de: 'Sehen Sie Ihre verknüpften Kinder sowie die Verfügbarkeit von Fachnoten, Verlaufsdiagrammen und Lehrkräfte-Feedback.',
+                    pt: 'Consulte os seus filhos associados e a disponibilidade de notas publicadas, gráficos de progresso e observações docentes.',
                   },
                   language,
                 )}
@@ -150,7 +159,7 @@ export const PerformanceView: React.FC = () => {
               className={`w-3.5 h-3.5 ${isRefreshing || isHydratingSchoolData ? 'animate-spin' : ''}`}
             />
             <span>
-              {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh' }, language)}
+              {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh', es: 'Actualizar', de: 'Aktualisieren', pt: 'Atualizar' }, language)}
             </span>
           </button>
         </div>
@@ -167,6 +176,9 @@ export const PerformanceView: React.FC = () => {
                 ar: 'تعذّر تحديث البيانات المدرسية. يرجى المحاولة مجدداً.',
                 fr: 'Impossible d’actualiser les données scolaires. Veuillez réessayer.',
                 en: 'Could not refresh school data. Please try again.',
+                es: 'No se pudieron actualizar los datos escolares. Inténtelo de nuevo.',
+                de: 'Schuldaten konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.',
+                pt: 'Não foi possível atualizar os dados escolares. Tente novamente.',
               },
               language,
             )}
@@ -193,6 +205,9 @@ export const PerformanceView: React.FC = () => {
                 ar: 'النتائج ومنحنيات التقدم وملاحظات المواد غير متاحة حالياً',
                 fr: 'Notes, graphiques de progression et appréciations indisponibles pour le moment',
                 en: 'Grades, progress charts, and subject feedback are not yet available',
+                es: 'Calificaciones, gráficos de progreso y observaciones aún no disponibles',
+                de: 'Noten, Verlaufsdiagramme und Fachfeedback sind noch nicht verfügbar',
+                pt: 'Notas, gráficos de progresso e observações ainda não estão disponíveis',
               },
               language,
             )}
@@ -203,6 +218,9 @@ export const PerformanceView: React.FC = () => {
                 ar: 'ستظهر العلامات ومنحنيات التطوّر والملاحظات التربوية المنشورة هنا فور تفعيل نظام التقييمات المدرسية.',
                 fr: 'Les notes, courbes d’évolution et appréciations publiées apparaîtront ici dès l’activation du suivi des évaluations scolaires.',
                 en: 'Published marks, progress series, and subject feedback will appear here once school assessment tracking is enabled.',
+                es: 'Las notas, series de progreso y observaciones publicadas aparecerán aquí cuando se active el seguimiento de evaluaciones.',
+                de: 'Veröffentlichte Noten, Verläufe und Rückmeldungen erscheinen hier, sobald das schulische Bewertungssystem aktiviert ist.',
+                pt: 'As notas publicadas, séries de progresso e observações aparecerão aqui assim que o acompanhamento das avaliações for ativado.',
               },
               language,
             )}

@@ -44,6 +44,9 @@ export const RegisterAuditTrailPanel: React.FC<RegisterAuditTrailPanelProps> = (
                 ar: 'سجل التدقيق غير القابل للتعديل',
                 fr: 'Journal d’audit immuable',
                 en: 'Immutable Attendance Audit Trail',
+                es: 'Registro de auditoría inmutable',
+                de: 'Unveränderliches Anwesenheits-Auditprotokoll',
+                pt: 'Registo de auditoria imutável',
               },
               language,
             )}
@@ -54,7 +57,7 @@ export const RegisterAuditTrailPanel: React.FC<RegisterAuditTrailPanelProps> = (
           onClick={() => visibleRegister.registerId && void loadAuditHistory(visibleRegister.registerId)}
           className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
         >
-          {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh' }, language)}
+          {pickText({ ar: 'تحديث', fr: 'Actualiser', en: 'Refresh', es: 'Actualizar', de: 'Aktualisieren', pt: 'Atualizar' }, language)}
         </button>
       </div>
 
@@ -79,6 +82,9 @@ export const RegisterAuditTrailPanel: React.FC<RegisterAuditTrailPanelProps> = (
                     ar: 'لا توجد أحداث مسجلة بعد.',
                     fr: 'Aucun événement enregistré.',
                     en: 'No audit events recorded yet.',
+                    es: 'Aún no hay eventos de auditoría registrados.',
+                    de: 'Noch keine Audit-Ereignisse erfasst.',
+                    pt: 'Ainda não há eventos de auditoria registados.',
                   },
                   language,
                 )}
@@ -112,7 +118,7 @@ export const RegisterAuditTrailPanel: React.FC<RegisterAuditTrailPanelProps> = (
                     {ev.reason && (
                       <p className="text-slate-700 dark:text-zinc-300">
                         <span className="font-bold">
-                          {pickText({ ar: 'السبب:', fr: 'Motif :', en: 'Reason:' }, language)}{' '}
+                          {pickText({ ar: 'السبب:', fr: 'Motif :', en: 'Reason:', es: 'Motivo:', de: 'Grund:', pt: 'Motivo:' }, language)}{' '}
                         </span>
                         {ev.reason}
                       </p>

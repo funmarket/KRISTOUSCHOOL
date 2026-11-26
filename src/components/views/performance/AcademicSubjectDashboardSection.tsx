@@ -117,7 +117,7 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
           className="inline-flex items-center gap-1.5 rounded-2xl bg-gray-100 dark:bg-gray-900 px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300"
         >
           {pickText(
-            { ar: 'لا توجد أقسام مسندة', fr: 'Aucune classe assignée', en: 'No assigned classes' },
+            { ar: 'لا توجد أقسام مسندة', fr: 'Aucune classe assignée', en: 'No assigned classes', es: 'Sin clases asignadas', de: 'Keine zugewiesenen Klassen', pt: 'Sem turmas atribuídas' },
             language,
           )}
         </span>
@@ -132,7 +132,7 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
         <span>
           {visibleAllocations.items.length}{' '}
           {pickText(
-            { ar: 'مادة مسندة', fr: 'matières attribuées', en: 'allocated subjects' },
+            { ar: 'مادة مسندة', fr: 'matières attribuées', en: 'allocated subjects', es: 'asignaturas asignadas', de: 'zugewiesene Fächer', pt: 'disciplinas atribuídas' },
             language,
           )}
         </span>
@@ -157,6 +157,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                   ar: 'لوحة المواد الدراسية حسب المجال',
                   fr: 'Tableau académique par matière et domaine',
                   en: 'Academic Dashboard by Subject and Domain',
+                  es: 'Panel académico por asignatura y área',
+                  de: 'Akademisches Dashboard nach Fach und Bereich',
+                  pt: 'Painel académico por disciplina e área',
                 },
                 language,
               )}
@@ -168,6 +171,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                       ar: 'متابعة المواد الدراسية الخاصة بأطفالك غير متاحة بعد',
                       fr: 'La vue détaillée par matière pour les parents n’est pas encore disponible',
                       en: 'Subject-level detail view for parents is not yet available',
+                      es: 'La vista detallada por asignatura para padres aún no está disponible',
+                      de: 'Die Fachdetailansicht für Eltern ist noch nicht verfügbar',
+                      pt: 'A vista detalhada por disciplina para encarregados ainda não está disponível',
                     },
                     language,
                   )
@@ -176,6 +182,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                       ar: 'عرض المواد المسندة ومكوّناتها الفرعية مجمّعة حسب المجال الدراسي',
                       fr: 'Affichage des matières attribuées et de leurs composantes par domaine',
                       en: 'Allocated subjects and their subject components grouped by learning domain',
+                      es: 'Asignaturas asignadas y sus componentes agrupados por área de aprendizaje',
+                      de: 'Zugewiesene Fächer und ihre Teilbereiche nach Lernbereich gruppiert',
+                      pt: 'Disciplinas atribuídas e respetivos componentes agrupados por área de aprendizagem',
                     },
                     language,
                   )}
@@ -198,6 +207,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                 ar: 'بيانات المواد الدراسية لأولياء الأمور غير متاحة حالياً.',
                 fr: 'Les informations par matière pour les parents ne sont pas encore disponibles.',
                 en: 'Subject information for parents is not yet available.',
+                es: 'La información por asignatura para padres aún no está disponible.',
+                de: 'Fachinformationen für Eltern sind noch nicht verfügbar.',
+                pt: 'A informação por disciplina para encarregados ainda não está disponível.',
               },
               language,
             )}
@@ -259,6 +271,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                 ar: 'لا توجد أقسام مسندة لحسابك حالياً.',
                 fr: 'Aucune classe n’est assignée à votre compte pour le moment.',
                 en: 'No classes are currently assigned to your account.',
+                es: 'Actualmente no hay clases asignadas a su cuenta.',
+                de: 'Ihrem Konto sind derzeit keine Klassen zugewiesen.',
+                pt: 'Atualmente não existem turmas atribuídas à sua conta.',
               },
               language,
             )}
@@ -276,6 +291,9 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                 ar: 'لا توجد مواد مسندة لك في هذا النطاق حالياً.',
                 fr: 'Aucune matière attribuée dans ce périmètre pour le moment.',
                 en: 'No subjects allocated in this scope.',
+                es: 'No hay asignaturas asignadas en este ámbito.',
+                de: 'In diesem Bereich sind keine Fächer zugewiesen.',
+                pt: 'Não existem disciplinas atribuídas neste âmbito.',
               },
               language,
             )}
@@ -291,11 +309,11 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-k-brand font-mono">
-                  {pickText({ ar: 'مجال:', fr: 'Domaine :', en: 'Domain:' }, language)} {domainCode}
+                  {pickText({ ar: 'مجال:', fr: 'Domaine :', en: 'Domain:', es: 'Área:', de: 'Bereich:', pt: 'Área:' }, language)} {domainCode}
                 </span>
                 <span className="text-xs font-bold text-gray-500">
                   {subjects.length}{' '}
-                  {pickText({ ar: 'مادة', fr: 'matières', en: 'subjects' }, language)}
+                  {pickText({ ar: 'مادة', fr: 'matières', en: 'subjects', es: 'asignaturas', de: 'Fächer', pt: 'disciplinas' }, language)}
                 </span>
               </div>
 
@@ -316,7 +334,7 @@ export const AcademicSubjectDashboardSection: React.FC<AcademicSubjectDashboardS
                         </p>
                       </div>
                       <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                        {pickText({ ar: 'نشط', fr: 'Actif', en: 'Active' }, language)}
+                        {pickText({ ar: 'نشط', fr: 'Actif', en: 'Active', es: 'Activo', de: 'Aktiv', pt: 'Ativo' }, language)}
                       </span>
                     </div>
 

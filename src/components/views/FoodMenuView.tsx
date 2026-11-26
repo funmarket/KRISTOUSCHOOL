@@ -56,7 +56,7 @@ export const FoodMenuView: React.FC = () => {
       setFeedback({
         type: 'success',
         text: pickText(
-          { ar: 'تم حفظ ونشر قائمة الطعام بنجاح.', fr: 'Menu de la cantine publié.', en: 'Food menu saved and published.' },
+          { ar: 'تم حفظ ونشر قائمة الطعام بنجاح.', fr: 'Menu de la cantine publié.', en: 'Food menu saved and published.', es: 'Menú del comedor guardado y publicado.', de: 'Speiseplan gespeichert und veröffentlicht.', pt: 'Ementa da cantina guardada e publicada.' },
           language,
         ),
       });
@@ -109,7 +109,7 @@ export const FoodMenuView: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
             >
               <Edit3 className="w-3.5 h-3.5" />
-              <span>{pickText({ ar: 'تعديل القائمة', fr: 'Modifier le menu', en: 'Edit Menu' }, language)}</span>
+              <span>{pickText({ ar: 'تعديل القائمة', fr: 'Modifier le menu', en: 'Edit Menu', es: 'Editar menú', de: 'Speiseplan bearbeiten', pt: 'Editar ementa' }, language)}</span>
             </button>
           )}
         </div>
@@ -136,7 +136,7 @@ export const FoodMenuView: React.FC = () => {
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-bold text-sm text-gray-900 dark:text-white">
-              {pickText({ ar: 'إدارة قائمة المطعم المدرسي', fr: 'Éditeur du menu hebdomadaire', en: 'Weekly Canteen Menu Editor' }, language)}
+              {pickText({ ar: 'إدارة قائمة المطعم المدرسي', fr: 'Éditeur du menu hebdomadaire', en: 'Weekly Canteen Menu Editor', es: 'Editor del menú semanal', de: 'Wochen-Speiseplan-Editor', pt: 'Editor da ementa semanal' }, language)}
             </h2>
             <button
               type="button"
@@ -149,7 +149,7 @@ export const FoodMenuView: React.FC = () => {
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-zinc-800 text-xs font-bold"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{pickText({ ar: 'إضافة يوم', fr: 'Ajouter un jour', en: 'Add Day' }, language)}</span>
+              <span>{pickText({ ar: 'إضافة يوم', fr: 'Ajouter un jour', en: 'Add Day', es: 'Añadir día', de: 'Tag hinzufügen', pt: 'Adicionar dia' }, language)}</span>
             </button>
           </div>
 
@@ -271,6 +271,9 @@ export const FoodMenuView: React.FC = () => {
                     ar: 'غير مصرح بعرض قائمة المطعم المدرسي حالياً.',
                     fr: 'Accès non autorisé au menu de la cantine.',
                     en: 'Not authorized to access canteen food menu.',
+                    es: 'No autorizado para acceder al menú del comedor.',
+                    de: 'Kein Zugriff auf den Mensa-Speiseplan.',
+                    pt: 'Sem autorização para aceder à ementa da cantina.',
                   },
                   language,
                 )}
@@ -281,7 +284,7 @@ export const FoodMenuView: React.FC = () => {
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -301,6 +304,9 @@ export const FoodMenuView: React.FC = () => {
                     ar: 'تعذر تحميل قائمة المطعم الأسبوعية من الخادم.',
                     fr: 'Impossible de charger le menu hebdomadaire depuis le serveur.',
                     en: 'Failed to load live canteen food menu from server.',
+                    es: 'No se pudo cargar el menú semanal del servidor.',
+                    de: 'Wochen-Speiseplan konnte nicht vom Server geladen werden.',
+                    pt: 'Falha ao carregar a ementa semanal do servidor.',
                   },
                   language,
                 )}
@@ -311,7 +317,7 @@ export const FoodMenuView: React.FC = () => {
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}

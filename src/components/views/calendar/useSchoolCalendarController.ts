@@ -315,7 +315,15 @@ export function useSchoolCalendarController(props: SchoolCalendarControllerProps
   }, [cursorYear, cursorMonth]);
 
   const monthTitle = useMemo(() => {
-    const locale = language === 'ar' ? 'ar-TN' : language === 'fr' ? 'fr-FR' : 'en-US';
+    const localeMap: Record<typeof language, string> = {
+      ar: 'ar-TN',
+      fr: 'fr-FR',
+      en: 'en-US',
+      es: 'es-ES',
+      de: 'de-DE',
+      pt: 'pt-PT',
+    };
+    const locale = localeMap[language];
     return new Intl.DateTimeFormat(locale, {
       month: 'long', year: 'numeric', timeZone: 'UTC',
     }).format(new Date(Date.UTC(cursorYear, cursorMonth, 1)));
@@ -324,6 +332,9 @@ export function useSchoolCalendarController(props: SchoolCalendarControllerProps
   const weekdayLabels = useMemo(() => {
     if (language === 'ar') return ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح'];
     if (language === 'fr') return ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    if (language === 'es') return ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    if (language === 'de') return ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    if (language === 'pt') return ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   }, [language]);
 

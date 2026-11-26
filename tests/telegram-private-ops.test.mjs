@@ -48,7 +48,10 @@ function fakeDatabase({ accountStatus = 'APPROVED', role = 'PARENT', banned = fa
         if (text.startsWith('select id::text as id, account_status')) return [{ id: ACTOR, account_status: accountStatus }];
         if (text.startsWith('select role::text as role')) return [{ role }];
         if (text.startsWith('select id::text as id, category')) return [{ id: 'notice-1', title: 'Own notification' }];
-        if (text.includes('upsert_my_preferences')) return [{ language: 'ar', theme: 'light', notification_sound: 'Kristou Bell', sound_muted: false, vibration_enabled: true }];
+        if (text.includes('upsert_my_preferences')) {
+          const requestedLang = typeof values[0] === 'string' ? values[0] : 'ar';
+          return [{ language: requestedLang, theme: 'light', notification_sound: 'Kristou Bell', sound_muted: false, vibration_enabled: true }];
+        }
         if (text.startsWith('select language, theme, notification_sound')) return [{ language: 'fr', theme: 'light' }];
         if (text.includes('governance_get_actor_scope')) return [{ data: { role } }];
         if (text.includes('mark_all_user_notification')) return [{ data: 1 }];
@@ -141,4 +144,33 @@ test('only enumerated operations are accepted and allowed mutations call the exi
   assert.equal(saved.status, 200);
   assert.deepEqual(await saved.json(), { language: 'ar', theme: 'light', notification_sound: 'Kristou Bell', sound_muted: false, vibration_enabled: true });
   assert.equal(sql.statements.filter(({ text }) => text.includes('upsert_my_preferences')).length, 1);
+});
+
+test('preferences.save forwards all 6 supported languages and rejects unsupported codes before database access', async () => {
+  for (const lang of ['ar', 'fr', 'en', 'es', 'de', 'pt']) {
+    const sql = fakeDatabase();
+    const res = await handleTelegramPrivateOps(makeRequest(null, {
+      initData: await initData(),
+      operation: 'preferences.save',
+      params: { language: lang },
+    }), deps(sql));
+    assert.equal(res.status, 200, `Expected ${lang} to be accepted by telegram-private-ops`);
+    const body = await res.json();
+    assert.equal(body.language, lang);
+    const upsertStmt = sql.statements.find(({ text }) => text.includes('upsert_my_preferences'));
+    assert.ok(upsertStmt, `Expected upsert_my_preferences call for ${lang}`);
+    assert.equal(upsertStmt.values[0], lang);
+  }
+
+  for (const invalidLang of ['it', 'ja', 'xx', 'ES', 123]) {
+    const sql = fakeDatabase();
+    const res = await handleTelegramPrivateOps(makeRequest(null, {
+      initData: await initData(),
+      operation: 'preferences.save',
+      params: { language: invalidLang },
+    }), deps(sql));
+    assert.equal(res.status, 400, `Expected ${String(invalidLang)} to be rejected with 400`);
+    assert.deepEqual(await res.json(), { error: 'invalid_request' });
+    assert.equal(sql.statements.length, 0, `Unsupported language ${String(invalidLang)} must be rejected before database access`);
+  }
 });

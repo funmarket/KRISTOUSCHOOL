@@ -194,6 +194,30 @@ test('ARCH-01 Gate 2: PreferencesContext hydrates, updates localStorage/DOM, and
   assert.deepEqual(savedPayloads, [{ language: 'en' }]);
   assert.equal(latestPrefs.preferencesSyncStatus, 'SAVED');
 
+  // Switch through es, de, pt: verify LTR dir, html lang, localStorage, translations, and persistence
+  for (const [lang, expectedHome] of [
+    ['es', 'Inicio'],
+    ['de', 'Startseite'],
+    ['pt', 'Início'],
+  ]) {
+    await act(async () => {
+      latestPrefs.setLanguage(lang);
+    });
+    assert.equal(latestPrefs.language, lang);
+    assert.equal(latestPrefs.dir, 'ltr');
+    assert.equal(dom.document.documentElement.dir, 'ltr');
+    assert.equal(dom.document.documentElement.lang, lang);
+    assert.equal(storageMap.get('kristou_lang'), lang);
+    assert.equal(latestPrefs.t('home'), expectedHome);
+    assert.equal(latestPrefs.preferencesSyncStatus, 'SAVED');
+  }
+  assert.deepEqual(savedPayloads, [
+    { language: 'en' },
+    { language: 'es' },
+    { language: 'de' },
+    { language: 'pt' },
+  ]);
+
   await act(async () => {
     root.unmount();
   });

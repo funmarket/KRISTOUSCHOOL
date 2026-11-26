@@ -42,7 +42,7 @@ export const MessageComposerForm: React.FC<MessageComposerFormProps> = ({
     className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-blue-200 dark:border-blue-900 shadow-sm space-y-4"
   >
     <h2 className="font-bold text-sm text-gray-900 dark:text-white">
-      {pickText({ ar: 'إرسال رسالة قصيرة', fr: 'Envoyer un message court', en: 'Send Short Message' }, language)}
+      {pickText({ ar: 'إرسال رسالة قصيرة', fr: 'Envoyer un message court', en: 'Send Short Message', es: 'Enviar mensaje corto', de: 'Kurznachricht senden', pt: 'Enviar mensagem curta' }, language)}
     </h2>
     {recipientsError && (
       <div
@@ -55,7 +55,7 @@ export const MessageComposerForm: React.FC<MessageComposerFormProps> = ({
           onClick={onRetryRecipients}
           className="px-3 py-1 rounded-lg bg-red-700 text-white font-bold text-[11px]"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     )}
@@ -70,7 +70,7 @@ export const MessageComposerForm: React.FC<MessageComposerFormProps> = ({
           <option value="">{t('loading')}</option>
         ) : recipients.length === 0 ? (
           <option value="">
-            {pickText({ ar: 'لا يوجد مستلمون متاحون', fr: 'Aucun destinataire', en: 'No recipients available' }, language)}
+            {pickText({ ar: 'لا يوجد مستلمون متاحون', fr: 'Aucun destinataire', en: 'No recipients available', es: 'No hay destinatarios disponibles', de: 'Keine Empfänger verfügbar', pt: 'Sem destinatários disponíveis' }, language)}
           </option>
         ) : (
           recipients.map((r) => (

@@ -31,6 +31,9 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
           ar: `مستويات محددة: ${levels}`,
           fr: `Niveaux ciblés : ${levels}`,
           en: `Selected Levels: ${levels}`,
+          es: `Niveles seleccionados: ${levels}`,
+          de: `Ausgewählte Stufen: ${levels}`,
+          pt: `Níveis selecionados: ${levels}`,
         },
         language,
       );
@@ -41,17 +44,20 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
           ar: `أقسام محددة (${ann.targetClassIds.length})`,
           fr: `Classes ciblées (${ann.targetClassIds.length})`,
           en: `Selected Classes (${ann.targetClassIds.length})`,
+          es: `Clases seleccionadas (${ann.targetClassIds.length})`,
+          de: `Ausgewählte Klassen (${ann.targetClassIds.length})`,
+          pt: `Turmas selecionadas (${ann.targetClassIds.length})`,
         },
         language,
       );
     }
     if (ann.audienceScope === 'ALL_CLASSES') {
-      return pickText({ ar: 'جميع الأقسام', fr: 'Toutes les classes', en: 'All Classes' }, language);
+      return pickText({ ar: 'جميع الأقسام', fr: 'Toutes les classes', en: 'All Classes', es: 'Todas las clases', de: 'Alle Klassen', pt: 'Todas as turmas' }, language);
     }
     if (ann.audienceScope === 'PUBLIC_SITE' || ann.isPublic) {
-      return pickText({ ar: 'الموقع العام', fr: 'Site public', en: 'Public Site' }, language);
+      return pickText({ ar: 'الموقع العام', fr: 'Site public', en: 'Public Site', es: 'Sitio público', de: 'Öffentliche Website', pt: 'Site público' }, language);
     }
-    return pickText({ ar: 'كل المدرسة', fr: 'Toute l’école', en: 'All School' }, language);
+    return pickText({ ar: 'كل المدرسة', fr: 'Toute l’école', en: 'All School', es: 'Toda la escuela', de: 'Ganze Schule', pt: 'Toda a escola' }, language);
   };
 
   return (
@@ -71,6 +77,9 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
                     ar: 'غير مصرح بعرض الإعلانات المدرسية.',
                     fr: 'Accès non autorisé aux annonces scolaires.',
                     en: 'Not authorized to view school broadcasts.',
+                    es: 'No autorizado para ver los anuncios escolares.',
+                    de: 'Keine Berechtigung für Schulmitteilungen.',
+                    pt: 'Sem autorização para ver anúncios escolares.',
                   },
                   language,
                 )}
@@ -81,7 +90,7 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
             onClick={onRefresh}
             className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -101,6 +110,9 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
                     ar: 'تعذر تحميل الإعلانات المدرسية من الخادم.',
                     fr: 'Impossible de charger les annonces scolaires.',
                     en: 'Failed to load school broadcasts from server.',
+                    es: 'No se pudieron cargar los anuncios escolares del servidor.',
+                    de: 'Schulmitteilungen konnten nicht vom Server geladen werden.',
+                    pt: 'Falha ao carregar anúncios escolares do servidor.',
                   },
                   language,
                 )}
@@ -111,7 +123,7 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
             onClick={onRefresh}
             className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -130,6 +142,9 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
                   ar: 'الإعلانات المدرسية بانتظار التفعيل في الخادم',
                   fr: 'Annonces générales en attente du contrat serveur',
                   en: 'School Broadcasts Pending Backend Deployment',
+                  es: 'Anuncios escolares pendientes de despliegue en el servidor',
+                  de: 'Schulmitteilungen warten auf Server-Bereitstellung',
+                  pt: 'Anúncios escolares a aguardar implementação no servidor',
                 },
                 language,
               )}
@@ -138,6 +153,9 @@ export const BroadcastFeedSection: React.FC<BroadcastFeedSectionProps> = ({
                   ar: 'جدول school_broadcasts غير منشور بعد في قاعدة بيانات Supabase.',
                   fr: 'La table public.school_broadcasts n’est pas encore déployée sur Supabase.',
                   en: 'public.school_broadcasts is awaiting deployment on Supabase.',
+                  es: 'La tabla public.school_broadcasts aún no está desplegada en Supabase.',
+                  de: 'public.school_broadcasts wartet auf Bereitstellung in Supabase.',
+                  pt: 'A tabela public.school_broadcasts aguarda implementação no Supabase.',
                 },
                 language,
               )}

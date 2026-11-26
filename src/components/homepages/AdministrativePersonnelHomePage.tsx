@@ -59,26 +59,12 @@ export const AdministrativePersonnelHomePage: React.FC<
     if (!res.ok) {
       setDeskFeedback(
         res.errorMessage ||
-          pickText(
-            {
-              ar: 'تعذر حفظ الرد عبر الخادم.',
-              fr: 'Impossible d’enregistrer la réponse côté serveur.',
-              en: 'Unable to save inquiry response on the server.',
-            },
-            language,
-          ),
+          pickText({ ar: 'تعذر حفظ الرد عبر الخادم.', fr: 'Impossible d’enregistrer la réponse côté serveur.', en: 'Unable to save inquiry response on the server.', es: 'No se pudo guardar la respuesta en el servidor.', de: 'Antwort konnte nicht auf dem Server gespeichert werden.', pt: 'Não foi possível guardar a resposta no servidor.' }, language),
       );
       return;
     }
     setDeskFeedback(
-      pickText(
-        {
-          ar: 'تم تحديث حالة الاستفسار وحفظ الرد بنجاح.',
-          fr: 'Demande mise à jour et réponse enregistrée.',
-          en: 'Inquiry updated and response saved.',
-        },
-        language,
-      ),
+      pickText({ ar: 'تم تحديث حالة الاستفسار وحفظ الرد بنجاح.', fr: 'Demande mise à jour et réponse enregistrée.', en: 'Inquiry updated and response saved.', es: 'Consulta actualizada y respuesta guardada.', de: 'Anfrage aktualisiert und Antwort gespeichert.', pt: 'Pedido atualizado e resposta guardada.' }, language),
     );
     await refreshSchoolData();
   };
@@ -91,14 +77,7 @@ export const AdministrativePersonnelHomePage: React.FC<
       <HomePageHeader
         badgeText={pickText(HOMEPAGE_BADGE_LABELS.ADMINISTRATIVE_PERSONNEL_HOME, language)}
         title={pickText(HOMEPAGE_COMMON_TEXT.mainHeadline, language)}
-        subtitle={pickText(
-          {
-            ar: 'مكتب الإدارة المدرسية لمتابعة ملفات التسجيل، استفسارات العائلات، الوثائق، والروزنامة الإدارية.',
-            fr: 'Espace secrétariat et administration : dossiers d’admission, demandes des familles, documents et calendrier.',
-            en: 'School office administration workspace for admissions intake, family inquiries, documents, and notices.',
-          },
-          language,
-        )}
+        subtitle={pickText({ ar: 'مكتب الإدارة المدرسية لمتابعة ملفات التسجيل، استفسارات العائلات، الوثائق، والروزنامة الإدارية.', fr: 'Espace secrétariat et administration : dossiers d’admission, demandes des familles, documents et calendrier.', en: 'School office administration workspace for admissions intake, family inquiries, documents, and notices.', es: 'Espacio de secretaría y administración escolar para admisiones, consultas familiares, documentos y avisos.', de: 'Verwaltungsbereich für Aufnahmeanträge, Familienanfragen, Dokumente und schulische Mitteilungen.', pt: 'Espaço de secretaria e administração escolar para admissões, pedidos das famílias, documentos e avisos.' }, language)}
       />
 
       {selectedOfficeFeature && (
@@ -111,57 +90,44 @@ export const AdministrativePersonnelHomePage: React.FC<
       )}
 
       {showOfficeDesk && (
-        <section
-          data-testid="admin-personnel-office-desk-panel"
-          className="kh-info-panel mb-6 space-y-4"
-        >
+        <section data-testid="admin-personnel-office-desk-panel" className="kh-info-panel mb-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="kh-info-panel-title">
-              {pickText(
-                { ar: 'مكتب الاستقبال والاستفسارات العامة', fr: 'Bureau d’accueil & Demandes publiques', en: 'Office Desk & Public Inquiries' },
-                language,
-              )}
+              {pickText({ ar: 'مكتب الاستقبال والاستفسارات العامة', fr: 'Bureau d’accueil & Demandes publiques', en: 'Office Desk & Public Inquiries', es: 'Recepción y consultas públicas', de: 'Empfang & öffentliche Anfragen', pt: 'Atendimento e pedidos públicos' }, language)}
             </h2>
             <button
               type="button"
               onClick={() => setShowOfficeDesk(false)}
               className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold"
             >
-              {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close' }, language)}
+              {pickText({ ar: 'إغلاق', fr: 'Fermer', en: 'Close', es: 'Cerrar', de: 'Schließen', pt: 'Fechar' }, language)}
             </button>
           </div>
 
           {schoolContextError && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-2"
-            >
+            <div role="alert" className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
               <span>{schoolContextError}</span>
-              <button
-                type="button"
-                onClick={() => void refreshSchoolData()}
-                className="rounded-lg bg-red-600 px-2.5 py-1 text-white text-[11px] font-bold hover:bg-red-700"
-              >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              <button type="button" onClick={() => void refreshSchoolData()} className="rounded-lg bg-red-600 px-2.5 py-1 text-white text-[11px] font-bold hover:bg-red-700">
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
               </button>
             </div>
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'الأقسام النشطة', fr: 'Classes actives', en: 'Active Classes' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'الأقسام النشطة', fr: 'Classes actives', en: 'Active Classes', es: 'Clases activas', de: 'Aktive Klassen', pt: 'Turmas ativas' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeClasses ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'التلاميذ المسجلون', fr: 'Élèves inscrits', en: 'Active Students' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'التلاميذ المسجلون', fr: 'Élèves inscrits', en: 'Active Students', es: 'Alumnos activos', de: 'Aktive Schüler', pt: 'Alunos ativos' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.activeStudents ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'ملفات التسجيل المعلقة', fr: 'Admissions en attente', en: 'Pending Admissions' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'ملفات التسجيل المعلقة', fr: 'Admissions en attente', en: 'Pending Admissions', es: 'Admisiones pendientes', de: 'Ausstehende Aufnahmen', pt: 'Admissões pendentes' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.pendingAdmissions ?? 0) : '—'}</div>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3">
-              <span className="text-slate-500 font-bold">{pickText({ ar: 'استفسارات مفتوحة', fr: 'Demandes ouvertes', en: 'Open Inquiries' }, language)}</span>
+              <span className="text-slate-500 font-bold">{pickText({ ar: 'استفسارات مفتوحة', fr: 'Demandes ouvertes', en: 'Open Inquiries', es: 'Consultas abiertas', de: 'Offene Anfragen', pt: 'Pedidos em aberto' }, language)}</span>
               <div className="text-lg font-black mt-0.5">{operationalCountsLoaded ? (operationalCounts.openInquiries ?? 0) : '—'}</div>
             </div>
           </div>
@@ -175,53 +141,28 @@ export const AdministrativePersonnelHomePage: React.FC<
           {inquiriesStatus === 'BLOCKED_BACKEND' ? (
             <EmptyFeatureState
               state="BLOCKED_BACKEND"
-              title={pickText(
-                { ar: 'صندوق الاستفسارات بانتظار الخادم', fr: 'Demandes en attente du serveur', en: 'Public Inquiries Awaiting Backend' },
-                language,
-              )}
-              description={pickText(
-                { ar: 'يتطلب عرض وتحديث استفسارات الموقع العام نشر جداول public_school_inquiries في Supabase.', fr: 'La table Supabase public_school_inquiries doit être déployée.', en: 'Requires deployed public.public_school_inquiries table and RPCs.' },
-                language,
-              )}
+              title={pickText({ ar: 'صندوق الاستفسارات بانتظار الخادم', fr: 'Demandes en attente du serveur', en: 'Public Inquiries Awaiting Backend', es: 'Consultas públicas en espera del servidor', de: 'Öffentliche Anfragen warten auf Server', pt: 'Pedidos públicos a aguardar servidor' }, language)}
+              description={pickText({ ar: 'يتطلب عرض وتحديث استفسارات الموقع العام نشر جداول public_school_inquiries في Supabase.', fr: 'La table Supabase public_school_inquiries doit être déployée.', en: 'Requires deployed public.public_school_inquiries table and RPCs.', es: 'Requiere las tablas y RPC public.public_school_inquiries en Supabase.', de: 'Erfordert die bereitgestellte Tabelle public.public_school_inquiries und RPCs.', pt: 'Requer a tabela e RPCs public.public_school_inquiries no Supabase.' }, language)}
             />
           ) : inquiriesStatus !== 'READY' ? (
-            <div
-              role="alert"
-              className="rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-3"
-            >
+            <div role="alert" className="rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-xs font-bold text-red-700 dark:text-red-300 flex items-center justify-between gap-3">
               <span>
                 {inquiriesStatus === 'UNAUTHORIZED'
-                  ? pickText(
-                      { ar: 'صلاحيات عرض الاستفسارات العامة غير مفعلة لهذا الحساب.', fr: 'Accès aux demandes publiques non autorisé.', en: 'Not authorized to read public inquiries.' },
-                      language,
-                    )
-                  : pickText(
-                      { ar: 'تعذر تحميل استفسارات الموقع العام من الخادم.', fr: 'Erreur de chargement des demandes publiques.', en: 'Unable to load public inquiries from the server.' },
-                      language,
-                    )}
+                  ? pickText({ ar: 'صلاحيات عرض الاستفسارات العامة غير مفعلة لهذا الحساب.', fr: 'Accès aux demandes publiques non autorisé.', en: 'Not authorized to read public inquiries.', es: 'Sin autorización para leer consultas públicas.', de: 'Keine Berechtigung zum Lesen öffentlicher Anfragen.', pt: 'Sem autorização para ler pedidos públicos.' }, language)
+                  : pickText({ ar: 'تعذر تحميل استفسارات الموقع العام من الخادم.', fr: 'Erreur de chargement des demandes publiques.', en: 'Unable to load public inquiries from the server.', es: 'No se pudieron cargar las consultas públicas.', de: 'Öffentliche Anfragen konnten nicht geladen werden.', pt: 'Não foi possível carregar os pedidos públicos.' }, language)}
               </span>
-              <button
-                type="button"
-                onClick={() => void refreshSchoolData()}
-                className="rounded-xl bg-red-600 px-3 py-1.5 text-white text-xs font-bold hover:bg-red-700 shrink-0"
-              >
-                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              <button type="button" onClick={() => void refreshSchoolData()} className="rounded-xl bg-red-600 px-3 py-1.5 text-white text-xs font-bold hover:bg-red-700 shrink-0">
+                {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
               </button>
             </div>
           ) : publicInquiries.length === 0 ? (
             <p className="text-xs text-slate-500">
-              {pickText(
-                { ar: 'لا توجد استفسارات واردة حالياً.', fr: 'Aucune demande reçue pour le moment.', en: 'No public inquiries submitted yet.' },
-                language,
-              )}
+              {pickText({ ar: 'لا توجد استفسارات واردة حالياً.', fr: 'Aucune demande reçue pour le moment.', en: 'No public inquiries submitted yet.', es: 'Aún no hay consultas públicas.', de: 'Noch keine öffentlichen Anfragen eingegangen.', pt: 'Ainda não existem pedidos públicos.' }, language)}
             </p>
           ) : (
             <div className="space-y-3">
               {publicInquiries.map((inq) => (
-                <div
-                  key={inq.id}
-                  className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3.5 space-y-2 text-xs"
-                >
+                <div key={inq.id} className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-3.5 space-y-2 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <span className="font-extrabold">{inq.subject}</span>
@@ -234,7 +175,7 @@ export const AdministrativePersonnelHomePage: React.FC<
                   <p className="text-slate-600 dark:text-zinc-300">{inq.message}</p>
                   {inq.staffResponse && (
                     <p className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                      {pickText({ ar: 'الرد المسجل:', fr: 'Réponse enregistrée :', en: 'Recorded reply:' }, language)} {inq.staffResponse}
+                      {pickText({ ar: 'الرد المسجل:', fr: 'Réponse enregistrée :', en: 'Recorded reply:', es: 'Respuesta registrada:', de: 'Gespeicherte Antwort:', pt: 'Resposta registada:' }, language)} {inq.staffResponse}
                     </p>
                   )}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -258,7 +199,7 @@ export const AdministrativePersonnelHomePage: React.FC<
                       onChange={(e) =>
                         setReplyByInquiry((prev) => ({ ...prev, [inq.id]: e.target.value }))
                       }
-                      placeholder={pickText({ ar: 'ملاحظة أو رد الإدارة...', fr: 'Réponse du secrétariat...', en: 'Office response note...' }, language)}
+                      placeholder={pickText({ ar: 'ملاحظة أو رد الإدارة...', fr: 'Réponse du secrétariat...', en: 'Office response note...', es: 'Nota de respuesta...', de: 'Antwortnotiz...', pt: 'Nota de resposta...' }, language)}
                       className="flex-1 min-w-[180px] rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-1.5 text-xs"
                     />
                     <button
@@ -267,7 +208,7 @@ export const AdministrativePersonnelHomePage: React.FC<
                       onClick={() => void handleInquiryResponse(inq.id, inq.status)}
                       className="rounded-xl bg-[#0D8AE8] px-3 py-1.5 text-xs font-extrabold text-white disabled:opacity-50"
                     >
-                      {pickText({ ar: 'حفظ', fr: 'Enregistrer', en: 'Save' }, language)}
+                      {pickText({ ar: 'حفظ', fr: 'Enregistrer', en: 'Save', es: 'Guardar', de: 'Speichern', pt: 'Guardar' }, language)}
                     </button>
                   </div>
                 </div>
@@ -281,10 +222,7 @@ export const AdministrativePersonnelHomePage: React.FC<
       <HomeCardGrid ariaLabel="Administrative personnel cards">
         <HomeShortcutCard
           id="admin-personnel-office-desk"
-          title={pickText(
-            { ar: 'مكتب الاستقبال والإدارة', fr: 'Bureau d’accueil', en: 'Office Desk' },
-            language,
-          )}
+          title={pickText({ ar: 'مكتب الاستقبال والإدارة', fr: 'Bureau d’accueil', en: 'Office Desk', es: 'Oficina de recepción', de: 'Schulsekretariat', pt: 'Secretaria escolar' }, language)}
           actionLabel={openActionLabel}
           icon="🗂️"
           tone="slate"
@@ -293,10 +231,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-admission-files"
-          title={pickText(
-            { ar: 'ملفات القبول والتسجيل', fr: 'Dossiers d’admission', en: 'Admission Files' },
-            language,
-          )}
+          title={pickText({ ar: 'ملفات القبول والتسجيل', fr: 'Dossiers d’admission', en: 'Admission Files', es: 'Expedientes de admisión', de: 'Aufnahmeakten', pt: 'Processos de admissão' }, language)}
           actionLabel={openActionLabel}
           icon="📋"
           tone="orange"
@@ -305,10 +240,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-family-inquiries"
-          title={pickText(
-            { ar: 'استفسارات العائلات', fr: 'Demandes des familles', en: 'Family Inquiries' },
-            language,
-          )}
+          title={pickText({ ar: 'استفسارات العائلات', fr: 'Demandes des familles', en: 'Family Inquiries', es: 'Consultas de familias', de: 'Familienanfragen', pt: 'Pedidos das famílias' }, language)}
           actionLabel={openActionLabel}
           statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
           icon="✉️"
@@ -318,10 +250,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-attendance"
-          title={pickText(
-            { ar: 'متابعة الحضور', fr: 'Suivi des présences', en: 'Attendance' },
-            language,
-          )}
+          title={pickText({ ar: 'متابعة الحضور', fr: 'Suivi des présences', en: 'Attendance', es: 'Asistencia', de: 'Anwesenheit', pt: 'Presenças' }, language)}
           actionLabel={openActionLabel}
           icon="📅"
           tone="green"
@@ -331,10 +260,7 @@ export const AdministrativePersonnelHomePage: React.FC<
         {canAccessAppTab(currentUser, 'students') && (
           <HomeShortcutCard
             id="admin-personnel-students"
-            title={pickText(
-              { ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students' },
-              language,
-            )}
+            title={pickText({ ar: 'إدارة التلاميذ وسجلهم', fr: 'Gestion des élèves', en: 'School Students', es: 'Gestión de alumnos', de: 'Schülerverwaltung', pt: 'Gestão de alunos' }, language)}
             actionLabel={openActionLabel}
             icon="🎓"
             tone="blue"
@@ -344,10 +270,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-forms-documents"
-          title={pickText(
-            { ar: 'الاستمارات والوثائق', fr: 'Formulaires & Documents', en: 'Forms & Documents' },
-            language,
-          )}
+          title={pickText({ ar: 'الاستمارات والوثائق', fr: 'Formulaires & Documents', en: 'Forms & Documents', es: 'Formularios y documentos', de: 'Formulare & Dokumente', pt: 'Formulários e documentos' }, language)}
           actionLabel={openActionLabel}
           icon="📄"
           tone="blue"
@@ -356,10 +279,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-school-calendar"
-          title={pickText(
-            { ar: 'الروزنامة المدرسية', fr: 'Calendrier scolaire', en: 'School Calendar' },
-            language,
-          )}
+          title={pickText({ ar: 'الروزنامة المدرسية', fr: 'Calendrier scolaire', en: 'School Calendar', es: 'Calendario escolar', de: 'Schulkalender', pt: 'Calendário escolar' }, language)}
           actionLabel={openActionLabel}
           icon="🗓️"
           tone="yellow"
@@ -372,10 +292,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-notices"
-          title={pickText(
-            { ar: 'المذكرات والإعلانات', fr: 'Notes & Annonces', en: 'Notices' },
-            language,
-          )}
+          title={pickText({ ar: 'المذكرات والإعلانات', fr: 'Notes & Annonces', en: 'Notices', es: 'Avisos y anuncios', de: 'Mitteilungen', pt: 'Avisos e anúncios' }, language)}
           actionLabel={openActionLabel}
           icon="📢"
           tone="red"
@@ -384,10 +301,7 @@ export const AdministrativePersonnelHomePage: React.FC<
 
         <HomeShortcutCard
           id="admin-personnel-work-queue"
-          title={pickText(
-            { ar: 'قائمة عملي اليومية', fr: 'Ma file de traitement', en: 'My Work Queue' },
-            language,
-          )}
+          title={pickText({ ar: 'قائمة عملي اليومية', fr: 'Ma file de traitement', en: 'My Work Queue', es: 'Mi cola de trabajo', de: 'Meine Aufgabenliste', pt: 'Minha fila de trabalho' }, language)}
           actionLabel={comingSoonLabel}
           statusBadge={comingSoonLabel}
           state="COMING_SOON"
@@ -395,18 +309,8 @@ export const AdministrativePersonnelHomePage: React.FC<
           tone="teal"
           onClick={() =>
             setSelectedOfficeFeature({
-              title: pickText(
-                { ar: 'قائمة المعاملات الإدارية', fr: 'Ma file de traitement administratif', en: 'My Administrative Work Queue' },
-                language,
-              ),
-              description: pickText(
-                {
-                  ar: 'قائمة المعاملات الإدارية المخصصة قيد الربط بالخادم دون أي تعديل محلي وهمي.',
-                  fr: 'La file de traitement administratif sera connectée au contrat serveur Supabase.',
-                  en: 'Administrative work queue persistence is marked Coming Soon until the backend contract is deployed.',
-                },
-                language,
-              ),
+              title: pickText({ ar: 'قائمة المعاملات الإدارية', fr: 'Ma file de traitement administratif', en: 'My Administrative Work Queue', es: 'Mi cola de gestión administrativa', de: 'Meine Verwaltungsaufgaben', pt: 'Minha fila administrativa' }, language),
+              description: pickText({ ar: 'قائمة المعاملات الإدارية المخصصة قيد الربط بالخادم دون أي تعديل محلي وهمي.', fr: 'La file de traitement administratif sera connectée au contrat serveur Supabase.', en: 'Administrative work queue persistence is marked Coming Soon until the backend contract is deployed.', es: 'La cola administrativa estará disponible próximamente tras el despliegue del contrato en el servidor.', de: 'Die Verwaltungsaufgabenliste folgt demnächst nach Bereitstellung des Serververtrags.', pt: 'A fila administrativa estará disponível em breve após a implementação do contrato no servidor.' }, language),
             })
           }
         />
@@ -414,10 +318,7 @@ export const AdministrativePersonnelHomePage: React.FC<
         {canAccessAppTab(currentUser, 'pickup') && (
           <HomeShortcutCard
             id="admin-personnel-pickup-assist"
-            title={pickText(
-              { ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' },
-              language,
-            )}
+            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup', es: 'Recogida', de: 'Abholung', pt: 'Recolha' }, language)}
             actionLabel={openActionLabel}
             icon="🚸"
             tone="green"

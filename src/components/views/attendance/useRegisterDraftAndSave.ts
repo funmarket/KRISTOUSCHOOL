@@ -187,7 +187,7 @@ export function useRegisterDraftAndSave(params: UseRegisterDraftAndSaveParams) {
         if (activeRecovery) {
           const refreshErr =
             errMsg ||
-            pickText({ ar: 'تعذر تحديث السجل من الخادم. تم الاحتفاظ بمسودتك للمحاولة مجدداً.', fr: 'Impossible d’actualiser le registre. Votre brouillon est conservé pour réessayer.', en: 'Could not refresh the latest register. Your unsaved edits are preserved to retry safely.' }, language);
+            pickText({ ar: 'تعذر تحديث السجل من الخادم. تم الاحتفاظ بمسودتك للمحاولة مجدداً.', fr: 'Impossible d’actualiser le registre. Votre brouillon est conservé pour réessayer.', en: 'Could not refresh the latest register. Your unsaved edits are preserved to retry safely.', es: 'No se pudo actualizar el último registro. Sus cambios sin guardar se conservan para reintentar.', de: 'Das aktuelle Register konnte nicht geladen werden. Ihre Entwürfe bleiben zum sicheren Wiederholen erhalten.', pt: 'Não foi possível atualizar o último registo. As suas edições foram guardadas para tentar novamente.' }, language);
           setPendingConflictRecovery({ ...activeRecovery, refreshErrorMessage: refreshErr });
           setDraftByStudentId(cloneAttendanceDraft(activeRecovery.unsavedDraftByStudentId));
           setReasonText(activeRecovery.unsavedReasonText);
@@ -340,7 +340,7 @@ export function useRegisterDraftAndSave(params: UseRegisterDraftAndSaveParams) {
         setConfirmedSavePendingRefresh(saveRes.data);
         setSaveFeedback({
           type: 'warning',
-          text: pickText({ ar: `تم الحفظ على الخادم (نسخة ${saveRes.data.version})، لكن تعذر تحديث العرض النهائي تلقائياً. أعد القراءة دون إعادة الإرسال.`, fr: `Enregistré sur le serveur (v${saveRes.data.version}), mais le rafraîchissement a échoué. Actualisez la lecture sans renvoyer la sauvegarde.`, en: `Saved on the server (v${saveRes.data.version}), but refreshing the latest register state failed. Reload readback safely without re-submitting.` }, language),
+          text: pickText({ ar: `تم الحفظ على الخادم (نسخة ${saveRes.data.version})، لكن تعذر تحديث العرض النهائي تلقائياً. أعد القراءة دون إعادة الإرسال.`, fr: `Enregistré sur le serveur (v${saveRes.data.version}), mais le rafraîchissement a échoué. Actualisez la lecture sans renvoyer la sauvegarde.`, en: `Saved on the server (v${saveRes.data.version}), but refreshing the latest register state failed. Reload readback safely without re-submitting.`, es: `Guardado en el servidor (v${saveRes.data.version}), pero falló la actualización de lectura. Recargue sin reenviar.`, de: `Auf dem Server gespeichert (v${saveRes.data.version}), aber Neuladen fehlgeschlagen. Sicher neu laden ohne erneut zu senden.`, pt: `Guardado no servidor (v${saveRes.data.version}), mas a atualização da leitura falhou. Recarregue sem reenviar.` }, language),
         });
         return;
       }
@@ -354,9 +354,9 @@ export function useRegisterDraftAndSave(params: UseRegisterDraftAndSaveParams) {
         text:
           freshReadback.data.status === 'SUBMITTED'
             ? visibleRegister.status === 'SUBMITTED'
-              ? pickText({ ar: `تم حفظ التصحيح المعتمد بنجاح (نسخة ${nextVersion}).`, fr: `Correction enregistrée avec succès (v${nextVersion}).`, en: `Submitted correction saved (v${nextVersion}).` }, language)
-              : pickText({ ar: `تم اعتماد سجل الحضور بنجاح (نسخة ${nextVersion}).`, fr: `Registre soumis avec succès (v${nextVersion}).`, en: `Attendance register submitted (v${nextVersion}).` }, language)
-            : pickText({ ar: `تم حفظ المسودة بنجاح (نسخة ${nextVersion}).`, fr: `Brouillon enregistré avec succès (v${nextVersion}).`, en: `Draft saved (v${nextVersion}).` }, language),
+              ? pickText({ ar: `تم حفظ التصحيح المعتمد بنجاح (نسخة ${nextVersion}).`, fr: `Correction enregistrée avec succès (v${nextVersion}).`, en: `Submitted correction saved (v${nextVersion}).`, es: `Corrección enviada guardada (v${nextVersion}).`, de: `Eingereichte Korrektur gespeichert (v${nextVersion}).`, pt: `Correção submetida guardada (v${nextVersion}).` }, language)
+              : pickText({ ar: `تم اعتماد سجل الحضور بنجاح (نسخة ${nextVersion}).`, fr: `Registre soumis avec succès (v${nextVersion}).`, en: `Attendance register submitted (v${nextVersion}).`, es: `Registro de asistencia enviado (v${nextVersion}).`, de: `Anwesenheitsregister eingereicht (v${nextVersion}).`, pt: `Registo de assiduidade submetido (v${nextVersion}).` }, language)
+            : pickText({ ar: `تم حفظ المسودة بنجاح (نسخة ${nextVersion}).`, fr: `Brouillon enregistré avec succès (v${nextVersion}).`, en: `Draft saved (v${nextVersion}).`, es: `Borrador guardado (v${nextVersion}).`, de: `Entwurf gespeichert (v${nextVersion}).`, pt: `Rascunho guardado (v${nextVersion}).` }, language),
       });
 
       if (showAuditPanel && freshReadback.data.registerId) void loadAuditHistory(freshReadback.data.registerId);

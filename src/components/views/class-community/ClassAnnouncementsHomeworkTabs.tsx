@@ -40,7 +40,14 @@ export const ClassAnnouncementsTab: React.FC<ClassAnnouncementsTabProps> = ({ vm
               <Plus className="w-3.5 h-3.5" />
               <span>
                 {pickText(
-                  { ar: 'إعلان للقسم', fr: 'Publier annonce classe', en: 'New Class Announcement' },
+                  {
+                    ar: 'إعلان للقسم',
+                    fr: 'Publier annonce classe',
+                    en: 'New Class Announcement',
+                    es: 'Nuevo anuncio de clase',
+                    de: 'Neue Klassenmitteilung',
+                    pt: 'Novo aviso da turma',
+                  },
                   language,
                 )}
               </span>
@@ -57,7 +64,7 @@ export const ClassAnnouncementsTab: React.FC<ClassAnnouncementsTabProps> = ({ vm
                   required
                   value={annTitle}
                   onChange={(e) => setAnnTitle(e.target.value)}
-                  placeholder={pickText({ ar: 'عنوان الإعلان', fr: 'Titre', en: 'Announcement title' }, language)}
+                  placeholder={pickText({ ar: 'عنوان الإعلان', fr: 'Titre', en: 'Announcement title', es: 'Título del anuncio', de: 'Titel der Mitteilung', pt: 'Título do aviso' }, language)}
                   className="sm:col-span-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 />
                 <select
@@ -74,7 +81,7 @@ export const ClassAnnouncementsTab: React.FC<ClassAnnouncementsTabProps> = ({ vm
                 rows={3}
                 value={annBody}
                 onChange={(e) => setAnnBody(e.target.value)}
-                placeholder={pickText({ ar: 'نص الإعلان...', fr: 'Contenu...', en: 'Message...' }, language)}
+                placeholder={pickText({ ar: 'نص الإعلان...', fr: 'Contenu...', en: 'Message...', es: 'Mensaje...', de: 'Nachricht...', pt: 'Mensagem...' }, language)}
                 className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
               />
               <div className="flex justify-end gap-2">
@@ -105,6 +112,9 @@ export const ClassAnnouncementsTab: React.FC<ClassAnnouncementsTabProps> = ({ vm
               ar: 'إعلانات القسم المباشرة بانتظار نشر جداول المجتمع في Supabase.',
               fr: 'Les annonces de classe attendent le déploiement du schéma communautaire Supabase.',
               en: 'Live class announcements are awaiting Supabase community schema deployment.',
+              es: 'Los anuncios de clase en directo esperan el despliegue del esquema comunitario de Supabase.',
+              de: 'Live-Klassenmitteilungen warten auf die Bereitstellung des Community-Schemas in Supabase.',
+              pt: 'Os avisos da turma em tempo real aguardam a implantação do esquema comunitário no Supabase.',
             },
             language,
           )}
@@ -166,7 +176,7 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
             >
               <Plus className="w-3.5 h-3.5" />
               <span>
-                {pickText({ ar: 'إضافة واجب', fr: 'Ajouter un devoir', en: 'Add Homework' }, language)}
+                {pickText({ ar: 'إضافة واجب', fr: 'Ajouter un devoir', en: 'Add Homework', es: 'Añadir tarea', de: 'Hausaufgabe hinzufügen', pt: 'Adicionar trabalho de casa' }, language)}
               </span>
             </button>
           </div>
@@ -181,7 +191,7 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
                   required
                   value={hwTitle}
                   onChange={(e) => setHwTitle(e.target.value)}
-                  placeholder={pickText({ ar: 'عنوان الواجب', fr: 'Titre du devoir', en: 'Homework title' }, language)}
+                  placeholder={pickText({ ar: 'عنوان الواجب', fr: 'Titre du devoir', en: 'Homework title', es: 'Título de la tarea', de: 'Titel der Hausaufgabe', pt: 'Título do trabalho de casa' }, language)}
                   className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 />
                 <input
@@ -196,7 +206,7 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
                 rows={2}
                 value={hwDesc}
                 onChange={(e) => setHwDesc(e.target.value)}
-                placeholder={pickText({ ar: 'التعليمات...', fr: 'Consignes...', en: 'Instructions...' }, language)}
+                placeholder={pickText({ ar: 'التعليمات...', fr: 'Consignes...', en: 'Instructions...', es: 'Instrucciones...', de: 'Anweisungen...', pt: 'Instruções...' }, language)}
                 className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
               />
               <div className="flex justify-end gap-2">
@@ -224,7 +234,7 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl text-center text-xs text-amber-900 dark:text-amber-200 space-y-2">
           <p className="font-bold">
             {pickText(
-              { ar: 'الواجبات المنزلية بانتظار التفعيل في الخادم', fr: 'Devoirs en attente du contrat serveur', en: 'Homework Persistence Pending Backend' },
+              { ar: 'الواجبات المنزلية بانتظار التفعيل في الخادم', fr: 'Devoirs en attente du contrat serveur', en: 'Homework Persistence Pending Backend', es: 'Persistencia de tareas pendiente del servidor', de: 'Hausaufgaben-Speicherung wartet auf Server', pt: 'Persistência dos trabalhos pendente do servidor' },
               language,
             )}
           </p>
@@ -234,6 +244,9 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
                 ar: 'الجدول class_homework_items غير منشور بعد في Supabase.',
                 fr: 'La table class_homework_items n’est pas encore déployée sur Supabase.',
                 en: 'public.class_homework_items is awaiting deployment on Supabase.',
+                es: 'public.class_homework_items está pendiente de despliegue en Supabase.',
+                de: 'public.class_homework_items wartet auf die Bereitstellung in Supabase.',
+                pt: 'public.class_homework_items aguarda implantação no Supabase.',
               },
               language,
             )}
@@ -241,7 +254,7 @@ export const ClassHomeworkTab: React.FC<ClassHomeworkTabProps> = ({ vm }) => {
         </div>
       ) : scopedHomework.length === 0 ? (
         <div className="bg-white dark:bg-[#111111] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500">
-          {pickText({ ar: 'لا توجد واجبات منشورة حالياً.', fr: 'Aucun devoir publié pour cette classe.', en: 'No homework posted yet.' }, language)}
+          {pickText({ ar: 'لا توجد واجبات منشورة حالياً.', fr: 'Aucun devoir publié pour cette classe.', en: 'No homework posted yet.', es: 'Aún no hay tareas publicadas.', de: 'Noch keine Hausaufgaben veröffentlicht.', pt: 'Ainda não há trabalhos de casa publicados.' }, language)}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

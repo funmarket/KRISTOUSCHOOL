@@ -71,6 +71,9 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
               ar: 'بحث بالاسم، اسم المستخدم، أو البريد...',
               fr: 'Rechercher par nom, identifiant ou e-mail...',
               en: 'Search by name, username, or email...',
+              es: 'Buscar por nombre, usuario o correo...',
+              de: 'Nach Name, Benutzername oder E-Mail suchen...',
+              pt: 'Pesquisar por nome, utilizador ou e-mail...',
             },
             language,
           )}
@@ -86,7 +89,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
           className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs sm:text-sm font-bold"
         >
           <option value="ALL">
-            {pickText({ ar: 'جميع الأدوار المطلوبة', fr: 'Tous les rôles demandés', en: 'All requested roles' }, language)}
+            {pickText({ ar: 'جميع الأدوار المطلوبة', fr: 'Tous les rôles demandés', en: 'All requested roles', es: 'Todos los roles solicitados', de: 'Alle beantragten Rollen', pt: 'Todas as funções pedidas' }, language)}
           </option>
           {CANONICAL_ROLES.map((r: AccountRole) => (
             <option key={r} value={r}>
@@ -98,7 +101,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
 
       {loadingPending ? (
         <div className="py-6 text-center text-xs font-bold text-slate-500">
-          {pickText({ ar: 'جاري تحميل الطلبات المعلقة...', fr: 'Chargement des demandes...', en: 'Loading pending accounts...' }, language)}
+          {pickText({ ar: 'جاري تحميل الطلبات المعلقة...', fr: 'Chargement des demandes...', en: 'Loading pending accounts...', es: 'Cargando cuentas pendientes...', de: 'Ausstehende Konten werden geladen...', pt: 'A carregar contas pendentes...' }, language)}
         </div>
       ) : pendingItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 dark:border-zinc-800 p-6 text-center text-xs sm:text-sm text-slate-500">
@@ -107,6 +110,9 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
               ar: 'لا توجد طلبات حسابات معلقة تطابق معايير البحث حالياً.',
               fr: 'Aucune demande de compte en attente pour ces critères.',
               en: 'No pending account applications match the current filters.',
+              es: 'Ninguna solicitud de cuenta pendiente coincide con los filtros actuales.',
+              de: 'Keine ausstehenden Kontoanträge entsprechen den aktuellen Filtern.',
+              pt: 'Nenhum pedido de conta pendente corresponde aos filtros atuais.',
             },
             language,
           )}
@@ -154,16 +160,16 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                     >
                       {contactConfirmed
                         ? pickText(
-                            { ar: '✓ تم تأكيد البريد/الهاتف', fr: '✓ Contact confirmé', en: '✓ Contact confirmed' },
+                            { ar: '✓ تم تأكيد البريد/الهاتف', fr: '✓ Contact confirmé', en: '✓ Contact confirmed', es: '✓ Contacto confirmado', de: '✓ Kontakt bestätigt', pt: '✓ Contacto confirmado' },
                             language,
                           )
                         : pickText(
-                            { ar: '⚠ بانتظار تأكيد البريد/الهاتف', fr: '⚠ Contact non confirmé', en: '⚠ Unconfirmed contact' },
+                            { ar: '⚠ بانتظار تأكيد البريد/الهاتف', fr: '⚠ Contact non confirmé', en: '⚠ Unconfirmed contact', es: '⚠ Contacto sin confirmar', de: '⚠ Kontakt unbestätigt', pt: '⚠ Contacto não confirmado' },
                             language,
                           )}
                     </span>
                     <span className="rounded-full bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 text-[11px] font-bold">
-                      {pickText({ ar: 'الدور المطلوب:', fr: 'Rôle demandé :', en: 'Requested:' }, language)}{' '}
+                      {pickText({ ar: 'الدور المطلوب:', fr: 'Rôle demandé :', en: 'Requested:', es: 'Solicitado:', de: 'Beantragt:', pt: 'Solicitado:' }, language)}{' '}
                       {pickText(ROLE_LABELS[item.requestedRole], language)} ({item.requestedRole})
                     </span>
                   </div>
@@ -172,7 +178,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      {pickText({ ar: 'الدور المعتمد عند الموافقة', fr: 'Rôle à attribuer', en: 'Role to assign on approval' }, language)}
+                      {pickText({ ar: 'الدور المعتمد عند الموافقة', fr: 'Rôle à attribuer', en: 'Role to assign on approval', es: 'Rol a asignar al aprobar', de: 'Zuzuweisende Rolle', pt: 'Função a atribuir' }, language)}
                     </label>
                     <select
                       value={selectedRole}
@@ -195,7 +201,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
                       {pickText(
-                        { ar: 'سبب القرار (إلزامي لسجل التدقيق)', fr: 'Motif de la décision (obligatoire pour l’audit)', en: 'Audit reason (required, 3–500 chars)' },
+                        { ar: 'سبب القرار (إلزامي لسجل التدقيق)', fr: 'Motif de la décision (obligatoire pour l’audit)', en: 'Audit reason (required, 3–500 chars)', es: 'Motivo de auditoría (obligatorio, 3–500 car.)', de: 'Prüfungsgrund (erforderlich, 3–500 Zeichen)', pt: 'Motivo de auditoria (obrigatório, 3–500 car.)' },
                         language,
                       )}
                     </label>
@@ -213,6 +219,9 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                           ar: 'مثال: تم التحقق من ملف التسجيل / عقد العمل...',
                           fr: 'Ex: Dossier d’inscription ou contrat vérifié...',
                           en: 'e.g., Verified parent enrollment record or staff contract...',
+                          es: 'Ej.: Expediente de matrícula o contrato verificado...',
+                          de: 'z. B. Geprüfte Anmeldeakte oder Arbeitsvertrag...',
+                          pt: 'Ex.: Registo de matrícula ou contrato verificado...',
                         },
                         language,
                       )}
@@ -228,7 +237,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                     onClick={() => void handleInspectAccountDetail(item.id)}
                     className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold hover:bg-slate-100 dark:hover:bg-zinc-900"
                   >
-                    {pickText({ ar: 'سجل التدقيق', fr: 'Journal d’audit', en: 'Audit Log' }, language)}
+                    {pickText({ ar: 'سجل التدقيق', fr: 'Journal d’audit', en: 'Audit Log', es: 'Registro de auditoría', de: 'Prüfprotokoll', pt: 'Registo de auditoria' }, language)}
                   </button>
                   <button
                     type="button"
@@ -236,7 +245,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                     onClick={() => void handleReviewDecision(item, 'REJECT')}
                     className="rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-rose-700 disabled:opacity-50"
                   >
-                    {pickText({ ar: 'رفض الطلب (REJECT)', fr: 'Refuser (REJECT)', en: 'Reject' }, language)}
+                    {pickText({ ar: 'رفض الطلب (REJECT)', fr: 'Refuser (REJECT)', en: 'Reject', es: 'Rechazar', de: 'Ablehnen', pt: 'Rejeitar' }, language)}
                   </button>
                   <button
                     type="button"
@@ -244,7 +253,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
                     onClick={() => void handleReviewDecision(item, 'APPROVE')}
                     className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
-                    {pickText({ ar: 'اعتماد الحساب (APPROVE)', fr: 'Approuver (APPROVE)', en: 'Approve Account' }, language)}
+                    {pickText({ ar: 'اعتماد الحساب (APPROVE)', fr: 'Approuver (APPROVE)', en: 'Approve Account', es: 'Aprobar cuenta', de: 'Konto genehmigen', pt: 'Aprovar conta' }, language)}
                   </button>
                 </div>
               </div>
@@ -255,7 +264,7 @@ export const PendingAccountApprovalsSection: React.FC<PendingAccountApprovalsSec
 
       <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
         <span>
-          {pickText({ ar: 'إجمالي الطلبات:', fr: 'Total en attente :', en: 'Total pending:' }, language)} {pendingTotal}
+          {pickText({ ar: 'إجمالي الطلبات:', fr: 'Total en attente :', en: 'Total pending:', es: 'Total pendientes:', de: 'Ausstehend gesamt:', pt: 'Total pendentes:' }, language)} {pendingTotal}
         </span>
         <div className="flex items-center gap-2">
           <button

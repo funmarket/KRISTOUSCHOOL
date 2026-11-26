@@ -7,15 +7,15 @@ export function getAttendanceMarkLabel(
 ): string {
   switch (mark) {
     case 'PRESENT':
-      return pickText({ ar: 'حاضر', fr: 'Présent(e)', en: 'Present' }, language);
+      return pickText({ ar: 'حاضر', fr: 'Présent(e)', en: 'Present', es: 'Presente', de: 'Anwesend', pt: 'Presente' }, language);
     case 'ABSENT':
-      return pickText({ ar: 'غائب', fr: 'Absent(e)', en: 'Absent' }, language);
+      return pickText({ ar: 'غائب', fr: 'Absent(e)', en: 'Absent', es: 'Ausente', de: 'Abwesend', pt: 'Ausente' }, language);
     case 'LATE':
-      return pickText({ ar: 'متأخر', fr: 'En retard', en: 'Late' }, language);
+      return pickText({ ar: 'متأخر', fr: 'En retard', en: 'Late', es: 'Tarde', de: 'Verspätet', pt: 'Atrasado' }, language);
     case 'EXCUSED':
-      return pickText({ ar: 'غياب مبرر', fr: 'Justifié(e)', en: 'Excused' }, language);
+      return pickText({ ar: 'غياب مبرر', fr: 'Justifié(e)', en: 'Excused', es: 'Justificado', de: 'Entschuldigt', pt: 'Justificado' }, language);
     default:
-      return pickText({ ar: 'غير مسجل', fr: 'Non enregistré', en: 'Not Recorded' }, language);
+      return pickText({ ar: 'غير مسجل', fr: 'Non enregistré', en: 'Not Recorded', es: 'Sin registrar', de: 'Nicht erfasst', pt: 'Não registado' }, language);
   }
 }
 
@@ -56,18 +56,18 @@ export function getRegisterStatusLabel(
 ): string {
   if (version === 0) {
     return pickText(
-      { ar: 'مسودة غير محفوظة', fr: 'Non encore enregistré', en: 'Not saved yet' },
+      { ar: 'مسودة غير محفوظة', fr: 'Non encore enregistré', en: 'Not saved yet', es: 'Aún no guardado', de: 'Noch nicht gespeichert', pt: 'Ainda não guardado' },
       language,
     );
   }
   if (status === 'SUBMITTED') {
     return pickText(
-      { ar: `معتمد (نسخة ${version})`, fr: `Soumis (v${version})`, en: `Submitted (v${version})` },
+      { ar: `معتمد (نسخة ${version})`, fr: `Soumis (v${version})`, en: `Submitted (v${version})`, es: `Enviado (v${version})`, de: `Eingereicht (v${version})`, pt: `Submetido (v${version})` },
       language,
     );
   }
   return pickText(
-    { ar: `مسودة (نسخة ${version})`, fr: `Brouillon (v${version})`, en: `Draft (v${version})` },
+    { ar: `مسودة (نسخة ${version})`, fr: `Brouillon (v${version})`, en: `Draft (v${version})`, es: `Borrador (v${version})`, de: `Entwurf (v${version})`, pt: `Rascunho (v${version})` },
     language,
   );
 }
@@ -75,14 +75,14 @@ export function getRegisterStatusLabel(
 export function getAuditEventLabel(eventType: string, language: Language): string {
   switch (eventType) {
     case 'DRAFT_SAVED':
-      return pickText({ ar: 'حفظ مسودة', fr: 'Brouillon enregistré', en: 'Draft saved' }, language);
+      return pickText({ ar: 'حفظ مسودة', fr: 'Brouillon enregistré', en: 'Draft saved', es: 'Borrador guardado', de: 'Entwurf gespeichert', pt: 'Rascunho guardado' }, language);
     case 'REGISTER_SUBMITTED':
-      return pickText({ ar: 'اعتماد السجل', fr: 'Registre soumis', en: 'Register submitted' }, language);
+      return pickText({ ar: 'اعتماد السجل', fr: 'Registre soumis', en: 'Register submitted', es: 'Registro enviado', de: 'Klassenbuch eingereicht', pt: 'Registo submetido' }, language);
     case 'SUBMITTED_CORRECTION':
-      return pickText({ ar: 'تصحيح سجل معتمد', fr: 'Correction post-soumission', en: 'Submitted register corrected' }, language);
+      return pickText({ ar: 'تصحيح سجل معتمد', fr: 'Correction post-soumission', en: 'Submitted register corrected', es: 'Registro enviado corregido', de: 'Eingereichtes Klassenbuch korrigiert', pt: 'Registo submetido corrigido' }, language);
     case 'INELIGIBLE_DRAFT_ENTRIES_REMOVED':
       return pickText(
-        { ar: 'تحديث قائمة التلاميذ المؤهلين', fr: 'Nettoyage des élèves inéligibles', en: 'Ineligible draft pupils removed' },
+        { ar: 'تحديث قائمة التلاميذ المؤهلين', fr: 'Nettoyage des élèves inéligibles', en: 'Ineligible draft pupils removed', es: 'Alumnos no elegibles retirados del borrador', de: 'Nicht berechtigte Schüler aus Entwurf entfernt', pt: 'Alunos não elegíveis removidos do rascunho' },
         language,
       );
     default:

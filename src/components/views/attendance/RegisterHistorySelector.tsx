@@ -77,6 +77,9 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
                 ar: 'السجلات المحفوظة لهذا القسم (بحث وترقيم من الخادم):',
                 fr: 'Registres enregistrés pour cette classe (filtres et pagination serveur) :',
                 en: 'Saved registers for this class (server-filtered & paginated):',
+                es: 'Registros guardados para esta clase (filtrados y paginados en servidor):',
+                de: 'Gespeicherte Klassenbücher für diese Klasse (serverseitig gefiltert & paginiert):',
+                pt: 'Registos guardados para esta turma (filtrados e paginados no servidor):',
               },
               language,
             )}
@@ -103,6 +106,9 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
               ar: `الفهرس الأولي للمعلمين غطى أحدث ${officeSyncedData.savedRegisters.length} سجلاً من أصل ${officeSyncedData.totalSavedRegistersCount ?? '2000+'}. استخدم البحث والترقيم أدناه للوصول إلى جميع السجلات التاريخية من الخادم.`,
               fr: `L’aperçu initial des enseignants couvre les ${officeSyncedData.savedRegisters.length} registres les plus récents sur ${officeSyncedData.totalSavedRegistersCount ?? '2000+'}. La liste paginée ci-dessous interroge l’historique complet côté serveur.`,
               en: `Initial teacher-summary pre-index loaded the newest ${officeSyncedData.savedRegisters.length} of ${officeSyncedData.totalSavedRegistersCount ?? '2000+'} school registers. Use the server filters and pagination below to reach all historical registers.`,
+              es: `El índice inicial cargó los ${officeSyncedData.savedRegisters.length} registros más recientes de ${officeSyncedData.totalSavedRegistersCount ?? '2000+'}. Use los filtros y la paginación del servidor abajo para consultar el historial completo.`,
+              de: `Der Vorab-Index hat die neuesten ${officeSyncedData.savedRegisters.length} von ${officeSyncedData.totalSavedRegistersCount ?? '2000+'} Schulregistern geladen. Nutzen Sie unten Filter und Seitennavigation für alle historischen Register.`,
+              pt: `O índice inicial carregou os ${officeSyncedData.savedRegisters.length} registos mais recentes de ${officeSyncedData.totalSavedRegistersCount ?? '2000+'}. Use os filtros e a paginação do servidor abaixo para aceder ao histórico completo.`,
             },
             language,
           )}
@@ -111,7 +117,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <select
-          aria-label={pickText({ ar: 'تصفية حسب المربي', fr: 'Filtrer par enseignant', en: 'Filter by teacher' }, language)}
+          aria-label={pickText({ ar: 'تصفية حسب المربي', fr: 'Filtrer par enseignant', en: 'Filter by teacher', es: 'Filtrar por docente', de: 'Nach Lehrkraft filtern', pt: 'Filtrar por professor' }, language)}
           data-testid="office-history-teacher-filter"
           value={officeHistoryTeacherFilter}
           onChange={(e) => {
@@ -121,7 +127,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
           className="min-h-[38px] rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-zinc-100"
         >
           <option value="">
-            {pickText({ ar: 'جميع المربين', fr: 'Tous les enseignants', en: 'All Teachers' }, language)}
+            {pickText({ ar: 'جميع المربين', fr: 'Tous les enseignants', en: 'All Teachers', es: 'Todos los docentes', de: 'Alle Lehrkräfte', pt: 'Todos os professores' }, language)}
           </option>
           {officeTeachersForActiveClass.map((tOpt) => (
             <option key={tOpt.userId} value={tOpt.userId}>
@@ -133,7 +139,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
 
         <input
           type="date"
-          aria-label={pickText({ ar: 'من تاريخ', fr: 'Du', en: 'From date' }, language)}
+          aria-label={pickText({ ar: 'من تاريخ', fr: 'Du', en: 'From date', es: 'Desde', de: 'Von Datum', pt: 'Desde' }, language)}
           data-testid="office-history-from-date"
           value={officeHistoryFromDate}
           onChange={(e) => {
@@ -148,7 +154,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
 
         <input
           type="date"
-          aria-label={pickText({ ar: 'إلى تاريخ', fr: 'Au', en: 'To date' }, language)}
+          aria-label={pickText({ ar: 'إلى تاريخ', fr: 'Au', en: 'To date', es: 'Hasta', de: 'Bis Datum', pt: 'Até' }, language)}
           data-testid="office-history-to-date"
           value={officeHistoryToDate}
           onChange={(e) => {
@@ -173,7 +179,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
             }}
             className="min-h-[38px] rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-zinc-200"
           >
-            {pickText({ ar: 'مسح التصفية', fr: 'Réinitialiser', en: 'Clear Filters' }, language)}
+            {pickText({ ar: 'مسح التصفية', fr: 'Réinitialiser', en: 'Clear Filters', es: 'Limpiar filtros', de: 'Filter löschen', pt: 'Limpar filtros' }, language)}
           </button>
         )}
       </div>
@@ -194,7 +200,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
             onClick={() => setOfficeHistoryReloadSeq((n) => n + 1)}
             className="rounded-lg bg-red-700 hover:bg-red-800 px-2.5 py-1 text-white text-[11px] font-bold"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       ) : officeHistoryPageItems.length === 0 ? (
@@ -204,6 +210,9 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
               ar: 'لا توجد سجلات حضور مطابقة لمعايير البحث في هذا القسم.',
               fr: 'Aucun registre enregistré ne correspond aux filtres sélectionnés.',
               en: 'No saved attendance registers match the selected filters for this class.',
+              es: 'Ningún registro de asistencia guardado coincide con los filtros seleccionados para esta clase.',
+              de: 'Keine gespeicherten Klassenbücher entsprechen den ausgewählten Filtern für diese Klasse.',
+              pt: 'Nenhum registo de assiduidade guardado corresponde aos filtros selecionados para esta turma.',
             },
             language,
           )}
@@ -257,7 +266,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
                 }
                 className="min-h-[34px] rounded-xl border border-slate-200 dark:border-zinc-700 px-3 py-1 text-[11px] font-bold text-slate-700 dark:text-zinc-200 disabled:opacity-40"
               >
-                {pickText({ ar: 'الأحدث (السابق)', fr: 'Plus récents', en: 'Newer' }, language)}
+                {pickText({ ar: 'الأحدث (السابق)', fr: 'Plus récents', en: 'Newer', es: 'Más recientes', de: 'Neuer', pt: 'Mais recentes' }, language)}
               </button>
               <button
                 type="button"
@@ -268,7 +277,7 @@ export const RegisterHistorySelector: React.FC<RegisterHistorySelectorProps> = (
                 }
                 className="min-h-[34px] rounded-xl border border-slate-200 dark:border-zinc-700 px-3 py-1 text-[11px] font-bold text-slate-700 dark:text-zinc-200 disabled:opacity-40"
               >
-                {pickText({ ar: 'الأقدم (التالي)', fr: 'Plus anciens', en: 'Older' }, language)}
+                {pickText({ ar: 'الأقدم (التالي)', fr: 'Plus anciens', en: 'Older', es: 'Más antiguos', de: 'Älter', pt: 'Mais antigos' }, language)}
               </button>
             </div>
           )}

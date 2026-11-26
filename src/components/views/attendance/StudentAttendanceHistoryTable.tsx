@@ -43,6 +43,9 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
               ar: 'نطاق التاريخ غير صالح: يجب أن يكون تاريخ البداية قبل أو مساوياً لتاريخ النهاية وبحد أقصى 366 يوماً.',
               fr: 'Période invalide : la date de début doit précéder la fin (366 jours maximum).',
               en: 'Invalid date range: start date must be on or before end date and within 366 days.',
+              es: 'Rango de fechas no válido: la fecha inicial debe ser anterior o igual a la final (máximo 366 días).',
+              de: 'Ungültiger Datumsbereich: Startdatum muss vor oder am Enddatum liegen (maximal 366 Tage).',
+              pt: 'Intervalo de datas inválido: a data de início deve ser anterior ou igual à de fim (máximo de 366 dias).',
             },
             language,
           )}
@@ -69,6 +72,9 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
                 ar: 'غير مصرح بعرض سجل الحضور لهذا التلميذ.',
                 fr: 'Accès non autorisé à l’historique de présence.',
                 en: 'Not authorized to view attendance history for this pupil.',
+                es: 'No autorizado para ver el historial de asistencia de este alumno.',
+                de: 'Keine Berechtigung zur Einsicht des Anwesenheitsverlaufs dieses Schülers.',
+                pt: 'Sem autorização para ver o histórico de assiduidade deste aluno.',
               },
               language,
             )}
@@ -84,6 +90,9 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
               ar: 'خدمة سجل الحضور غير متاحة حالياً على الخادم.',
               fr: 'Service d’historique des présences indisponible.',
               en: 'Attendance history service is unavailable.',
+              es: 'El servicio de historial de asistencia no está disponible.',
+              de: 'Der Anwesenheitsverlaufsdienst ist derzeit nicht verfügbar.',
+              pt: 'O serviço de histórico de assiduidade está indisponível.',
             },
             language,
           )}
@@ -104,6 +113,9 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
                   ar: 'تعذر تحميل سجل الحضور من الخادم.',
                   fr: 'Impossible de charger l’historique des présences.',
                   en: 'Failed to load attendance history from the server.',
+                  es: 'Error al cargar el historial de asistencia desde el servidor.',
+                  de: 'Anwesenheitsverlauf konnte nicht vom Server geladen werden.',
+                  pt: 'Falha ao carregar o histórico de assiduidade do servidor.',
                 },
                 language,
               )}
@@ -114,7 +126,7 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
           onClick={onRetry}
           className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     )}
@@ -129,6 +141,9 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
             ar: 'لا توجد سجلات حضور معتمدة في الفترة المحددة.',
             fr: 'Aucun enregistrement de présence soumis pour cette période.',
             en: 'No submitted attendance records found for this date range.',
+            es: 'No se encontraron registros de asistencia enviados para este rango de fechas.',
+            de: 'Keine eingereichten Anwesenheitsdaten für diesen Zeitraum gefunden.',
+            pt: 'Nenhum registo de assiduidade submetido encontrado para este período.',
           },
           language,
         )}
@@ -140,10 +155,10 @@ export const StudentAttendanceHistoryTable: React.FC<StudentAttendanceHistoryTab
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 dark:bg-zinc-900/80 border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 font-extrabold">
             <tr>
-              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'التاريخ', fr: 'Date', en: 'Date' }, language)}</th>
-              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'القسم', fr: 'Classe', en: 'Class' }, language)}</th>
-              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher' }, language)}</th>
-              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'الحالة', fr: 'Statut', en: 'Mark' }, language)}</th>
+              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'التاريخ', fr: 'Date', en: 'Date', es: 'Fecha', de: 'Datum', pt: 'Data' }, language)}</th>
+              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'القسم', fr: 'Classe', en: 'Class', es: 'Clase', de: 'Klasse', pt: 'Turma' }, language)}</th>
+              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher', es: 'Docente responsable', de: 'Verantwortliche Lehrkraft', pt: 'Professor responsável' }, language)}</th>
+              <th className="py-2.5 px-3 text-start">{pickText({ ar: 'الحالة', fr: 'Statut', en: 'Mark', es: 'Estado', de: 'Status', pt: 'Estado' }, language)}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">

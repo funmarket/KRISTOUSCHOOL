@@ -76,6 +76,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
           ar: 'تقدير الحصة غير متاح',
           fr: 'Estimation indisponible',
           en: 'Estimated quota unavailable',
+          es: 'Cuota estimada no disponible',
+          de: 'Geschätztes Kontingent nicht verfügbar',
+          pt: 'Quota estimada indisponível',
         },
         language as any,
       )
@@ -85,6 +88,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
           ar: `غير محدّث (${quotaDigits})`,
           fr: `Périmée (${quotaDigits})`,
           en: `Outdated (${quotaDigits})`,
+          es: `Desactualizado (${quotaDigits})`,
+          de: `Veraltet (${quotaDigits})`,
+          pt: `Desatualizado (${quotaDigits})`,
         },
         language as any,
       )
@@ -93,6 +99,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
           ar: `تقديريًا (${quotaDigits})`,
           fr: `Estimation (${quotaDigits})`,
           en: `Estimated (${quotaDigits})`,
+          es: `Estimado (${quotaDigits})`,
+          de: `Geschätzt (${quotaDigits})`,
+          pt: `Estimado (${quotaDigits})`,
         },
         language as any,
       );
@@ -102,6 +111,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
       ar: 'مغلق خارج 08:00–18:00 تونس',
       fr: 'Fermé hors 08h00–18h00 Tunis',
       en: 'Closed Outside 08:00–18:00 Tunis',
+      es: 'Cerrado fuera de 08:00–18:00 Túnez',
+      de: 'Geschlossen außerhalb 08:00–18:00 Tunis',
+      pt: 'Fechado fora das 08:00–18:00 Tunes',
     },
     language as any,
   );
@@ -123,6 +135,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
                     ar: 'ملاحظات الأولياء الخاصة تحت الروزنامة',
                     fr: 'Notes privées des parents sous le calendrier',
                     en: 'Private Parent–School Notes',
+                    es: 'Notas privadas de padres y escuela',
+                    de: 'Private Eltern-Schule-Notizen',
+                    pt: 'Notas privadas de pais e escola',
                   },
                   language as any,
                 )
@@ -154,7 +169,7 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
           >
             {withinTunisWindow
               ? pickText(
-                  { ar: 'مفتوح الآن (08:00–18:00 تونس)', fr: 'Ouvert (08h00–18h00 Tunis)', en: 'Open Now (08:00–18:00 Tunis)' },
+                  { ar: 'مفتوح الآن (08:00–18:00 تونس)', fr: 'Ouvert (08h00–18h00 Tunis)', en: 'Open Now (08:00–18:00 Tunis)', es: 'Abierto ahora (08:00–18:00 Túnez)', de: 'Jetzt geöffnet (08:00–18:00 Tunis)', pt: 'Aberto agora (08:00–18:00 Tunes)' },
                   language as any,
                 )
               : closedWindowText}
@@ -178,7 +193,7 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
         <div data-testid="parent-notes-error-state" className="p-4 bg-red-50 text-red-800 rounded-2xl text-xs flex justify-between items-center">
           <span>{notesError || t('error')}</span>
           <button data-testid="parent-notes-retry-btn" type="button" onClick={handleQuotaRefresh} className="underline font-bold">
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language as any)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language as any)}
           </button>
         </div>
       )}
@@ -190,6 +205,9 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
               ar: 'لا يوجد طفل مرتبط بحسابك في هذا القسم.',
               fr: 'Aucun enfant associé à votre compte dans cette classe.',
               en: 'No linked child in this class.',
+              es: 'Ningún hijo vinculado en esta clase.',
+              de: 'Kein verknüpftes Kind in dieser Klasse.',
+              pt: 'Nenhuma criança associada a esta turma.',
             },
             language as any,
           )}
@@ -199,7 +217,7 @@ export const ParentNotesFormSection: React.FC<ParentNotesFormSectionProps> = ({
       {showSendForm && (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
           <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-            {pickText({ ar: 'إرسال ملاحظة جديدة', fr: 'Envoyer une nouvelle note', en: 'Send New Note' }, language as any)}
+            {pickText({ ar: 'إرسال ملاحظة جديدة', fr: 'Envoyer une nouvelle note', en: 'Send New Note', es: 'Enviar nueva nota', de: 'Neue Notiz senden', pt: 'Enviar nova nota' }, language as any)}
           </h3>
           {!withinTunisWindow && (
             <div data-testid="parent-notes-window-closed-notice" className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-200 rounded-2xl text-xs font-semibold">

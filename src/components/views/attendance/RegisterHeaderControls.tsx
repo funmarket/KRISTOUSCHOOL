@@ -128,7 +128,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
                   <option key={cls.id} value={cls.id}>
                     {cls.name} ({cls.academicYear})
                     {cls.isArchived
-                      ? ` — [${pickText({ ar: 'مؤرشف', fr: 'Archivée', en: 'Archived' }, language)}]`
+                      ? ` — [${pickText({ ar: 'مؤرشف', fr: 'Archivée', en: 'Archived', es: 'Archivada', de: 'Archiviert', pt: 'Arquivada' }, language)}]`
                       : ''}
                   </option>
                 ))}
@@ -139,10 +139,10 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
           {isOffice ? (
             <div className="space-y-1.5">
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                {pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher' }, language)}
+                {pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher', es: 'Docente responsable', de: 'Verantwortliche Lehrkraft', pt: 'Professor responsável' }, language)}
               </label>
               <select
-                aria-label={pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher' }, language)}
+                aria-label={pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher', es: 'Docente responsable', de: 'Verantwortliche Lehrkraft', pt: 'Professor responsável' }, language)}
                 data-testid="attendance-office-teacher-select"
                 value={activeTeacherUserIdParam}
                 onChange={(e) => requestContextSwitch({ kind: 'teacher', teacherUserId: e.target.value })}
@@ -151,10 +151,10 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
                 {officeTeachersForActiveClass.map((tOpt) => {
                   const tags: string[] = [];
                   if (tOpt.hasActiveAssignmentInClass[activeClassId]) {
-                    tags.push(pickText({ ar: 'مكلف حالياً', fr: 'Assigné', en: 'Assigned' }, language));
+                    tags.push(pickText({ ar: 'مكلف حالياً', fr: 'Assigné', en: 'Assigned', es: 'Asignado', de: 'Zugewiesen', pt: 'Atribuído' }, language));
                   }
                   if (tOpt.hasSavedRegisterInClass[activeClassId]) {
-                    tags.push(pickText({ ar: 'له سجل محفوظ', fr: 'Registres existants', en: 'Has Registers' }, language));
+                    tags.push(pickText({ ar: 'له سجل محفوظ', fr: 'Registres existants', en: 'Has Registers', es: 'Con registros', de: 'Mit Registern', pt: 'Com registos' }, language));
                   }
                   if (tOpt.accountStatus && tOpt.accountStatus !== 'APPROVED') tags.push(tOpt.accountStatus);
                   return (
@@ -169,7 +169,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
           ) : (
             <div className="space-y-1.5">
               <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                {pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher' }, language)}
+                {pickText({ ar: 'المربي المسؤول', fr: 'Enseignant responsable', en: 'Responsible Teacher', es: 'Docente responsable', de: 'Verantwortliche Lehrkraft', pt: 'Professor responsável' }, language)}
               </span>
               <div className="min-h-[44px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/50 px-3 py-2 flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-zinc-200">
                 <UserCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -180,7 +180,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
 
           <div className="space-y-1.5">
             <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              {pickText({ ar: 'تاريخ اليوم الدراسي (تونس)', fr: 'Date scolaire (Africa/Tunis)', en: 'School Date (Africa/Tunis)' }, language)}
+              {pickText({ ar: 'تاريخ اليوم الدراسي (تونس)', fr: 'Date scolaire (Africa/Tunis)', en: 'School Date (Africa/Tunis)', es: 'Fecha escolar (Africa/Tunis)', de: 'Schuldatum (Africa/Tunis)', pt: 'Data escolar (Africa/Tunis)' }, language)}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -199,7 +199,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
                 onClick={() => void loadRegister()}
                 disabled={(registerState.status === 'LOADING' && isRegisterScopeSynced) || isRetryingConflictRefresh}
                 className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
-                title={pickText({ ar: 'إعادة قراءة من الخادم', fr: 'Recharger depuis le serveur', en: 'Reload from server' }, language)}
+                title={pickText({ ar: 'إعادة قراءة من الخادم', fr: 'Recharger depuis le serveur', en: 'Reload from server', es: 'Recargar desde el servidor', de: 'Vom Server neu laden', pt: 'Recarregar do servidor' }, language)}
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
@@ -242,10 +242,10 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-extrabold">
-                {pickText({ ar: 'لديك تعديلات غير محفوظة في سجل الحضور الحالي.', fr: 'Vous avez des modifications non enregistrées dans ce registre.', en: 'You have unsaved changes in the current attendance register.' }, language)}
+                {pickText({ ar: 'لديك تعديلات غير محفوظة في سجل الحضور الحالي.', fr: 'Vous avez des modifications non enregistrées dans ce registre.', en: 'You have unsaved changes in the current attendance register.', es: 'Tiene cambios sin guardar en el registro de asistencia actual.', de: 'Sie haben ungespeicherte Änderungen im aktuellen Klassenbuch.', pt: 'Tem alterações não guardadas no registo de assiduidade atual.' }, language)}
               </p>
               <p className="font-normal text-amber-800 dark:text-amber-300">
-                {pickText({ ar: 'تبديل القسم أو التاريخ أو المربي سيؤدي إلى تجاهل التعديلات غير المحفوظة.', fr: 'Changer de classe, de date ou d’enseignant ignorera vos modifications non enregistrées.', en: 'Switching class, date, or responsible teacher will discard unsaved edits.' }, language)}
+                {pickText({ ar: 'تبديل القسم أو التاريخ أو المربي سيؤدي إلى تجاهل التعديلات غير المحفوظة.', fr: 'Changer de classe, de date ou d’enseignant ignorera vos modifications non enregistrées.', en: 'Switching class, date, or responsible teacher will discard unsaved edits.', es: 'Cambiar de clase, fecha o docente responsable descartará los cambios sin guardar.', de: 'Das Wechseln von Klasse, Datum oder Lehrkraft verwirft ungespeicherte Änderungen.', pt: 'Mudar de turma, data ou professor responsável descartará as alterações não guardadas.' }, language)}
               </p>
             </div>
           </div>
@@ -256,14 +256,14 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
               onClick={() => applyContextSwitch(pendingSwitch)}
               className="min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 px-4 py-2 text-xs font-bold text-white"
             >
-              {pickText({ ar: 'تجاهل التعديلات والمتابعة', fr: 'Ignorer et continuer', en: 'Discard & Switch' }, language)}
+              {pickText({ ar: 'تجاهل التعديلات والمتابعة', fr: 'Ignorer et continuer', en: 'Discard & Switch', es: 'Descartar y cambiar', de: 'Verwerfen & wechseln', pt: 'Descartar e mudar' }, language)}
             </button>
             <button
               type="button"
               onClick={() => setPendingSwitch(null)}
               className="min-h-[40px] rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-bold text-amber-900 dark:text-amber-200"
             >
-              {pickText({ ar: 'البقاء والمتابعة', fr: 'Rester ici', en: 'Keep Editing' }, language)}
+              {pickText({ ar: 'البقاء والمتابعة', fr: 'Rester ici', en: 'Keep Editing', es: 'Seguir editando', de: 'Weiter bearbeiten', pt: 'Continuar a editar' }, language)}
             </button>
           </div>
         </div>
@@ -276,7 +276,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
           className="rounded-3xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200"
         >
           <p className="font-extrabold">
-            {pickText({ ar: `تم تأكيد الحفظ (النسخة ${confirmedSavePendingRefresh.version})، بانتظار تحديث القراءة.`, fr: `Sauvegarde confirmée (v${confirmedSavePendingRefresh.version}), lecture actualisée requise.`, en: `Save confirmed on server (v${confirmedSavePendingRefresh.version}), waiting for fresh readback.` }, language)}
+            {pickText({ ar: `تم تأكيد الحفظ (النسخة ${confirmedSavePendingRefresh.version})، بانتظار تحديث القراءة.`, fr: `Sauvegarde confirmée (v${confirmedSavePendingRefresh.version}), lecture actualisée requise.`, en: `Save confirmed on server (v${confirmedSavePendingRefresh.version}), waiting for fresh readback.`, es: `Guardado confirmado en el servidor (v${confirmedSavePendingRefresh.version}), esperando lectura actualizada.`, de: `Speichern auf Server bestätigt (v${confirmedSavePendingRefresh.version}), warte auf Aktualisierung.`, pt: `Gravação confirmada no servidor (v${confirmedSavePendingRefresh.version}), a aguardar atualização.` }, language)}
           </p>
           <button
             type="button"
@@ -285,7 +285,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
             className="min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 px-4 py-2 text-xs font-bold text-white inline-flex items-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>{pickText({ ar: 'تحديث القراءة', fr: 'Actualiser la lecture', en: 'Refresh Readback' }, language)}</span>
+            <span>{pickText({ ar: 'تحديث القراءة', fr: 'Actualiser la lecture', en: 'Refresh Readback', es: 'Actualizar lectura', de: 'Anzeige aktualisieren', pt: 'Atualizar leitura' }, language)}</span>
           </button>
         </div>
       )}
@@ -334,7 +334,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
             onClick={() => void loadRegister()}
             className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -350,13 +350,13 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
               <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>
                 {activeRecoveryForScope.conflictKind === 'roster_conflict'
-                  ? pickText({ ar: 'تغيرت قائمة القسم أثناء الحفظ، وتعذر تحديث أحدث نسخة من الخادم بعد.', fr: 'La liste de la classe a changé pendant l’enregistrement et l’actualisation serveur a échoué.', en: 'The class roster changed during save, and refreshing the latest register failed.' }, language)
-                  : pickText({ ar: 'تم تحديث السجل في جلسة أخرى، وتعذر قراءة النسخة الأحدث من الخادم بعد.', fr: 'Ce registre a été modifié ailleurs et l’actualisation serveur a échoué.', en: 'This register changed elsewhere, and refreshing the latest server state failed.' }, language)}
+                  ? pickText({ ar: 'تغيرت قائمة القسم أثناء الحفظ، وتعذر تحديث أحدث نسخة من الخادم بعد.', fr: 'La liste de la classe a changé pendant l’enregistrement et l’actualisation serveur a échoué.', en: 'The class roster changed during save, and refreshing the latest register failed.', es: 'La lista de la clase cambió al guardar y falló la actualización del registro.', de: 'Die Klassenliste hat sich beim Speichern geändert und das Neuladen ist fehlgeschlagen.', pt: 'A lista da turma mudou ao guardar e falhou a atualização do registo.' }, language)
+                  : pickText({ ar: 'تم تحديث السجل في جلسة أخرى، وتعذر قراءة النسخة الأحدث من الخادم بعد.', fr: 'Ce registre a été modifié ailleurs et l’actualisation serveur a échoué.', en: 'This register changed elsewhere, and refreshing the latest server state failed.', es: 'Este registro cambió en otro lugar y falló la actualización del servidor.', de: 'Dieses Klassenbuch wurde anderweitig geändert und das Neuladen ist fehlgeschlagen.', pt: 'Este registo foi alterado noutro local e falhou a atualização do servidor.' }, language)}
               </span>
             </div>
             <p className="text-[11px] text-amber-800 dark:text-amber-300">
               {activeRecoveryForScope.refreshErrorMessage ||
-                pickText({ ar: 'تم الاحتفاظ بتعديلاتك غير المحفوظة وبقائمة السجل السابقة بشكل آمن. أعد القراءة للمصالحة قبل الحفظ.', fr: 'Vos saisies non enregistrées sont conservées en toute sécurité. Relancez la lecture pour réconcilier avant d’enregistrer.', en: 'Your unsaved draft entries are safely preserved. Retry loading the server register to reconcile before saving.' }, language)}
+                pickText({ ar: 'تم الاحتفاظ بتعديلاتك غير المحفوظة وبقائمة السجل السابقة بشكل آمن. أعد القراءة للمصالحة قبل الحفظ.', fr: 'Vos saisies non enregistrées sont conservées en toute sécurité. Relancez la lecture pour réconcilier avant d’enregistrer.', en: 'Your unsaved draft entries are safely preserved. Retry loading the server register to reconcile before saving.', es: 'Sus entradas en borrador están a salvo. Reintente cargar el registro del servidor antes de guardar.', de: 'Ihre ungespeicherten Entwürfe bleiben sicher erhalten. Laden Sie das Register vor dem Speichern erneut.', pt: 'As suas alterações em rascunho estão guardadas. Tente recarregar o registo do servidor antes de guardar.' }, language)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -371,7 +371,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
               <span>
                 {isRetryingConflictRefresh
                   ? t('loading')
-                  : pickText({ ar: 'إعادة قراءة السجل', fr: 'Réessayer l’actualisation', en: 'Retry Refresh' }, language)}
+                  : pickText({ ar: 'إعادة قراءة السجل', fr: 'Réessayer l’actualisation', en: 'Retry Refresh', es: 'Reintentar actualización', de: 'Erneut laden', pt: 'Tentar atualizar' }, language)}
               </span>
             </button>
             <button
@@ -381,7 +381,7 @@ export const RegisterHeaderControls: React.FC<RegisterHeaderControlsProps> = ({
               onClick={discardConflictDraftAndReload}
               className="min-h-[40px] rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 px-3.5 py-2 text-xs font-bold text-amber-900 dark:text-amber-200 disabled:opacity-50"
             >
-              {pickText({ ar: 'تجاهل المسودة وإعادة التحميل', fr: 'Abandonner et recharger', en: 'Discard Draft & Reload' }, language)}
+              {pickText({ ar: 'تجاهل المسودة وإعادة التحميل', fr: 'Abandonner et recharger', en: 'Discard Draft & Reload', es: 'Descartar borrador y recargar', de: 'Entwurf verwerfen & neu laden', pt: 'Descartar rascunho e recarregar' }, language)}
             </button>
           </div>
         </div>

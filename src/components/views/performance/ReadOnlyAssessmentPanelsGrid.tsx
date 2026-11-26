@@ -32,6 +32,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                     ar: 'النتائج والدرجات حسب المادة',
                     fr: 'Notes par matière',
                     en: 'Subject Grades',
+                    es: 'Calificaciones por asignatura',
+                    de: 'Noten nach Fach',
+                    pt: 'Notas por disciplina',
                   },
                   language,
                 )}
@@ -49,6 +52,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                 ar: 'نتائج التقييمات لكل مادة غير متاحة حالياً، ولا يُعد غياب السجلات صفراً في التحصيل.',
                 fr: 'Les notes par matière ne sont pas encore disponibles. L’absence de relevé ne signifie pas une note nulle.',
                 en: 'Subject grades are not yet available. Missing records never represent zero achievement.',
+                es: 'Las calificaciones por asignatura aún no están disponibles. La ausencia de registros nunca representa un cero.',
+                de: 'Fachnoten sind noch nicht verfügbar. Fehlende Einträge bedeuten niemals null Leistung.',
+                pt: 'As notas por disciplina ainda não estão disponíveis. A ausência de registos nunca representa zero aproveitamento.',
               },
               language,
             )}
@@ -62,6 +68,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                 ar: 'سجل التقييمات المنشورة',
                 fr: 'Relevé d’évaluations',
                 en: 'Published assessments',
+                es: 'Evaluaciones publicadas',
+                de: 'Veröffentlichte Bewertungen',
+                pt: 'Avaliações publicadas',
               },
               language,
             )}
@@ -86,6 +95,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                     ar: 'منحنى التقدم الأكاديمي',
                     fr: 'Graphique de progression académique',
                     en: 'Academic Progress Chart',
+                    es: 'Gráfico de progreso académico',
+                    de: 'Akademisches Verlaufsdiagramm',
+                    pt: 'Gráfico de progresso académico',
                   },
                   language,
                 )}
@@ -103,6 +115,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                 ar: 'سيعرض هذا الرسم البياني تطوّر الأداء عبر الفترات الدراسية فور تفعيل متابعة التقييمات.',
                 fr: 'Ce graphique affichera l’évolution chronologique par matière dès l’activation du suivi des périodes scolaires.',
                 en: 'Subject progress trends across reporting periods will appear here once assessment tracking is active.',
+                es: 'Las tendencias de progreso por asignatura aparecerán aquí cuando el seguimiento de evaluaciones esté activo.',
+                de: 'Leistungsverläufe nach Fach erscheinen hier, sobald die Bewertungsverfolgung aktiv ist.',
+                pt: 'As tendências de progresso por disciplina aparecerão aqui quando o acompanhamento de avaliações estiver ativo.',
               },
               language,
             )}
@@ -115,6 +130,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
               ar: 'مخطط التقدم غير متاح حالياً',
               fr: 'Graphique de progression indisponible',
               en: 'Progress chart unavailable',
+              es: 'Gráfico de progreso no disponible',
+              de: 'Verlaufsdiagramm nicht verfügbar',
+              pt: 'Gráfico de progresso indisponível',
             },
             language,
           )}
@@ -127,6 +145,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                 ar: 'لا توجد بيانات زمنية متاحة للرسم البياني بعد',
                 fr: 'Aucune série chronologique disponible pour le moment',
                 en: 'No progress series available yet',
+                es: 'Aún no hay datos cronológicos disponibles',
+                de: 'Noch keine Verlaufsdaten verfügbar',
+                pt: 'Ainda não existem séries de progresso disponíveis',
               },
               language,
             )}
@@ -149,6 +170,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                   ar: 'ملاحظات وتوصيات المربي حسب المادة',
                   fr: 'Appréciations des enseignants par matière',
                   en: 'Teacher Subject Feedback',
+                  es: 'Observaciones docentes por asignatura',
+                  de: 'Lehrkräfte-Feedback nach Fach',
+                  pt: 'Observações docentes por disciplina',
                 },
                 language,
               )}
@@ -167,6 +191,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                   ar: 'تظهر هنا فقط ملاحظات المربين المنشورة للأولياء فور تفعيلها. لا تُعرض الملاحظات الداخلية.',
                   fr: 'Seules les appréciations publiées pour les parents apparaîtront ici dès leur activation. Les notes internes ne sont jamais affichées.',
                   en: 'Only published teacher feedback for parents will appear here once enabled. Private teacher notes are never shown.',
+                  es: 'Solo aparecerán aquí las observaciones publicadas para los padres una vez activadas. Nunca se muestran notas internas.',
+                  de: 'Hier erscheinen nach Aktivierung nur für Eltern veröffentlichte Rückmeldungen. Interne Notizen werden nie angezeigt.',
+                  pt: 'Apenas as observações publicadas para os encarregados aparecerão aqui após ativação. Notas internas nunca são mostradas.',
                 },
                 language,
               )
@@ -175,6 +202,9 @@ export const ReadOnlyAssessmentPanelsGrid: React.FC<ReadOnlyAssessmentPanelsGrid
                   ar: 'ملاحظات المواد غير متاحة للعرض حالياً. هذه الواجهة مخصّصة للقراءة فقط.',
                   fr: 'La consultation des appréciations par matière n’est pas encore disponible. Cette vue est en lecture seule.',
                   en: 'Subject-level teacher feedback is not yet available. This view is read-only.',
+                  es: 'Las observaciones por asignatura aún no están disponibles. Esta vista es de solo lectura.',
+                  de: 'Fachbezogene Rückmeldungen sind noch nicht verfügbar. Diese Ansicht ist schreibgeschützt.',
+                  pt: 'As observações por disciplina ainda não estão disponíveis. Esta vista é apenas de leitura.',
                 },
                 language,
               )}

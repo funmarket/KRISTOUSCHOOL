@@ -28,11 +28,14 @@ function invalidResponseResult<T>(): BackendOpResult<T> {
   };
 }
 
+const SUPPORTED_LANGUAGES = new Set<string>(['ar', 'fr', 'en', 'es', 'de', 'pt']);
+
 function parsePreferencesRow(data: unknown): UserPreferencesState | null {
   if (!data || typeof data !== 'object') return null;
   const row = data as Record<string, unknown>;
   if (
     typeof row.language !== 'string' ||
+    !SUPPORTED_LANGUAGES.has(row.language) ||
     typeof row.theme !== 'string' ||
     typeof row.notification_sound !== 'string' ||
     typeof row.sound_muted !== 'boolean' ||
@@ -82,6 +85,14 @@ export async function saveMyPreferences(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any = supabase,
 ): Promise<BackendOpResult<UserPreferencesState>> {
+  if (prefs.language !== undefined && (typeof prefs.language !== 'string' || !SUPPORTED_LANGUAGES.has(prefs.language))) {
+    return {
+      ok: false,
+      status: 'ERROR',
+      errorCode: 'invalid_language',
+      errorMessage: 'Unsupported language preference.',
+    };
+  }
   if (!client) return unavailableResult();
   try {
     const values = {

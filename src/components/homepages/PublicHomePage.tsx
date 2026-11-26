@@ -128,7 +128,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
         ? t('error')
         : isAnnouncementsDemo
         ? t('demoPreview')
-        : pickText({ ar: 'منشور', fr: 'Publié', en: 'Published' }, language)}
+        : pickText({ ar: 'منشور', fr: 'Publié', en: 'Published', es: 'Publicado', de: 'Veröffentlicht', pt: 'Publicado' }, language)}
     </span>
   );
 
@@ -143,15 +143,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
     <HomeCardGrid ariaLabel="Public school services">
       <HomeShortcutCard
         id="public-teachers"
-        title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers' }, language)}
-        actionLabel={pickText(
-          {
-            ar: 'ملفات تعريف معتمدة',
-            fr: 'Profils approuvés par l’école',
-            en: 'School-approved profiles',
-          },
-          language,
-        )}
+        title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers', es: 'Docentes', de: 'Lehrkräfte', pt: 'Docentes' }, language)}
+        actionLabel={pickText({ ar: 'ملفات تعريف معتمدة', fr: 'Profils approuvés par l’école', en: 'School-approved profiles', es: 'Perfiles aprobados', de: 'Geprüfte Profile', pt: 'Perfis aprovados' }, language)}
         icon="👩‍🏫"
         tone="blue"
         onClick={openTeachers}
@@ -159,7 +152,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-food-menu"
-        title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+        title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu', es: 'Menú del comedor', de: 'Speiseplan', pt: 'Ementa da cantina' }, language)}
         actionLabel="La Toque Gourmande"
         icon="🍽️"
         tone="green"
@@ -168,11 +161,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-administration"
-        title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration' }, language)}
-        actionLabel={pickText(
-          { ar: 'الهيئة الإدارية', fr: 'Direction de l’école', en: 'School Board' },
-          language,
-        )}
+        title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration', es: 'Administración', de: 'Verwaltung', pt: 'Administração' }, language)}
+        actionLabel={pickText({ ar: 'الهيئة الإدارية', fr: 'Direction de l’école', en: 'School Board', es: 'Dirección escolar', de: 'Schulleitung', pt: 'Direção escolar' }, language)}
         icon="🏛️"
         tone="purple"
         onClick={openAdministration}
@@ -180,14 +170,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-admissions"
-        title={pickText(
-          { ar: 'القبول والتسجيل', fr: 'Admissions', en: 'Admissions' },
-          language,
-        )}
-        actionLabel={pickText(
-          { ar: 'بوابة التسجيل', fr: 'Entrée des demandes', en: 'Application entry' },
-          language,
-        )}
+        title={pickText({ ar: 'القبول والتسجيل', fr: 'Admissions', en: 'Admissions', es: 'Admisiones', de: 'Aufnahmen', pt: 'Admissões' }, language)}
+        actionLabel={pickText({ ar: 'بوابة التسجيل', fr: 'Entrée des demandes', en: 'Application entry', es: 'Acceso a solicitudes', de: 'Antragseingang', pt: 'Entrada de pedidos' }, language)}
         icon="📋"
         tone="orange"
         onClick={() => setActiveTab('registration')}
@@ -195,18 +179,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-levels-classes"
-        title={pickText(
-          { ar: 'المستويات والأقسام', fr: 'Niveaux & Classes', en: 'Levels & Classes' },
-          language,
-        )}
-        actionLabel={pickText(
-          {
-            ar: 'السنة الأولى إلى السادسة ابتدائي',
-            fr: 'De la 1ère à la 6ème année',
-            en: 'Year 1 through Year 6',
-          },
-          language,
-        )}
+        title={pickText({ ar: 'المستويات والأقسام', fr: 'Niveaux & Classes', en: 'Levels & Classes', es: 'Niveles y clases', de: 'Stufen & Klassen', pt: 'Níveis e turmas' }, language)}
+        actionLabel={pickText({ ar: 'السنة الأولى إلى السادسة ابتدائي', fr: 'De la 1ère à la 6ème année', en: 'Year 1 through Year 6', es: 'De 1.º a 6.º curso', de: 'Klasse 1 bis 6', pt: 'Do 1.º ao 6.º ano' }, language)}
         icon="🎓"
         tone="teal"
         onClick={() => scrollToRef(levelsSectionRef)}
@@ -214,14 +188,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-activities-clubs"
-        title={pickText(
-          { ar: 'الأنشطة والنوادي', fr: 'Activités & Clubs', en: 'Activities & Clubs' },
-          language,
-        )}
-        actionLabel={pickText(
-          { ar: 'الحياة المدرسية', fr: 'Vie scolaire', en: 'School life' },
-          language,
-        )}
+        title={pickText({ ar: 'الأنشطة والنوادي', fr: 'Activités & Clubs', en: 'Activities & Clubs', es: 'Actividades y clubes', de: 'Aktivitäten & Clubs', pt: 'Atividades e clubes' }, language)}
+        actionLabel={pickText({ ar: 'الحياة المدرسية', fr: 'Vie scolaire', en: 'School life', es: 'Vida escolar', de: 'Schulleben', pt: 'Vida escolar' }, language)}
         icon="🎨"
         tone="yellow"
         onClick={() => scrollToRef(activitiesSectionRef)}
@@ -229,18 +197,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-gallery"
-        title={pickText(
-          { ar: 'المعرض العام', fr: 'Galerie publique', en: 'Public Gallery' },
-          language,
-        )}
-        actionLabel={pickText(
-          {
-            ar: 'صور معتمدة فقط',
-            fr: 'Médias approuvés uniquement',
-            en: 'Approved media only',
-          },
-          language,
-        )}
+        title={pickText({ ar: 'المعرض العام', fr: 'Galerie publique', en: 'Public Gallery', es: 'Galería pública', de: 'Öffentliche Galerie', pt: 'Galeria pública' }, language)}
+        actionLabel={pickText({ ar: 'صور معتمدة فقط', fr: 'Médias approuvés uniquement', en: 'Approved media only', es: 'Solo fotos aprobadas', de: 'Nur freigegebene Medien', pt: 'Apenas média aprovada' }, language)}
         icon="🖼️"
         tone="slate"
         onClick={() => scrollToRef(gallerySectionRef)}
@@ -248,14 +206,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-apply-register"
-        title={pickText(
-          { ar: 'قدّم طلب تسجيل', fr: 'Postuler / S’inscrire', en: 'Apply / Register' },
-          language,
-        )}
-        actionLabel={pickText(
-          { ar: 'ابدأ ملف التسجيل', fr: 'Démarrer un dossier', en: 'Start an application' },
-          language,
-        )}
+        title={pickText({ ar: 'قدّم طلب تسجيل', fr: 'Postuler / S’inscrire', en: 'Apply / Register', es: 'Solicitar / Inscribirse', de: 'Bewerben / Anmelden', pt: 'Candidatar / Inscrever' }, language)}
+        actionLabel={pickText({ ar: 'ابدأ ملف التسجيل', fr: 'Démarrer un dossier', en: 'Start an application', es: 'Iniciar solicitud', de: 'Antrag starten', pt: 'Iniciar pedido' }, language)}
         icon="✨"
         tone="red"
         onClick={() => setActiveTab('registration')}
@@ -263,14 +215,8 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-announcements"
-        title={pickText(
-          { ar: 'البلاغات العامة', fr: 'Annonces publiques', en: 'Announcements' },
-          language,
-        )}
-        actionLabel={pickText(
-          { ar: 'أخبار المدرسة', fr: 'Actualités de l’école', en: 'Public school notices' },
-          language,
-        )}
+        title={pickText({ ar: 'البلاغات العامة', fr: 'Annonces publiques', en: 'Announcements', es: 'Anuncios', de: 'Ankündigungen', pt: 'Anúncios' }, language)}
+        actionLabel={pickText({ ar: 'أخبار المدرسة', fr: 'Actualités de l’école', en: 'Public school notices', es: 'Avisos escolares', de: 'Schulmitteilungen', pt: 'Avisos escolares' }, language)}
         icon="📢"
         tone="blue"
         onClick={() => scrollToRef(announcementsSectionRef)}
@@ -278,10 +224,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
 
       <HomeShortcutCard
         id="public-contact"
-        title={pickText(
-          { ar: 'الاتصال والموقع', fr: 'Contact & Accès', en: 'Contact' },
-          language,
-        )}
+        title={pickText({ ar: 'الاتصال والموقع', fr: 'Contact & Accès', en: 'Contact', es: 'Contacto', de: 'Kontakt', pt: 'Contacto' }, language)}
         actionLabel={t('tunis')}
         icon="📍"
         tone="teal"
@@ -390,14 +333,7 @@ export const PublicHomePage: React.FC<PublicHomePageProps> = ({
                 onClick={() => onOpenAuth('register')}
                 className="rounded-xl border border-[#0D8AE8] bg-[#0D8AE8]/10 px-4 py-2.5 text-xs sm:text-sm font-extrabold text-[#0D8AE8] hover:bg-[#0D8AE8]/20 transition-colors"
               >
-                {pickText(
-                  {
-                    ar: 'إنشاء حساب / طلب انضمام',
-                    fr: 'Créer un compte / Postuler',
-                    en: 'Create Account / Apply',
-                  },
-                  language,
-                )}
+                {pickText({ ar: 'إنشاء حساب / طلب انضمام', fr: 'Créer un compte / Postuler', en: 'Create Account / Apply', es: 'Crear cuenta / Solicitar', de: 'Konto erstellen / Bewerben', pt: 'Criar conta / Candidatar' }, language)}
               </button>
             </div>
           )}

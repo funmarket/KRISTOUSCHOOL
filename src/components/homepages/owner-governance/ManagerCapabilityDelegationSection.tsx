@@ -51,6 +51,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
               ar: 'تفويض صلاحيات المدير المساعد مقتصر على مالك المدرسة (APP_ADMIN)',
               fr: 'Délégation Manager réservée à APP_ADMIN',
               en: 'Manager Capability Delegation is Restricted to School Owner (APP_ADMIN)',
+              es: 'La delegación de capacidades Manager está restringida al Propietario (APP_ADMIN)',
+              de: 'Die Manager-Delegation ist auf den Schulinhaber (APP_ADMIN) beschränkt',
+              pt: 'A delegação de capacidades Manager é restrita ao Proprietário (APP_ADMIN)',
             },
             language,
           )}
@@ -66,6 +69,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
                   ar: 'منح وسحب صلاحيات المدير المساعد (MANAGER) عبر الخادم',
                   fr: 'Accorder et révoquer les capacités Manager côté serveur',
                   en: 'Owner-Only Server-Verified Manager Capability Delegation',
+                  es: 'Delegación de capacidades Manager verificada por servidor (solo Propietario)',
+                  de: 'Inhaberrechtliche, servergeprüfte Manager-Delegation',
+                  pt: 'Delegação de capacidades Manager verificada no servidor (exclusivo do Proprietário)',
                 },
                 language,
               )}
@@ -76,6 +82,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
                   ar: 'كل تغيير يُسجّل في سجل التدقيق الدائم. أدخل سبباً واضحاً (3–500 حرف) ثم فعّل أو اسحب أي صلاحية.',
                   fr: 'Chaque modification est enregistrée dans le journal d’audit. Saisissez un motif (3–500 car.) puis activez/révoquez une capacité.',
                   en: 'Every capability toggle writes an immutable audit trail entry. Enter an audit reason (3–500 chars), then toggle capabilities below.',
+                  es: 'Cada cambio de capacidad genera un registro de auditoría inmutable. Indica un motivo (3–500 caracteres) y activa o revoca las capacidades.',
+                  de: 'Jede Änderung erzeugt einen unveränderlichen Prüfprotokolleintrag. Geben Sie einen Grund (3–500 Zeichen) ein und schalten Sie unten die Rechte um.',
+                  pt: 'Cada alteração grava uma entrada imutável de auditoria. Indique um motivo (3–500 carateres) e ative ou revogue capacidades abaixo.',
                 },
                 language,
               )}
@@ -90,6 +99,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
                   ar: 'سبب تفويض أو سحب الصلاحية (إلزامي 3–500 حرف)...',
                   fr: 'Motif d’audit obligatoire (3–500 caractères)...',
                   en: 'Mandatory audit reason for delegation change (3–500 chars)...',
+                  es: 'Motivo de auditoría obligatorio para la delegación (3–500 caracteres)...',
+                  de: 'Verbindlicher Prüfungsgrund für die Delegation (3–500 Zeichen)...',
+                  pt: 'Motivo de auditoria obrigatório para a delegação (3–500 carateres)...',
                 },
                 language,
               )}
@@ -104,6 +116,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
                   ar: 'جاري تحميل قائمة المدراء المفوضين...',
                   fr: 'Chargement des Managers...',
                   en: 'Loading approved managers...',
+                  es: 'Cargando gestores aprobados...',
+                  de: 'Genehmigte Manager werden geladen...',
+                  pt: 'A carregar gestores aprovados...',
                 },
                 language,
               )}
@@ -115,6 +130,9 @@ export const ManagerCapabilityDelegationSection: React.FC<
                   ar: 'لا يوجد حسابات بدور MANAGER معتمد حالياً. يمكنك تعيين مدير مساعد من تبويب تعيين الأدوار القيادية.',
                   fr: 'Aucun compte MANAGER approuvé pour le moment. Nommez un Manager depuis l’onglet Gouvernance des rôles.',
                   en: 'No approved MANAGER accounts found yet. Appoint a Manager in Role Governance first.',
+                  es: 'Aún no hay cuentas MANAGER aprobadas. Designa primero un Manager en Gobernanza de roles.',
+                  de: 'Noch keine genehmigten MANAGER-Konten vorhanden. Ernennen Sie zuerst einen Manager unter Rollenverwaltung.',
+                  pt: 'Ainda não existem contas MANAGER aprovadas. Nomeie primeiro um Gestor em Governação de funções.',
                 },
                 language,
               )}

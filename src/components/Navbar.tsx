@@ -4,7 +4,7 @@ import { AuthModal } from './AuthModal';
 import { getTelegramLinkCopy } from '../i18n/telegram-link';
 import { canAccessAppTab } from './homepages/homepageAccess';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../i18n/homepages';
-import { NotificationItem, NotificationSoundOption } from '../types';
+import { Language, NotificationItem, NotificationSoundOption } from '../types';
 import { Menu } from 'lucide-react';
 import { NavbarNotificationMenu } from './navbar/NavbarNotificationMenu';
 import { NavbarProfileMenu } from './navbar/NavbarProfileMenu';
@@ -119,13 +119,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative flex items-center">
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value as 'ar' | 'fr' | 'en')}
+              onChange={(e) => setLanguage(e.target.value as Language)}
               aria-label={t('language')}
               className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-bold px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-k-brand cursor-pointer uppercase"
             >
               <option value="ar">AR</option>
               <option value="fr">FR</option>
               <option value="en">EN</option>
+              <option value="es">ES</option>
+              <option value="de">DE</option>
+              <option value="pt">PT</option>
             </select>
           </div>
 
@@ -307,7 +310,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onClick={() => { setActiveTab('students'); setShowProfileMenu(false); }}
                         className="w-full text-start px-4 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                       >
-                        <span>🎓 {language === 'ar' ? 'التلاميذ' : language === 'fr' ? 'Élèves' : 'Students'}</span>
+                        <span>🎓 {pickText({ ar: 'التلاميذ', fr: 'Élèves', en: 'Students', es: 'Estudiantes', de: 'Schüler', pt: 'Alunos' }, language)}</span>
                       </button>
                     )}
                   </div>

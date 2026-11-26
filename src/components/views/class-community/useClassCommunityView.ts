@@ -170,6 +170,9 @@ export function useClassCommunityView({ initialSubTab = 'announcements' }: { ini
             ar: 'لا يوجد قسم مرتبط بحسابك حالياً.',
             fr: 'Aucune classe n’est rattachée à votre compte pour le moment.',
             en: 'No active class is linked to your account yet.',
+            es: 'Aún no hay ninguna clase activa vinculada a su cuenta.',
+            de: 'Ihrem Konto ist noch keine aktive Klasse zugeordnet.',
+            pt: 'Ainda não existe nenhuma turma ativa associada à sua conta.',
           },
           language,
         ),
@@ -225,7 +228,14 @@ export function useClassCommunityView({ initialSubTab = 'announcements' }: { ini
     setActionFeedback({
       type: 'success',
       text: pickText(
-        { ar: 'تم نشر إعلان القسم بنجاح.', fr: 'Annonce de classe publiée.', en: 'Class announcement published.' },
+        {
+          ar: 'تم نشر إعلان القسم بنجاح.',
+          fr: 'Annonce de classe publiée.',
+          en: 'Class announcement published.',
+          es: 'Anuncio de clase publicado.',
+          de: 'Klassenmitteilung veröffentlicht.',
+          pt: 'Aviso da turma publicado.',
+        },
         language,
       ),
     });
@@ -250,7 +260,14 @@ export function useClassCommunityView({ initialSubTab = 'announcements' }: { ini
     setActionFeedback({
       type: 'success',
       text: pickText(
-        { ar: 'تم إضافة الواجب بنجاح.', fr: 'Devoir publié.', en: 'Homework assignment saved.' },
+        {
+          ar: 'تم إضافة الواجب بنجاح.',
+          fr: 'Devoir publié.',
+          en: 'Homework assignment saved.',
+          es: 'Tarea escolar guardada.',
+          de: 'Hausaufgabe gespeichert.',
+          pt: 'Trabalho de casa guardado.',
+        },
         language,
       ),
     });

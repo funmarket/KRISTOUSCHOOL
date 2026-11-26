@@ -29,12 +29,15 @@ export const GovernanceAuditLogDrawer: React.FC<GovernanceAuditLogDrawerProps> =
               ar: `سجل التدقيق غير القابل للتعديل: ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
               fr: `Journal d’audit immuable : ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
               en: `Immutable Governance Audit Log: ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
+              es: `Registro de auditoría inmutable: ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
+              de: `Unveränderliches Prüfprotokoll: ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
+              pt: `Registo de auditoria imutável: ${selectedDetail.account.fullName} (@${selectedDetail.account.username})`,
             },
             language,
           )}
         </h4>
         <button type="button" onClick={onClose} className="text-xs font-bold underline">
-          {pickText({ ar: 'إخفاء السجل', fr: 'Masquer', en: 'Hide Log' }, language)}
+          {pickText({ ar: 'إخفاء السجل', fr: 'Masquer', en: 'Hide Log', es: 'Ocultar registro', de: 'Protokoll ausblenden', pt: 'Ocultar registo' }, language)}
         </button>
       </div>
 
@@ -45,6 +48,9 @@ export const GovernanceAuditLogDrawer: React.FC<GovernanceAuditLogDrawerProps> =
               ar: 'لا توجد عمليات مسجلة بعد لهذا الحساب.',
               fr: 'Aucune entrée d’audit pour ce compte.',
               en: 'No governance audit entries recorded for this account yet.',
+              es: 'Aún no hay registros de auditoría para esta cuenta.',
+              de: 'Für dieses Konto liegen noch keine Prüfprotokolle vor.',
+              pt: 'Ainda não existem registos de auditoria para esta conta.',
             },
             language,
           )}

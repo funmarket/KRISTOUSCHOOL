@@ -67,7 +67,7 @@ function makeTelegramClient() {
             sound_muted: false, vibration_enabled: true,
           },
           'preferences.save': {
-            language: 'ar', theme: 'pitch-black', notification_sound: 'Soft Chime',
+            language: body?.params?.language ?? 'ar', theme: 'pitch-black', notification_sound: 'Soft Chime',
             sound_muted: true, vibration_enabled: false,
           },
           'governance.actorScope': {
@@ -121,6 +121,17 @@ test('Telegram private adapters route reads and writes through the verified gate
     'preferences.load', 'preferences.save', 'governance.actorScope',
     'governance.pendingAccounts', 'governance.accountDirectory', 'governance.accountDetail',
   ]);
+
+  for (const lang of ['es', 'de', 'pt']) {
+    const saved = await preferences.saveMyPreferences({ language: lang }, client);
+    assert.equal(saved.ok, true);
+    assert.equal(saved.data.language, lang);
+  }
+  const callsBeforeInvalid = calls.length;
+  const rejected = await preferences.saveMyPreferences({ language: 'it' }, client);
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.errorCode, 'invalid_language');
+  assert.equal(calls.length, callsBeforeInvalid, 'Unsupported language must be rejected before invoking Telegram gateway');
 
   delete globalThis.window;
 });

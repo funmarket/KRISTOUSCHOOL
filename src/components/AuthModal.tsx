@@ -26,12 +26,18 @@ const optionalBadgeLabel = {
   ar: 'اختياري',
   fr: 'optionnel',
   en: 'optional',
+  es: 'opcional',
+  de: 'optional',
+  pt: 'opcional',
 } as const;
 
 const loginIdentifierHint = {
   ar: 'سجّل الدخول باستخدام اسم المستخدم أو البريد الإلكتروني.',
   fr: 'Connectez-vous avec votre nom d’utilisateur ou votre adresse e-mail.',
   en: 'Sign in using your username or email address.',
+  es: 'Inicia sesión con tu nombre de usuario o correo electrónico.',
+  de: 'Melden Sie sich mit Ihrem Benutzernamen oder Ihrer E-Mail-Adresse an.',
+  pt: 'Inicie sessão com o seu nome de utilizador ou e-mail.',
 } as const;
 
 export const AuthModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {

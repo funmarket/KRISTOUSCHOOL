@@ -45,11 +45,11 @@ export function formatAudienceOptionLabel(
 ): string {
   switch (mode) {
     case 'WHOLE_SCHOOL':
-      return pickText({ ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school' }, language);
+      return pickText({ ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school', es: 'Toda la escuela', de: 'Ganze Schule', pt: 'Toda a escola' }, language);
     case 'SINGLE_CLASS':
       return isSchoolCalendarManager
         ? pickText(
-            { ar: 'قسم واحد محدد', fr: 'Une classe sélectionnée', en: 'One selected class' },
+            { ar: 'قسم واحد محدد', fr: 'Une classe sélectionnée', en: 'One selected class', es: 'Una clase seleccionada', de: 'Eine ausgewählte Klasse', pt: 'Uma turma selecionada' },
             language,
           )
         : pickText(
@@ -57,6 +57,9 @@ export function formatAudienceOptionLabel(
               ar: 'أحد أقسامي المسندة',
               fr: 'Une de mes classes attribuées',
               en: 'One of my assigned classes',
+              es: 'Una de mis clases asignadas',
+              de: 'Eine meiner zugewiesenen Klassen',
+              pt: 'Uma das minhas turmas atribuídas',
             },
             language,
           );
@@ -66,6 +69,9 @@ export function formatAudienceOptionLabel(
           ar: 'أقسام أستاذ محدد',
           fr: 'Classes d’un enseignant sélectionné',
           en: 'One selected teacher’s assigned classes',
+          es: 'Clases asignadas de un docente seleccionado',
+          de: 'Zugewiesene Klassen einer ausgewählten Lehrkraft',
+          pt: 'Turmas atribuídas de um professor selecionado',
         },
         language,
       );
@@ -75,6 +81,9 @@ export function formatAudienceOptionLabel(
           ar: 'جميع أقسامي المسندة',
           fr: 'Toutes mes classes attribuées',
           en: 'All of my assigned classes',
+          es: 'Todas mis clases asignadas',
+          de: 'Alle meine zugewiesenen Klassen',
+          pt: 'Todas as minhas turmas atribuídas',
         },
         language,
       );
@@ -86,10 +95,10 @@ export function formatRsvpLabel(
   language: Language,
 ): string {
   if (resp === 'ATTENDING') {
-    return pickText({ ar: 'سأحضر', fr: 'Participer', en: 'Attending' }, language);
+    return pickText({ ar: 'سأحضر', fr: 'Participer', en: 'Attending', es: 'Asistiré', de: 'Nehme teil', pt: 'Vou participar' }, language);
   }
   if (resp === 'ACKNOWLEDGED') {
-    return pickText({ ar: 'تم الاطلاع', fr: 'Vu', en: 'Acknowledged' }, language);
+    return pickText({ ar: 'تم الاطلاع', fr: 'Vu', en: 'Acknowledged', es: 'Enterado', de: 'Zur Kenntnis genommen', pt: 'Tomado conhecimento' }, language);
   }
-  return pickText({ ar: 'معتذر', fr: 'Absent', en: 'Declined' }, language);
+  return pickText({ ar: 'معتذر', fr: 'Absent', en: 'Declined', es: 'Rechazado', de: 'Abgelehnt', pt: 'Recusado' }, language);
 }

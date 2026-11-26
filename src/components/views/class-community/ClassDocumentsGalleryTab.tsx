@@ -17,11 +17,17 @@ export const ClassDocumentsTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm 
         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
           <FileText className="w-4 h-4" />
           <span>
-            {language === 'ar'
-              ? `وثائق ومطبوعات القسم${activeClass ? ` (${activeClass.name})` : ''}`
-              : language === 'fr'
-              ? `Documents pédagogiques de la classe${activeClass ? ` (${activeClass.name})` : ''}`
-              : `Class Documents & Learning Materials${activeClass ? ` (${activeClass.name})` : ''}`}
+            {pickText(
+              {
+                ar: `وثائق ومطبوعات القسم${activeClass ? ` (${activeClass.name})` : ''}`,
+                fr: `Documents pédagogiques de la classe${activeClass ? ` (${activeClass.name})` : ''}`,
+                en: `Class Documents & Learning Materials${activeClass ? ` (${activeClass.name})` : ''}`,
+                es: `Documentos y materiales de la clase${activeClass ? ` (${activeClass.name})` : ''}`,
+                de: `Klassendokumente & Lernmaterialien${activeClass ? ` (${activeClass.name})` : ''}`,
+                pt: `Documentos e materiais da turma${activeClass ? ` (${activeClass.name})` : ''}`,
+              },
+              language,
+            )}
           </span>
         </div>
 
@@ -35,7 +41,7 @@ export const ClassDocumentsTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm 
             <Lock className="w-3.5 h-3.5" />
             <span>
               {pickText(
-                { ar: 'رفع وثيقة (مقفل)', fr: 'Importer document (verrouillé)', en: 'Upload Document (Locked)' },
+                { ar: 'رفع وثيقة (مقفل)', fr: 'Importer document (verrouillé)', en: 'Upload Document (Locked)', es: 'Subir documento (bloqueado)', de: 'Dokument hochladen (gesperrt)', pt: 'Carregar documento (bloqueado)' },
                 language,
               )}
             </span>
@@ -53,6 +59,9 @@ export const ClassDocumentsTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm 
               ar: 'إضافة وحذف وثائق القسم غير متاحين حالياً لأن خدمة تحميل الملفات لم تُفعّل بعد. يمكنك الاطلاع على الوثائق المتاحة أدناه.',
               fr: 'L’ajout et la suppression de documents sont actuellement indisponibles car le service de téléversement n’est pas encore activé. Vous pouvez consulter les documents existants ci-dessous.',
               en: 'Uploading and deleting class documents is currently unavailable because the file upload service is not yet enabled. You can still view existing documents below.',
+              es: 'Subir y eliminar documentos de clase no está disponible actualmente porque el servicio de carga aún no está activado. Puede consultar los documentos existentes abajo.',
+              de: 'Das Hochladen und Löschen von Klassendokumenten ist derzeit nicht verfügbar, da der Datei-Upload-Dienst noch nicht aktiviert ist. Vorhandene Dokumente können unten eingesehen werden.',
+              pt: 'O carregamento e a eliminação de documentos da turma estão indisponíveis porque o serviço de envio ainda não está ativado. Pode consultar os documentos existentes abaixo.',
             },
             language,
           )}
@@ -67,11 +76,14 @@ export const ClassDocumentsTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm 
                   ar: 'مكتبة وثائق القسم بانتظار النشر في Supabase (class_documents).',
                   fr: 'Les documents de classe attendent le déploiement de class_documents sur Supabase.',
                   en: 'Class documents are awaiting public.class_documents deployment on Supabase.',
+                  es: 'Los documentos de clase esperan el despliegue de public.class_documents en Supabase.',
+                  de: 'Klassendokumente warten auf die Bereitstellung von public.class_documents in Supabase.',
+                  pt: 'Os documentos da turma aguardam a implantação de public.class_documents no Supabase.',
                 },
                 language,
               )
             : pickText(
-                { ar: 'لا توجد وثائق مرفقة لهذا القسم حالياً.', fr: 'Aucun document publié pour cette classe.', en: 'No documents published for this class yet.' },
+                { ar: 'لا توجد وثائق مرفقة لهذا القسم حالياً.', fr: 'Aucun document publié pour cette classe.', en: 'No documents published for this class yet.', es: 'Aún no hay documentos publicados para esta clase.', de: 'Noch keine Dokumente für diese Klasse veröffentlicht.', pt: 'Ainda não há documentos publicados para esta turma.' },
                 language,
               )}
         </p>
@@ -88,7 +100,7 @@ export const ClassDocumentsTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm 
                 >
                   <div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
-                      {doc.fileType} • {pickText({ ar: 'رابط محجوب', fr: 'Lien bloqué', en: 'Unsafe URL blocked' }, language)}
+                      {doc.fileType} • {pickText({ ar: 'رابط محجوب', fr: 'Lien bloqué', en: 'Unsafe URL blocked', es: 'URL no segura bloqueada', de: 'Unsichere URL blockiert', pt: 'URL inseguro bloqueado' }, language)}
                     </span>
                     <h4 className="font-bold text-xs text-gray-900 dark:text-white mt-1.5">{doc.title}</h4>
                     {doc.description && <p className="text-xs text-gray-500 mt-0.5">{doc.description}</p>}
@@ -131,11 +143,17 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
           <ImageIcon className="w-4 h-4" />
           <span>
-            {language === 'ar'
-              ? 'معرض أنشطة القسم والمدرسة'
-              : language === 'fr'
-              ? 'Galerie des activités scolaires'
-              : 'Class & School Activity Gallery'}
+            {pickText(
+              {
+                ar: 'معرض أنشطة القسم والمدرسة',
+                fr: 'Galerie des activités scolaires',
+                en: 'Class & School Activity Gallery',
+                es: 'Galería de actividades de clase y escuela',
+                de: 'Klassen- und Schulaktivitätengalerie',
+                pt: 'Galeria de atividades da turma e da escola',
+              },
+              language,
+            )}
           </span>
         </div>
 
@@ -149,7 +167,7 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
             <Lock className="w-3.5 h-3.5" />
             <span>
               {pickText(
-                { ar: 'إضافة صورة (مقفل)', fr: 'Ajouter photo (verrouillé)', en: 'Upload Photo (Locked)' },
+                { ar: 'إضافة صورة (مقفل)', fr: 'Ajouter photo (verrouillé)', en: 'Upload Photo (Locked)', es: 'Subir foto (bloqueado)', de: 'Foto hochladen (gesperrt)', pt: 'Carregar foto (bloqueado)' },
                 language,
               )}
             </span>
@@ -167,6 +185,9 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
               ar: 'إضافة وحذف صور المعرض غير متاحين حالياً لأن خدمة رفع الصور لم تُفعّل بعد. يمكنك تصفح الصور المعتمدة أدناه.',
               fr: 'L’ajout et la suppression de photos sont actuellement indisponibles car le service d’envoi d’images n’est pas encore activé. Vous pouvez consulter la galerie ci-dessous.',
               en: 'Uploading and deleting gallery photos is currently unavailable because the image upload service is not yet enabled. You can still view published photos below.',
+              es: 'Subir y eliminar fotos de la galería no está disponible actualmente porque el servicio de envío de imágenes aún no está activado. Puede ver las fotos publicadas abajo.',
+              de: 'Das Hochladen und Löschen von Galeriefotos ist derzeit nicht verfügbar, da der Bildupload-Dienst noch nicht aktiviert ist. Veröffentlichte Fotos können unten angesehen werden.',
+              pt: 'O carregamento e a eliminação de fotos da galeria estão indisponíveis porque o serviço de envio de imagens ainda não está ativado. Pode ver as fotos publicadas abaixo.',
             },
             language,
           )}
@@ -190,7 +211,7 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
                     data-testid={`class-gallery-unsafe-blocked-${item.id}`}
                     className="rounded-2xl aspect-[4/3] w-full border border-amber-200 dark:border-amber-900 bg-amber-50/60 dark:bg-amber-950/20 flex items-center justify-center p-4 text-center text-xs font-bold text-amber-800 dark:text-amber-300"
                   >
-                    {pickText({ ar: 'تم حجب رابط صورة غير آمن', fr: 'URL image non sécurisée bloquée', en: 'Unsafe image URL blocked' }, language)}
+                    {pickText({ ar: 'تم حجب رابط صورة غير آمن', fr: 'URL image non sécurisée bloquée', en: 'Unsafe image URL blocked', es: 'URL de imagen no segura bloqueada', de: 'Unsichere Bild-URL blockiert', pt: 'URL de imagem inseguro bloqueado' }, language)}
                   </div>
                 )}
                 <figcaption className="text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -208,6 +229,9 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
                 ar: 'معرض صور القسم بانتظار التفعيل في الخادم — يتم عرض صور الحرم المدرسي المعتمدة فقط.',
                 fr: 'La galerie de classe attend le contrat serveur — aperçu campus affiché.',
                 en: 'Class gallery is awaiting backend deployment — verified campus photos shown below.',
+                es: 'La galería de clase espera el despliegue del servidor — fotos verificadas del campus abajo.',
+                de: 'Die Klassengalerie wartet auf die Server-Bereitstellung — verifizierte Campusfotos unten.',
+                pt: 'A galeria da turma aguarda implantação no servidor — fotos verificadas do campus abaixo.',
               },
               language,
             )}
@@ -226,7 +250,7 @@ export const ClassGalleryTab: React.FC<ClassDocumentsGalleryTabProps> = ({ vm })
         </div>
       ) : (
         <p className="text-xs text-gray-500">
-          {pickText({ ar: 'لا توجد صور منشورة في معرض القسم حالياً.', fr: 'Aucune photo publiée pour cette classe.', en: 'No gallery photos published for this class yet.' }, language)}
+          {pickText({ ar: 'لا توجد صور منشورة في معرض القسم حالياً.', fr: 'Aucune photo publiée pour cette classe.', en: 'No gallery photos published for this class yet.', es: 'Aún no hay fotos publicadas en la galería de esta clase.', de: 'Noch keine Galeriefotos für diese Klasse veröffentlicht.', pt: 'Ainda não há fotos publicadas na galeria desta turma.' }, language)}
         </p>
       )}
     </div>

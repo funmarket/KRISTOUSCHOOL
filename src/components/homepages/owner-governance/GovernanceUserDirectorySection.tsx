@@ -67,6 +67,9 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
               ar: 'بحث في دليل الحسابات (الاسم، اسم المستخدم، البريد)...',
               fr: 'Rechercher dans le répertoire (nom, identifiant, e-mail)...',
               en: 'Search directory by name, username, or email...',
+              es: 'Buscar en el directorio por nombre, usuario o correo...',
+              de: 'Verzeichnis nach Name, Benutzername oder E-Mail durchsuchen...',
+              pt: 'Pesquisar no diretório por nome, utilizador ou e-mail...',
             },
             language,
           )}
@@ -82,7 +85,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
           className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs font-bold"
         >
           <option value="ALL">
-            {pickText({ ar: 'كل الحالات', fr: 'Tous les statuts', en: 'All statuses' }, language)}
+            {pickText({ ar: 'كل الحالات', fr: 'Tous les statuts', en: 'All statuses', es: 'Todos los estados', de: 'Alle Status', pt: 'Todos os estados' }, language)}
           </option>
           {(['APPROVED', 'PENDING', 'REJECTED', 'SUSPENDED', 'REVOKED'] as AccountApprovalStatus[]).map(
             (st) => (
@@ -102,7 +105,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
           className="rounded-xl border border-slate-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-xs font-bold"
         >
           <option value="ALL">
-            {pickText({ ar: 'كل الأدوار الـ 7', fr: 'Les 7 rôles', en: 'All 7 roles' }, language)}
+            {pickText({ ar: 'كل الأدوار الـ 7', fr: 'Les 7 rôles', en: 'All 7 roles', es: 'Los 7 roles', de: 'Alle 7 Rollen', pt: 'Todas as 7 funções' }, language)}
           </option>
           {CANONICAL_ROLES.map((r: AccountRole) => (
             <option key={r} value={r}>
@@ -119,6 +122,9 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
               ar: 'جاري تحميل دليل الحسابات...',
               fr: 'Chargement du répertoire...',
               en: 'Loading account directory...',
+              es: 'Cargando directorio de cuentas...',
+              de: 'Kontoverzeichnis wird geladen...',
+              pt: 'A carregar diretório de contas...',
             },
             language,
           )}
@@ -130,6 +136,9 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
               ar: 'لا توجد حسابات مطابقة.',
               fr: 'Aucun compte correspondant.',
               en: 'No matching accounts found.',
+              es: 'No se encontraron cuentas coincidentes.',
+              de: 'Keine passenden Konten gefunden.',
+              pt: 'Nenhuma conta correspondente encontrada.',
             },
             language,
           )}
@@ -178,6 +187,9 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         ar: 'التفاصيل وسجل التدقيق',
                         fr: 'Détails & Audit',
                         en: 'Details & Audit Trail',
+                        es: 'Detalles y auditoría',
+                        de: 'Details & Prüfprotokoll',
+                        pt: 'Detalhes e auditoria',
                       },
                       language,
                     )}
@@ -199,6 +211,9 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         ar: 'سبب تغيير الحالة (إلزامي للتدقيق)...',
                         fr: 'Motif du changement de statut (obligatoire)...',
                         en: 'Audit reason for lifecycle change (required)...',
+                        es: 'Motivo de auditoría para el cambio de estado (obligatorio)...',
+                        de: 'Prüfungsgrund für Statusänderung (erforderlich)...',
+                        pt: 'Motivo de auditoria para alteração de estado (obrigatório)...',
                       },
                       language,
                     )}
@@ -214,7 +229,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         className="rounded-xl bg-orange-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-orange-700 disabled:opacity-50"
                       >
                         {pickText(
-                          { ar: 'تعليق مؤقت (SUSPEND)', fr: 'Suspendre', en: 'Suspend' },
+                          { ar: 'تعليق مؤقت (SUSPEND)', fr: 'Suspendre', en: 'Suspend', es: 'Suspender', de: 'Sperren', pt: 'Suspender' },
                           language,
                         )}
                       </button>
@@ -225,7 +240,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-rose-700 disabled:opacity-50"
                       >
                         {pickText(
-                          { ar: 'إلغاء نهائي (REVOKE)', fr: 'Révoquer', en: 'Revoke' },
+                          { ar: 'إلغاء نهائي (REVOKE)', fr: 'Révoquer', en: 'Revoke', es: 'Revocar', de: 'Widerrufen', pt: 'Revogar' },
                           language,
                         )}
                       </button>
@@ -242,7 +257,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                       className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
                     >
                       {pickText(
-                        { ar: 'إعادة تفعيل (REACTIVATE)', fr: 'Réactiver', en: 'Reactivate' },
+                        { ar: 'إعادة تفعيل (REACTIVATE)', fr: 'Réactiver', en: 'Reactivate', es: 'Reactivar', de: 'Reaktivieren', pt: 'Reativar' },
                         language,
                       )}
                     </button>
@@ -257,7 +272,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {pickText(
-                          { ar: 'اعتماد (APPROVE)', fr: 'Approuver', en: 'Approve' },
+                          { ar: 'اعتماد (APPROVE)', fr: 'Approuver', en: 'Approve', es: 'Aprobar', de: 'Genehmigen', pt: 'Aprovar' },
                           language,
                         )}
                       </button>
@@ -267,7 +282,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
                         onClick={() => void handleReviewDecision(acct, 'REJECT')}
                         className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-rose-700 disabled:opacity-50"
                       >
-                        {pickText({ ar: 'رفض (REJECT)', fr: 'Refuser', en: 'Reject' }, language)}
+                        {pickText({ ar: 'رفض (REJECT)', fr: 'Refuser', en: 'Reject', es: 'Rechazar', de: 'Ablehnen', pt: 'Rejeitar' }, language)}
                       </button>
                     </>
                   )}
@@ -281,7 +296,7 @@ export const GovernanceUserDirectorySection: React.FC<GovernanceUserDirectorySec
       <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
         <span>
           {pickText(
-            { ar: 'إجمالي الحسابات:', fr: 'Total des comptes :', en: 'Total accounts:' },
+            { ar: 'إجمالي الحسابات:', fr: 'Total des comptes :', en: 'Total accounts:', es: 'Total de cuentas:', de: 'Konten gesamt:', pt: 'Total de contas:' },
             language,
           )}{' '}
           {directoryTotal}

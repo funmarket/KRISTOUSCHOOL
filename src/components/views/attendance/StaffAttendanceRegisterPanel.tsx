@@ -85,7 +85,7 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
           onClick={() => void refreshSchoolData()}
           className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     );
@@ -105,6 +105,9 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
                 ar: 'لا توجد أقسام مسندة لحسابك حالياً',
                 fr: 'Aucune classe assignée à votre compte',
                 en: 'No assigned classes linked to your account yet',
+                es: 'Aún no hay clases asignadas a su cuenta',
+                de: 'Ihrem Konto sind noch keine Klassen zugewiesen',
+                pt: 'Ainda não existem turmas atribuídas à sua conta',
               },
               language,
             )}
@@ -116,6 +119,9 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
               ar: 'ستظهر أقسامك هنا فور إسنادها من قبل إدارة المدرسة لتتمكن من تسجيل الحضور والغياب.',
               fr: 'Vos classes assignées apparaîtront ici dès leur affectation par la direction.',
               en: 'Your assigned classes will appear here once school administration assigns them to you.',
+              es: 'Sus clases asignadas aparecerán aquí una vez que la administración escolar se las asigne.',
+              de: 'Ihre zugewiesenen Klassen erscheinen hier, sobald die Schulleitung sie Ihnen zuweist.',
+              pt: 'As suas turmas atribuídas aparecerão aqui assim que a administração escolar lhas atribuir.',
             },
             language,
           )}
@@ -151,7 +157,7 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
           onClick={() => setOfficeReloadSeq((n) => n + 1)}
           className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
         >
-          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+          {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
         </button>
       </div>
     );
@@ -175,6 +181,9 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
                 ar: 'لا توجد أقسام أو مربون مفعّلون في المدرسة بعد',
                 fr: 'Aucune classe ou aucun enseignant configuré pour le moment',
                 en: 'No school classes or teachers set up yet',
+                es: 'Aún no hay clases ni docentes configurados',
+                de: 'Noch keine Schulklassen oder Lehrkräfte eingerichtet',
+                pt: 'Ainda não existem turmas nem professores configurados',
               },
               language,
             )}
@@ -186,6 +195,9 @@ export const StaffAttendanceRegisterPanel: React.FC<StaffAttendanceRegisterPanel
               ar: 'قم بإنشاء قسم وتعيين مربي في إدارة الأقسام أولاً لفتح سجلات الحضور اليومية.',
               fr: 'Créez d’abord une classe et affectez un enseignant dans la gestion des classes.',
               en: 'Create a class and assign a teacher in Classes management first to oversee daily registers.',
+              es: 'Cree una clase y asigne un docente en Gestión de clases primero para supervisar los registros diarios.',
+              de: 'Erstellen Sie zuerst eine Klasse und weisen Sie eine Lehrkraft in der Klassenverwaltung zu, um Tagesregister zu überwachen.',
+              pt: 'Crie primeiro uma turma e atribua um professor na gestão de turmas para supervisionar os registos diários.',
             },
             language,
           )}

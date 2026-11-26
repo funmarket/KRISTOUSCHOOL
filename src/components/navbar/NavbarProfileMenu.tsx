@@ -67,7 +67,7 @@ export const NavbarProfileMenu: React.FC<NavbarProfileMenuProps> = ({
         <div className="px-4 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
             <Volume2 className="w-3.5 h-3.5 text-gray-400" />
-            <span>{pickText({ ar: 'النغمة', fr: 'Son', en: 'Sound' }, language)}</span>
+            <span>{pickText({ ar: 'النغمة', fr: 'Son', en: 'Sound', es: 'Sonido', de: 'Ton', pt: 'Som' }, language)}</span>
           </span>
           <button
             type="button"
@@ -85,7 +85,7 @@ export const NavbarProfileMenu: React.FC<NavbarProfileMenuProps> = ({
         <div className="px-4 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
             {soundMuted ? <VolumeX className="w-3.5 h-3.5 text-red-500" /> : <Volume2 className="w-3.5 h-3.5 text-gray-400" />}
-            <span>{pickText({ ar: 'كتم الصوت', fr: 'Muet', en: 'Mute' }, language)}</span>
+            <span>{pickText({ ar: 'كتم الصوت', fr: 'Muet', en: 'Mute', es: 'Silencio', de: 'Stumm', pt: 'Silenciar' }, language)}</span>
           </span>
           <button
             type="button"
@@ -99,15 +99,15 @@ export const NavbarProfileMenu: React.FC<NavbarProfileMenuProps> = ({
             }`}
           >
             {soundMuted
-              ? pickText({ ar: 'مكتوم', fr: 'Activé', en: 'Muted' }, language)
-              : pickText({ ar: 'مفعّل', fr: 'Désactivé', en: 'On' }, language)}
+              ? pickText({ ar: 'مكتوم', fr: 'Activé', en: 'Muted', es: 'Silenciado', de: 'Stumm', pt: 'Sem som' }, language)
+              : pickText({ ar: 'مفعّل', fr: 'Désactivé', en: 'On', es: 'Activo', de: 'Ein', pt: 'Ligado' }, language)}
           </button>
         </div>
 
         <div className="px-4 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
             <Smartphone className="w-3.5 h-3.5 text-gray-400" />
-            <span>{pickText({ ar: 'الاهتزاز', fr: 'Vibration', en: 'Vibration' }, language)}</span>
+            <span>{pickText({ ar: 'الاهتزاز', fr: 'Vibration', en: 'Vibration', es: 'Vibración', de: 'Vibration', pt: 'Vibração' }, language)}</span>
           </span>
           <button
             type="button"
@@ -121,14 +121,14 @@ export const NavbarProfileMenu: React.FC<NavbarProfileMenuProps> = ({
             }`}
           >
             {vibrationEnabled
-              ? pickText({ ar: 'مفعّل', fr: 'Activé', en: 'On' }, language)
-              : pickText({ ar: 'معطّل', fr: 'Désactivé', en: 'Off' }, language)}
+              ? pickText({ ar: 'مفعّل', fr: 'Activé', en: 'On', es: 'Activo', de: 'Ein', pt: 'Ligado' }, language)
+              : pickText({ ar: 'معطّل', fr: 'Désactivé', en: 'Off', es: 'Inactivo', de: 'Aus', pt: 'Desligado' }, language)}
           </button>
         </div>
 
         <div className="px-4 py-1.5 flex items-center justify-between gap-2 text-[10px] font-bold">
           <span className="text-gray-400">
-            {pickText({ ar: 'حالة التفضيلات:', fr: 'Préférences :', en: 'Sync status:' }, language)}
+            {pickText({ ar: 'حالة التفضيلات:', fr: 'Préférences :', en: 'Sync status:', es: 'Estado de sincr.:', de: 'Sync-Status:', pt: 'Estado sincr.:' }, language)}
           </span>
           <span
             data-testid="preferences-sync-status"
@@ -145,12 +145,12 @@ export const NavbarProfileMenu: React.FC<NavbarProfileMenuProps> = ({
             {preferencesSyncStatus === 'SAVING'
               ? t('loading')
               : preferencesSyncStatus === 'SAVED'
-              ? pickText({ ar: 'محفوظة', fr: 'Enregistré', en: 'Saved' }, language)
+              ? pickText({ ar: 'محفوظة', fr: 'Enregistré', en: 'Saved', es: 'Guardado', de: 'Gespeichert', pt: 'Guardado' }, language)
               : preferencesSyncStatus === 'UNAVAILABLE'
-              ? pickText({ ar: 'محلي (دون خادم)', fr: 'Local (hors serveur)', en: 'Local (backend pending)' }, language)
+              ? pickText({ ar: 'محلي (دون خادم)', fr: 'Local (hors serveur)', en: 'Local (backend pending)', es: 'Local (sin servidor)', de: 'Lokal (ohne Server)', pt: 'Local (sem servidor)' }, language)
               : preferencesSyncStatus === 'ERROR'
               ? t('error')
-              : pickText({ ar: 'عرض محلي', fr: 'Affichage local', en: 'Local display' }, language)}
+              : pickText({ ar: 'عرض محلي', fr: 'Affichage local', en: 'Local display', es: 'Vista local', de: 'Lokale Ansicht', pt: 'Vista local' }, language)}
           </span>
         </div>
 

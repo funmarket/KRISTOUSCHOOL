@@ -84,6 +84,9 @@ export const PublicFeaturedAndCanteenPanels: React.FC<PublicFeaturedAndCanteenPa
                       ar: 'تعذر تحميل الإعلانات العامة من الخادم.',
                       fr: 'Impossible de charger les annonces publiques.',
                       en: 'Unable to load live public announcements.',
+                      es: 'No se pudieron cargar los anuncios públicos en vivo.',
+                      de: 'Öffentliche Ankündigungen konnten nicht geladen werden.',
+                      pt: 'Não foi possível carregar os anúncios públicos em direto.',
                     },
                     language,
                   )}
@@ -94,7 +97,7 @@ export const PublicFeaturedAndCanteenPanels: React.FC<PublicFeaturedAndCanteenPa
                   onClick={() => void refreshSchoolData()}
                   className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
                 >
-                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
                 </button>
               )}
             </div>
@@ -144,6 +147,9 @@ export const PublicFeaturedAndCanteenPanels: React.FC<PublicFeaturedAndCanteenPa
                       ar: 'تعذر تحميل قائمة الطعام من الخادم.',
                       fr: 'Impossible de charger le menu de la cantine.',
                       en: 'Unable to load live canteen menu.',
+                      es: 'No se pudo cargar el menú del comedor.',
+                      de: 'Der Speiseplan der Mensa konnte nicht geladen werden.',
+                      pt: 'Não foi possível carregar a ementa da cantina.',
                     },
                     language,
                   )}
@@ -154,7 +160,7 @@ export const PublicFeaturedAndCanteenPanels: React.FC<PublicFeaturedAndCanteenPa
                   onClick={() => void refreshSchoolData()}
                   className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 shrink-0"
                 >
-                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+                  {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
                 </button>
               )}
             </div>

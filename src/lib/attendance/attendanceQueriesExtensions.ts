@@ -182,7 +182,12 @@ export async function fetchOfficeAttendanceContext(
     for (const c of Array.isArray(classesRes.data) ? (classesRes.data as any[]) : []) {
       if (!c || !isValidUuid(c.id) || !isNonEmptyString(c.name)) continue;
       const lvlObj = isPlainObject(c.school_levels) ? c.school_levels : null;
-      const lvlField = lang === 'ar' ? lvlObj?.label_ar : lang === 'fr' ? lvlObj?.label_fr : lvlObj?.label_en;
+      const lvlField =
+        lang === 'ar'
+          ? lvlObj?.label_ar
+          : lang === 'fr'
+          ? lvlObj?.label_fr
+          : lvlObj?.label_en || lvlObj?.label_fr || lvlObj?.label_ar;
       const yrObj = isPlainObject(c.academic_years) ? c.academic_years : null;
       classes.push({
         id: c.id,

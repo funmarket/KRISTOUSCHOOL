@@ -123,11 +123,20 @@ export function getNextTunisMidnightDelayMs(now: Date = new Date()): number {
   return remainingSeconds * 1000 + 250;
 }
 
+const ATTENDANCE_LOCALE_MAP: Record<Language, string> = {
+  ar: 'ar-TN',
+  fr: 'fr-TN',
+  en: 'en-GB',
+  es: 'es-ES',
+  de: 'de-DE',
+  pt: 'pt-PT',
+};
+
 export function formatAttendanceDateLabel(isoDate: string, language: Language): string {
   if (!isValidIsoDate(isoDate)) return isoDate;
   const [y, m, d] = isoDate.split('-').map(Number);
   const utcNoon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  const locale = language === 'ar' ? 'ar-TN' : language === 'fr' ? 'fr-TN' : 'en-GB';
+  const locale = ATTENDANCE_LOCALE_MAP[language] ?? 'en-GB';
   try {
     return new Intl.DateTimeFormat(locale, {
       timeZone: TUNIS_TIMEZONE,
@@ -145,7 +154,7 @@ export function formatAttendanceTimestamp(isoTimestamp: string | null | undefine
   if (!isoTimestamp) return '—';
   const parsed = new Date(isoTimestamp);
   if (Number.isNaN(parsed.getTime())) return isoTimestamp;
-  const locale = language === 'ar' ? 'ar-TN' : language === 'fr' ? 'fr-TN' : 'en-GB';
+  const locale = ATTENDANCE_LOCALE_MAP[language] ?? 'en-GB';
   try {
     return new Intl.DateTimeFormat(locale, {
       timeZone: TUNIS_TIMEZONE,

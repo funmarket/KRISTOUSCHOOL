@@ -76,7 +76,7 @@ const CANONICAL_ROLES = new Set([
   'APP_ADMIN', 'MANAGER', 'ADMINISTRATIVE_PERSONNEL', 'TEACHER', 'SCHOOL_STAFF', 'PARENT', 'STUDENT',
 ]);
 const ACCOUNT_STATUSES = new Set(['APPROVED', 'PENDING', 'REJECTED', 'SUSPENDED', 'REVOKED']);
-const LANGUAGES = new Set(['ar', 'fr', 'en']);
+const LANGUAGES = new Set(['ar', 'fr', 'en', 'es', 'de', 'pt']);
 const THEMES = new Set(['light', 'pitch-black']);
 const SOUNDS = new Set(['Kristou Bell', 'Soft Chime', 'Classroom Bell', 'Gentle Pop', 'Silent']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -419,6 +419,18 @@ export async function handleTelegramPrivateOps(
       const stale = Number.isSafeInteger(authDate) && authDate > 0 &&
         nowSeconds - authDate > MAX_INIT_DATA_AGE_SECONDS;
       throw new GatewayError(stale ? 'telegram_auth_expired' : 'invalid_telegram_auth', 401);
+    }
+
+    if (operation === 'preferences.save') {
+      optionalEnum(params.language, LANGUAGES);
+      optionalEnum(params.theme, THEMES);
+      optionalEnum(params.notificationSound, SOUNDS);
+      if (params.soundMuted !== undefined && params.soundMuted !== null && typeof params.soundMuted !== 'boolean') {
+        throw new GatewayError('invalid_request', 400);
+      }
+      if (params.vibrationEnabled !== undefined && params.vibrationEnabled !== null && typeof params.vibrationEnabled !== 'boolean') {
+        throw new GatewayError('invalid_request', 400);
+      }
     }
 
     const browserUserId = await verifyBrowserIdentity(request, dependencies);

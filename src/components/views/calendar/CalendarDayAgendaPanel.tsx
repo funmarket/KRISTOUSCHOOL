@@ -86,25 +86,11 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
         </div>
       ) : selectedDayEvents.length === 0 && backendStatus === 'READY' ? (
         <p className="text-xs text-gray-500 py-6 text-center">
-          {pickText(
-            {
-              ar: 'لا توجد أحداث مجدولة لهذا اليوم.',
-              fr: 'Aucun événement prévu pour cette date.',
-              en: 'No events scheduled for this date.',
-            },
-            language,
-          )}
+          {pickText({ ar: 'لا توجد أحداث مجدولة لهذا اليوم.', fr: 'Aucun événement prévu pour cette date.', en: 'No events scheduled for this date.', es: 'No hay eventos programados para esta fecha.', de: 'Keine Veranstaltungen für dieses Datum geplant.', pt: 'Não há eventos agendados para esta data.' }, language)}
         </p>
       ) : selectedDayEvents.length === 0 ? (
         <p className="text-xs text-gray-500 py-6 text-center">
-          {pickText(
-            {
-              ar: 'لا توجد أحداث معروضة لهذا التاريخ.',
-              fr: 'Aucun événement affiché pour cette date.',
-              en: 'No displayed events for this date.',
-            },
-            language,
-          )}
+          {pickText({ ar: 'لا توجد أحداث معروضة لهذا التاريخ.', fr: 'Aucun événement affiché pour cette date.', en: 'No displayed events for this date.', es: 'No hay eventos mostrados para esta fecha.', de: 'Keine angezeigten Veranstaltungen für dieses Datum.', pt: 'Não há eventos exibidos para esta data.' }, language)}
         </p>
       ) : (
         <div className="space-y-3">
@@ -115,13 +101,10 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
               (cid) => classNameById.get(cid) || cid,
             );
             const scopeBadgeLabel = isWholeSchool
-              ? pickText({ ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school' }, language)
+              ? pickText({ ar: 'كامل المدرسة', fr: 'Toute l’école', en: 'Whole school', es: 'Toda la escuela', de: 'Ganze Schule', pt: 'Toda a escola' }, language)
               : visibleTargetNames.length > 0
               ? visibleTargetNames.join(', ')
-              : pickText(
-                  { ar: 'قسم مستهدف', fr: 'Classe ciblée', en: 'Targeted class' },
-                  language,
-                );
+              : pickText({ ar: 'قسم مستهدف', fr: 'Classe ciblée', en: 'Targeted class', es: 'Clase objetivo', de: 'Zielklasse', pt: 'Turma alvo' }, language);
             const isCancelled = ev.status === 'CANCELLED';
             return (
               <div
@@ -153,7 +136,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                       >
                         <Globe className="w-3 h-3" />
                         <span>
-                          {pickText({ ar: 'عام', fr: 'Public', en: 'Public' }, language)}
+                          {pickText({ ar: 'عام', fr: 'Public', en: 'Public', es: 'Público', de: 'Öffentlich', pt: 'Público' }, language)}
                         </span>
                       </span>
                     )}
@@ -165,7 +148,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                     >
                       <XCircle className="w-3 h-3" />
                       <span>
-                        {pickText({ ar: 'ملغى', fr: 'ANNULÉ', en: 'CANCELLED' }, language)}
+                        {pickText({ ar: 'ملغى', fr: 'ANNULÉ', en: 'CANCELLED', es: 'CANCELADO', de: 'ABGESAGT', pt: 'CANCELADO' }, language)}
                       </span>
                     </span>
                   )}
@@ -203,26 +186,12 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                       >
                         <Check className="w-3 h-3" />
                         <span>
-                          {pickText(
-                            {
-                              ar: `ردك السابق (${formatRsvpLabel(ev.myResponse, language)})`,
-                              fr: `Réponse précédente (${formatRsvpLabel(ev.myResponse, language)})`,
-                              en: `Prior response: ${formatRsvpLabel(ev.myResponse, language)}`,
-                            },
-                            language,
-                          )}
+                          {pickText({ ar: `ردك السابق (${formatRsvpLabel(ev.myResponse, language)})`, fr: `Réponse précédente (${formatRsvpLabel(ev.myResponse, language)})`, en: `Prior response: ${formatRsvpLabel(ev.myResponse, language)}`, es: `Respuesta anterior: ${formatRsvpLabel(ev.myResponse, language)}`, de: `Vorherige Antwort: ${formatRsvpLabel(ev.myResponse, language)}`, pt: `Resposta anterior: ${formatRsvpLabel(ev.myResponse, language)}` }, language)}
                         </span>
                       </div>
                     )}
                     <p className="text-[10px] text-gray-500">
-                      {pickText(
-                        {
-                          ar: 'إشعار إلغاء حدث فقط — لا يُسجل غياباً ولا يغلق المدرسة ولا يُعد إذن خروج.',
-                          fr: 'Annulation d’événement uniquement — n’enregistre ni absence, ni fermeture, ni sortie.',
-                          en: 'Event cancellation notice only — does not record pupil absence, school closure, or pickup release.',
-                        },
-                        language,
-                      )}
+                      {pickText({ ar: 'إشعار إلغاء حدث فقط — لا يُسجل غياباً ولا يغلق المدرسة ولا يُعد إذن خروج.', fr: 'Annulation d’événement uniquement — n’enregistre ni absence, ni fermeture, ni sortie.', en: 'Event cancellation notice only — does not record pupil absence, school closure, or pickup release.', es: 'Solo aviso de cancelación del evento: no registra ausencia, cierre escolar ni salida.', de: 'Nur Veranstaltungsabsage — erfasst weder Abwesenheit noch Schulschließung oder Abholfreigabe.', pt: 'Apenas aviso de cancelamento — não regista falta, encerramento escolar nem autorização de saída.' }, language)}
                     </p>
                   </div>
                 )}
@@ -242,9 +211,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                           }`}
                         >
                           <Check className="w-3 h-3" />
-                          <span>
-                            {pickText({ ar: 'سأحضر', fr: 'Participer', en: 'Attending' }, language)}
-                          </span>
+                          <span>{pickText({ ar: 'سأحضر', fr: 'Participer', en: 'Attending', es: 'Asistiré', de: 'Teilnahme', pt: 'Participar' }, language)}</span>
                         </button>
 
                         <button
@@ -258,12 +225,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                           }`}
                         >
                           <Check className="w-3 h-3" />
-                          <span>
-                            {pickText(
-                              { ar: 'تم الاطلاع', fr: 'Vu', en: 'Acknowledge' },
-                              language,
-                            )}
-                          </span>
+                          <span>{pickText({ ar: 'تم الاطلاع', fr: 'Vu', en: 'Acknowledge', es: 'Visto', de: 'Bestätigen', pt: 'Confirmar leitura' }, language)}</span>
                         </button>
 
                         <button
@@ -277,9 +239,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                           }`}
                         >
                           <XCircle className="w-3 h-3" />
-                          <span>
-                            {pickText({ ar: 'معتذر', fr: 'Absent', en: 'Decline' }, language)}
-                          </span>
+                          <span>{pickText({ ar: 'معتذر', fr: 'Absent', en: 'Decline', es: 'No asistiré', de: 'Absagen', pt: 'Recusar' }, language)}</span>
                         </button>
                       </>
                     )}
@@ -305,14 +265,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                       data-testid="calendar-cancel-reason-input"
                       value={cancelReason}
                       onChange={(e) => setCancelReason(e.target.value)}
-                      placeholder={pickText(
-                        {
-                          ar: 'سبب الإلغاء',
-                          fr: 'Motif d’annulation',
-                          en: 'Cancellation reason',
-                        },
-                        language,
-                      )}
+                      placeholder={pickText({ ar: 'سبب الإلغاء', fr: 'Motif d’annulation', en: 'Cancellation reason', es: 'Motivo de cancelación', de: 'Absagegrund', pt: 'Motivo do cancelamento' }, language)}
                       className="w-full p-2 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs"
                     />
                     <button
@@ -324,14 +277,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
                     >
                       {cancellingSubmitting
                         ? t('loading')
-                        : pickText(
-                            {
-                              ar: 'تأكيد الإلغاء',
-                              fr: 'Confirmer l’annulation',
-                              en: 'Confirm cancel',
-                            },
-                            language,
-                          )}
+                        : pickText({ ar: 'تأكيد الإلغاء', fr: 'Confirmer l’annulation', en: 'Confirm cancel', es: 'Confirmar cancelación', de: 'Absage bestätigen', pt: 'Confirmar cancelamento' }, language)}
                     </button>
                   </div>
                 )}
@@ -346,14 +292,7 @@ export const CalendarDayAgendaPanel: React.FC<CalendarDayAgendaPanelProps> = ({
               onClick={() => setAgendaLimit((n) => n + AGENDA_PAGE_SIZE)}
               className="w-full py-2 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-900"
             >
-              {pickText(
-                {
-                  ar: `عرض المزيد (${selectedDayEvents.length - pagedDayEvents.length})`,
-                  fr: `Afficher plus (${selectedDayEvents.length - pagedDayEvents.length})`,
-                  en: `Show more (${selectedDayEvents.length - pagedDayEvents.length})`,
-                },
-                language,
-              )}
+              {pickText({ ar: `عرض المزيد (${selectedDayEvents.length - pagedDayEvents.length})`, fr: `Afficher plus (${selectedDayEvents.length - pagedDayEvents.length})`, en: `Show more (${selectedDayEvents.length - pagedDayEvents.length})`, es: `Mostrar más (${selectedDayEvents.length - pagedDayEvents.length})`, de: `Mehr anzeigen (${selectedDayEvents.length - pagedDayEvents.length})`, pt: `Mostrar mais (${selectedDayEvents.length - pagedDayEvents.length})` }, language)}
             </button>
           )}
         </div>

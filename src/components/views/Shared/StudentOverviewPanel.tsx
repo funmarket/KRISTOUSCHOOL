@@ -27,13 +27,13 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
   const formatStatus = (status: ClassStudentRosterItem['enrollmentStatus']) => {
     switch (status) {
       case 'ACTIVE':
-        return pickText({ ar: 'نشط', fr: 'Actif', en: 'Active' }, language);
+        return pickText({ ar: 'نشط', fr: 'Actif', en: 'Active', es: 'Activo', de: 'Aktiv', pt: 'Ativo' }, language);
       case 'TRANSFERRED':
-        return pickText({ ar: 'منقول', fr: 'Transféré', en: 'Transferred' }, language);
+        return pickText({ ar: 'منقول', fr: 'Transféré', en: 'Transferred', es: 'Trasladado', de: 'Versetzt', pt: 'Transferido' }, language);
       case 'WITHDRAWN':
-        return pickText({ ar: 'منسحب', fr: 'Retiré', en: 'Withdrawn' }, language);
+        return pickText({ ar: 'منسحب', fr: 'Retiré', en: 'Withdrawn', es: 'Retirado', de: 'Abgemeldet', pt: 'Desistente' }, language);
       case 'COMPLETED':
-        return pickText({ ar: 'مكمل', fr: 'Terminé', en: 'Completed' }, language);
+        return pickText({ ar: 'مكمل', fr: 'Terminé', en: 'Completed', es: 'Completado', de: 'Abgeschlossen', pt: 'Concluído' }, language);
       default:
         return status;
     }
@@ -57,6 +57,9 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
                 ar: 'العودة إلى قائمة التلاميذ',
                 fr: 'Retour à la liste des élèves',
                 en: 'Back to student list',
+                es: 'Volver a la lista de alumnos',
+                de: 'Zurück zur Schülerliste',
+                pt: 'Voltar à lista de alunos',
               },
               language,
             )}
@@ -83,7 +86,7 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
               {student.fullName}
             </h3>
             <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono" data-testid="student-overview-code">
-              {pickText({ ar: 'المعرف المدرسي:', fr: 'Code élève :', en: 'Student Code:' }, language)} {student.studentCode}
+              {pickText({ ar: 'المعرف المدرسي:', fr: 'Code élève :', en: 'Student Code:', es: 'Código de alumno:', de: 'Schülercode:', pt: 'Código do aluno:' }, language)} {student.studentCode}
             </p>
           </div>
         </div>
@@ -91,7 +94,7 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800/80 space-y-1">
             <span className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-zinc-500">
-              {pickText({ ar: 'حالة التسجيل', fr: 'Statut d’inscription', en: 'Enrollment Status' }, language)}
+              {pickText({ ar: 'حالة التسجيل', fr: 'Statut d’inscription', en: 'Enrollment Status', es: 'Estado de matrícula', de: 'Einschreibungsstatus', pt: 'Estado da matrícula' }, language)}
             </span>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -103,7 +106,7 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800/80 space-y-1">
             <span className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-zinc-500">
-              {pickText({ ar: 'تاريخ التسجيل', fr: 'Date d’inscription', en: 'Enrollment Date' }, language)}
+              {pickText({ ar: 'تاريخ التسجيل', fr: 'Date d’inscription', en: 'Enrollment Date', es: 'Fecha de matrícula', de: 'Anmeldedatum', pt: 'Data de matrícula' }, language)}
             </span>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -115,7 +118,7 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800/80 space-y-1">
             <span className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-zinc-500">
-              {pickText({ ar: 'القسم الدراسي', fr: 'Classe scolaire', en: 'School Class' }, language)}
+              {pickText({ ar: 'القسم الدراسي', fr: 'Classe scolaire', en: 'School Class', es: 'Clase escolar', de: 'Schulklasse', pt: 'Turma escolar' }, language)}
             </span>
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -128,7 +131,7 @@ export const StudentOverviewPanel: React.FC<StudentOverviewPanelProps> = ({
           {schoolClass.roomLabel && (
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800/80 space-y-1">
               <span className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-zinc-500">
-                {pickText({ ar: 'القاعة', fr: 'Salle', en: 'Room' }, language)}
+                {pickText({ ar: 'القاعة', fr: 'Salle', en: 'Room', es: 'Aula', de: 'Raum', pt: 'Sala' }, language)}
               </span>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400" />

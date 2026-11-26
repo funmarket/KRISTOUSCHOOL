@@ -317,18 +317,18 @@ export function usePerformanceViewController() {
   const hasRefreshError = refreshErrorScopeKey === actorScopeKey;
 
   const unavailableBadgeLabel = pickText(
-    { ar: 'غير متاح حالياً', fr: 'Indisponible pour le moment', en: 'Currently unavailable' },
+    { ar: 'غير متاح حالياً', fr: 'Indisponible pour le moment', en: 'Currently unavailable', es: 'No disponible actualmente', de: 'Derzeit nicht verfügbar', pt: 'Atualmente indisponível' },
     language,
   );
   const readOnlyBadgeLabel = pickText(
-    { ar: 'عرض للقراءة فقط', fr: 'Consultation seule', en: 'Read-only view' },
+    { ar: 'عرض للقراءة فقط', fr: 'Consultation seule', en: 'Read-only view', es: 'Vista de solo lectura', de: 'Leseansicht', pt: 'Vista apenas de leitura' },
     language,
   );
   const serviceUnavailableLabel = pickText(
-    { ar: 'الخدمة غير متاحة حالياً', fr: 'Service actuellement indisponible', en: 'Service currently unavailable' },
+    { ar: 'الخدمة غير متاحة حالياً', fr: 'Service actuellement indisponible', en: 'Service currently unavailable', es: 'Servicio no disponible actualmente', de: 'Dienst derzeit nicht verfügbar', pt: 'Serviço atualmente indisponível' },
     language,
   );
-  const retryLabel = pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language);
+  const retryLabel = pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language);
 
   return {
     currentUser, language, t, isTeacher, isParent, isAuthorizedRole, actorScopeKey,

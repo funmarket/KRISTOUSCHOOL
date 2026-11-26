@@ -21,15 +21,18 @@ export const EmptyFeatureState: React.FC<EmptyFeatureStateProps> = ({
 }) => {
   const { theme, language } = useApp();
 
-  const badgeLabels: Record<CardAvailabilityState, { ar: string; fr: string; en: string }> = {
-    AVAILABLE: { ar: 'متاح', fr: 'Disponible', en: 'Available' },
-    AVAILABLE_READ_ONLY: { ar: 'قراءة فقط', fr: 'Lecture seule', en: 'Read-only' },
-    COMING_SOON: { ar: 'قريباً', fr: 'Bientôt disponible', en: 'Coming soon' },
-    UNAUTHORIZED: { ar: 'غير مصرح', fr: 'Accès restreint', en: 'Restricted' },
+  const badgeLabels: Record<CardAvailabilityState, { ar: string; fr: string; en: string; es: string; de: string; pt: string }> = {
+    AVAILABLE: { ar: 'متاح', fr: 'Disponible', en: 'Available', es: 'Disponible', de: 'Verfügbar', pt: 'Disponível' },
+    AVAILABLE_READ_ONLY: { ar: 'قراءة فقط', fr: 'Lecture seule', en: 'Read-only', es: 'Solo lectura', de: 'Schreibgeschützt', pt: 'Só de leitura' },
+    COMING_SOON: { ar: 'قريباً', fr: 'Bientôt disponible', en: 'Coming soon', es: 'Próximamente', de: 'Demnächst', pt: 'Em breve' },
+    UNAUTHORIZED: { ar: 'غير مصرح', fr: 'Accès restreint', en: 'Restricted', es: 'Restringido', de: 'Eingeschränkt', pt: 'Restrito' },
     BLOCKED_BACKEND: {
       ar: 'بانتظار ربط الخادم (Supabase)',
       fr: 'En attente du contrat serveur Supabase',
       en: 'Awaiting verified backend contract',
+      es: 'A la espera del contrato del servidor',
+      de: 'Warten auf geprüften Serververtrag',
+      pt: 'A aguardar contrato verificado do servidor',
     },
   };
 
@@ -37,6 +40,9 @@ export const EmptyFeatureState: React.FC<EmptyFeatureStateProps> = ({
     ar: 'إغلاق',
     fr: 'Fermer',
     en: 'Dismiss',
+    es: 'Cerrar',
+    de: 'Schließen',
+    pt: 'Fechar',
   };
 
   return (

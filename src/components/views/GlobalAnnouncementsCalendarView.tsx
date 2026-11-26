@@ -149,6 +149,9 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
           ar: 'تم نشر الإعلان المدرسي بنجاح.',
           fr: 'Annonce scolaire publiée.',
           en: 'School broadcast published.',
+          es: 'Anuncio escolar publicado.',
+          de: 'Schulmitteilung veröffentlicht.',
+          pt: 'Anúncio escolar publicado.',
         },
         language,
       ),
@@ -170,6 +173,9 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
                 ar: 'الإعلانات المدرسية الرسمية والتقويم العام للمؤسسة.',
                 fr: 'Communications officielles et calendrier général de l’école.',
                 en: 'Official school-wide announcements and school campus calendar.',
+                es: 'Anuncios oficiales y calendario general de la escuela.',
+                de: 'Offizielle Schulmitteilungen und allgemeiner Schulkalender.',
+                pt: 'Anúncios oficiais e calendário geral da escola.',
               },
               language,
             )}
@@ -213,7 +219,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
             >
               <h2 className="font-bold text-sm text-gray-900 dark:text-white">
                 {pickText(
-                  { ar: 'نشر إعلان مدرسي عام', fr: 'Publier une annonce générale', en: 'Publish School Broadcast' },
+                  { ar: 'نشر إعلان مدرسي عام', fr: 'Publier une annonce générale', en: 'Publish School Broadcast', es: 'Publicar anuncio escolar', de: 'Schulmitteilung veröffentlichen', pt: 'Publicar anúncio escolar' },
                   language,
                 )}
               </h2>
@@ -239,7 +245,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={pickText({ ar: 'عنوان الإعلان', fr: 'Titre', en: 'Title' }, language)}
+                  placeholder={pickText({ ar: 'عنوان الإعلان', fr: 'Titre', en: 'Title', es: 'Título', de: 'Titel', pt: 'Título' }, language)}
                   className="sm:col-span-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
                 />
                 <select
@@ -257,7 +263,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder={pickText(
-                  { ar: 'نص الإعلان...', fr: 'Contenu de l’annonce...', en: 'Announcement message...' },
+                  { ar: 'نص الإعلان...', fr: 'Contenu de l’annonce...', en: 'Announcement message...', es: 'Mensaje del anuncio...', de: 'Mitteilungstext...', pt: 'Mensagem do anúncio...' },
                   language,
                 )}
                 className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-xs"
@@ -273,19 +279,19 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
                     data-testid="broadcast-audience-scope"
                   >
                     <option value="ALL_SCHOOL">
-                      {pickText({ ar: 'كل المدرسة (ALL_SCHOOL)', fr: 'Toute l’école (ALL_SCHOOL)', en: 'All School (ALL_SCHOOL)' }, language)}
+                      {pickText({ ar: 'كل المدرسة (ALL_SCHOOL)', fr: 'Toute l’école (ALL_SCHOOL)', en: 'All School (ALL_SCHOOL)', es: 'Toda la escuela (ALL_SCHOOL)', de: 'Ganze Schule (ALL_SCHOOL)', pt: 'Toda a escola (ALL_SCHOOL)' }, language)}
                     </option>
                     <option value="ALL_CLASSES">
-                      {pickText({ ar: 'جميع الأقسام (ALL_CLASSES)', fr: 'Toutes les classes (ALL_CLASSES)', en: 'All Classes (ALL_CLASSES)' }, language)}
+                      {pickText({ ar: 'جميع الأقسام (ALL_CLASSES)', fr: 'Toutes les classes (ALL_CLASSES)', en: 'All Classes (ALL_CLASSES)', es: 'Todas las clases (ALL_CLASSES)', de: 'Alle Klassen (ALL_CLASSES)', pt: 'Todas as turmas (ALL_CLASSES)' }, language)}
                     </option>
                     <option value="SELECTED_LEVELS">
-                      {pickText({ ar: 'مستويات محددة (SELECTED_LEVELS)', fr: 'Niveaux ciblés (SELECTED_LEVELS)', en: 'Selected Levels (SELECTED_LEVELS)' }, language)}
+                      {pickText({ ar: 'مستويات محددة (SELECTED_LEVELS)', fr: 'Niveaux ciblés (SELECTED_LEVELS)', en: 'Selected Levels (SELECTED_LEVELS)', es: 'Niveles seleccionados (SELECTED_LEVELS)', de: 'Ausgewählte Stufen (SELECTED_LEVELS)', pt: 'Níveis selecionados (SELECTED_LEVELS)' }, language)}
                     </option>
                     <option value="SELECTED_CLASSES">
-                      {pickText({ ar: 'أقسام محددة (SELECTED_CLASSES)', fr: 'Classes ciblées (SELECTED_CLASSES)', en: 'Selected Classes (SELECTED_CLASSES)' }, language)}
+                      {pickText({ ar: 'أقسام محددة (SELECTED_CLASSES)', fr: 'Classes ciblées (SELECTED_CLASSES)', en: 'Selected Classes (SELECTED_CLASSES)', es: 'Clases seleccionadas (SELECTED_CLASSES)', de: 'Ausgewählte Klassen (SELECTED_CLASSES)', pt: 'Turmas selecionadas (SELECTED_CLASSES)' }, language)}
                     </option>
                     <option value="PUBLIC_SITE">
-                      {pickText({ ar: 'الموقع العام (PUBLIC_SITE)', fr: 'Site public (PUBLIC_SITE)', en: 'Public Site (PUBLIC_SITE)' }, language)}
+                      {pickText({ ar: 'الموقع العام (PUBLIC_SITE)', fr: 'Site public (PUBLIC_SITE)', en: 'Public Site (PUBLIC_SITE)', es: 'Sitio público (PUBLIC_SITE)', de: 'Öffentliche Website (PUBLIC_SITE)', pt: 'Site público (PUBLIC_SITE)' }, language)}
                     </option>
                   </select>
                   <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
@@ -296,7 +302,7 @@ export const GlobalAnnouncementsCalendarView: React.FC<GlobalAnnouncementsCalend
                     />
                     <span>
                       {pickText(
-                        { ar: 'عرض على الموقع العام', fr: 'Afficher sur le site public', en: 'Show on Public Site' },
+                        { ar: 'عرض على الموقع العام', fr: 'Afficher sur le site public', en: 'Show on Public Site', es: 'Mostrar en sitio público', de: 'Auf öffentlicher Website zeigen', pt: 'Mostrar no site público' },
                         language,
                       )}
                     </span>

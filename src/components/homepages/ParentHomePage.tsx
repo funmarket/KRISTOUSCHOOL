@@ -80,6 +80,9 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
             ar: 'تابع أطفالك، الواجبات، الملاحظات، الاستلام المدرسي، وقائمة الطعام من مكان واحد.',
             fr: 'Suivez vos enfants, les devoirs, les notes aux enseignants, la sortie sécurisée et la cantine.',
             en: 'Follow your linked children, classwork, parent notes, secure pickup, and school services.',
+            es: 'Sigue a tus hijos, deberes, notas de padres, recogida segura y servicios escolares desde un solo lugar.',
+            de: 'Verfolgen Sie Ihre Kinder, Hausaufgaben, Elternhinweise, sichere Abholung und Schuldienste an einem Ort.',
+            pt: 'Acompanhe os seus filhos, trabalhos, notas dos pais, recolha segura e serviços escolares num só lugar.',
           },
           language,
         )}
@@ -112,6 +115,9 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
               ar: 'لا يوجد أطفال مرتبطون بحسابك حالياً',
               fr: 'Aucun enfant lié à votre compte pour le moment',
               en: 'No linked children assigned yet',
+              es: 'Aún no hay hijos vinculados a tu cuenta',
+              de: 'Noch keine verknüpften Kinder zugewiesen',
+              pt: 'Ainda não há filhos associados à sua conta',
             },
             language,
           )}
@@ -120,6 +126,9 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
               ar: 'يرجى التواصل مع إدارة مدرسة كريستو أو تقديم ملف تسجيل لربط حسابك بملف طفلك الدراسي.',
               fr: 'Veuillez contacter l’administration KRISTOU ou soumettre un dossier d’inscription pour lier votre enfant.',
               en: 'Please contact KRISTOU School administration or submit a registration application to link your child to your parent account.',
+              es: 'Contacta con la administración de KRISTOU School o presenta una solicitud de inscripción para vincular a tu hijo.',
+              de: 'Bitte wenden Sie sich an die Verwaltung der KRISTOU School oder reichen Sie eine Anmeldung ein, um Ihr Kind zu verknüpfen.',
+              pt: 'Contacte a administração da KRISTOU School ou submeta um pedido de inscrição para associar o seu filho à sua conta.',
             },
             language,
           )}
@@ -128,6 +137,9 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
               ar: 'فتح بوابة التسجيل',
               fr: 'Ouvrir les inscriptions',
               en: 'Open Registration',
+              es: 'Abrir inscripciones',
+              de: 'Anmeldung öffnen',
+              pt: 'Abrir inscrições',
             },
             language,
           )}
@@ -151,6 +163,9 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
                       ar: `المخولون بالاستلام: ${activeChild.pickupAuthorizedNames.join('، ')}`,
                       fr: `Personnes autorisées à la sortie : ${activeChild.pickupAuthorizedNames.join(', ')}`,
                       en: `Authorized pickup persons: ${activeChild.pickupAuthorizedNames.join(', ')}`,
+                      es: `Personas autorizadas para recoger: ${activeChild.pickupAuthorizedNames.join(', ')}`,
+                      de: `Abholberechtigte Personen: ${activeChild.pickupAuthorizedNames.join(', ')}`,
+                      pt: `Pessoas autorizadas para recolha: ${activeChild.pickupAuthorizedNames.join(', ')}`,
                     },
                     language,
                   )}
@@ -162,7 +177,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
               onClick={() => setShowChildrenSummary(false)}
               className="rounded-xl border border-slate-300 dark:border-zinc-700 px-3 py-1.5 text-xs font-bold"
             >
-              {pickText({ ar: 'إخفاء', fr: 'Masquer', en: 'Hide' }, language)}
+              {pickText({ ar: 'إخفاء', fr: 'Masquer', en: 'Hide', es: 'Ocultar', de: 'Ausblenden', pt: 'Ocultar' }, language)}
             </button>
           </div>
         </div>
@@ -172,7 +187,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
       <HomeCardGrid ariaLabel="Parent shortcuts">
         <HomeShortcutCard
           id="parent-my-children"
-          title={pickText({ ar: 'أطفالي', fr: 'Mes enfants', en: 'My Children' }, language)}
+          title={pickText({ ar: 'أطفالي', fr: 'Mes enfants', en: 'My Children', es: 'Mis hijos', de: 'Meine Kinder', pt: 'Os meus filhos' }, language)}
           actionLabel={openActionLabel}
           icon="👦"
           tone="orange"
@@ -181,7 +196,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-my-classes"
-          title={pickText({ ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }, language)}
+          title={pickText({ ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes', es: 'Mis clases', de: 'Meine Klassen', pt: 'As minhas turmas' }, language)}
           actionLabel={openActionLabel}
           icon="🏫"
           tone="blue"
@@ -191,7 +206,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
         <HomeShortcutCard
           id="parent-homework"
           title={pickText(
-            { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork' },
+            { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork', es: 'Deberes y tareas', de: 'Hausaufgaben & Aufgaben', pt: 'Trabalhos de casa e aula' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -202,7 +217,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-calendar"
-          title={pickText({ ar: 'الروزنامة', fr: 'Calendrier', en: 'Calendar' }, language)}
+          title={pickText({ ar: 'الروزنامة', fr: 'Calendrier', en: 'Calendar', es: 'Calendario', de: 'Kalender', pt: 'Calendário' }, language)}
           actionLabel={openActionLabel}
           icon="📅"
           tone="yellow"
@@ -211,7 +226,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-messages"
-          title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
+          title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages', es: 'Mensajes', de: 'Nachrichten', pt: 'Mensagens' }, language)}
           actionLabel={openActionLabel}
           statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
           icon="💬"
@@ -222,7 +237,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
         <HomeShortcutCard
           id="parent-notes"
           title={pickText(
-            { ar: 'ملاحظات الأولياء', fr: 'Notes des parents', en: 'Parent Notes' },
+            { ar: 'ملاحظات الأولياء', fr: 'Notes des parents', en: 'Parent Notes', es: 'Notas de los padres', de: 'Elternhinweise', pt: 'Notas dos pais' },
             language,
           )}
           actionLabel={openActionLabel}
@@ -233,7 +248,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-pickup"
-          title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' }, language)}
+          title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup', es: 'Recogida', de: 'Abholung', pt: 'Recolha' }, language)}
           actionLabel={openActionLabel}
           icon="🚸"
           tone="teal"
@@ -242,7 +257,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-food-menu"
-          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+          title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu', es: 'Menú del comedor', de: 'Speiseplan', pt: 'Ementa da cantina' }, language)}
           actionLabel={openActionLabel}
           icon="🍽️"
           tone="yellow"
@@ -251,7 +266,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-teachers"
-          title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers' }, language)}
+          title={pickText({ ar: 'المربون', fr: 'Enseignants', en: 'Teachers', es: 'Docentes', de: 'Lehrkräfte', pt: 'Docentes' }, language)}
           actionLabel={openActionLabel}
           icon="👩‍🏫"
           tone="blue"
@@ -260,7 +275,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-administration"
-          title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration' }, language)}
+          title={pickText({ ar: 'الإدارة', fr: 'Administration', en: 'Administration', es: 'Administración', de: 'Verwaltung', pt: 'Administração' }, language)}
           actionLabel={openActionLabel}
           icon="🏛️"
           tone="slate"
@@ -269,7 +284,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-registration"
-          title={pickText({ ar: 'التسجيل', fr: 'Inscription', en: 'Registration' }, language)}
+          title={pickText({ ar: 'التسجيل', fr: 'Inscription', en: 'Registration', es: 'Inscripción', de: 'Anmeldung', pt: 'Inscrição' }, language)}
           actionLabel={openActionLabel}
           icon="📋"
           tone="orange"
@@ -278,7 +293,7 @@ export const ParentHomePage: React.FC<ParentHomePageProps> = ({
 
         <HomeShortcutCard
           id="parent-gallery"
-          title={pickText({ ar: 'معرض الصور', fr: 'Galerie', en: 'Gallery' }, language)}
+          title={pickText({ ar: 'معرض الصور', fr: 'Galerie', en: 'Gallery', es: 'Galería', de: 'Galerie', pt: 'Galeria' }, language)}
           actionLabel={openActionLabel}
           icon="🖼️"
           tone="purple"

@@ -96,8 +96,8 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
             <span>
               {pickText(
                 isTeacherView
-                  ? { ar: 'العودة إلى أقسامي', fr: 'Retour à mes classes', en: 'Back to My Classes' }
-                  : { ar: 'العودة إلى قائمة الأقسام', fr: 'Retour aux classes', en: 'Back to Classes' },
+                  ? { ar: 'العودة إلى أقسامي', fr: 'Retour à mes classes', en: 'Back to My Classes', es: 'Volver a mis clases', de: 'Zurück zu meinen Klassen', pt: 'Voltar às minhas turmas' }
+                  : { ar: 'العودة إلى قائمة الأقسام', fr: 'Retour aux classes', en: 'Back to Classes', es: 'Volver a las clases', de: 'Zurück zu den Klassen', pt: 'Voltar às turmas' },
                 language,
               )}
             </span>
@@ -115,7 +115,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
             >
               <MessageSquare className="w-4 h-4" />
               <span>
-                {pickText({ ar: 'فتح فضاء القسم', fr: 'Ouvrir l’espace classe', en: 'Open Class Community' }, language)}
+                {pickText({ ar: 'فتح فضاء القسم', fr: 'Ouvrir l’espace classe', en: 'Open Class Community', es: 'Abrir espacio de clase', de: 'Klassenbereich öffnen', pt: 'Abrir espaço da turma' }, language)}
               </span>
             </button>
           )}
@@ -131,7 +131,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
             >
               <ClipboardCheck className="w-4 h-4" />
               <span>
-                {pickText({ ar: 'تسجيل الحضور والغياب', fr: 'Faire l’appel', en: 'Take Attendance' }, language)}
+                {pickText({ ar: 'تسجيل الحضور والغياب', fr: 'Faire l’appel', en: 'Take Attendance', es: 'Pasar lista', de: 'Anwesenheit erfassen', pt: 'Registar presenças' }, language)}
               </span>
             </button>
           )}
@@ -146,19 +146,12 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
         <HomePageHeader
           badgeText={pickText(
             isTeacherView
-              ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }
+              ? { ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes', es: 'Mis clases', de: 'Meine Klassen', pt: 'As minhas turmas' }
               : HOMEPAGE_COMMON_TEXT.classesNav,
             language,
           )}
           title={selectedClass.name}
-          subtitle={pickText(
-            {
-              ar: `المربي الرئيسي: ${selectedClass.homeroomTeacherName || 'غير معين'} • عدد التلاميذ المسجلين: ${selectedClass.activeStudentCount}`,
-              fr: `Enseignant principal : ${selectedClass.homeroomTeacherName || 'Non assigné'} • Élèves inscrits : ${selectedClass.activeStudentCount}`,
-              en: `Homeroom Teacher: ${selectedClass.homeroomTeacherName || 'Unassigned'} • Enrolled Students: ${selectedClass.activeStudentCount}`,
-            },
-            language,
-          )}
+          subtitle={pickText({ ar: `المربي الرئيسي: ${selectedClass.homeroomTeacherName || 'غير معين'} • عدد التلاميذ المسجلين: ${selectedClass.activeStudentCount}`, fr: `Enseignant principal : ${selectedClass.homeroomTeacherName || 'Non assigné'} • Élèves inscrits : ${selectedClass.activeStudentCount}`, en: `Homeroom Teacher: ${selectedClass.homeroomTeacherName || 'Unassigned'} • Enrolled Students: ${selectedClass.activeStudentCount}`, es: `Docente tutor: ${selectedClass.homeroomTeacherName || 'Sin asignar'} • Alumnos matriculados: ${selectedClass.activeStudentCount}`, de: `Klassenlehrkraft: ${selectedClass.homeroomTeacherName || 'Nicht zugewiesen'} • Eingeschriebene Schüler: ${selectedClass.activeStudentCount}`, pt: `Docente titular: ${selectedClass.homeroomTeacherName || 'Não atribuído'} • Alunos inscritos: ${selectedClass.activeStudentCount}` }, language)}
         />
       </div>
 
@@ -172,14 +165,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
               {errorMessage ||
-                pickText(
-                  {
-                    ar: 'تعذر تحديث قائمة التلاميذ من الخادم.',
-                    fr: 'Impossible de rafraîchir la liste des élèves depuis le serveur.',
-                    en: 'Failed to refresh student roster from the server.',
-                  },
-                  language,
-                )}
+                pickText({ ar: 'تعذر تحديث قائمة التلاميذ من الخادم.', fr: 'Impossible de rafraîchir la liste des élèves depuis le serveur.', en: 'Failed to refresh student roster from the server.', es: 'No se pudo actualizar la lista de alumnos desde el servidor.', de: 'Schülerliste konnte nicht vom Server aktualisiert werden.', pt: 'Falha ao atualizar a lista de alunos do servidor.' }, language)}
             </span>
           </div>
           {onRefresh && (
@@ -189,7 +175,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
               onClick={() => void onRefresh()}
               className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
             >
-              {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+              {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
             </button>
           )}
         </div>
@@ -206,27 +192,13 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
               setStudentSearchQuery(e.target.value);
               setRosterPage(1);
             }}
-            placeholder={pickText(
-              {
-                ar: 'البحث عن تلميذ بالاسم أو المعرف المدرسي أو الولي...',
-                fr: 'Rechercher un élève par nom, code élève ou parent...',
-                en: 'Search student by full name, student code, or guardian...',
-              },
-              language,
-            )}
+            placeholder={pickText({ ar: 'البحث عن تلميذ بالاسم أو المعرف المدرسي أو الولي...', fr: 'Rechercher un élève par nom, code élève ou parent...', en: 'Search student by full name, student code, or guardian...', es: 'Buscar alumno por nombre completo, código o tutor...', de: 'Schüler nach Name, Schülercode oder Erziehungsberechtigtem suchen...', pt: 'Pesquisar aluno por nome completo, código ou encarregado...' }, language)}
             className="w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-2.5 ps-10 pe-4 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div className="text-xs font-bold text-slate-600 dark:text-zinc-300 px-2">
-          {pickText(
-            {
-              ar: `النتائج: ${filteredRoster.length}`,
-              fr: `Élèves affichés : ${filteredRoster.length}`,
-              en: `Showing: ${filteredRoster.length} students`,
-            },
-            language,
-          )}
+          {pickText({ ar: `النتائج: ${filteredRoster.length}`, fr: `Élèves affichés : ${filteredRoster.length}`, en: `Showing: ${filteredRoster.length} students`, es: `Mostrando: ${filteredRoster.length} alumnos`, de: `Angezeigt: ${filteredRoster.length} Schüler`, pt: `A mostrar: ${filteredRoster.length} alunos` }, language)}
         </div>
       </div>
 
@@ -236,30 +208,14 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
             state="AVAILABLE_READ_ONLY"
             title={pickText(
               isZeroStudentsEnrolled
-                ? {
-                    ar: 'لا يوجد تلاميذ مسجلون في هذا القسم حالياً',
-                    fr: 'Aucun élève inscrit dans cette classe',
-                    en: 'No students enrolled in this class',
-                  }
-                : {
-                    ar: 'لا يوجد تلاميذ مطابقون للبحث',
-                    fr: 'Aucun élève ne correspond à la recherche',
-                    en: 'No matching students found',
-                  },
+                ? { ar: 'لا يوجد تلاميذ مسجلون في هذا القسم حالياً', fr: 'Aucun élève inscrit dans cette classe', en: 'No students enrolled in this class', es: 'No hay alumnos matriculados en esta clase', de: 'Keine Schüler in dieser Klasse eingeschrieben', pt: 'Não há alunos inscritos nesta turma' }
+                : { ar: 'لا يوجد تلاميذ مطابقون للبحث', fr: 'Aucun élève ne correspond à la recherche', en: 'No matching students found', es: 'No se encontraron alumnos coincidentes', de: 'Keine passenden Schüler gefunden', pt: 'Não foram encontrados alunos correspondentes' },
               language,
             )}
             description={pickText(
               isZeroStudentsEnrolled
-                ? {
-                    ar: 'لم يتم تسجيل أي تلميذ في هذا القسم حتى الآن. ستظهر القائمة بمجرد تأكيد التسجيل من الإدارة.',
-                    fr: 'Aucun élève n’est encore inscrit dans cette classe. La liste apparaîtra dès la validation par la direction.',
-                    en: 'No student enrollments are linked to this class yet. Verified students will appear here once enrolled.',
-                  }
-                : {
-                    ar: 'جرّب تعديل كلمات البحث لعرض التلاميذ المسجلين في هذا القسم.',
-                    fr: 'Modifiez votre recherche pour afficher les élèves inscrits dans cette classe.',
-                    en: 'Try adjusting your search query to view enrolled students in this class.',
-                  },
+                ? { ar: 'لم يتم تسجيل أي تلميذ في هذا القسم حتى الآن. ستظهر القائمة بمجرد تأكيد التسجيل من الإدارة.', fr: 'Aucun élève n’est encore inscrit dans cette classe. La liste apparaîtra dès la validation par la direction.', en: 'No student enrollments are linked to this class yet. Verified students will appear here once enrolled.', es: 'Aún no hay matrículas vinculadas a esta clase. Los alumnos verificados aparecerán aquí tras su inscripción.', de: 'Dieser Klasse sind noch keine Schülereinschreibungen zugeordnet. Bestätigte Schüler erscheinen hier nach der Einschreibung.', pt: 'Ainda não existem inscrições associadas a esta turma. Os alunos verificados aparecerão aqui após a inscrição.' }
+                : { ar: 'جرّب تعديل كلمات البحث لعرض التلاميذ المسجلين في هذا القسم.', fr: 'Modifiez votre recherche pour afficher les élèves inscrits dans cette classe.', en: 'Try adjusting your search query to view enrolled students in this class.', es: 'Pruebe a ajustar su búsqueda para ver los alumnos matriculados en esta clase.', de: 'Passen Sie Ihre Suchanfrage an, um die eingeschriebenen Schüler dieser Klasse anzuzeigen.', pt: 'Experimente ajustar a pesquisa para ver os alunos inscritos nesta turma.' },
               language,
             )}
           />
@@ -271,23 +227,23 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
               <thead className="bg-slate-50 dark:bg-zinc-900/80 border-b border-gray-200 dark:border-gray-800 text-slate-600 dark:text-zinc-400 uppercase font-extrabold">
                 <tr>
                   <th className="py-3.5 px-4 text-start">
-                    {pickText({ ar: 'المعرف', fr: 'Code élève', en: 'Student Code' }, language)}
+                    {pickText({ ar: 'المعرف', fr: 'Code élève', en: 'Student Code', es: 'Código del alumno', de: 'Schülercode', pt: 'Código do aluno' }, language)}
                   </th>
                   <th className="py-3.5 px-4 text-start">
-                    {pickText({ ar: 'اسم التلميذ', fr: 'Nom complet', en: 'Student Name' }, language)}
+                    {pickText({ ar: 'اسم التلميذ', fr: 'Nom complet', en: 'Student Name', es: 'Nombre del alumno', de: 'Schülername', pt: 'Nome do aluno' }, language)}
                   </th>
                   <th className="py-3.5 px-4 text-start">
-                    {pickText({ ar: 'الولي الرئيسي', fr: 'Parent / Tuteur', en: 'Primary Guardian' }, language)}
+                    {pickText({ ar: 'الولي الرئيسي', fr: 'Parent / Tuteur', en: 'Primary Guardian', es: 'Tutor principal', de: 'Haupterziehungsberechtigter', pt: 'Encarregado principal' }, language)}
                   </th>
                   <th className="py-3.5 px-4 text-start">
-                    {pickText({ ar: 'تاريخ التسجيل', fr: 'Date d’inscription', en: 'Enrolled Date' }, language)}
+                    {pickText({ ar: 'تاريخ التسجيل', fr: 'Date d’inscription', en: 'Enrolled Date', es: 'Fecha de matrícula', de: 'Einschreibedatum', pt: 'Data de inscrição' }, language)}
                   </th>
                   <th className="py-3.5 px-4 text-start">
-                    {pickText({ ar: 'الحالة', fr: 'Statut', en: 'Status' }, language)}
+                    {pickText({ ar: 'الحالة', fr: 'Statut', en: 'Status', es: 'Estado', de: 'Status', pt: 'Estado' }, language)}
                   </th>
                   {isTeacherView && (
                     <th className="py-3.5 px-4 text-end">
-                      {pickText({ ar: 'إجراءات', fr: 'Actions', en: 'Actions' }, language)}
+                      {pickText({ ar: 'إجراءات', fr: 'Actions', en: 'Actions', es: 'Acciones', de: 'Aktionen', pt: 'Ações' }, language)}
                     </th>
                   )}
                 </tr>
@@ -327,17 +283,10 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
                             setSelectionActorId(currentUser?.id ?? null);
                           }
                         }}
-                        aria-label={pickText(
-                          {
-                            ar: `عرض ملف التلميذ ${student.fullName}`,
-                            fr: `Afficher le profil de l’élève ${student.fullName}`,
-                            en: `View student profile for ${student.fullName}`,
-                          },
-                          language,
-                        )}
+                        aria-label={pickText({ ar: `عرض ملف التلميذ ${student.fullName}`, fr: `Afficher le profil de l’élève ${student.fullName}`, en: `View student profile for ${student.fullName}`, es: `Ver perfil del alumno ${student.fullName}`, de: `Schülerprofil von ${student.fullName} anzeigen`, pt: `Ver perfil do aluno ${student.fullName}` }, language)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 text-[#1E3A6D] dark:text-blue-300 font-extrabold text-[11px] transition-colors"
                       >
-                        <span>{pickText({ ar: 'عرض', fr: 'Voir', en: 'View' }, language)}</span>
+                        <span>{pickText({ ar: 'عرض', fr: 'Voir', en: 'View', es: 'Ver', de: 'Anzeigen', pt: 'Ver' }, language)}</span>
                       </button>
                     </td>
                   </tr>
@@ -355,7 +304,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
                 onClick={() => setRosterPage((p) => Math.max(1, p - 1))}
                 className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold disabled:opacity-40"
               >
-                {pickText({ ar: 'السابق', fr: 'Précédent', en: 'Previous' }, language)}
+                {pickText({ ar: 'السابق', fr: 'Précédent', en: 'Previous', es: 'Anterior', de: 'Zurück', pt: 'Anterior' }, language)}
               </button>
               <span data-testid="roster-page-indicator" className="font-bold text-gray-600 dark:text-gray-400">
                 {safeRosterPage} / {totalRosterPages}
@@ -367,7 +316,7 @@ export const ClassRosterPanel: React.FC<ClassRosterPanelProps> = ({
                 onClick={() => setRosterPage((p) => Math.min(totalRosterPages, p + 1))}
                 className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 font-bold disabled:opacity-40"
               >
-                {pickText({ ar: 'التالي', fr: 'Suivant', en: 'Next' }, language)}
+                {pickText({ ar: 'التالي', fr: 'Suivant', en: 'Next', es: 'Siguiente', de: 'Weiter', pt: 'Seguinte' }, language)}
               </button>
             </div>
           )}

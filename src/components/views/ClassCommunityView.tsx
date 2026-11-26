@@ -118,7 +118,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                   : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              {language === 'ar' ? 'الوثائق' : language === 'fr' ? 'Documents' : 'Documents'}
+              {pickText({ ar: 'الوثائق', fr: 'Documents', en: 'Documents', es: 'Documentos', de: 'Dokumente', pt: 'Documentos' }, language)}
             </button>
             <button
               type="button"
@@ -129,7 +129,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                   : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              {language === 'ar' ? 'المعرض' : language === 'fr' ? 'Galerie' : 'Gallery'}
+              {pickText({ ar: 'المعرض', fr: 'Galerie', en: 'Gallery', es: 'Galería', de: 'Galerie', pt: 'Galeria' }, language)}
             </button>
           </div>
         </div>
@@ -137,7 +137,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
         {accessibleClasses.length > 1 && (
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
             <span className="text-[11px] font-bold text-gray-500">
-              {pickText({ ar: 'اختيار القسم:', fr: 'Classe :', en: 'Active Class:' }, language)}
+              {pickText({ ar: 'اختيار القسم:', fr: 'Classe :', en: 'Active Class:', es: 'Clase activa:', de: 'Aktive Klasse:', pt: 'Turma ativa:' }, language)}
             </span>
             {accessibleClasses.map((cls) => (
               <button
@@ -189,6 +189,9 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                     ar: 'غير مصرح بالوصول إلى بيانات هذا القسم.',
                     fr: 'Accès non autorisé au contenu de cette classe.',
                     en: 'Not authorized to access class community content.',
+                    es: 'No autorizado para acceder al contenido de la comunidad de esta clase.',
+                    de: 'Nicht berechtigt, auf die Inhalte dieser Klassengemeinschaft zuzugreifen.',
+                    pt: 'Sem autorização para aceder ao conteúdo da comunidade desta turma.',
                   },
                   language,
                 )}
@@ -199,7 +202,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -219,6 +222,9 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
                     ar: 'تعذر تحميل محتوى مجتمع القسم من الخادم.',
                     fr: 'Impossible de charger les données de la communauté de classe.',
                     en: 'Failed to load class community data from server.',
+                    es: 'No se pudieron cargar los datos de la comunidad de clase desde el servidor.',
+                    de: 'Daten der Klassengemeinschaft konnten nicht vom Server geladen werden.',
+                    pt: 'Falha ao carregar os dados da comunidade da turma do servidor.',
                   },
                   language,
                 )}
@@ -229,7 +235,7 @@ export const ClassCommunityView: React.FC<ClassCommunityViewProps> = ({
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}

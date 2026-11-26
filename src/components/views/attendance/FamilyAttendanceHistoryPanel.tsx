@@ -160,7 +160,7 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
             onClick={() => void refreshSchoolData()}
             className="rounded-xl bg-red-700 hover:bg-red-800 px-3 py-1.5 text-white text-xs font-bold"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       );
@@ -182,6 +182,9 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
                 ar: 'بمجرد ربط حسابك بملف طفلك من إدارة المدرسة، سيظهر سجل الحضور المعتمد هنا.',
                 fr: 'Dès qu’un enfant est lié à votre compte par l’administration, son historique de présence apparaîtra ici.',
                 en: 'Once school administration links your child to your account, their submitted attendance records will appear here.',
+                es: 'Una vez que la administración escolar vincule a su hijo a su cuenta, sus registros de asistencia enviados aparecerán aquí.',
+                de: 'Sobald die Schulverwaltung Ihr Kind mit Ihrem Konto verknüpft hat, erscheinen die eingereichten Anwesenheitsdaten hier.',
+                pt: 'Assim que a administração escolar associar o seu filho à sua conta, os registos de assiduidade submetidos aparecerão aqui.',
               },
               language,
             )}
@@ -257,6 +260,9 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
                 ar: 'تعذر التحقق من ملف التلميذ المرتبط بحسابك.',
                 fr: 'Impossible de vérifier le profil élève associé à votre compte.',
                 en: 'Unable to verify the student record linked to your account.',
+                es: 'No se pudo verificar el expediente de alumno vinculado a su cuenta.',
+                de: 'Der mit Ihrem Konto verknüpfte Schülereintrag konnte nicht überprüft werden.',
+                pt: 'Não foi possível verificar o registo de aluno associado à sua conta.',
               },
               language,
             )}
@@ -279,6 +285,9 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
                 ar: 'حسابك غير مرتبط بملف تلميذ نشط بعد.',
                 fr: 'Votre compte n’est pas encore lié à un dossier élève actif.',
                 en: 'Your account is not linked to an active student record yet.',
+                es: 'Su cuenta aún no está vinculada a un expediente de alumno activo.',
+                de: 'Ihr Konto ist noch nicht mit einem aktiven Schülerprofil verknüpft.',
+                pt: 'A sua conta ainda não está associada a um processo de aluno ativo.',
               },
               language,
             )}
@@ -290,6 +299,9 @@ export const FamilyAttendanceHistoryPanel: React.FC = () => {
               ar: 'يرجى التواصل مع إدارة المدرسة لربط حسابك التلميذ بسجلك الدراسي.',
               fr: 'Veuillez contacter l’administration pour lier votre compte élève.',
               en: 'Please contact school administration to link your student account.',
+              es: 'Póngase en contacto con la administración escolar para vincular su cuenta de alumno.',
+              de: 'Bitte wenden Sie sich an die Schulverwaltung, um Ihr Schülerkonto zu verknüpfen.',
+              pt: 'Por favor, contacte a administração escolar para associar a sua conta de aluno.',
             },
             language,
           )}

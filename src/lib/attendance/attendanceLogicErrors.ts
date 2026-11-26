@@ -41,6 +41,39 @@ export function classifyAttendanceError(
   const { code, message } = extractSupabaseErrorParts(error);
   const lowerMsg = message.toLowerCase();
 
+  const blockedMessages: Record<Language, string> = {
+    ar: 'خدمة الحضور غير متوفرة حالياً (جداول Supabase غير مطبقة بعد).',
+    fr: 'Service de présence indisponible (tables Supabase non déployées).',
+    en: 'Attendance backend tables / RPC functions are not deployed yet.',
+    es: 'El servicio de asistencia no está disponible (tablas de Supabase sin desplegar).',
+    de: 'Anwesenheitsdienst nicht verfügbar (Supabase-Tabellen noch nicht bereitgestellt).',
+    pt: 'Serviço de presenças indisponível (tabelas Supabase ainda não implementadas).',
+  };
+  const unauthorizedMessages: Record<Language, string> = {
+    ar: 'ليس لديك صلاحية لتنفيذ هذه العملية.',
+    fr: 'Accès non autorisé.',
+    en: 'Unauthorized attendance operation.',
+    es: 'Operación de asistencia no autorizada.',
+    de: 'Nicht autorisierter Anwesenheitsvorgang.',
+    pt: 'Operação de presenças não autorizada.',
+  };
+  const rosterConflictMessages: Record<Language, string> = {
+    ar: 'تغيّرت قائمة تلاميذ القسم. يرجى إعادة تحميل السجل.',
+    fr: 'La liste des élèves a changé. Veuillez recharger le registre.',
+    en: 'Class roster changed. Please refresh and review.',
+    es: 'La lista de alumnos de la clase ha cambiado. Actualiza y revisa.',
+    de: 'Die Klassenliste hat sich geändert. Bitte neu laden und prüfen.',
+    pt: 'A lista de alunos da turma mudou. Atualize e reveja.',
+  };
+  const conflictMessages: Record<Language, string> = {
+    ar: 'تعارض في الإصدار أو السجل. يرجى إعادة تحميل الحضور.',
+    fr: 'Conflit de version ou de registre. Veuillez recharger.',
+    en: 'Attendance register version conflict. Please refresh and review.',
+    es: 'Conflicto de versión en el registro de asistencia. Actualiza y revisa.',
+    de: 'Versionskonflikt im Anwesenheitsregister. Bitte neu laden.',
+    pt: 'Conflito de versão no registo de presenças. Atualize e reveja.',
+  };
+
   if (
     code === '42P01' ||
     code === '42883' ||
@@ -52,12 +85,7 @@ export function classifyAttendanceError(
     return {
       status: 'BLOCKED_BACKEND',
       errorCode: 'backend_unavailable',
-      errorMessage:
-        language === 'ar'
-          ? 'خدمة الحضور غير متوفرة حالياً (جداول Supabase غير مطبقة بعد).'
-          : language === 'fr'
-          ? 'Service de présence indisponible (tables Supabase non déployées).'
-          : 'Attendance backend tables / RPC functions are not deployed yet.',
+      errorMessage: blockedMessages[language] ?? blockedMessages.en,
     };
   }
 
@@ -79,12 +107,7 @@ export function classifyAttendanceError(
     return {
       status: 'UNAUTHORIZED',
       errorCode: 'unauthorized',
-      errorMessage:
-        language === 'ar'
-          ? 'ليس لديك صلاحية لتنفيذ هذه العملية.'
-          : language === 'fr'
-          ? 'Accès non autorisé.'
-          : 'Unauthorized attendance operation.',
+      errorMessage: unauthorizedMessages[language] ?? unauthorizedMessages.en,
     };
   }
 
@@ -92,12 +115,7 @@ export function classifyAttendanceError(
     return {
       status: 'ERROR',
       errorCode: 'roster_conflict',
-      errorMessage:
-        language === 'ar'
-          ? 'تغيّرت قائمة تلاميذ القسم. يرجى إعادة تحميل السجل.'
-          : language === 'fr'
-          ? 'La liste des élèves a changé. Veuillez recharger le registre.'
-          : 'Class roster changed. Please refresh and review.',
+      errorMessage: rosterConflictMessages[language] ?? rosterConflictMessages.en,
     };
   }
 
@@ -105,12 +123,7 @@ export function classifyAttendanceError(
     return {
       status: 'ERROR',
       errorCode: 'version_conflict',
-      errorMessage:
-        language === 'ar'
-          ? 'تعارض في الإصدار أو السجل. يرجى إعادة تحميل الحضور.'
-          : language === 'fr'
-          ? 'Conflit de version ou de registre. Veuillez recharger.'
-          : 'Attendance register version conflict. Please refresh and review.',
+      errorMessage: conflictMessages[language] ?? conflictMessages.en,
     };
   }
 

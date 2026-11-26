@@ -244,7 +244,14 @@ export function useClassesMutations({
       setOpFeedback({
         type: 'success',
         text: pickText(
-          { ar: 'تم تسجيل التلميذ في القسم بنجاح.', fr: 'Élève inscrit dans la classe.', en: 'Student created and enrolled.' },
+          {
+            ar: 'تم تسجيل التلميذ في القسم بنجاح.',
+            fr: 'Élève inscrit dans la classe.',
+            en: 'Student created and enrolled.',
+            es: 'Alumno creado y matriculado.',
+            de: 'Schüler angelegt und eingeschrieben.',
+            pt: 'Aluno criado e inscrito.',
+          },
           language,
         ),
       });
@@ -280,11 +287,25 @@ export function useClassesMutations({
         type: 'success',
         text: teacherActive
           ? pickText(
-              { ar: 'تم تعيين المربي للقسم بنجاح.', fr: 'Enseignant affecté à la classe.', en: 'Teacher assigned to class.' },
+              {
+                ar: 'تم تعيين المربي للقسم بنجاح.',
+                fr: 'Enseignant affecté à la classe.',
+                en: 'Teacher assigned to class.',
+                es: 'Docente asignado a la clase.',
+                de: 'Lehrkraft der Klasse zugewiesen.',
+                pt: 'Docente atribuído à turma.',
+              },
               language,
             )
           : pickText(
-              { ar: 'تم إلغاء تعيين المربي من القسم.', fr: 'Enseignant retiré de la classe.', en: 'Teacher unassigned from class.' },
+              {
+                ar: 'تم إلغاء تعيين المربي من القسم.',
+                fr: 'Enseignant retiré de la classe.',
+                en: 'Teacher unassigned from class.',
+                es: 'Docente retirado de la clase.',
+                de: 'Lehrkraft aus der Klasse entfernt.',
+                pt: 'Docente removido da turma.',
+              },
               language,
             ),
       });

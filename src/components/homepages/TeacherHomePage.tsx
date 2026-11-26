@@ -67,6 +67,9 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
             ar: 'إدارة أقسامك، الواجبات، الاستلام المدرسي، والتواصل مع الأولياء بوضوح.',
             fr: 'Gérez vos classes assignées, les devoirs, la sortie des élèves et les échanges avec les parents.',
             en: 'Manage your assigned classes, homework, student release, and parent communication.',
+            es: 'Gestiona tus clases asignadas, deberes, recogida de alumnos y comunicación con las familias.',
+            de: 'Verwalten Sie Ihre zugewiesenen Klassen, Hausaufgaben, Schülerabholung und Elternkommunikation.',
+            pt: 'Gerir as suas turmas atribuídas, trabalhos de casa, saída dos alunos e comunicação com os pais.',
           },
           language,
         )}
@@ -96,6 +99,9 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
                   ar: 'لا توجد أقسام مسندة لحسابك حالياً — سيتم عرض أقسامك فور ربطها من قبل الإدارة.',
                   fr: 'Aucune classe assignée à votre compte pour le moment — vos classes apparaîtront dès leur affectation par la direction.',
                   en: 'No assigned classes linked to your teacher account yet — classes will appear once assigned by school administration.',
+                  es: 'Aún no hay clases asignadas a tu cuenta docente — aparecerán en cuanto la administración las asigne.',
+                  de: 'Ihrem Lehrkräftekonto sind noch keine Klassen zugewiesen — diese erscheinen nach Zuweisung durch die Schulleitung.',
+                  pt: 'Ainda não há turmas associadas à sua conta docente — aparecerão assim que forem atribuídas pela direção.',
                 },
                 language,
               )}
@@ -107,14 +113,14 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
       {/* Group 1: My Teaching (matching Screenshot 6 primary cards + Section 8.2) */}
       <HomeSection
         title={pickText(
-          { ar: 'التدريس والأقسام', fr: 'Mon enseignement & Classes', en: 'My Teaching' },
+          { ar: 'التدريس والأقسام', fr: 'Mon enseignement & Classes', en: 'My Teaching', es: 'Mi docencia', de: 'Mein Unterricht', pt: 'A minha docência' },
           language,
         )}
       >
         <HomeCardGrid ariaLabel="Teacher primary cards">
           <HomeShortcutCard
             id="teacher-my-classes"
-            title={pickText({ ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes' }, language)}
+            title={pickText({ ar: 'أقسامي', fr: 'Mes classes', en: 'My Classes', es: 'Mis clases', de: 'Meine Klassen', pt: 'As minhas turmas' }, language)}
             actionLabel={openActionLabel}
             icon="🏫"
             tone="blue"
@@ -123,7 +129,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
 
           <HomeShortcutCard
             id="teacher-pickup"
-            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup' }, language)}
+            title={pickText({ ar: 'الاستلام المدرسي', fr: 'Sortie & Pickup', en: 'Pickup', es: 'Recogida', de: 'Abholung', pt: 'Recolha' }, language)}
             actionLabel={openActionLabel}
             icon="🚸"
             tone="green"
@@ -133,7 +139,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-homework"
             title={pickText(
-              { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork' },
+              { ar: 'الواجبات والعمل الفصلي', fr: 'Devoirs & Travaux', en: 'Homework & Classwork', es: 'Deberes y tareas', de: 'Hausaufgaben & Aufgaben', pt: 'Trabalhos de casa e aula' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -144,7 +150,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
 
           <HomeShortcutCard
             id="teacher-messages"
-            title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages' }, language)}
+            title={pickText({ ar: 'الرسائل', fr: 'Messages', en: 'Messages', es: 'Mensajes', de: 'Nachrichten', pt: 'Mensagens' }, language)}
             actionLabel={openActionLabel}
             statusBadge={unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined}
             icon="💬"
@@ -155,7 +161,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-parent-notes"
             title={pickText(
-              { ar: 'ملاحظات الأولياء', fr: 'Notes des parents', en: 'Parent Notes' },
+              { ar: 'ملاحظات الأولياء', fr: 'Notes des parents', en: 'Parent Notes', es: 'Notas de los padres', de: 'Elternhinweise', pt: 'Notas dos pais' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -166,7 +172,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
 
           <HomeShortcutCard
             id="teacher-food-menu"
-            title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu' }, language)}
+            title={pickText({ ar: 'قائمة الطعام', fr: 'Menu de la cantine', en: 'Food Menu', es: 'Menú del comedor', de: 'Speiseplan', pt: 'Ementa da cantina' }, language)}
             actionLabel={openActionLabel}
             icon="🍽️"
             tone="yellow"
@@ -182,6 +188,9 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
             ar: 'التواصل والخدمات البيداغوجية',
             fr: 'Communication & Services pédagogiques',
             en: 'Communication & School Services',
+            es: 'Comunicación y servicios escolares',
+            de: 'Kommunikation & Schuldienste',
+            pt: 'Comunicação e serviços escolares',
           },
           language,
         )}
@@ -190,7 +199,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-class-announcements"
             title={pickText(
-              { ar: 'إعلانات القسم', fr: 'Annonces de classe', en: 'Class Announcements' },
+              { ar: 'إعلانات القسم', fr: 'Annonces de classe', en: 'Class Announcements', es: 'Anuncios de clase', de: 'Klassenankündigungen', pt: 'Anúncios da turma' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -202,7 +211,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-class-calendar"
             title={pickText(
-              { ar: 'روزنامة القسم', fr: 'Calendrier de classe', en: 'Class Calendar' },
+              { ar: 'روزنامة القسم', fr: 'Calendrier de classe', en: 'Class Calendar', es: 'Calendario de clase', de: 'Klassenkalender', pt: 'Calendário da turma' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -214,7 +223,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-class-documents"
             title={pickText(
-              { ar: 'وثائق القسم', fr: 'Documents de classe', en: 'Class Documents' },
+              { ar: 'وثائق القسم', fr: 'Documents de classe', en: 'Class Documents', es: 'Documentos de clase', de: 'Klassendokumente', pt: 'Documentos da turma' },
               language,
             )}
             actionLabel={openActionLabel}
@@ -226,7 +235,7 @@ export const TeacherHomePage: React.FC<TeacherHomePageProps> = ({
           <HomeShortcutCard
             id="teacher-attendance"
             title={pickText(
-              { ar: 'الحضور والغياب', fr: 'Présences & Absences', en: 'Attendance / Absence' },
+              { ar: 'الحضور والغياب', fr: 'Présences & Absences', en: 'Attendance / Absence', es: 'Asistencia y ausencias', de: 'Anwesenheit & Fehlzeiten', pt: 'Presenças e faltas' },
               language,
             )}
             actionLabel={openActionLabel}

@@ -135,10 +135,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
       setTagsCsv('');
       setFeedback({
         type: 'success',
-        text: pickText(
-          { ar: 'تم حفظ بطاقة الدليل بنجاح.', fr: 'Fiche annuaire enregistrée.', en: 'Directory entry saved.' },
-          language,
-        ),
+        text: pickText({ ar: 'تم حفظ بطاقة الدليل بنجاح.', fr: 'Fiche annuaire enregistrée.', en: 'Directory entry saved.', es: 'Ficha del directorio guardada.', de: 'Verzeichniseintrag gespeichert.', pt: 'Registo do diretório guardado.' }, language),
       });
       await refreshSchoolData();
     } catch (err) {
@@ -203,7 +200,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{pickText({ ar: 'إضافة عضو', fr: 'Ajouter', en: 'Add Entry' }, language)}</span>
+              <span>{pickText({ ar: 'إضافة عضو', fr: 'Ajouter', en: 'Add Entry', es: 'Añadir ficha', de: 'Eintrag hinzufügen', pt: 'Adicionar registo' }, language)}</span>
             </button>
           )}
         </div>
@@ -258,10 +255,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <Lock className="w-4 h-4 shrink-0" />
             <span>
               {directoryError ||
-                pickText(
-                  { ar: 'غير مصرح بعرض دليل المدرسة حالياً.', fr: 'Accès non autorisé à l’annuaire de l’école.', en: 'Not authorized to access the school directory.' },
-                  language,
-                )}
+                pickText({ ar: 'غير مصرح بعرض دليل المدرسة حالياً.', fr: 'Accès non autorisé à l’annuaire de l’école.', en: 'Not authorized to access the school directory.', es: 'No autorizado para acceder al directorio escolar.', de: 'Nicht berechtigt, auf das Schulverzeichnis zuzugreifen.', pt: 'Sem autorização para aceder ao diretório escolar.' }, language)}
             </span>
           </div>
           <button
@@ -269,7 +263,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -284,10 +278,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
               {directoryError ||
-                pickText(
-                  { ar: 'تعذر تحميل بيانات الدليل المباشر من الخادم.', fr: 'Impossible de charger l’annuaire en direct depuis le serveur.', en: 'Failed to load live school directory from server.' },
-                  language,
-                )}
+                pickText({ ar: 'تعذر تحميل بيانات الدليل المباشر من الخادم.', fr: 'Impossible de charger l’annuaire en direct depuis le serveur.', en: 'Failed to load live school directory from server.', es: 'No se pudo cargar el directorio escolar en directo desde el servidor.', de: 'Das Live-Schulverzeichnis konnte nicht vom Server geladen werden.', pt: 'Falha ao carregar o diretório escolar em tempo real do servidor.' }, language)}
             </span>
           </div>
           <button
@@ -295,7 +286,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             onClick={() => void refreshSchoolData()}
             className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold text-xs"
           >
-            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry' }, language)}
+            {pickText({ ar: 'إعادة المحاولة', fr: 'Réessayer', en: 'Retry', es: 'Reintentar', de: 'Erneut versuchen', pt: 'Tentar novamente' }, language)}
           </button>
         </div>
       )}
@@ -330,7 +321,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 data-testid={'directory-open-' + teach.id}
                 disabled={!canOpenDetails}
                 onClick={(event) => openDirectoryProfile(event.currentTarget, 'TEACHER', teach.id)}
-                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of' }, language) + ' ' + teach.name}
+                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of', es: 'Ver perfil de', de: 'Profil anzeigen von', pt: 'Ver perfil de' }, language) + ' ' + teach.name}
                 className="flex flex-1 items-start gap-4 sm:gap-5 min-w-0 text-start rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:opacity-90"
               >
                 <img src={teach.photoUrl || '/assets/kristou-logo.png'} alt={teach.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-500 shadow-md shrink-0" />
@@ -344,11 +335,11 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     ))}
                   </span>
                   {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details' }, language)}
+                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details', es: 'Ver detalles', de: 'Details anzeigen', pt: 'Ver detalhes' }, language)}
                     <ChevronRight className="w-3 h-3" />
                   </span>}
                   {canManage && teach.isPublished !== true && directoryStatus === 'READY' && <span className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft' }, language)}
+                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft', es: 'Borrador sin publicar', de: 'Unveröffentlichter Entwurf', pt: 'Rascunho não publicado' }, language)}
                   </span>}
                 </span>
               </button>
@@ -359,7 +350,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     id: teach.id, name: teach.name, title: teach.title, bio: teach.bio,
                     tags: teach.classes, languages: teach.languages, isPublished: teach.isPublished,
                   })}
-                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit' }, language) + ' ' + teach.name}
+                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit', es: 'Editar', de: 'Bearbeiten', pt: 'Editar' }, language) + ' ' + teach.name}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -377,7 +368,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 data-testid={'directory-open-' + adm.id}
                 disabled={!canOpenDetails}
                 onClick={(event) => openDirectoryProfile(event.currentTarget, 'ADMIN', adm.id)}
-                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of' }, language) + ' ' + adm.name}
+                aria-label={pickText({ ar: 'عرض ملف', fr: 'Voir le profil de', en: 'View profile of', es: 'Ver perfil de', de: 'Profil anzeigen von', pt: 'Ver perfil de' }, language) + ' ' + adm.name}
                 className="flex flex-1 items-start gap-4 sm:gap-5 min-w-0 text-start rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-90"
               >
                 <img src={adm.photoUrl || '/assets/kristou-logo.png'} alt={adm.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500 shadow-md shrink-0" />
@@ -391,11 +382,11 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     ))}
                   </span>
                   {canOpenDetails && <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details' }, language)}
+                    {pickText({ ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details', es: 'Ver detalles', de: 'Details anzeigen', pt: 'Ver detalhes' }, language)}
                     <ChevronRight className="w-3 h-3" />
                   </span>}
                   {canManage && adm.isPublished !== true && directoryStatus === 'READY' && <span className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft' }, language)}
+                    {pickText({ ar: 'مسودة غير منشورة', fr: 'Brouillon non publié', en: 'Unpublished draft', es: 'Borrador sin publicar', de: 'Unveröffentlichter Entwurf', pt: 'Rascunho não publicado' }, language)}
                   </span>}
                 </span>
               </button>
@@ -406,7 +397,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     id: adm.id, name: adm.name, title: adm.title, bio: adm.bio,
                     tags: adm.responsibilities, languages: adm.languages, isPublished: adm.isPublished,
                   })}
-                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit' }, language) + ' ' + adm.name}
+                  aria-label={pickText({ ar: 'تعديل', fr: 'Modifier', en: 'Edit', es: 'Editar', de: 'Bearbeiten', pt: 'Editar' }, language) + ' ' + adm.name}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
