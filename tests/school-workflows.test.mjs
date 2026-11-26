@@ -498,7 +498,7 @@ test('Regression: Defects B, C, F contracts, targeted level broadcasts, and SQL 
 
   // Static SQL migration regression assertions (Defects A-F)
   const mig11 = fs.readFileSync(
-    new URL('../supabase/migrations/20261114110000_people_family_academics_enrollment.sql', import.meta.url),
+    new URL('../supabase/migrations/20261115005910_people_family_academics_enrollment.sql', import.meta.url),
     'utf8',
   );
   const mig12 = fs.readFileSync(
