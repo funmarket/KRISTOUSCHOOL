@@ -260,6 +260,8 @@ select extensions.is((public.revoke_pickup_release_authority('00000000-0000-4000
 reset role;
 select extensions.is((select version from public.pickup_release_revocations where target_user_id='00000000-0000-4000-9000-000000010103'),1,'revocation version increments to one');
 select extensions.is((select count(*)::integer from public.pickup_authority_audit_logs where target_user_id='00000000-0000-4000-9000-000000010103' and action='REVOKE_RELEASE' and version=1),1,'revocation writes immutable audit history');
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010103',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010103","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.is((select can_confirm_release from public.get_pickup_staff_board() where student_id='00000000-0000-4000-9000-000000010139'),false,'staff board removes release capability immediately after revocation');
 reset role;
@@ -291,6 +293,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-00000001
 set local role authenticated;
 select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010136'),'00000000-0000-4000-9000-000000010186','00000000-0000-4000-9000-000000010421',2,true,null)$$,'P0001','collector_invalid','expired collector cannot be released');
 reset role;
+update public.authorized_pickup_persons set valid_until=(now() at time zone 'Africa/Tunis')::date where id='00000000-0000-4000-9000-000000010186';
 update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010136';
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
@@ -404,7 +407,7 @@ begin
   perform dblink_exec('g5_rev_release','set role authenticated');
   perform dblink_exec('g5_rev_blocker','begin');
   perform 1 from dblink('g5_rev_blocker','select id from public.profiles where id=''00000000-0000-4000-9000-000000010103'' for update') as t(id uuid);
-  if dblink_send_query('g5_revoker',$$select public.revoke_pickup_release_authority('00000000-0000-4000-9000-000000010103','Concurrent G5 revoke')$$)<>1 then raise exception 'g5_revoke_query_not_accepted'; end if;
+  if dblink_send_query('g5_revoker',$q$select public.revoke_pickup_release_authority('00000000-0000-4000-9000-000000010103','Concurrent G5 revoke')$q$)<>1 then raise exception 'g5_revoke_query_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_revoker'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
   if v_waiters<>1 then raise exception 'g5_revoke_session_not_queued'; end if;
   v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010141');
@@ -437,7 +440,7 @@ begin
   perform dblink_exec('g5_att_release','set role authenticated');
   perform dblink_exec('g5_att_blocker','begin');
   perform 1 from dblink('g5_att_blocker','select student_id from public.attendance_entries where register_id=''00000000-0000-4000-9000-000000010171'' and student_id=''00000000-0000-4000-9000-000000010142'' for update') as t(student_id uuid);
-  if dblink_send_query('g5_att_correct',$$update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010142' returning mark$$)<>1 then raise exception 'g5_attendance_correction_not_accepted'; end if;
+  if dblink_send_query('g5_att_correct',$q$update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010142' returning mark$q$)<>1 then raise exception 'g5_attendance_correction_not_accepted'; end if;
   v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_att_correct'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
   if v_waiters<>1 then raise exception 'g5_attendance_correction_not_queued'; end if;
   v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010142');
