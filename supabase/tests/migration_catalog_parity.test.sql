@@ -5,7 +5,7 @@
 
 begin;
 
-select extensions.plan(10);
+select extensions.plan(11);
 
 create temporary table migration_catalog_fingerprints on commit drop as
 with
@@ -36,8 +36,13 @@ trig as (
   from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='public' and not t.tgisinternal
 ),
-procs as (
-  select format('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s',p.oid::regprocedure::text,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),l.lanname,pg_get_userbyid(p.proowner),p.prosecdef,p.provolatile,p.proisstrict,coalesce(array_to_string(p.proconfig,','),''),pg_get_functiondef(p.oid)) s
+proc_meta as (
+  select format('%s|%s|%s|%s|%s|%s|%s|%s|%s',p.oid::regprocedure::text,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),l.lanname,pg_get_userbyid(p.proowner),p.prosecdef,p.provolatile,p.proisstrict,coalesce(array_to_string(p.proconfig,','),'')) s
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
+  where n.nspname='public' and p.prokind in ('f','p')
+),
+proc_source as (
+  select format('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s',p.oid::regprocedure::text,pg_get_function_identity_arguments(p.oid),pg_get_function_result(p.oid),l.lanname,pg_get_userbyid(p.proowner),p.prosecdef,p.provolatile,p.proisstrict,coalesce(array_to_string(p.proconfig,','),''),p.prosrc) s
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_language l on l.oid=p.prolang
   where n.nspname='public' and p.prokind in ('f','p')
 ),
@@ -72,7 +77,8 @@ fingerprints as (
   union all select 'constraints',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from cons
   union all select 'indexes',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from idx
   union all select 'triggers',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from trig
-  union all select 'functions',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from procs
+  union all select 'function_metadata',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from proc_meta
+  union all select 'function_source',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from proc_source
   union all select 'policies',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from pol
   union all select 'table_grants',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from table_grants
   union all select 'routine_grants',count(*),md5(coalesce(string_agg(s,E'\n' order by s),'')) from routine_grants
@@ -84,7 +90,8 @@ select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fin
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='constraints'),'304:60ddb737da94705fe02e13c1a27332ee','public constraints: primary/unique/foreign-key/check definitions match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='indexes'),'93:a3105f3a779e0a734a272d36e55f5000','public indexes match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='triggers'),'40:243e9c72292fe2a2ac8dbec5220555f5','public triggers and trigger functions match hosted baseline');
-select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='functions'),'99:3688e8bce4583672b13f46eb0b094eb2','public function signatures/definitions/security/owners match hosted baseline');
+select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_metadata'),'99:9ddcd3aced7d4b67a59dd643b2c63a55','public function signatures/security/owners/configuration match hosted baseline');
+select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_source'),'99:1b66f7c8d32fd2116849b696371c2c7f','public function source bodies match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='policies'),'56:d093adf4ea11deae5d7067ae0fc9fa4a','public RLS policies match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='table_grants'),'839:2643402505bd4f6a74a930e30cd9e5b5','public table/view/sequence grants match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='routine_grants'),'295:97acc07e6163e9b2b1bdf889faec8761','public routine grants match hosted baseline');

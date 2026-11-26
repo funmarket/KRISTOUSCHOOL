@@ -66,7 +66,7 @@ Six other source files differ byte-for-byte from their stored statements only in
 
 ## Normalized live catalog snapshot
 
-On 2026-11-26, a read-only query against `ofppapwofhovhroyjtkc` computed deterministic MD5 fingerprints from sorted, normalized `public` catalog rows. The snapshot covers relation kinds/owners/RLS, columns and formatted types/nullability/defaults, custom type definitions and enum labels, constraints, indexes, non-internal triggers, public function/procedure signatures and definitions/security/owners/configuration, RLS policies, and explicit table/routine ACL entries. OIDs and application row data are excluded. Row counts and fingerprints are:
+On 2026-11-26, a read-only query against `ofppapwofhovhroyjtkc` computed deterministic MD5 fingerprints from sorted, normalized `public` catalog rows. The snapshot covers relation kinds/owners/RLS, columns and formatted types/nullability/defaults, custom type definitions and enum labels, constraints, indexes, non-internal triggers, public function/procedure signatures, source bodies, security/owners/configuration, RLS policies, and explicit table/routine ACL entries. OIDs and application row data are excluded. Row counts and fingerprints are:
 
 | Catalog category | Rows | Normalized MD5 |
 |---|---:|---|
@@ -75,16 +75,17 @@ On 2026-11-26, a read-only query against `ofppapwofhovhroyjtkc` computed determi
 | Constraints | 304 | `60ddb737da94705fe02e13c1a27332ee` |
 | Indexes | 93 | `a3105f3a779e0a734a272d36e55f5000` |
 | Triggers | 40 | `243e9c72292fe2a2ac8dbec5220555f5` |
-| Functions and procedures | 99 | `3688e8bce4583672b13f46eb0b094eb2` |
+| Function/procedure signature, language, owner, security, volatility, strictness, configuration | 99 | `9ddcd3aced7d4b67a59dd643b2c63a55` |
+| Function/procedure source bodies | 99 | `1b66f7c8d32fd2116849b696371c2c7f` |
 | RLS policies | 56 | `d093adf4ea11deae5d7067ae0fc9fa4a` |
 | Table/view/sequence grants | 839 | `2643402505bd4f6a74a930e30cd9e5b5` |
 | Routine grants | 295 | `97acc07e6163e9b2b1bdf889faec8761` |
 | Custom types | 2 | `ad0b86ba85981a94326ee576e14f199f` |
 
-`supabase/tests/migration_catalog_parity.test.sql` computes the same ten fingerprints on the isolated database after the migration replay and asserts both row counts and hashes against this live snapshot. The comparison is **pending** until that test passes in GitHub Actions for this branch. A mismatch is a hard stop; do not waive or label it unexplained parity without investigating the differing category.
+`supabase/tests/migration_catalog_parity.test.sql` computes the same eleven fingerprints on the isolated database after the migration replay and asserts both row counts and hashes against this live snapshot. An initial CI version compared PostgreSQL's `pg_get_functiondef` output as a single hash; that assertion failed (`99:6cd77c247a51ebf30239f97fa7a6d1f5` in the local replay, versus `99:3688e8bce4583672b13f46eb0b094eb2` live). That mismatch is recorded, not dismissed. The test now separates stored function source bodies from function metadata so the next run can establish whether source/contract drift exists independently of deparser output. The comparison is **pending** until all eleven assertions pass and the mismatch is explained. A mismatch is a hard stop; do not waive or label it unexplained parity without investigating the differing category.
 
 ## Verification boundary
 
-The successful replay run `45737505828` validated all 20 migrations and the existing application/security suites, but it predates the normalized catalog parity test. A new passing GitHub Actions run on the updated branch is required to close G2. That run must show all ten catalog assertions passing alongside the application checks, `db reset`, and SQL security tests.
+The successful replay run `45737505828` validated all 20 migrations and the existing application/security suites, but it predates the normalized catalog parity test. Catalog test run `45813480752` failed one of ten assertions: the combined `pg_get_functiondef` fingerprint differed as recorded above; its other nine catalog assertions passed. A new passing GitHub Actions run on the updated branch is required to close G2. That run must show all eleven catalog assertions passing alongside the application checks, `db reset`, and SQL security tests.
 
 No live production migration was applied. No `main` ref was changed. No G3 Pickup schema, RLS, RPC, or Edge Function is part of this packet. The normalized live/replay comparison is not yet claimed as passing.
