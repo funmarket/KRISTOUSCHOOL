@@ -158,7 +158,7 @@ reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009909');
 set local role authenticated;
-select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','false','unapproved MANAGER account is denied');
+select extensions.throws_ok($$select public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922')$$,'P0001','insufficient_pickup_scope','unapproved MANAGER account has no Pickup board or release authority');
 reset role;
 
 select pg_temp.set_pickup_actor('00000000-0000-4000-9000-000000009901');
