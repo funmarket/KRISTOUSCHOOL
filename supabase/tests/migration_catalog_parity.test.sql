@@ -33,7 +33,9 @@ pickup_routines(proname) as (
     ('create_authorized_pickup_person'),('revoke_authorized_pickup_person'),
     ('list_authorized_pickup_persons'),('export_pickup_events'),
     ('get_pickup_parent_board'),('get_pickup_staff_board'),
-    ('parent_arrived'),('get_pickup_operation_receipt')
+    ('parent_arrived'),('get_pickup_operation_receipt'),
+    ('provision_pickup_cycles'),('release_pupil'),
+    ('revoke_pickup_release_authority'),('reinstate_pickup_release_authority')
 ),
 rel as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,c.relpersistence,c.relispartition) s

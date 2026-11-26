@@ -2013,6 +2013,9 @@ isOneToOne: false
               "academic_year_id": string,"attendance_mark": string,"class_id": string,"eligibility": string,"eligible": boolean,"membership_id": string,"reason_code": string,"register_id": string,"register_status": string,"register_version": number,"school_date": string,"student_id": string
             }[]
                            },
+"provision_pickup_cycles":
+{ Args: { "p_school_date"?: string }; Returns: Json
+                           },
 "get_school_student_identity":
 { Args: { "p_student_id": string }; Returns: Json
                            },
@@ -2158,6 +2161,9 @@ isOneToOne: false
 "parent_arrived":
 { Args: { "p_collector_id": string,"p_cycle_id": string,"p_expected_version": number,"p_request_id": string }; Returns: Json
                            },
+"release_pupil":
+{ Args: { "p_collector_id": string,"p_cycle_id": string,"p_expected_version": number,"p_handoff_notes"?: string | null,"p_in_person_verified": boolean,"p_request_id": string }; Returns: Json
+                           },
 "pickup_actor_can_confirm_release":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -2215,6 +2221,12 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "reinstate_user_pickup_release_authority":
+{ Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
+                           },
+"revoke_pickup_release_authority":
+{ Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
+                           },
+"reinstate_pickup_release_authority":
 { Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
                            },
 "replace_pickup_dismissal_policy":
