@@ -181,11 +181,12 @@ update public.authorized_pickup_persons set valid_from=(now() at time zone 'Afri
 set local role authenticated;
 select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009991',1)$$,'P0001','collector_or_parent_not_authorized','expired verified collector is denied');
 reset role;
-update public.authorized_pickup_persons set valid_from=(now() at time zone 'Africa/Tunis')::date,valid_until=(now() at time zone 'Africa/Tunis')::date,revoked_at=now() where id='00000000-0000-4000-9000-000000009968';
+update public.authorized_pickup_persons set valid_from=(now() at time zone 'Africa/Tunis')::date,valid_until=(now() at time zone 'Africa/Tunis')::date,
+ revoked_at=now(),revoked_by='00000000-0000-4000-9000-000000009943',revocation_reason='G4 revoked collector test' where id='00000000-0000-4000-9000-000000009968';
 set local role authenticated;
 select extensions.throws_ok($$select public.parent_arrived('00000000-0000-4000-9000-000000009964','00000000-0000-4000-9000-000000009968','00000000-0000-4000-9000-000000009992',1)$$,'P0001','collector_or_parent_not_authorized','revoked verified collector is denied');
 reset role;
-update public.authorized_pickup_persons set revoked_at=null where id='00000000-0000-4000-9000-000000009968';
+update public.authorized_pickup_persons set revoked_at=null,revoked_by=null,revocation_reason=null where id='00000000-0000-4000-9000-000000009968';
 
 update public.dismissal_policies set opens_at=((now() at time zone 'Africa/Tunis')::time + interval '1 minute')::time,
  closes_at=((now() at time zone 'Africa/Tunis')::time + interval '2 minutes')::time where id='00000000-0000-4000-9000-000000009947';
