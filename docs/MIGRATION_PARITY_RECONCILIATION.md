@@ -64,8 +64,27 @@ The main-branch `revoke_auth_trigger_execute_public` source revoked execution fr
 
 Six other source files differ byte-for-byte from their stored statements only in comments or formatting recorded in the matrix. Their executable SQL was compared against the hosted statements; no other SQL-token change was found. The two restored files and the corrected revoke statement are byte-identical to their hosted payloads.
 
+## Normalized live catalog snapshot
+
+On 2026-11-26, a read-only query against `ofppapwofhovhroyjtkc` computed deterministic MD5 fingerprints from sorted, normalized `public` catalog rows. The snapshot covers relation kinds/owners/RLS, columns and formatted types/nullability/defaults, custom type definitions and enum labels, constraints, indexes, non-internal triggers, public function/procedure signatures and definitions/security/owners/configuration, RLS policies, and explicit table/routine ACL entries. OIDs and application row data are excluded. Row counts and fingerprints are:
+
+| Catalog category | Rows | Normalized MD5 |
+|---|---:|---|
+| Relations | 50 | `6a45512997971f57eff829e358ef9767` |
+| Columns | 519 | `94c56097d3ae7f3f32b17028ea3bffbe` |
+| Constraints | 304 | `60ddb737da94705fe02e13c1a27332ee` |
+| Indexes | 93 | `a3105f3a779e0a734a272d36e55f5000` |
+| Triggers | 40 | `243e9c72292fe2a2ac8dbec5220555f5` |
+| Functions and procedures | 99 | `3688e8bce4583672b13f46eb0b094eb2` |
+| RLS policies | 56 | `d093adf4ea11deae5d7067ae0fc9fa4a` |
+| Table/view/sequence grants | 839 | `2643402505bd4f6a74a930e30cd9e5b5` |
+| Routine grants | 295 | `97acc07e6163e9b2b1bdf889faec8761` |
+| Custom types | 2 | `ad0b86ba85981a94326ee576e14f199f` |
+
+`supabase/tests/migration_catalog_parity.test.sql` computes the same ten fingerprints on the isolated database after the migration replay and asserts both row counts and hashes against this live snapshot. The comparison is **pending** until that test passes in GitHub Actions for this branch. A mismatch is a hard stop; do not waive or label it unexplained parity without investigating the differing category.
+
 ## Verification boundary
 
-This branch is intended to trigger `.github/workflows/tg-authz-validation.yml`, which runs application checks and starts isolated local Supabase before `db reset` and `db test`. CI output must establish that all 20 migrations were applied on this branch and that the required suites pass. A prior run against the 18-file baseline is not evidence for this reconciliation.
+The successful replay run `45737505828` validated all 20 migrations and the existing application/security suites, but it predates the normalized catalog parity test. A new passing GitHub Actions run on the updated branch is required to close G2. That run must show all ten catalog assertions passing alongside the application checks, `db reset`, and SQL security tests.
 
-No live production migration was applied. No `main` ref was changed. No G3 Pickup schema, RLS, RPC, or Edge Function is part of this packet. Normalized live catalog comparison remains a CI/review acceptance check; this file does not claim it passed before CI.
+No live production migration was applied. No `main` ref was changed. No G3 Pickup schema, RLS, RPC, or Edge Function is part of this packet. The normalized live/replay comparison is not yet claimed as passing.
