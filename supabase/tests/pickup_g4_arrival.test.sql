@@ -127,15 +127,18 @@ do $$
 declare
   v_parent uuid:='00000000-0000-4000-9000-000000009941';
   v_cycle uuid; v_collector uuid; v_request uuid;
-  v_waiters integer; v_sql text; v_result jsonb; v_locked_cycle uuid; i integer;
+  v_waiters integer; v_sql text; v_result jsonb; v_locked_cycle uuid; i integer; v_conn text;
   v_pid integer;
 begin
   -- Supabase's isolated local database uses its documented local `postgres`
-  -- role/password. dblink requires an explicit password when opened by the
-  -- pgTAP session's non-superuser role, even when the target is this database.
-  perform dblink_connect('pickup_g4_blocker','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
-  perform dblink_connect('pickup_g4_a','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
-  perform dblink_connect('pickup_g4_b','host=127.0.0.1 port=5432 dbname='||current_database()||' user=postgres password=postgres');
+  -- role/password. Connect over the address/port observed by this server so
+  -- PostgreSQL applies its TCP password-auth rule (Unix socket/loopback trust
+  -- is rejected for a non-superuser dblink caller even with password= present).
+  v_conn:=format('host=%s port=%s dbname=%s user=postgres password=postgres',
+    host(inet_server_addr()),inet_server_port(),current_database());
+  perform dblink_connect('pickup_g4_blocker',v_conn);
+  perform dblink_connect('pickup_g4_a',v_conn);
+  perform dblink_connect('pickup_g4_b',v_conn);
   select pid into v_pid from dblink('pickup_g4_blocker','select pg_backend_pid()') as t(pid integer);
   insert into pickup_g4_session_pids values(v_pid);
   select pid into v_pid from dblink('pickup_g4_a','select pg_backend_pid()') as t(pid integer);
