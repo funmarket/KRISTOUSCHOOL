@@ -159,8 +159,9 @@ begin
   perform dblink_exec('pickup_g4_blocker','begin');
   select cycle_id into v_locked_cycle from dblink('pickup_g4_blocker',format('select cycle_id from public.pickup_cycles where cycle_id=%L::uuid for update',v_cycle)) as lock_row(cycle_id uuid);
   v_sql:=format('/* pickup_g4_same_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,v_request);
-  perform dblink_send_query('pickup_g4_a',v_sql);
-  perform dblink_send_query('pickup_g4_b',v_sql);
+  if dblink_send_query('pickup_g4_a',v_sql)<>1 or dblink_send_query('pickup_g4_b',v_sql)<>1 then
+    raise exception 'pickup_g4_same_request_query_was_not_accepted';
+  end if;
   v_waiters:=0;
   for i in 1..200 loop
     -- dblink_is_busy observes each independent backend without relying on
@@ -186,8 +187,10 @@ begin
   v_collector:='00000000-0000-4000-9000-000000009969';
   perform dblink_exec('pickup_g4_blocker','begin');
   select cycle_id into v_locked_cycle from dblink('pickup_g4_blocker',format('select cycle_id from public.pickup_cycles where cycle_id=%L::uuid for update',v_cycle)) as lock_row(cycle_id uuid);
-  perform dblink_send_query('pickup_g4_a',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009971'));
-  perform dblink_send_query('pickup_g4_b',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009972'));
+  if dblink_send_query('pickup_g4_a',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009971'))<>1
+     or dblink_send_query('pickup_g4_b',format('/* pickup_g4_distinct_request */ select public.parent_arrived(%L::uuid,%L::uuid,%L::uuid,1) as result',v_cycle,v_collector,'00000000-0000-4000-9000-000000009972'))<>1 then
+    raise exception 'pickup_g4_distinct_request_query_was_not_accepted';
+  end if;
   v_waiters:=0;
   for i in 1..200 loop
     v_waiters:=dblink_is_busy('pickup_g4_a')+dblink_is_busy('pickup_g4_b');
