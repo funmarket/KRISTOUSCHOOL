@@ -707,6 +707,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"family_guardian_audit_logs": {
+                  Row: {
+                    "action": string,"actor_user_id": string,"created_at": string,"id": string,"link_id": string,"previous_active": boolean,"previous_verified_by": string | null,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_user_id": string,"created_at"?: string,"id"?: string,"link_id": string,"previous_active": boolean,"previous_verified_by"?: string | null,"reason": string
+                  }
+                  Update: {
+                    "action"?: string,"actor_user_id"?: string,"created_at"?: string,"id"?: string,"link_id"?: string,"previous_active"?: boolean,"previous_verified_by"?: string | null,"reason"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "family_guardian_audit_logs_actor_user_id_fkey"
+      columns: ["actor_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "family_guardian_audit_logs_link_id_fkey"
+      columns: ["link_id"]
+isOneToOne: false
+      referencedRelation: "parent_child_links"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "family_guardian_audit_logs_previous_verified_by_fkey"
+      columns: ["previous_verified_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"food_menu_days": {
                   Row: {
                     "day_label": string,"day_order": number,"dessert": string,"id": string,"main_dish": string,"menu_week_id": string,"notes": string | null,"side_dish": string,"starter": string
@@ -1878,7 +1910,10 @@ isOneToOne: false
             "acknowledge_pickup_outbox_delivery":
 { Args: { "p_error"?: string,"p_outbox_id": string,"p_provider_message_id"?: string,"p_succeeded": boolean }; Returns: Json
                            },
-"assign_existing_student_to_class": { Args: { p_student_id: string; p_class_id: string; p_expected_membership_id?: string | null }; Returns: Json },"assign_teacher_subject_allocation":
+"assign_existing_student_to_class":
+{ Args: { "p_class_id": string,"p_expected_membership_id"?: string,"p_student_id": string }; Returns: Json
+                           },
+"assign_teacher_subject_allocation":
 { Args: { "p_class_id": string,"p_notes"?: string,"p_subject_code": string,"p_teacher_user_id": string }; Returns: Json
                            },
 "assign_teacher_to_class":
@@ -2077,10 +2112,13 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
-"family_reject_audit_mutation": { Args: never; Returns: unknown },"get_attendance_register":
+"get_attendance_register":
 { Args: { "p_class_id": string,"p_school_date": string,"p_teacher_user_id"?: string }; Returns: Json
                            },
-"get_enrollment_review_access": { Args: never; Returns: boolean },"get_my_class_creation_permission":
+"get_enrollment_review_access":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"get_my_class_creation_permission":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_my_school_context":
@@ -2212,7 +2250,10 @@ isOneToOne: false
 "list_class_subject_allocations":
 { Args: { "p_class_id": string,"p_include_inactive"?: boolean }; Returns: Json
                            },
-"list_enrollment_applications": { Args: never; Returns: Json },"list_my_teacher_subject_allocations":
+"list_enrollment_applications":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_my_teacher_subject_allocations":
 { Args: { "p_class_id"?: string }; Returns: Json
                            },
 "list_school_classes_with_rosters":
@@ -2226,7 +2267,10 @@ isOneToOne: false
               "class_id": string,"mark": string,"register_id": string,"school_date": string,"teacher_user_id": string
             }[]
                            },
-"list_student_guardians": { Args: {p_student_id: string}; Returns: Json },"list_teacher_subject_allocation_events":
+"list_student_guardians":
+{ Args: { "p_student_id": string }; Returns: Json
+                           },
+"list_teacher_subject_allocation_events":
 { Args: { "p_allocation_id"?: string,"p_class_id"?: string }; Returns: Json
                            },
 "mark_all_user_notifications_read":
@@ -2418,7 +2462,10 @@ isOneToOne: false
 "review_enrollment_application":
 { Args: { "p_application_id": string,"p_decision": string,"p_expected_version"?: number,"p_review_note"?: string }; Returns: Json
                            },
-"review_student_guardian": { Args: {p_student_id:string; p_link_id:string; p_action:string; p_expected_updated_at:string; p_reason:string}; Returns: Json },"revoke_authorized_pickup_person":
+"review_student_guardian":
+{ Args: { "p_action": string,"p_expected_updated_at": string,"p_link_id": string,"p_reason": string,"p_student_id": string }; Returns: Json
+                           },
+"revoke_authorized_pickup_person":
 { Args: { "p_person_id": string,"p_reason": string }; Returns: Json
                            },
 "revoke_pickup_release_authority":

@@ -33,3 +33,15 @@ test('Telegram context and enrollment reads never fall back to anonymous RPC/tab
     assert.equal((await fetchMySchoolContext(client)).ok,false);
   } finally {delete globalThis.window;}
 });
+
+test('placement and Family adapters preserve explicit canonical IDs and stale-state tokens',async()=>{
+  const {assignExistingStudentToClass}=await import('../src/lib/domains/academics.ts');
+  const {reviewStudentGuardian}=await import('../src/lib/domains/family.ts');
+  const calls=[];
+  const client={rpc:async(name,args)=>{calls.push({name,args});return {data:name==='assign_existing_student_to_class'?{studentId:'student',classId:'class',membershipId:'membership',replayed:false}:{linkId:'link',studentId:'student',replayed:false},error:null};}};
+  assert.equal((await assignExistingStudentToClass({studentId:'student',classId:'class',expectedMembershipId:null},client)).ok,true);
+  assert.deepEqual(calls[0],{name:'assign_existing_student_to_class',args:{p_student_id:'student',p_class_id:'class'}});
+  assert.equal((await reviewStudentGuardian({studentId:'student',linkId:'link',action:'REVOKE',expectedUpdatedAt:'stamp',reason:' reviewed evidence '},client)).ok,true);
+  assert.equal(calls[1].args.p_expected_updated_at,'stamp');assert.equal(calls[1].args.p_reason,'reviewed evidence');
+  assert.ok(!JSON.stringify(calls).includes('create_and_enroll_student'));
+});

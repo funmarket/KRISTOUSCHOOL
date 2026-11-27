@@ -370,7 +370,8 @@ export async function assignExistingStudentToClass(
   try {
     const tg = await invokeTelegramPrivateOperation<StudentPlacementReceipt>('academics.placeStudent', input, client);
     const {data,error} = tg.handled ? {data:tg.data,error:null} : await client.rpc('assign_existing_student_to_class', {
-      p_student_id:input.studentId,p_class_id:input.classId,p_expected_membership_id:input.expectedMembershipId,
+      p_student_id:input.studentId,p_class_id:input.classId,
+      ...(input.expectedMembershipId ? {p_expected_membership_id:input.expectedMembershipId} : {}),
     });
     if (error) return {ok:false,...classifySupabaseError(error)};
     const row = data as unknown as StudentPlacementReceipt;
