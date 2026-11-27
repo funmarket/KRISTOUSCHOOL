@@ -2327,14 +2327,14 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"retry_failed_pickup_notifications":
+{ Args: { "p_request_id": string }; Returns: Json
+                           },
 "review_early_departure":
 { Args: { "p_decision": string,"p_early_departure_id": string,"p_expected_version": number,"p_request_id": string,"p_review_reason"?: string }; Returns: Json
                            },
 "review_enrollment_application":
 { Args: { "p_application_id": string,"p_decision": string,"p_expected_version"?: number,"p_review_note"?: string }; Returns: Json
-                           },
-"retry_failed_pickup_notifications":
-{ Args: { "p_request_id": string }; Returns: Json
                            },
 "revoke_authorized_pickup_person":
 { Args: { "p_person_id": string,"p_reason": string }; Returns: Json
