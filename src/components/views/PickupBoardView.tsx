@@ -22,10 +22,16 @@ export const PickupBoardView: React.FC = () => {
     pickupLastSyncedAt,
     pickupMutationState,
     isLoadingPickup,
+    isProvisioningPickup,
+    isUpdatingReleaseAuthority,
+    pickupAdminNotice,
     refreshPickupBoard,
     verifyPickupOperationReceipt,
     markPickupArrived,
     confirmPickupRelease,
+    provisionTodayPickupCycles,
+    revokePickupReleaseAuthority,
+    reinstatePickupReleaseAuthority,
     language,
     t,
   } = useApp();
@@ -193,6 +199,9 @@ export const PickupBoardView: React.FC = () => {
           pickupAvailability={pickupAvailability}
           pickupMutationState={pickupMutationState}
           isLoadingPickup={isLoadingPickup}
+          isProvisioningPickup={isProvisioningPickup}
+          isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
+          pickupAdminNotice={pickupAdminNotice}
           onRefresh={(classId) => {
             void refreshPickupBoard(classId);
           }}
@@ -206,6 +215,9 @@ export const PickupBoardView: React.FC = () => {
                 }
               : undefined
           }
+          onProvisionCycles={provisionTodayPickupCycles}
+          onRevokeReleaseAuthority={revokePickupReleaseAuthority}
+          onReinstateReleaseAuthority={reinstatePickupReleaseAuthority}
         />
       )}
     </div>

@@ -13,7 +13,12 @@ export type TelegramPrivateOperation =
   | 'preferences.save'
   | 'pickup.board'
   | 'pickup.arrive'
-  | 'pickup.receipt';
+  | 'pickup.receipt'
+  | 'pickup.release'
+  | 'pickup.provision'
+  | 'pickup.openCycles'
+  | 'pickup.revokeRelease'
+  | 'pickup.reinstateRelease';
 
 export interface TelegramPrivateOperationResult<T = unknown> {
   handled: boolean;
@@ -31,6 +36,19 @@ const PRESERVED_REMOTE_ERROR_CODES = new Set([
   'invalid_request',
   'version_conflict',
   'idempotency_conflict',
+  'arrival_required',
+  'already_released',
+  'attestation_required',
+  'collector_invalid',
+  'attendance_ineligible',
+  'pickup_release_authority_required',
+  'pickup_release_authority_revoked',
+  'pickup_provision_authority_required',
+  'pickup_app_admin_required',
+  'release_authority_target_ineligible',
+  'pickup_release_authority_already_revoked',
+  'pickup_release_authority_not_revoked',
+  'invalid_pickup_authority_request',
   'pickup_parent_required',
   'pickup_parent_child_link_required',
   'collector_or_parent_not_authorized',

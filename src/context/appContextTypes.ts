@@ -37,8 +37,13 @@ import type { SignInErrorCode, SignUpErrorCode } from '../i18n/authMessages';
 import type { SignupRole } from '../lib/auth';
 import type { SchoolClassWithRoster } from '../lib/schoolOperations';
 import type { PreferencesSyncStatus } from '../lib/appStateGuards';
-import type { AnnounceArrivalInput, ConfirmReleaseInput } from '../lib/domains/pickup';
-import type { PickupMutationResponse } from './usePickupState';
+import type {
+  AnnounceArrivalInput,
+  ConfirmReleaseInput,
+  PickupProvisionResult,
+  PickupReleaseAuthorityResult,
+} from '../lib/domains/pickup';
+import type { PickupAdminNotice, PickupMutationResponse } from './usePickupState';
 import type { SignupInput, SignupOutcome } from './IdentityContext';
 import { MOCK_ANNOUNCEMENTS, MOCK_FOOD_MENU } from '../data/mockData';
 import { contentT } from '../i18n/content';
@@ -110,6 +115,9 @@ export interface AppContextType {
   pickupLastSyncedAt: string | null;
   pickupMutationState: Record<string, PickupMutationEntry>;
   isLoadingPickup: boolean;
+  isProvisioningPickup?: boolean;
+  isUpdatingReleaseAuthority?: boolean;
+  pickupAdminNotice?: PickupAdminNotice | null;
   foodMenu: FoodMenuWeek;
   foodMenuStatus: BackendOpStatus;
   foodMenuError: string | null;
@@ -183,6 +191,9 @@ export interface AppContextType {
   confirmPickupRelease: (
     inputOrRecordId: ConfirmReleaseInput | string,
   ) => Promise<PickupMutationResponse>;
+  provisionTodayPickupCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
+  revokePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  reinstatePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   notificationSound: NotificationSoundOption;

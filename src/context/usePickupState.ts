@@ -27,17 +27,17 @@ import {
   type PickupReasonCode,
   type PickupRecord,
 } from '../lib/domains/pickup.ts';
+import {
+  toPickupMutationResponse,
+  usePickupAdminActions,
+  type PickupAdminNotice,
+  type PickupMutationResponse,
+  type UsePickupAdminAdapters,
+} from './usePickupAdminActions.ts';
 
-export interface PickupMutationResponse {
-  success: boolean;
-  status: BackendOpStatus;
-  outcome: PickupCommandOutcome['outcome'];
-  error?: string;
-  errorCode?: PickupReasonCode;
-  commandOutcome: PickupCommandOutcome;
-}
+export type { PickupAdminNotice, PickupMutationResponse };
 
-export interface UsePickupStateAdapters {
+export interface UsePickupStateAdapters extends UsePickupAdminAdapters {
   fetchCycles?: (options?: { role?: AccountRole | null; classId?: string | null }) => Promise<PickupReadResult>;
   announceArrival?: (input: AnnounceArrivalInput) => Promise<PickupCommandOutcome>;
   confirmRelease?: (input: ConfirmReleaseInput) => Promise<PickupCommandOutcome>;
@@ -56,24 +56,6 @@ type PickupCommandPayload = AnnounceArrivalInput | ConfirmReleaseInput;
 
 const isEligible = (user: User | null | undefined): boolean =>
   Boolean(user && user.accountStatus === 'APPROVED' && user.role !== 'STUDENT');
-
-function toMutationResponse(outcome: PickupCommandOutcome): PickupMutationResponse {
-  const status: BackendOpStatus = outcome.ok
-    ? 'READY'
-    : outcome.outcome === 'DENIED'
-      ? 'UNAUTHORIZED'
-      : outcome.outcome === 'UNAVAILABLE' && outcome.reasonCode === PICKUP_BACKEND_UNAVAILABLE_CODE
-        ? 'BLOCKED_BACKEND'
-        : 'ERROR';
-  return {
-    success: outcome.ok,
-    status,
-    outcome: outcome.outcome,
-    error: outcome.ok ? undefined : outcome.reasonCode,
-    errorCode: outcome.ok ? undefined : outcome.reasonCode,
-    commandOutcome: outcome,
-  };
-}
 
 export function usePickupState({ currentUser, identityContext, getCurrentIdentity, mountedRef, adapters }: UsePickupStateParams) {
   const fetchCycles = adapters?.fetchCycles ?? defaultFetchPickupBoardCycles;
@@ -100,26 +82,6 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     return () => { internalMountedRef.current = false; };
   }, [mountedRef]);
 
-  const clearPickupState = useCallback(() => {
-    readReqGenRef.current += 1;
-    setPickupCycles([]);
-    setPickupStatus('BLOCKED_BACKEND');
-    setPickupAvailability('UNAVAILABLE');
-    setPickupError(null);
-    setPickupErrorCode(PICKUP_BACKEND_UNAVAILABLE_CODE);
-    setPickupLastSyncedAt(null);
-    setPickupMutationState({});
-    setIsLoadingPickup(false);
-  }, []);
-
-  const lastIdentityGenRef = useRef<number>(identityContext.generation);
-  useEffect(() => {
-    if (lastIdentityGenRef.current !== identityContext.generation || !isEligible(currentUser)) {
-      lastIdentityGenRef.current = identityContext.generation;
-      clearPickupState();
-    }
-  }, [clearPickupState, currentUser, identityContext.generation]);
-
   const refreshPickupBoardForUser = useCallback(
     async (targetUser: User | null | undefined, classId?: string | null): Promise<PickupReadResult> => {
       const origin = getCurrentIdentity();
@@ -134,13 +96,11 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
         }
         return denied;
       }
-
       const reqGen = ++readReqGenRef.current;
       if (effectiveMountedRef.current) setIsLoadingPickup(true);
       try {
         const res = await fetchCycles({ role: targetUser.role, classId: classId ?? null });
-        const stillValid = reqGen === readReqGenRef.current && isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current);
-        if (!stillValid) {
+        if (reqGen !== readReqGenRef.current || !isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) {
           return { ok: false, status: 'ERROR', availability: 'ERROR', records: [], lastSyncedAt: null, errorCode: 'session_changed', errorMessage: 'Account session changed.' };
         }
         setPickupStatus(res.status);
@@ -148,7 +108,6 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
         setPickupError(res.ok ? null : res.errorMessage ?? null);
         setPickupErrorCode(res.ok ? null : res.errorCode ?? null);
         setPickupLastSyncedAt(res.lastSyncedAt);
-
         if (res.ok && res.availability === 'READY') {
           setPickupCycles(res.records);
           setPickupMutationState((prev) =>
@@ -177,6 +136,28 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     [effectiveMountedRef, fetchCycles, getCurrentIdentity],
   );
 
+  const adminActions = usePickupAdminActions({
+    currentUser, getCurrentIdentity, effectiveMountedRef, refreshPickupBoardForUser, adapters,
+  });
+
+  const { clearPickupAdminState } = adminActions;
+
+  const clearPickupState = useCallback(() => {
+    readReqGenRef.current += 1;
+    setPickupCycles([]); setPickupStatus('BLOCKED_BACKEND'); setPickupAvailability('UNAVAILABLE');
+    setPickupError(null); setPickupErrorCode(PICKUP_BACKEND_UNAVAILABLE_CODE);
+    setPickupLastSyncedAt(null); setPickupMutationState({}); setIsLoadingPickup(false);
+    clearPickupAdminState();
+  }, [clearPickupAdminState]);
+
+  const lastIdentityGenRef = useRef<number>(identityContext.generation);
+  useEffect(() => {
+    if (lastIdentityGenRef.current !== identityContext.generation || !isEligible(currentUser)) {
+      lastIdentityGenRef.current = identityContext.generation;
+      clearPickupState();
+    }
+  }, [clearPickupState, currentUser, identityContext.generation]);
+
   const refreshPickupBoard = useCallback(
     (classId?: string | null) => refreshPickupBoardForUser(currentUser, classId),
     [currentUser, refreshPickupBoardForUser],
@@ -202,10 +183,9 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
           upsertCycle(outcome.serverRecord);
         } else if (outcome.serverState || outcome.serverVersion) {
           setPickupCycles((prev) => prev.map((item) => item.cycleId !== targetKey ? item : {
-            ...item,
-            state: outcome.serverState ?? item.state,
-            version: outcome.serverVersion ?? item.version,
+            ...item, state: outcome.serverState ?? item.state, version: outcome.serverVersion ?? item.version,
             actorCanAnnounceArrival: outcome.serverState === 'WAITING' ? item.actorCanAnnounceArrival : false,
+            actorCanConfirmRelease: outcome.serverState === 'PARENT_ARRIVED' ? item.actorCanConfirmRelease : false,
           }));
         }
         setPickupMutationState((prev) => ({
@@ -225,6 +205,9 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
           },
         }));
         return;
+      }
+      if (outcome.outcome === 'DENIED' && outcome.reasonCode === 'pickup_release_authority_revoked') {
+        setPickupCycles((prev) => prev.map((c) => ({ ...c, revocationStatus: 'REVOKED', actorCanConfirmRelease: false })));
       }
       setPickupMutationState((prev) => ({
         ...prev,
@@ -254,24 +237,21 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
 
   const reconcileAuthoritativeSuccess = useCallback(
     async (
-      cycleId: string,
-      operation: 'ARRIVAL' | 'RELEASE',
-      payload: PickupCommandPayload,
-      outcome: Extract<PickupCommandOutcome, { ok: true }>,
-      origin: AccountIdentityContext,
-      role: AccountRole,
+      cycleId: string, operation: 'ARRIVAL' | 'RELEASE', payload: PickupCommandPayload,
+      outcome: Extract<PickupCommandOutcome, { ok: true }>, origin: AccountIdentityContext, role: AccountRole,
+      skipReceiptRead = false,
     ): Promise<PickupCommandOutcome> => {
       if (hasCommittedPickupTransition(outcome.updatedRecord, cycleId, operation)) return outcome;
-
-      try {
-        const receipt = await readOperationReceipt(payload.requestId, cycleId);
-        if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return deniedOutcome('session_changed', 'Account session changed.');
-        if (receipt.ok && hasCommittedPickupTransition(receipt.updatedRecord, cycleId, operation)) return receipt;
-        if (!receipt.ok && (receipt.outcome === 'CONFLICT' || receipt.outcome === 'DENIED')) return receipt;
-      } catch {
-        // Fall through to board readback verification.
+      if (!skipReceiptRead) {
+        try {
+          const receipt = await readOperationReceipt(payload.requestId, cycleId);
+          if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return deniedOutcome('session_changed', 'Account session changed.');
+          if (receipt.ok && hasCommittedPickupTransition(receipt.updatedRecord, cycleId, operation)) return receipt;
+          if (!receipt.ok && (receipt.outcome === 'CONFLICT' || receipt.outcome === 'DENIED')) return receipt;
+        } catch {
+          // Fall through to board readback verification.
+        }
       }
-
       try {
         const board = await fetchCycles({ role });
         if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return deniedOutcome('session_changed', 'Account session changed.');
@@ -287,23 +267,22 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
       } catch {
         // Authoritative readback failed; require explicit verification.
       }
-
       return unknownOutcomeFor(payload.requestId, cycleId, 'Server acknowledged command without updated pickup record; verification required.');
     },
     [effectiveMountedRef, fetchCycles, getCurrentIdentity, readOperationReceipt],
   );
 
   const verifyPickupOperationReceipt = useCallback(async (cycleId: string): Promise<PickupMutationResponse> => {
-    if (!currentUser || !isEligible(currentUser)) return toMutationResponse(deniedOutcome('actor_not_authorized', 'Approved account required.'));
+    if (!currentUser || !isEligible(currentUser)) return toPickupMutationResponse(deniedOutcome('actor_not_authorized', 'Approved account required.'));
     const existing = pickupMutationState[cycleId];
     if (!existing || existing.status !== 'UNKNOWN_OUTCOME' || !existing.requestId || !existing.payload || !existing.operation) {
-      return toMutationResponse(unknownOutcomeFor(existing?.requestId || '', cycleId, 'No pending unconfirmed operation to verify.'));
+      return toPickupMutationResponse(unknownOutcomeFor(existing?.requestId || '', cycleId, 'No pending unconfirmed operation to verify.'));
     }
     const origin = getCurrentIdentity();
     let outcome: PickupCommandOutcome;
     try {
       const receipt = await readOperationReceipt(existing.requestId, cycleId);
-      if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
+      if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toPickupMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
       if (receipt.ok) outcome = await reconcileAuthoritativeSuccess(cycleId, existing.operation, existing.payload, receipt, origin, currentUser.role);
       else if (receipt.outcome === 'CONFLICT') outcome = await reconcileConflictFromBoard(cycleId, currentUser.role, receipt, origin);
       else if (receipt.outcome === 'DENIED') outcome = receipt;
@@ -311,36 +290,33 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     } catch (err) {
       outcome = unknownOutcomeFor(existing.requestId, cycleId, err instanceof Error ? err.message : 'Receipt verification failed.');
     }
-    if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
+    if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toPickupMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
     applyCommandOutcome(cycleId, outcome, { operation: existing.operation, payload: existing.payload });
-    return toMutationResponse(outcome);
+    return toPickupMutationResponse(outcome);
   }, [applyCommandOutcome, currentUser, effectiveMountedRef, getCurrentIdentity, pickupMutationState, readOperationReceipt, reconcileAuthoritativeSuccess, reconcileConflictFromBoard]);
 
   const runCommand = useCallback(
     async (
-      cycleId: string,
-      operation: 'ARRIVAL' | 'RELEASE',
-      payload: PickupCommandPayload,
+      cycleId: string, operation: 'ARRIVAL' | 'RELEASE', payload: PickupCommandPayload,
       execute: (effectivePayload: PickupCommandPayload) => Promise<PickupCommandOutcome>,
     ): Promise<PickupMutationResponse> => {
-      if (!currentUser || !isEligible(currentUser)) return toMutationResponse(deniedOutcome('actor_not_authorized', 'Approved account required.'));
+      if (!currentUser || !isEligible(currentUser)) return toPickupMutationResponse(deniedOutcome('actor_not_authorized', 'Approved account required.'));
       if (pickupAvailability !== 'READY') {
         const unavailable = unavailableOutcome(pickupErrorCode || PICKUP_BACKEND_UNAVAILABLE_CODE, pickupError || 'Pickup backend is unavailable.');
         applyCommandOutcome(cycleId, unavailable);
-        return toMutationResponse(unavailable);
+        return toPickupMutationResponse(unavailable);
       }
-
       const origin = getCurrentIdentity();
       let effectivePayload = payload;
       const existing = pickupMutationState[cycleId];
       if (existing?.status === 'UNKNOWN_OUTCOME') {
         if (!existing.requestId || payload.requestId !== existing.requestId) {
-          return toMutationResponse(unknownOutcomeFor(existing.requestId || payload.requestId, cycleId, 'Verify or retry the pending request before submitting a new request.'));
+          return toPickupMutationResponse(unknownOutcomeFor(existing.requestId || payload.requestId, cycleId, 'Verify or retry the pending request before submitting a new request.'));
         }
         effectivePayload = existing.payload ?? payload;
         try {
           const receipt = await readOperationReceipt(existing.requestId, cycleId);
-          if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
+          if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toPickupMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
           if (receipt.ok || receipt.outcome === 'CONFLICT' || receipt.outcome === 'DENIED') {
             const resolved = receipt.ok
               ? await reconcileAuthoritativeSuccess(cycleId, operation, effectivePayload, receipt, origin, currentUser.role)
@@ -348,66 +324,58 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
                 ? await reconcileConflictFromBoard(cycleId, currentUser.role, receipt, origin)
                 : receipt;
             applyCommandOutcome(cycleId, resolved, { operation, payload: effectivePayload });
-            return toMutationResponse(resolved);
+            return toPickupMutationResponse(resolved);
           }
         } catch {
           // Receipt lookup unavailable; retry with exact stored payload & requestId.
         }
       }
-
       if (effectiveMountedRef.current) {
         setPickupMutationState((prev) => ({
           ...prev,
           [cycleId]: { status: 'SUBMITTING', requestId: effectivePayload.requestId, operation, payload: effectivePayload },
         }));
       }
-
       let outcome: PickupCommandOutcome;
       try {
         outcome = await execute(effectivePayload);
       } catch (err) {
         outcome = unknownOutcomeFor(effectivePayload.requestId, cycleId, err instanceof Error && err.message ? err.message : 'Request failed before server confirmation.');
       }
-      if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
-
+      if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toPickupMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
+      let receiptAlreadyChecked = false;
       if (!outcome.ok && outcome.outcome === 'UNKNOWN_OUTCOME') {
         try {
           const autoReceipt = await readOperationReceipt(effectivePayload.requestId, cycleId);
-          if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
-          if (autoReceipt.ok || autoReceipt.outcome === 'CONFLICT' || autoReceipt.outcome === 'DENIED') {
-            outcome = autoReceipt;
-          }
+          receiptAlreadyChecked = true;
+          if (!isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) return toPickupMutationResponse(deniedOutcome('session_changed', 'Account session changed.'));
+          if (autoReceipt.ok || autoReceipt.outcome === 'CONFLICT' || autoReceipt.outcome === 'DENIED') outcome = autoReceipt;
         } catch {
           // Preserve UNKNOWN_OUTCOME with exact requestId for explicit verification or retry.
         }
       }
-
-      if (outcome.ok) outcome = await reconcileAuthoritativeSuccess(cycleId, operation, effectivePayload, outcome, origin, currentUser.role);
+      if (outcome.ok) outcome = await reconcileAuthoritativeSuccess(cycleId, operation, effectivePayload, outcome, origin, currentUser.role, receiptAlreadyChecked);
       else if (outcome.outcome === 'CONFLICT') outcome = await reconcileConflictFromBoard(cycleId, currentUser.role, outcome, origin);
-
       applyCommandOutcome(cycleId, outcome, { operation, payload: effectivePayload });
-      return toMutationResponse(outcome);
+      return toPickupMutationResponse(outcome);
     },
     [applyCommandOutcome, currentUser, effectiveMountedRef, getCurrentIdentity, pickupAvailability, pickupError, pickupErrorCode, pickupMutationState, readOperationReceipt, reconcileAuthoritativeSuccess, reconcileConflictFromBoard],
   );
 
   const markPickupArrived = useCallback(
     async (inputOrChildId: AnnounceArrivalInput | string, collectorId?: string): Promise<PickupMutationResponse> => {
-      const input: AnnounceArrivalInput =
-        typeof inputOrChildId === 'string'
-          ? (() => {
-              const matched = pickupCycles.find((c) => c.studentId === inputOrChildId);
-              const activeCol = matched?.authorizedCollectors.find((c) => c.status === 'ACTIVE');
-              const resolvedId = matched?.cycleId || inputOrChildId;
-              return {
-                cycleId: resolvedId,
-                studentId: inputOrChildId,
-                collectorId: collectorId || matched?.intendedCollectorId || activeCol?.collectorId || '',
-                requestId: createPickupRequestId('arrival', resolvedId),
-                expectedVersion: matched?.version ?? 0,
-              };
-            })()
-          : inputOrChildId;
+      const input: AnnounceArrivalInput = typeof inputOrChildId === 'string'
+        ? (() => {
+            const matched = pickupCycles.find((c) => c.studentId === inputOrChildId);
+            const activeCol = matched?.authorizedCollectors.find((c) => c.status === 'ACTIVE');
+            const resolvedId = matched?.cycleId || inputOrChildId;
+            return {
+              cycleId: resolvedId, studentId: inputOrChildId,
+              collectorId: collectorId || matched?.intendedCollectorId || activeCol?.collectorId || '',
+              requestId: createPickupRequestId('arrival', resolvedId), expectedVersion: matched?.version ?? 0,
+            };
+          })()
+        : inputOrChildId;
       return runCommand(input.cycleId, 'ARRIVAL', input, (p) => announceArrival(p as AnnounceArrivalInput));
     },
     [announceArrival, pickupCycles, runCommand],
@@ -417,14 +385,13 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     async (inputOrRecordId: ConfirmReleaseInput | string): Promise<PickupMutationResponse> => {
       if (typeof inputOrRecordId === 'string' || inputOrRecordId.physicalHandoffAttested !== true || inputOrRecordId.collectorVerifiedInPerson !== true) {
         const targetId = typeof inputOrRecordId === 'string' ? inputOrRecordId : inputOrRecordId.cycleId;
-        const outcome =
-          !currentUser || !isEligible(currentUser)
-            ? deniedOutcome('actor_not_authorized', 'Approved account required.')
-            : pickupAvailability !== 'READY'
-              ? unavailableOutcome(pickupErrorCode || PICKUP_BACKEND_UNAVAILABLE_CODE, pickupError || 'Pickup backend is unavailable.')
-              : deniedOutcome('handoff_attestation_required', 'Physical handoff and collector verification must be attested.');
+        const outcome = !currentUser || !isEligible(currentUser)
+          ? deniedOutcome('actor_not_authorized', 'Approved account required.')
+          : pickupAvailability !== 'READY'
+            ? unavailableOutcome(pickupErrorCode || PICKUP_BACKEND_UNAVAILABLE_CODE, pickupError || 'Pickup backend is unavailable.')
+            : deniedOutcome('attestation_required', 'Physical handoff and collector verification must be attested.');
         if (currentUser && isEligible(currentUser)) applyCommandOutcome(targetId, outcome);
-        return toMutationResponse(outcome);
+        return toPickupMutationResponse(outcome);
       }
       return runCommand(inputOrRecordId.cycleId, 'RELEASE', inputOrRecordId, (p) => confirmRelease(p as ConfirmReleaseInput));
     },
@@ -437,5 +404,6 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     pickupCycles, pickupRecords, pickupStatus, pickupAvailability, pickupError, pickupErrorCode,
     pickupLastSyncedAt, pickupMutationState, isLoadingPickup, refreshPickupBoard, refreshPickupBoardForUser,
     verifyPickupOperationReceipt, markPickupArrived, confirmPickupRelease, clearPickupState,
+    ...adminActions,
   };
 }

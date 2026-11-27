@@ -1,21 +1,31 @@
 import type { AccountRole } from '../../types.ts';
 import {
   announcePickupArrivalTransport,
+  confirmPickupReleaseTransport,
   fetchPickupBoardCyclesTransport,
   readPickupOperationReceiptTransport,
 } from './pickupTransport.ts';
+import {
+  fetchAuthorizedPickupCollectorsTransport,
+  provisionPickupCyclesTransport,
+  reinstatePickupReleaseAuthorityTransport,
+  revokePickupReleaseAuthorityTransport,
+} from './pickupAdminTransport.ts';
 import type {
   AnnounceArrivalInput,
   ConfirmReleaseInput,
+  PickupAuthorizedCollectorSummary,
   PickupAvailabilityStatus,
   PickupCommandOutcome,
   PickupCycleRecord,
   PickupMutationEntry,
   PickupNotificationDeliveryStatus,
   PickupPresentationState,
+  PickupProvisionResult,
   PickupReadResult,
   PickupReasonCode,
   PickupRecord,
+  PickupReleaseAuthorityResult,
 } from './pickupTypes.ts';
 
 export type {
@@ -37,9 +47,11 @@ export type {
   PickupNotificationDeliveryStatus,
   PickupOutboxStatus,
   PickupPresentationState,
+  PickupProvisionResult,
   PickupReadResult,
   PickupReasonCode,
   PickupRecord,
+  PickupReleaseAuthorityResult,
   PickupRevocationStatus,
   PickupWindowStatus,
 } from './pickupTypes.ts';
@@ -264,15 +276,11 @@ export async function announcePickupArrival(
 }
 
 export async function confirmPickupRelease(
-  _input: ConfirmReleaseInput,
+  input: ConfirmReleaseInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
 ): Promise<PickupCommandOutcome> {
-  return {
-    ok: false,
-    outcome: 'UNAVAILABLE',
-    reasonCode: PICKUP_BACKEND_UNAVAILABLE_CODE,
-    message: 'Pickup physical release backend contract (G5) is not deployed yet.',
-    retryable: true,
-  };
+  return confirmPickupReleaseTransport(input, clientOverride);
 }
 
 export async function readPickupOperationReceipt(
@@ -282,4 +290,39 @@ export async function readPickupOperationReceipt(
   clientOverride?: any,
 ): Promise<PickupCommandOutcome> {
   return readPickupOperationReceiptTransport(requestId, cycleId, clientOverride);
+}
+
+export async function fetchAuthorizedPickupCollectors(
+  studentId: string,
+  schoolDate?: string | null,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupAuthorizedCollectorSummary[]> {
+  return fetchAuthorizedPickupCollectorsTransport(studentId, schoolDate, clientOverride);
+}
+
+export async function provisionPickupCycles(
+  schoolDate?: string | null,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupProvisionResult> {
+  return provisionPickupCyclesTransport(schoolDate, clientOverride);
+}
+
+export async function revokePickupReleaseAuthority(
+  targetUserId: string,
+  reason: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupReleaseAuthorityResult> {
+  return revokePickupReleaseAuthorityTransport(targetUserId, reason, clientOverride);
+}
+
+export async function reinstatePickupReleaseAuthority(
+  targetUserId: string,
+  reason: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupReleaseAuthorityResult> {
+  return reinstatePickupReleaseAuthorityTransport(targetUserId, reason, clientOverride);
 }

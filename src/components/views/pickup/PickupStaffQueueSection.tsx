@@ -1,14 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  AlertCircle,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  RefreshCw,
-  ShieldAlert,
-} from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Clock, RefreshCw, ShieldAlert } from 'lucide-react';
 import type { AccountRole, Language } from '../../../types.ts';
 import type { TranslationKey } from '../../../i18n/translations.ts';
+import type { PickupAdminNotice } from '../../../context/usePickupAdminActions.ts';
 import {
   canActorTriggerReleaseUi,
   createPickupRequestId,
@@ -18,9 +12,12 @@ import {
   type PickupAvailabilityStatus,
   type PickupCycleRecord,
   type PickupMutationEntry,
+  type PickupProvisionResult,
+  type PickupReleaseAuthorityResult,
 } from '../../../lib/domains/pickup.ts';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../../i18n/homepages.ts';
 import { PickupChildAvatar } from './PickupChildAvatar.tsx';
+import { PickupAdminControlsPanel } from './PickupAdminControlsPanel.tsx';
 import {
   formatTunisPickupTime,
   getPickupBadgeMeta,
@@ -39,19 +36,27 @@ export interface PickupStaffQueueSectionProps {
   pickupAvailability: PickupAvailabilityStatus;
   pickupMutationState: Record<string, PickupMutationEntry>;
   isLoadingPickup: boolean;
+  isProvisioningPickup?: boolean;
+  isUpdatingReleaseAuthority?: boolean;
+  pickupAdminNotice?: PickupAdminNotice | null;
   onRefresh: (classId?: string | null) => void;
   onConfirmRelease: (input: ConfirmReleaseInput) => void;
   onVerifyReceipt?: (cycleId: string) => void;
+  onProvisionCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
+  onRevokeReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  onReinstateReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
 }
 
 export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = ({
   currentUserId, language, t, currentRole, pickupCycles, classesList = [], pickupAvailability,
-  pickupMutationState, isLoadingPickup, onRefresh, onConfirmRelease, onVerifyReceipt,
+  pickupMutationState, isLoadingPickup, isProvisioningPickup, isUpdatingReleaseAuthority,
+  pickupAdminNotice, onRefresh, onConfirmRelease, onVerifyReceipt,
+  onProvisionCycles, onRevokeReleaseAuthority, onReinstateReleaseAuthority,
 }) => {
   const [stateFilter, setStateFilter] = useState<'ALL' | PickupCycleRecord['state']>('ALL');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [attestations, setAttestations] = useState<
-    Record<string, { verified: boolean; handoff: boolean; collectorId?: string }>
+    Record<string, { verified: boolean; handoff: boolean; collectorId?: string; notes?: string }>
   >({});
 
   useEffect(() => {
@@ -134,6 +139,19 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
         </div>
       )}
 
+      <PickupAdminControlsPanel
+        currentUserId={currentUserId}
+        currentRole={currentRole}
+        pickupAvailability={pickupAvailability}
+        t={t}
+        isProvisioningPickup={isProvisioningPickup}
+        isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
+        pickupAdminNotice={pickupAdminNotice}
+        onProvisionCycles={onProvisionCycles}
+        onRevokeReleaseAuthority={onRevokeReleaseAuthority}
+        onReinstateReleaseAuthority={onReinstateReleaseAuthority}
+      />
+
       {pickupAvailability !== 'READY' ? (
         <div className="bg-white dark:bg-[#111111] p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3">
           <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold">
@@ -204,7 +222,7 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
                         <Clock className="w-3.5 h-3.5 shrink-0" />
                         <span>{cycle.windowLabel ? `${cycle.windowLabel} — ${windowStatusLabel}` : windowStatusLabel}</span>
                       </div>
-                      {cycle.attendanceEligibility !== 'ELIGIBLE' && cycle.state === 'WAITING' && (
+                      {cycle.attendanceEligibility !== 'ELIGIBLE' && cycle.state !== 'RELEASED' && (
                         <div className="rounded-xl bg-slate-100 dark:bg-slate-900/70 px-3 py-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                           <span>{resolvePickupReasonText(cycle.attendanceReasonCode, t)}</span>
@@ -218,12 +236,18 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
                           {cycle.arrivalActorLabel && <span>({cycle.arrivalActorLabel})</span>}
                         </div>
                       )}
-                      {cycle.state === 'RELEASED' && cycle.releasedAt && (
-                        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-emerald-800 dark:text-emerald-300 flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>{formatTunisPickupTime(cycle.releasedAt, language)}</span>
-                          {cycle.releasedToCollectorName && <span>• {cycle.releasedToCollectorName}</span>}
-                          {cycle.releasedByName && <span>• {cycle.releasedByName}</span>}
+                      {cycle.state === 'RELEASED' && (
+                        <div data-testid={`pickup-staff-released-receipt-${cycle.cycleId}`}
+                          className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-emerald-800 dark:text-emerald-300 space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>{t('pickupReleasedReceiptLabel')}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                            {cycle.releasedAt && <span>{formatTunisPickupTime(cycle.releasedAt, language)}</span>}
+                            {cycle.releasedToCollectorName && <span>• {cycle.releasedToCollectorName}</span>}
+                            {cycle.releasedByName && <span>• {cycle.releasedByName}</span>}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -232,6 +256,14 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
                       <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-2.5 text-xs text-red-800 dark:text-red-300 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>{t('pickupReleaseRevokedNotice')}</span>
+                      </div>
+                    )}
+
+                    {(mutation?.status === 'CONFLICT' || mutation?.status === 'DENIED' || mutation?.status === 'UNAVAILABLE') && (
+                      <div data-testid={`pickup-staff-mutation-error-${cycle.cycleId}`}
+                        className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-2.5 text-xs text-red-800 dark:text-red-300 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{resolvePickupReasonText(mutation.reasonCode, t, mutation.message)}</span>
                       </div>
                     )}
 
@@ -263,7 +295,9 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
 
                     {cycle.state === 'PARENT_ARRIVED' && !canRelease && !isStaffWithoutDefaultRelease && (
                       <p className="text-[11px] text-slate-600 dark:text-slate-400 pt-1 border-t border-gray-100 dark:border-gray-800">
-                        {t('pickupReleasePendingG5')}
+                        {cycle.attendanceEligibility !== 'ELIGIBLE'
+                          ? resolvePickupReasonText(cycle.attendanceReasonCode, t)
+                          : t('pickupReleaseBlockedPolicy')}
                       </p>
                     )}
 
@@ -286,13 +320,29 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
                             onChange={(e) => setAttestations((prev) => ({ ...prev, [cycle.cycleId]: { ...att, handoff: e.target.checked } }))} />
                           <span>{t('pickupHandoffAttestedCheckbox')}</span>
                         </label>
-                        <button type="button" disabled={!att.verified || !att.handoff || !chosenCollectorId}
+                        <input
+                          type="text"
+                          data-testid={`pickup-handoff-notes-${cycle.cycleId}`}
+                          value={att.notes ?? ''}
+                          onChange={(e) => setAttestations((prev) => ({ ...prev, [cycle.cycleId]: { ...att, notes: e.target.value } }))}
+                          placeholder={t('pickupHandoffNotesPlaceholder')}
+                          maxLength={500}
+                          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#161616] px-3 py-1.5 text-xs text-gray-900 dark:text-gray-100"
+                        />
+                        <button type="button"
+                          data-testid={`pickup-confirm-release-btn-${cycle.cycleId}`}
+                          disabled={!att.verified || !att.handoff || !chosenCollectorId || mutation?.status === 'SUBMITTING'}
                           onClick={() => {
                             if (!att.verified || !att.handoff || !chosenCollectorId) return;
+                            const cleanNotes = att.notes?.trim();
                             onConfirmRelease({
-                              cycleId: cycle.cycleId, collectorId: chosenCollectorId,
+                              cycleId: cycle.cycleId,
+                              collectorId: chosenCollectorId,
                               requestId: createPickupRequestId('release', cycle.cycleId),
-                              expectedVersion: cycle.version, collectorVerifiedInPerson: true, physicalHandoffAttested: true,
+                              expectedVersion: cycle.version,
+                              collectorVerifiedInPerson: true,
+                              physicalHandoffAttested: true,
+                              ...(cleanNotes ? { handoffNotes: cleanNotes } : {}),
                             });
                           }}
                           className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:dark:bg-gray-800 disabled:text-gray-500 text-white font-bold text-xs">

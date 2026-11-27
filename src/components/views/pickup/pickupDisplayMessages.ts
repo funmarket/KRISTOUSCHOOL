@@ -89,10 +89,31 @@ export function resolvePickupReasonText(
   if (ATTENDANCE_PENDING_CODES.has(code)) return t('pickupEligibilityAttendancePending');
   if (code === 'outside_dismissal_window' || code === 'window_closed') return t('pickupWindowClosedLabel');
   if (code === 'window_not_started') return t('pickupWindowNotStarted');
-  if (code === 'schedule_unavailable') return t('pickupWindowUnavailable');
+  if (code === 'schedule_unavailable') return t('pickupScheduleUnavailableNotice');
   if (code === 'idempotency_conflict') return t('pickupReasonIdempotencyConflict');
+  if (code === 'arrival_required') return t('pickupReasonArrivalRequired');
   if (code === 'version_conflict' || code === 'already_arrived' || code === 'already_released') {
     return t('pickupStateConflict');
+  }
+  if (code === 'attestation_required' || code === 'handoff_attestation_required') {
+    return t('pickupReasonAttestationRequired');
+  }
+  if (code === 'collector_invalid') return t('pickupReasonCollectorInvalid');
+  if (
+    code === 'pickup_release_authority_required' ||
+    code === 'pickup_provision_authority_required' ||
+    code === 'pickup_app_admin_required'
+  ) {
+    return t('pickupReasonReleaseAuthorityRequired');
+  }
+  if (code === 'pickup_release_authority_revoked' || code === 'release_authority_revoked') {
+    return t('pickupReleaseRevokedNotice');
+  }
+  if (code === 'release_authority_target_ineligible' || code === 'invalid_pickup_authority_request') {
+    return t('pickupReasonAuthorityRequestInvalid');
+  }
+  if (code === 'pickup_release_authority_already_revoked' || code === 'pickup_release_authority_not_revoked') {
+    return t('pickupReasonAuthorityStateConflict');
   }
   if (
     code === 'actor_not_authorized' ||
@@ -104,7 +125,6 @@ export function resolvePickupReasonText(
   ) {
     return t('pickupStateDenied');
   }
-  if (code === 'release_authority_revoked') return t('pickupReleaseRevokedNotice');
   if (code === 'unknown_outcome_verify_required') return t('pickupUnknownOutcomeHint');
   if (code === 'pickup_backend_unavailable') return t('pickupStateUnavailable');
   return fallback || t('pickupStateUnavailable');

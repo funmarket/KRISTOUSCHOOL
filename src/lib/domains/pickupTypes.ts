@@ -56,7 +56,18 @@ export type PickupReasonCode =
   | 'release_authority_revoked'
   | 'collector_not_authorized'
   | 'collector_revoked'
+  | 'collector_invalid'
   | 'handoff_attestation_required'
+  | 'attestation_required'
+  | 'pickup_release_authority_required'
+  | 'pickup_release_authority_revoked'
+  | 'pickup_provision_authority_required'
+  | 'pickup_app_admin_required'
+  | 'release_authority_target_ineligible'
+  | 'pickup_release_authority_already_revoked'
+  | 'pickup_release_authority_not_revoked'
+  | 'invalid_pickup_authority_request'
+  | 'arrival_required'
   | 'version_conflict'
   | 'idempotency_conflict'
   | 'pickup_cycle_not_found'
@@ -149,6 +160,27 @@ export interface ConfirmReleaseInput {
   expectedVersion: number;
   physicalHandoffAttested: true;
   collectorVerifiedInPerson: true;
+  handoffNotes?: string | null;
+}
+
+export interface PickupProvisionResult {
+  ok: boolean;
+  schoolDate: string | null;
+  timezone: string | null;
+  provisionedCount: number;
+  skippedCount: number;
+  errorCode?: PickupReasonCode;
+  message?: string;
+}
+
+export interface PickupReleaseAuthorityResult {
+  ok: boolean;
+  targetUserId: string;
+  isRevoked: boolean | null;
+  version?: number;
+  effectiveAt?: string;
+  errorCode?: PickupReasonCode;
+  message?: string;
 }
 
 export interface PickupCommandSuccess<T = PickupCycleRecord> {
@@ -180,7 +212,7 @@ export interface PickupCommandDenied {
 export interface PickupCommandConflict<T = PickupCycleRecord> {
   ok: false;
   outcome: 'CONFLICT';
-  reasonCode: 'version_conflict' | 'idempotency_conflict' | 'already_arrived' | 'already_released';
+  reasonCode: 'version_conflict' | 'idempotency_conflict' | 'already_arrived' | 'already_released' | 'arrival_required';
   serverRecord?: T;
   serverState?: PickupDurableState;
   serverVersion?: number;

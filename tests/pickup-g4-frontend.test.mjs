@@ -504,7 +504,7 @@ test('G4 UI + 6-Language Coverage: fail-closed empty READY board, parent arrival
   };
   await act(async () => { root.render(React.createElement(PickupBoardView)); });
   assert.ok(container.querySelector('[data-testid="pickup-staff-class-filter"]'));
-  assert.ok(container.textContent.includes(translations.en.pickupReleasePendingG5));
+  assert.ok(container.textContent.includes(translations.en.pickupReleaseBlockedPolicy));
   assert.ok(!container.textContent.includes(translations.en.confirmRelease));
 
   await act(async () => { root.unmount(); });
