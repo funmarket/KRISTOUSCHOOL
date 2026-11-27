@@ -599,16 +599,86 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"enrollment_applications": {
+                },"enrollment_admission_audit_logs": {
                   Row: {
-                    "birth_date": string,"created_at": string,"desired_level_code": string,"email": string | null,"id": string,"notes": string | null,"parent_full_name": string,"phone": string,"reference_code": string,"review_note": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"status": string,"student_full_name": string,"submitted_by_user_id": string | null,"updated_at": string,"version": number
+                    "action": string,"actor_user_id": string,"application_id": string,"created_at": string,"id": string,"previous_status": string,"resulting_version": number,"student_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "birth_date": string,"created_at"?: string,"desired_level_code": string,"email"?: string | null,"id"?: string,"notes"?: string | null,"parent_full_name": string,"phone": string,"reference_code": string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_full_name": string,"submitted_by_user_id"?: string | null,"updated_at"?: string,"version"?: number
+                    "action": string,"actor_user_id": string,"application_id": string,"created_at"?: string,"id"?: string,"previous_status": string,"resulting_version": number,"student_id": string
                   }
                   Update: {
-                    "birth_date"?: string,"created_at"?: string,"desired_level_code"?: string,"email"?: string | null,"id"?: string,"notes"?: string | null,"parent_full_name"?: string,"phone"?: string,"reference_code"?: string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_full_name"?: string,"submitted_by_user_id"?: string | null,"updated_at"?: string,"version"?: number
+                    "action"?: string,"actor_user_id"?: string,"application_id"?: string,"created_at"?: string,"id"?: string,"previous_status"?: string,"resulting_version"?: number,"student_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "enrollment_admission_audit_logs_actor_user_id_fkey"
+      columns: ["actor_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "enrollment_admission_audit_logs_application_id_fkey"
+      columns: ["application_id"]
+isOneToOne: false
+      referencedRelation: "enrollment_admission_completions"
+      referencedColumns: ["application_id"]
+    },{
+      foreignKeyName: "enrollment_admission_audit_logs_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "students"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"enrollment_admission_completions": {
+                  Row: {
+                    "active": boolean,"application_id": string,"completed_at": string,"completed_by": string,"guardian_user_id": string | null,"guardian_verified": boolean,"student_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"application_id": string,"completed_at"?: string,"completed_by": string,"guardian_user_id"?: string | null,"guardian_verified": boolean,"student_id": string
+                  }
+                  Update: {
+                    "active"?: boolean,"application_id"?: string,"completed_at"?: string,"completed_by"?: string,"guardian_user_id"?: string | null,"guardian_verified"?: boolean,"student_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "enrollment_admission_completions_application_id_fkey"
+      columns: ["application_id"]
+isOneToOne: true
+      referencedRelation: "enrollment_applications"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "enrollment_admission_completions_completed_by_fkey"
+      columns: ["completed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "enrollment_admission_completions_guardian_user_id_fkey"
+      columns: ["guardian_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "enrollment_admission_completions_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "students"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"enrollment_applications": {
+                  Row: {
+                    "birth_date": string,"created_at": string,"desired_level_code": string,"email": string | null,"id": string,"notes": string | null,"parent_full_name": string,"phone": string,"reference_code": string,"review_note": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"status": string,"student_full_name": string,"student_id": string | null,"submitted_by_user_id": string | null,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "birth_date": string,"created_at"?: string,"desired_level_code": string,"email"?: string | null,"id"?: string,"notes"?: string | null,"parent_full_name": string,"phone": string,"reference_code": string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_full_name": string,"student_id"?: string | null,"submitted_by_user_id"?: string | null,"updated_at"?: string,"version"?: number
+                  }
+                  Update: {
+                    "birth_date"?: string,"created_at"?: string,"desired_level_code"?: string,"email"?: string | null,"id"?: string,"notes"?: string | null,"parent_full_name"?: string,"phone"?: string,"reference_code"?: string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_full_name"?: string,"student_id"?: string | null,"submitted_by_user_id"?: string | null,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     {
@@ -622,6 +692,12 @@ isOneToOne: false
       columns: ["reviewed_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "enrollment_applications_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "students"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "enrollment_applications_submitted_by_user_id_fkey"
@@ -1973,6 +2049,9 @@ isOneToOne: false
                            },
 "enqueue_school_notification":
 { Args: { "p_body": string,"p_category": string,"p_recipient_user_id": string,"p_target_ref_id"?: string,"p_target_tab"?: string,"p_title": string }; Returns: string
+                           },
+"enrollment_actor_can_complete":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "export_pickup_events":
 { Args: { "p_from_at": string,"p_reason": string,"p_student_id": string,"p_until_at": string }; Returns: {
