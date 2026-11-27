@@ -57,7 +57,12 @@ type GatewayOperation =
   | 'preferences.save'
   | 'pickup.board'
   | 'pickup.arrive'
-  | 'pickup.receipt';
+  | 'pickup.receipt'
+  | 'pickup.release'
+  | 'pickup.provision'
+  | 'pickup.openCycles'
+  | 'pickup.revokeRelease'
+  | 'pickup.reinstateRelease';
 
 type RequestBody = {
   initData?: unknown;
@@ -214,6 +219,21 @@ function optionalSearch(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string' || value.trim().length > 160) throw new GatewayError('invalid_request', 400);
   return value.trim() || null;
+}
+
+function optionalIsoDate(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new GatewayError('invalid_request', 400);
+  }
+  return value;
+}
+
+function requirePickupReason(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length < 3 || value.trim().length > 500) {
+    throw new GatewayError('invalid_request', 400);
+  }
+  return value.trim();
 }
 
 function requireUuid(value: unknown): string {
@@ -402,6 +422,48 @@ async function executeOperation(
         select public.get_pickup_operation_receipt(${requestId}::uuid, ${cycleId}::uuid) as data
       `).data;
     }
+    case 'pickup.release': {
+      const cycleId = requireUuid(params.cycleId);
+      const collectorId = requireUuid(params.collectorId);
+      const requestId = requireUuid(params.requestId);
+      const expectedVersion = integer(params.expectedVersion, -1, 1);
+      if (expectedVersion < 1) throw new GatewayError('invalid_request', 400);
+      const inPersonVerified = params.inPersonVerified === undefined ? null : params.inPersonVerified;
+      if (inPersonVerified !== null && typeof inPersonVerified !== 'boolean') {
+        throw new GatewayError('invalid_request', 400);
+      }
+      const handoffNotes = params.handoffNotes === undefined ? null : params.handoffNotes;
+      if (handoffNotes !== null && typeof handoffNotes !== 'string') {
+        throw new GatewayError('invalid_request', 400);
+      }
+      return requireRow(await transaction`
+        select public.release_pupil(
+          ${cycleId}::uuid, ${collectorId}::uuid, ${requestId}::uuid,
+          ${expectedVersion}, ${inPersonVerified}::boolean, ${handoffNotes}::text
+        ) as data
+      `).data;
+    }
+    case 'pickup.provision':
+    case 'pickup.openCycles': {
+      const schoolDate = optionalIsoDate(params.schoolDate);
+      return requireRow(await transaction`
+        select public.provision_pickup_cycles(${schoolDate}::date) as data
+      `).data;
+    }
+    case 'pickup.revokeRelease': {
+      const targetUserId = requireUuid(params.targetUserId);
+      const reason = requirePickupReason(params.reason);
+      return requireRow(await transaction`
+        select public.revoke_pickup_release_authority(${targetUserId}::uuid, ${reason}) as data
+      `).data;
+    }
+    case 'pickup.reinstateRelease': {
+      const targetUserId = requireUuid(params.targetUserId);
+      const reason = requirePickupReason(params.reason);
+      return requireRow(await transaction`
+        select public.reinstate_pickup_release_authority(${targetUserId}::uuid, ${reason}) as data
+      `).data;
+    }
     default:
       throw new GatewayError('invalid_request', 400);
   }
@@ -447,7 +509,8 @@ export async function handleTelegramPrivateOps(
       'governance.actorScope', 'governance.pendingAccounts', 'governance.accountDirectory',
       'governance.accountDetail', 'notifications.list', 'notifications.markOne',
       'notifications.markAll', 'preferences.load', 'preferences.save',
-      'pickup.board', 'pickup.arrive', 'pickup.receipt',
+      'pickup.board', 'pickup.arrive', 'pickup.receipt', 'pickup.release',
+      'pickup.provision', 'pickup.openCycles', 'pickup.revokeRelease', 'pickup.reinstateRelease',
     ]);
     if (!knownOperations.has(operation)) throw new GatewayError('invalid_request', 400);
     if (!dependencies.botToken) throw new GatewayError('backend_unavailable', 503);
@@ -494,16 +557,18 @@ export async function handleTelegramPrivateOps(
     }
     if (message.includes('owner_only_operation')) return json({ error: 'owner_only_operation' }, 403, origin, allowedOrigin);
     if (message.includes('target_not_found')) return json({ error: 'target_not_found' }, 404, origin, allowedOrigin);
-    const pickupConflictCodes = new Set(['version_conflict', 'idempotency_conflict']);
+    const pickupConflictCodes = new Set(['version_conflict', 'idempotency_conflict', 'arrival_required', 'already_released']);
     const pickupDeniedCodes = new Set([
       'pickup_parent_required', 'pickup_parent_child_link_required', 'collector_or_parent_not_authorized',
-      'insufficient_pickup_scope', 'pickup_receipt_unavailable',
+      'insufficient_pickup_scope', 'pickup_receipt_unavailable', 'pickup_release_authority_required',
+      'pickup_release_authority_revoked', 'pickup_provision_authority_required', 'pickup_app_admin_required',
     ]);
     const pickupUnavailableCodes = new Set([
       'schedule_unavailable', 'outside_dismissal_window', 'attendance_absent', 'attendance_excused',
       'attendance_mark_missing', 'attendance_mark_unknown', 'attendance_entry_missing_or_conflicting',
       'register_missing', 'register_not_submitted', 'conflicting_registers',
-      'conflicting_effective_memberships', 'responsible_teacher_unavailable',
+      'conflicting_effective_memberships', 'responsible_teacher_unavailable', 'attestation_required',
+      'collector_invalid', 'attendance_ineligible', 'pickup_cycle_not_found', 'release_authority_target_ineligible',
     ]);
     if (pickupConflictCodes.has(message)) return json({ error: message }, 409, origin, allowedOrigin);
     if (pickupDeniedCodes.has(message)) return json({ error: message }, 403, origin, allowedOrigin);

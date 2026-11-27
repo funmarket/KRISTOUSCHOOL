@@ -137,7 +137,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009979'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009979","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.is((select count(*)::integer from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944')),3,'MANAGER can read the scoped school staff board');
-select extensions.ok(not exists(select 1 from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944') where can_confirm_release),'G4 staff board never grants physical release');
+select extensions.is((select can_confirm_release from public.get_pickup_staff_board('00000000-0000-4000-9000-000000009944') where student_id='00000000-0000-4000-9000-000000009945'),true,'G5 staff board grants the unrevoked Manager release authority for an arrived eligible pupil');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000009980',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000009980","role":"authenticated"}',true);

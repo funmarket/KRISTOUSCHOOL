@@ -2190,6 +2190,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"provision_pickup_cycles":
+{ Args: { "p_school_date"?: string }; Returns: Json
+                           },
 "publish_school_broadcast":
 { Args: { "p_audience_scope"?: string,"p_body": string,"p_is_public"?: boolean,"p_priority"?: string,"p_target_class_ids"?: (string)[],"p_target_level_codes"?: (string)[],"p_title": string }; Returns: {
               "audience_scope": string,
@@ -2214,8 +2217,14 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"reinstate_pickup_release_authority":
+{ Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
+                           },
 "reinstate_user_pickup_release_authority":
 { Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
+                           },
+"release_pupil":
+{ Args: { "p_collector_id": string,"p_cycle_id": string,"p_expected_version": number,"p_handoff_notes"?: string,"p_in_person_verified": boolean,"p_request_id": string }; Returns: Json
                            },
 "replace_pickup_dismissal_policy":
 { Args: { "p_closes_at": string,"p_effective_from": string,"p_effective_until": string,"p_opens_at": string,"p_policy_id": string,"p_reason": string }; Returns: Json
@@ -2299,6 +2308,9 @@ isOneToOne: false
                            },
 "revoke_authorized_pickup_person":
 { Args: { "p_person_id": string,"p_reason": string }; Returns: Json
+                           },
+"revoke_pickup_release_authority":
+{ Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
                            },
 "revoke_user_pickup_release_authority":
 { Args: { "p_reason": string,"p_target_user_id": string }; Returns: Json
