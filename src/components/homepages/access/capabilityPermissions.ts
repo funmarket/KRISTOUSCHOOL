@@ -32,8 +32,8 @@ export function canReviewEnrollmentsUi(user: User | null | undefined): boolean {
   return (
     user.role === 'APP_ADMIN' ||
     user.role === 'ADMINISTRATIVE_PERSONNEL' ||
-    (user.role === 'MANAGER' &&
-      (caps.includes('ENROLLMENT_REVIEW') || caps.includes('FULL_ACCESS')))
+    user.role === 'MANAGER' ||
+    (user.role === 'SCHOOL_STAFF' && caps.includes('ENROLLMENT_REVIEW'))
   );
 }
 

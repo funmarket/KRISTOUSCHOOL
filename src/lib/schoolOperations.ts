@@ -13,6 +13,7 @@ export {
   createAndEnrollStudent,
   assignTeacherToClass,
   listAcademicYears,
+  assignExistingStudentToClass,
 } from './domains/academics.ts';
 
 export {
@@ -34,7 +35,10 @@ export {
   listEnrollmentApplications,
   reviewEnrollmentApplication,
   completeEnrollmentAdmission,
+  getEnrollmentReviewAccess,
 } from './domains/enrollment.ts';
+
+export { listStudentGuardians, reviewStudentGuardian, type StudentGuardianLink } from './domains/family.ts';
 
 export {
   type SubmitPublicInquiryInput,

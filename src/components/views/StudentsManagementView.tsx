@@ -82,6 +82,8 @@ export function StudentsManagementView({
           }
         }}
         onRetryDetail={() => setDetailRetrySeq((s) => s + 1)}
+        availableClasses={availableClasses}
+        onChanged={() => { void loadStudents(); setDetailRetrySeq(s => s + 1); }}
       />
     );
   }

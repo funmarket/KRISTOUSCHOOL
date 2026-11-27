@@ -56,6 +56,7 @@ test('ARCH-06 Gate 3: All 14 domain modules preserve exact RPC and table contrac
         'create_and_enroll_student',
         'assign_teacher_to_class',
         'list_academic_years',
+        'assign_existing_student_to_class',
       ],
       tables: [],
     },
@@ -93,8 +94,8 @@ test('ARCH-06 Gate 3: All 14 domain modules preserve exact RPC and table contrac
       tables: ['directory_entries'],
     },
     'enrollment.ts': {
-      rpcs: ['submit_enrollment_application', 'complete_enrollment_admission', 'review_enrollment_application'],
-      tables: ['enrollment_applications'],
+      rpcs: ['submit_enrollment_application', 'list_enrollment_applications', 'complete_enrollment_admission', 'review_enrollment_application', 'get_enrollment_review_access'],
+      tables: [],
     },
     'foodMenu.ts': {
       rpcs: ['save_food_menu_week'],

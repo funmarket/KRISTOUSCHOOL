@@ -117,7 +117,7 @@ export function useStudentsManagement({
           classesRes.data.map((c) => ({
             id: c.id,
             name: c.name,
-            levelCode: c.levelCode || 'CP',
+            levelCode: c.levelCode || c.level,
             academicYear: c.academicYear,
           })),
         );

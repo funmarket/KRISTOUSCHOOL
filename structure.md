@@ -12,6 +12,12 @@ Supabase project inspected read-only for this revision: **KRISTOUSCHOOL / ofppap
 
 Product boundary: **one school, one React product, one Supabase backend/data authority, one canonical identity model, Browser and Telegram as two runtime contexts of the same application.**
 
+ENROLL-D02 keeps directory identity in `domains/people.ts`, admission queues/completion
+in Enrollment, existing-student class placement in Academics and guardian link actions
+in `domains/family.ts`. UI subcomponents consume typed adapters; schoolOperations remains
+a pure barrel. Telegram adds bounded transport dispatch to these same RPCs and existing
+authenticated-role policy, without another identity/session or business owner.
+
 ---
 
 ## 0. Purpose and authority of this document

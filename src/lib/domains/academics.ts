@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import type {
   BackendOpResult,
   Child,
@@ -138,7 +139,8 @@ export async function fetchMySchoolContext(
 ): Promise<BackendOpResult<MySchoolContextPayload>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('get_my_school_context');
+    const tg = await invokeTelegramPrivateOperation('school.context', {}, client);
+    const { data, error } = tg.handled ? { data: tg.data, error: null } : await client.rpc('get_my_school_context');
     if (error) {
       return { ok: false, ...classifySupabaseError(error) };
     }
@@ -172,7 +174,8 @@ export async function fetchSchoolClassesWithRosters(
 ): Promise<BackendOpResult<SchoolClassWithRoster[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('list_school_classes_with_rosters');
+    const tg = await invokeTelegramPrivateOperation('academics.classes', {}, client);
+    const { data, error } = tg.handled ? { data: tg.data, error: null } : await client.rpc('list_school_classes_with_rosters');
     if (error) {
       return { ok: false, ...classifySupabaseError(error) };
     }
@@ -346,7 +349,8 @@ export async function listAcademicYears(
 ): Promise<BackendOpResult<AcademicYearItem[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('list_academic_years');
+    const tg = await invokeTelegramPrivateOperation('academics.years', {}, client);
+    const { data, error } = tg.handled ? { data: tg.data, error: null } : await client.rpc('list_academic_years');
     if (error) {
       return { ok: false, ...classifySupabaseError(error) };
     }
@@ -355,4 +359,23 @@ export async function listAcademicYears(
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
+}
+
+export interface StudentPlacementReceipt { studentId: string; classId: string; membershipId: string; replayed: boolean }
+export async function assignExistingStudentToClass(
+  input: { studentId: string; classId: string; expectedMembershipId: string | null },
+  client: typeof supabase = supabase,
+): Promise<BackendOpResult<StudentPlacementReceipt>> {
+  if (!client) return unavailableResult();
+  try {
+    const tg = await invokeTelegramPrivateOperation<StudentPlacementReceipt>('academics.placeStudent', input, client);
+    const {data,error} = tg.handled ? {data:tg.data,error:null} : await client.rpc('assign_existing_student_to_class', {
+      p_student_id:input.studentId,p_class_id:input.classId,
+      ...(input.expectedMembershipId ? {p_expected_membership_id:input.expectedMembershipId} : {}),
+    });
+    if (error) return {ok:false,...classifySupabaseError(error)};
+    const row = data as unknown as StudentPlacementReceipt;
+    if (!row || row.studentId!==input.studentId || row.classId!==input.classId || typeof row.membershipId!=='string') throw new Error('invalid_placement_receipt');
+    return {ok:true,status:'READY',data:row};
+  } catch(error) { return {ok:false,...classifySupabaseError(error)}; }
 }

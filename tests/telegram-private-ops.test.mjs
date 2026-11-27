@@ -91,6 +91,45 @@ function makeRequest(data, body, extraHeaders = {}) {
 
 const deps = (sql, nowSeconds = Math.floor(Date.now() / 1000)) => ({ sql, botToken: BOT_TOKEN, nowSeconds, allowedOrigins: ['https://school.invalid'] });
 
+test('ENROLL-D02 gateway uses authenticated canonical RPCs for context, admission, placement and guardian operations',async()=>{
+  const signed=await initData();
+  const id='00000000-0000-4000-8000-000000000301';
+  for(const [operation,params,expected] of [
+    ['school.context',{},'get_my_school_context'],
+    ['enrollment.list',{},'list_enrollment_applications'],
+    ['enrollment.reviewAccess',{},'get_enrollment_review_access'],
+    ['academics.classes',{},'list_school_classes_with_rosters'],
+    ['academics.years',{},'list_academic_years'],
+    ['people.students',{p_search:'literal % name',p_limit:25},'list_school_students'],
+    ['people.studentIdentity',{studentId:id},'get_school_student_identity'],
+    ['enrollment.complete',{applicationId:id,expectedVersion:2,verifyGuardian:true},'complete_enrollment_admission'],
+    ['enrollment.review',{applicationId:id,expectedVersion:2,decision:'ACCEPTED'},'review_enrollment_application'],
+    ['academics.placeStudent',{studentId:id,classId:id,expectedMembershipId:null},'assign_existing_student_to_class'],
+    ['family.guardians',{studentId:id},'list_student_guardians'],
+    ['family.reviewGuardian',{studentId:id,linkId:id,action:'REVOKE',expectedUpdatedAt:'2026-01-01T00:00:00Z',reason:'Verified evidence'},'review_student_guardian'],
+  ]){
+    const sql=fakeDatabase();
+    const response=await handleTelegramPrivateOps(makeRequest(null,{initData:signed,operation,params}),deps(sql));
+    assert.equal(response.status,200,operation);
+    assert.equal(sql.statements.filter(s=>s.text.includes('public.'+expected+'(')).length,1,operation);
+    assert.ok(sql.statements.some(s=>s.text==='set local role authenticated'));
+  }
+  for(const [operation,params] of [
+    ['enrollment.complete',{applicationId:id,expectedVersion:0}],
+    ['enrollment.complete',{applicationId:id,expectedVersion:2,verifyGuardian:'yes'}],
+    ['enrollment.review',{applicationId:id,expectedVersion:2,decision:'ENROLLED'}],
+    ['academics.placeStudent',{studentId:'invalid',classId:id}],
+    ['family.reviewGuardian',{studentId:id,linkId:id,action:'VERIFY',expectedUpdatedAt:'wrong',reason:'evidence'}],
+  ]){
+    const response=await handleTelegramPrivateOps(makeRequest(null,{initData:signed,operation,params}),deps(fakeDatabase()));
+    assert.equal(response.status,400,operation);
+  }
+  for(const [message,status] of [['insufficient_authority',403],['version_conflict',409],['guardian_student_conflict',409]]){
+    const response=await handleTelegramPrivateOps(makeRequest(null,{initData:signed,operation:'enrollment.complete',params:{applicationId:id,expectedVersion:2}}),deps(fakeDatabase({throwError:message})));
+    assert.equal(response.status,status);assert.equal((await response.json()).error,message);
+  }
+});
+
 test('fresh signed initData maps to one authenticated transaction and returns no client session', async () => {
   const sql = fakeDatabase();
   const response = await handleTelegramPrivateOps(makeRequest(null, {
