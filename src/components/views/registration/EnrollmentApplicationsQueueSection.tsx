@@ -61,6 +61,9 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
     if(target) setQueue(getEnrollmentQueue(target));
   },[notificationIntent?.requestId,enrollmentApplications]);
   const visibleApplications=canReview ? enrollmentApplications.filter(app=>getEnrollmentQueue(app)===queue) : enrollmentApplications;
+  useEffect(() => {
+    if(notificationIntent?.refId) document.getElementById(`notification-enrollment-${notificationIntent.refId}`)?.scrollIntoView?.({block:'nearest'});
+  },[queue,notificationIntent?.requestId]);
   return (
   <div
     data-testid="enrollment-applications-section"

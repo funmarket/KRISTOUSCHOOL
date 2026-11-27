@@ -207,3 +207,48 @@ Limits: database/adapter PR only. No new browser completion/class-placement UI, 
 enrollment transport, no browser login/end-to-end acceptance, no genuine multi-session
 completion race test, no school-wide backfill or inferred family links. These remain
 separate packets. PR remains unmerged pending explicit owner approval; no next packet started.
+
+## ENROLL-D02 — queues, directory actions and Telegram parity (2026-11-27)
+
+Fresh GitHub/main inspection confirms PR #47/#48 merged; execution base main is
+`082b7fd52d9ebf7529fae1b0c42db4f1becfea15`. Branch feat/enroll-d02-directory-gateway.
+This supersedes D01's historical unmerged status above.
+
+Enrollment separates pending review, accepted completion and read-only history;
+completion calls D01, legal review choices preserve existing notes, and notification
+targets open their queue. People directory/detail remains canonical; Unassigned is
+separate from ACTIVE. Academics places existing students with expected-membership,
+capacity and transfer-history checks. Family verifies/revokes explicit existing links
+with timestamp/reason and immutable private audit. Review privilege grants neither
+class nor Family administration. See the dossier plan for the full bounded contract.
+
+Migration 20261128000002_enrollment_directory_actions.sql, typed domain adapters,
+generated types and enrollment/student subcomponents implement this packet.
+telegram-private-ops adds bounded canonical RPC dispatch after its existing identity
+verification/authenticated transaction. Protected browser identity verification and
+withAuthenticatedTelegramActor compare byte-for-byte to base. Linking/auth/challenge/cache,
+Pickup worker and Pickup command paths are unchanged. The workflow also runs on
+feat/enroll-* pushes to satisfy the Owner's explicit CI-before-PR gate.
+
+Local lint/test/build exit 0; npm test reports 294 passed, 0 failed. Component/domain
+tests cover the three queues, completion/refresh/history targets, same-student placement,
+guardian verify/revoke/read-only controls, explicit stale-state arguments, Telegram
+context/enrollment routing and gateway validation/denies. Detailed logs and timestamps
+are ignored under .evidence/. A system-Chromium Playwright component harness passed
+desktop EN and mobile FR/AR, four interactions, zero console errors and no horizontal
+overflow. Its clearly labelled synthetic fixtures are external to repository/product;
+this is not real-account acceptance.
+
+TG-AUTHZ run 46077280485 on 5a724684b5d5cee1cec1a40c397fb63cd93f72b6 passed clean
+reset, generated-type parity and 18 SQL files / 733 pgTAP assertions, including 38 new
+directory/Family assertions. Types were adopted from run 46076880580's actual generated
+schema diff. That first run failed bootstrap parity, with replay/generation passing.
+Final UI/history refinements require the exact-head CI gate recorded in the PR checks
+before opening/review handoff. Local full/reduced startup could not extract the pinned
+PostgreSQL image (no space left on device); retries stopped, exit 130. No local DB pass.
+
+No hosted D02 migration, gateway deployment, real family/class changes, real Telegram/
+browser account acceptance, genuine multi-session race or production load test is
+claimed. New form copy supports AR/FR/EN with English fallback in ES/DE/PT. Release the
+reviewed migration and gateway before dependent UI. PR2 remains unmerged; no next
+dossier packet started.

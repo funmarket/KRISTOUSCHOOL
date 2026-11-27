@@ -5,6 +5,7 @@ import {createRequire} from 'node:module';
 import React,{act} from 'react';
 import {installNodeDomShim} from './helpers/nodeDomShim.mjs';
 const dom=installNodeDomShim();
+dom.document.getElementById=id=>[...dom.document.querySelectorAll('div')].find(el=>el.getAttribute('id')===id)||null;
 const {createRoot}=await import('react-dom/client');
 const require=createRequire(import.meta.url);
 async function component(path,name) {
@@ -46,6 +47,9 @@ test('review tabs hide history mutations; accepted completion invokes canonical 
   await act(async()=>dom.submitForm(container.querySelector('form')));
   assert.deepEqual(completed,{applicationId:'accepted',expectedVersion:2,verifyGuardian:true});
   assert.equal(refreshed,1);
+  await act(async()=>root.render(React.createElement(EnrollmentApplicationsQueueSection,{...props,notificationIntent:{requestId:'notification-history',refId:'done'}})));
+  assert.ok(container.textContent.includes('Pupil done'),'notification target opens its history tab');
+  assert.equal(container.querySelectorAll('select').length,0);
   await act(async()=>root.unmount());dom.document.body.removeChild(container);
 });
 test('directory actions place the same unassigned student and verify/revoke an explicit guardian link',async()=>{
