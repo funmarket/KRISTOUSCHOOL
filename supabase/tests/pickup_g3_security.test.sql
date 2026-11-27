@@ -172,9 +172,9 @@ set local role authenticated;
 select extensions.is(public.get_pickup_actor_authority('00000000-0000-4000-9000-000000009922') ->> 'canConfirmRelease','false','revoked Manager loses release authority');
 select extensions.is((select eligibility from public.get_pickup_student_eligibility('00000000-0000-4000-9000-000000009922','2026-11-26')),'ELIGIBLE_CANDIDATE','release revocation does not remove Manager board visibility');
 reset role;
-insert into public.pickup_events(actor_user_id,actor_role,student_id,action,request_id,reason)
+insert into public.pickup_events(actor_user_id,actor_role,student_id,action,request_id,reason,occurred_at)
 values('00000000-0000-4000-9000-000000009902','MANAGER','00000000-0000-4000-9000-000000009922',
-  'OUTAGE_RECONCILED','00000000-0000-4000-9000-000000009930','G3 append-only test fixture');
+  'OUTAGE_RECONCILED','00000000-0000-4000-9000-000000009930','G3 append-only test fixture','2026-11-26 12:00:00+00');
 select extensions.throws_ok($$update public.pickup_events set reason='changed' where request_id='00000000-0000-4000-9000-000000009930'$$,'P0001','pickup_audit_immutable','pickup event update is blocked');
 select extensions.throws_ok($$delete from public.pickup_events where request_id='00000000-0000-4000-9000-000000009930'$$,'P0001','pickup_audit_immutable','pickup event deletion is blocked');
 

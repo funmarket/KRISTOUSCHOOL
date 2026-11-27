@@ -117,15 +117,15 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-00000002
 set local role authenticated;
 select extensions.is((public.request_early_departure(
   '00000000-0000-4000-9000-000000020130','00000000-0000-4000-9000-000000020180',
-  'Pediatric appointment at 11:30','00000000-0000-4000-9000-000000020300',now()+interval '1 hour')->>'code'),
+  'Pediatric appointment at 11:30','00000000-0000-4000-9000-000000020300','2026-11-27 11:30:00+01'::timestamptz)->>'code'),
   'early_departure_requested','verified parent can request pre-cycle early departure');
 select extensions.is((public.request_early_departure(
   '00000000-0000-4000-9000-000000020130','00000000-0000-4000-9000-000000020180',
-  'Pediatric appointment at 11:30','00000000-0000-4000-9000-000000020300',null)->>'replayed'),
+  'Pediatric appointment at 11:30','00000000-0000-4000-9000-000000020300','2026-11-27 11:30:00+01'::timestamptz)->>'replayed'),
   'true','replaying request_early_departure with same request_id and equivalent core payload returns replayed=true');
 select extensions.throws_ok($$select public.request_early_departure(
   '00000000-0000-4000-9000-000000020130','00000000-0000-4000-9000-000000020180',
-  'Changed medical reason','00000000-0000-4000-9000-000000020300',null)$$,
+  'Changed medical reason','00000000-0000-4000-9000-000000020300','2026-11-27 11:30:00+01'::timestamptz)$$,
   'P0001','idempotency_conflict','request_early_departure rejects changed payload on same request_id');
 select extensions.is((public.request_early_departure(
   '00000000-0000-4000-9000-000000020130','00000000-0000-4000-9000-000000020180',
@@ -476,9 +476,9 @@ begin
     select blocked_count into v_waiters
       from dblink('g6_obs',format($obs$
         select count(*)::integer from pg_stat_activity a
-         where a.pid in (%s,%s) and %s = any(pg_blocking_pids(a.pid))
+         where a.pid in (%s,%s) and pg_blocking_pids(a.pid) && array[%s,%s,%s]::integer[]
            and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
-      $obs$, v_a_pid, v_b_pid, v_blocker_pid)) as t(blocked_count integer);
+      $obs$, v_a_pid, v_b_pid, v_blocker_pid, v_a_pid, v_b_pid)) as t(blocked_count integer);
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;
@@ -533,9 +533,9 @@ begin
     select blocked_count into v_waiters
       from dblink('g6_obs',format($obs$
         select count(*)::integer from pg_stat_activity a
-         where a.pid in (%s,%s) and %s = any(pg_blocking_pids(a.pid))
+         where a.pid in (%s,%s) and pg_blocking_pids(a.pid) && array[%s,%s,%s]::integer[]
            and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
-      $obs$, v_ed_pid, v_rel_pid, v_blocker_pid)) as t(blocked_count integer);
+      $obs$, v_ed_pid, v_rel_pid, v_blocker_pid, v_ed_pid, v_rel_pid)) as t(blocked_count integer);
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;

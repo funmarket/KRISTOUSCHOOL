@@ -425,9 +425,9 @@ begin
         select count(*)::integer
           from pg_stat_activity a
          where a.pid in (%s,%s)
-           and %s = any(pg_blocking_pids(a.pid))
+           and pg_blocking_pids(a.pid) && array[%s,%s,%s]::integer[]
            and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
-      $obs$, v_a_pid, v_b_pid, v_blocker_pid)) as t(blocked_count integer);
+      $obs$, v_a_pid, v_b_pid, v_blocker_pid, v_a_pid, v_b_pid)) as t(blocked_count integer);
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;
