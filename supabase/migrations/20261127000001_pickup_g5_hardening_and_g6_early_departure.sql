@@ -474,45 +474,54 @@ begin
     raise exception 'pickup_parent_required' using errcode = 'P0001';
   end if;
   return query
-  select c.cycle_id, c.student_id, s.full_name, c.class_id, cl.name, c.state, c.version, c.school_date,
-    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
-    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
+  with scoped_cycles as materialized (
+    select c.cycle_id, c.student_id, s.full_name as student_name, c.class_id, cl.name as class_name,
+      c.state, c.version, c.school_date, c.dismissal_policy_id, c.policy_revision, c.membership_id,
+      c.arrival_at, c.arrival_actor_user_id, c.collector_id, c.release_at, c.release_actor_user_id
+    from public.pickup_cycles c
+    join public.students s on s.id = c.student_id and s.status = 'ACTIVE'
+    join public.school_classes cl on cl.id = c.class_id
+    where c.school_date = v_date
+      and exists(select 1 from public.parent_child_links l
+        where l.parent_user_id = v_actor and l.student_id = c.student_id and l.active and l.verified_by is not null)
+  )
+  select sc.cycle_id, sc.student_id, sc.student_name, sc.class_id, sc.class_name, sc.state, sc.version, sc.school_date,
+    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id then ((sc.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id then ((sc.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
     coalesce(el.eligible, false), coalesce(el.reason_code, 'eligibility_unavailable'),
     coalesce((select jsonb_agg(jsonb_build_object('id', p.id, 'displayName', p.display_name, 'relationshipLabel', p.relationship_label, 'validUntil', p.valid_until) order by p.display_name, p.id)
-      from public.authorized_pickup_persons p where p.student_id = c.student_id and p.verified_by is not null
+      from public.authorized_pickup_persons p where p.student_id = sc.student_id and p.verified_by is not null
        and p.verified_at is not null and p.valid_from <= v_date and p.valid_until >= v_date and p.revoked_at is null), '[]'::jsonb),
-    c.arrival_at, coalesce(arr.full_name, arr.username), coalesce(person.display_name, ''),
-    c.release_at, coalesce(rel.full_name, rel.username),
-    (c.state = 'WAITING' and coalesce(el.eligible, false) and sched.sch->>'status' = 'AVAILABLE'
-      and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id
-      and clock_timestamp() >= ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis')
-      and clock_timestamp() < ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis')
-      and exists(select 1 from public.authorized_pickup_persons p where p.student_id = c.student_id
+    sc.arrival_at, coalesce(arr.full_name, arr.username), coalesce(person.display_name, ''),
+    sc.release_at, coalesce(rel.full_name, rel.username),
+    (sc.state = 'WAITING' and coalesce(el.eligible, false) and sched.sch->>'status' = 'AVAILABLE'
+      and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id
+      and clock_timestamp() >= ((sc.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis')
+      and clock_timestamp() < ((sc.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis')
+      and exists(select 1 from public.authorized_pickup_persons p where p.student_id = sc.student_id
         and p.verified_by is not null and p.verified_at is not null and p.valid_from <= v_date
         and p.valid_until >= v_date and p.revoked_at is null)
-      and public.pickup_parent_can_announce_arrival(c.student_id,
-        (select p.id from public.authorized_pickup_persons p where p.student_id = c.student_id
+      and public.pickup_parent_can_announce_arrival(sc.student_id,
+        (select p.id from public.authorized_pickup_persons p where p.student_id = sc.student_id
           and p.verified_by is not null and p.verified_at is not null and p.valid_from <= v_date
           and p.valid_until >= v_date and p.revoked_at is null order by p.display_name, p.id limit 1), v_date)),
     false,
-    (sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id),
+    (sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id),
     ed_proj.early_departure
-  from public.pickup_cycles c
-  join public.students s on s.id = c.student_id and s.status = 'ACTIVE'
-  join public.school_classes cl on cl.id = c.class_id
-  left join public.profiles arr on arr.id = c.arrival_actor_user_id
-  left join public.profiles rel on rel.id = c.release_actor_user_id
-  left join public.authorized_pickup_persons person on person.id = c.collector_id
-  cross join lateral (select public.pickup_resolve_schedule(c.student_id, v_date) as sch) sched
-  left join lateral (select e.eligible, e.reason_code from public.get_pickup_student_eligibility(c.student_id, v_date) e) el on true
+  from scoped_cycles sc
+  left join public.profiles arr on arr.id = sc.arrival_actor_user_id
+  left join public.profiles rel on rel.id = sc.release_actor_user_id
+  left join public.authorized_pickup_persons person on person.id = sc.collector_id
+  cross join lateral (select public.pickup_resolve_schedule(sc.student_id, v_date) as sch) sched
+  left join lateral (select e.eligible, e.reason_code from public.get_pickup_student_eligibility(sc.student_id, v_date) e) el on true
   left join lateral (
     select jsonb_build_object(
       'id', ed.id,
@@ -531,13 +540,11 @@ begin
     ) as early_departure
     from public.early_departure_requests ed
     left join public.authorized_pickup_persons ed_col on ed_col.id = ed.collector_id
-    where ed.student_id = c.student_id and ed.school_date = c.school_date
+    where ed.student_id = sc.student_id and ed.school_date = sc.school_date
     order by ed.created_at desc, ed.id desc
     limit 1
   ) ed_proj on true
-  where c.school_date = v_date and exists(select 1 from public.parent_child_links l
-    where l.parent_user_id = v_actor and l.student_id = c.student_id and l.active and l.verified_by is not null)
-  order by s.full_name, c.cycle_id;
+  order by sc.student_name, sc.cycle_id;
 end;
 $$;
 
@@ -570,33 +577,45 @@ begin
     raise exception 'insufficient_pickup_scope' using errcode = 'P0001';
   end if;
   return query
-  select c.cycle_id, c.student_id, s.full_name, c.class_id, cl.name, c.state, c.version, c.school_date,
-    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id then ((c.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
-    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id then ((c.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
+  with scoped_cycles as materialized (
+    select c.cycle_id, c.student_id, s.full_name as student_name, c.class_id, cl.name as class_name,
+      c.state, c.version, c.school_date, c.dismissal_policy_id, c.policy_revision, c.membership_id,
+      c.arrival_at, c.arrival_actor_user_id, c.collector_id, c.release_at, c.release_actor_user_id
+    from public.pickup_cycles c
+    join public.students s on s.id = c.student_id and s.status = 'ACTIVE'
+    join public.school_classes cl on cl.id = c.class_id
+    where c.school_date = v_date and (p_class_id is null or c.class_id = p_class_id)
+      and (public.pickup_actor_is_app_admin() or public.current_user_has_role('MANAGER'::public.app_role)
+        or public.current_user_has_role('ADMINISTRATIVE_PERSONNEL'::public.app_role)
+        or exists(select 1 from public.teacher_class_assignments a where a.teacher_user_id = v_actor
+          and a.class_id = c.class_id and a.active))
+  )
+  select sc.cycle_id, sc.student_id, sc.student_name, sc.class_id, sc.class_name, sc.state, sc.version, sc.school_date,
+    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id then ((sc.school_date + (sched.sch->>'opensAt')::time) at time zone 'Africa/Tunis') end,
+    case when sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id then ((sc.school_date + (sched.sch->>'closesAt')::time) at time zone 'Africa/Tunis') end,
     coalesce(el.eligible, false), coalesce(el.reason_code, 'eligibility_unavailable'),
-    '[]'::jsonb, c.arrival_at, coalesce(arr.full_name, arr.username), coalesce(person.display_name, ''),
-    c.release_at, coalesce(rel.full_name, rel.username), false,
-    coalesce((c.state = 'PARENT_ARRIVED' and coalesce(el.eligible, false)
-      and el.membership_id = c.membership_id and el.class_id = c.class_id
+    '[]'::jsonb, sc.arrival_at, coalesce(arr.full_name, arr.username), coalesce(person.display_name, ''),
+    sc.release_at, coalesce(rel.full_name, rel.username), false,
+    coalesce((sc.state = 'PARENT_ARRIVED' and coalesce(el.eligible, false)
+      and el.membership_id = sc.membership_id and el.class_id = sc.class_id
       and public.pickup_actor_can_confirm_release()
-      and person.id = c.collector_id and person.verified_by is not null and person.verified_at is not null
+      and person.id = sc.collector_id and person.verified_by is not null and person.verified_at is not null
       and person.valid_from <= v_date and person.valid_until >= v_date and person.revoked_at is null), false),
-    (sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = c.dismissal_policy_id
-      and (sched.sch->>'policyRevision')::integer = c.policy_revision and (sched.sch->>'membershipId')::uuid = c.membership_id
-      and (sched.sch->>'classId')::uuid = c.class_id),
+    (sched.sch->>'status' = 'AVAILABLE' and (sched.sch->>'dismissalPolicyId')::uuid = sc.dismissal_policy_id
+      and (sched.sch->>'policyRevision')::integer = sc.policy_revision and (sched.sch->>'membershipId')::uuid = sc.membership_id
+      and (sched.sch->>'classId')::uuid = sc.class_id),
     ed_proj.early_departure
-  from public.pickup_cycles c join public.students s on s.id = c.student_id and s.status = 'ACTIVE'
-  join public.school_classes cl on cl.id = c.class_id
-  left join public.profiles arr on arr.id = c.arrival_actor_user_id
-  left join public.profiles rel on rel.id = c.release_actor_user_id
-  left join public.authorized_pickup_persons person on person.id = c.collector_id
-  cross join lateral (select public.pickup_resolve_schedule(c.student_id, v_date) as sch) sched
+  from scoped_cycles sc
+  left join public.profiles arr on arr.id = sc.arrival_actor_user_id
+  left join public.profiles rel on rel.id = sc.release_actor_user_id
+  left join public.authorized_pickup_persons person on person.id = sc.collector_id
+  cross join lateral (select public.pickup_resolve_schedule(sc.student_id, v_date) as sch) sched
   left join lateral (select e.eligible, e.reason_code, e.membership_id, e.class_id
-    from public.get_pickup_student_eligibility(c.student_id, v_date) e) el on true
+    from public.get_pickup_student_eligibility(sc.student_id, v_date) e) el on true
   left join lateral (
     select jsonb_build_object(
       'id', ed.id,
@@ -622,16 +641,11 @@ begin
     left join public.profiles ed_req on ed_req.id = ed.requested_by
     left join public.profiles ed_rev on ed_rev.id = ed.reviewed_by
     left join public.profiles ed_rel on ed_rel.id = ed.released_by_user_id
-    where ed.student_id = c.student_id and ed.school_date = c.school_date
+    where ed.student_id = sc.student_id and ed.school_date = sc.school_date
     order by ed.created_at desc, ed.id desc
     limit 1
   ) ed_proj on true
-  where c.school_date = v_date and (p_class_id is null or c.class_id = p_class_id)
-    and (public.pickup_actor_is_app_admin() or public.current_user_has_role('MANAGER'::public.app_role)
-      or public.current_user_has_role('ADMINISTRATIVE_PERSONNEL'::public.app_role)
-      or exists(select 1 from public.teacher_class_assignments a where a.teacher_user_id = v_actor
-        and a.class_id = c.class_id and a.active))
-  order by cl.name, s.full_name, c.cycle_id;
+  order by sc.class_name, sc.student_name, sc.cycle_id;
 end;
 $$;
 
@@ -685,96 +699,121 @@ begin
     end if;
   end if;
 
+  with scoped_departures as materialized (
+    select
+      ed.id as ed_id,
+      ed.student_id,
+      ed.membership_id,
+      ed.cycle_id,
+      ed.school_date,
+      ed.collector_id,
+      ed.reason,
+      ed.requested_pickup_at,
+      ed.status,
+      ed.version,
+      ed.requested_by,
+      ed.reviewed_by,
+      ed.reviewed_at,
+      ed.review_reason,
+      ed.released_by_user_id,
+      ed.completed_at,
+      ed.handoff_notes,
+      ed.created_at,
+      s.full_name as student_label,
+      m.class_id,
+      cl.name as class_label
+    from public.early_departure_requests ed
+    join public.students s on s.id = ed.student_id and s.status = 'ACTIVE'
+    join public.student_class_memberships m on m.id = ed.membership_id
+    join public.school_classes cl on cl.id = m.class_id
+    where ed.school_date = v_date
+      and (p_class_id is null or m.class_id = p_class_id)
+      and (
+        v_is_release_role
+        or (v_is_teacher and exists (
+          select 1 from public.teacher_class_assignments a
+           where a.teacher_user_id = v_actor and a.class_id = m.class_id and a.active
+        ))
+        or (v_is_parent and exists (
+          select 1 from public.parent_child_links l
+           where l.parent_user_id = v_actor and l.student_id = ed.student_id
+             and l.active and l.verified_by is not null
+        ))
+      )
+  )
   select coalesce(jsonb_agg(item order by class_label, student_label, created_at desc, ed_id), '[]'::jsonb)
     into v_items
     from (
       select
-        ed.id as ed_id,
-        ed.created_at,
-        s.full_name as student_label,
-        cl.name as class_label,
+        sd.ed_id,
+        sd.created_at,
+        sd.student_label,
+        sd.class_label,
         case when v_is_staff then
           jsonb_build_object(
-            'id', ed.id,
-            'studentId', ed.student_id,
-            'studentLabel', s.full_name,
-            'classId', m.class_id,
-            'classLabel', cl.name,
-            'cycleId', ed.cycle_id,
-            'schoolDate', ed.school_date,
-            'collectorId', ed.collector_id,
+            'id', sd.ed_id,
+            'studentId', sd.student_id,
+            'studentLabel', sd.student_label,
+            'classId', sd.class_id,
+            'classLabel', sd.class_label,
+            'cycleId', sd.cycle_id,
+            'schoolDate', sd.school_date,
+            'collectorId', sd.collector_id,
             'collectorLabel', coalesce(col.display_name, ''),
-            'reason', ed.reason,
-            'requestedPickupAt', ed.requested_pickup_at,
-            'status', ed.status,
-            'version', ed.version,
+            'reason', sd.reason,
+            'requestedPickupAt', sd.requested_pickup_at,
+            'status', sd.status,
+            'version', sd.version,
             'requestedByLabel', coalesce(req.full_name, req.username),
             'reviewedByLabel', coalesce(rev.full_name, rev.username),
-            'reviewedAt', ed.reviewed_at,
-            'reviewReason', ed.review_reason,
+            'reviewedAt', sd.reviewed_at,
+            'reviewReason', sd.review_reason,
             'releasedByLabel', coalesce(rel.full_name, rel.username),
-            'completedAt', ed.completed_at,
-            'handoffNotes', ed.handoff_notes,
-            'createdAt', ed.created_at,
-            'canReview', (v_is_release_role and ed.status = 'PENDING'),
+            'completedAt', sd.completed_at,
+            'handoffNotes', sd.handoff_notes,
+            'createdAt', sd.created_at,
+            'canReview', (v_is_release_role and sd.status = 'PENDING'),
             'canComplete', (
-              v_is_release_role and ed.status = 'APPROVED'
+              v_is_release_role and sd.status = 'APPROVED'
               and public.pickup_actor_can_confirm_release()
               and coalesce(el.eligible, false)
-              and el.membership_id = ed.membership_id
+              and el.membership_id = sd.membership_id
               and col.id is not null and col.verified_by is not null and col.verified_at is not null
               and col.valid_from <= v_date and col.valid_until >= v_date and col.revoked_at is null
             )
           )
         else
           jsonb_build_object(
-            'id', ed.id,
-            'studentId', ed.student_id,
-            'studentLabel', s.full_name,
-            'classId', m.class_id,
-            'classLabel', cl.name,
-            'cycleId', ed.cycle_id,
-            'schoolDate', ed.school_date,
-            'collectorId', ed.collector_id,
+            'id', sd.ed_id,
+            'studentId', sd.student_id,
+            'studentLabel', sd.student_label,
+            'classId', sd.class_id,
+            'classLabel', sd.class_label,
+            'cycleId', sd.cycle_id,
+            'schoolDate', sd.school_date,
+            'collectorId', sd.collector_id,
             'collectorLabel', coalesce(col.display_name, ''),
-            'reason', ed.reason,
-            'requestedPickupAt', ed.requested_pickup_at,
-            'status', ed.status,
-            'version', ed.version,
-            'reviewedAt', ed.reviewed_at,
-            'reviewReason', ed.review_reason,
-            'completedAt', ed.completed_at,
-            'createdAt', ed.created_at,
+            'reason', sd.reason,
+            'requestedPickupAt', sd.requested_pickup_at,
+            'status', sd.status,
+            'version', sd.version,
+            'reviewedAt', sd.reviewed_at,
+            'reviewReason', sd.review_reason,
+            'completedAt', sd.completed_at,
+            'createdAt', sd.created_at,
             'canReview', false,
             'canComplete', false
           )
         end as item
-      from public.early_departure_requests ed
-      join public.students s on s.id = ed.student_id and s.status = 'ACTIVE'
-      join public.student_class_memberships m on m.id = ed.membership_id
-      join public.school_classes cl on cl.id = m.class_id
-      left join public.authorized_pickup_persons col on col.id = ed.collector_id
-      left join public.profiles req on req.id = ed.requested_by
-      left join public.profiles rev on rev.id = ed.reviewed_by
-      left join public.profiles rel on rel.id = ed.released_by_user_id
+      from scoped_departures sd
+      left join public.authorized_pickup_persons col on col.id = sd.collector_id
+      left join public.profiles req on req.id = sd.requested_by
+      left join public.profiles rev on rev.id = sd.reviewed_by
+      left join public.profiles rel on rel.id = sd.released_by_user_id
       left join lateral (
         select e.eligible, e.membership_id
-          from public.get_pickup_student_eligibility(ed.student_id, v_date) e
+          from public.get_pickup_student_eligibility(sd.student_id, v_date) e
       ) el on true
-      where ed.school_date = v_date
-        and (p_class_id is null or m.class_id = p_class_id)
-        and (
-          v_is_release_role
-          or (v_is_teacher and exists (
-            select 1 from public.teacher_class_assignments a
-             where a.teacher_user_id = v_actor and a.class_id = m.class_id and a.active
-          ))
-          or (v_is_parent and exists (
-            select 1 from public.parent_child_links l
-             where l.parent_user_id = v_actor and l.student_id = ed.student_id
-               and l.active and l.verified_by is not null
-          ))
-        )
     ) scoped;
 
   return coalesce(v_items, '[]'::jsonb);
