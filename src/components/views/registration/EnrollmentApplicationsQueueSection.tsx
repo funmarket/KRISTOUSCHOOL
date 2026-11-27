@@ -1,18 +1,11 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
+import {getEnrollmentQueue,getEnrollmentReviewDecisions,getEnrollmentReviewAccess,type EnrollmentQueue} from '../../../lib/domains/enrollment';
+import {CompleteAdmissionForm} from './CompleteAdmissionForm';
 import { pickText } from '../../../i18n/homepages';
 import type { NotificationTargetIntent } from '../../../lib/notificationTargetNavigation';
 import type { EnrollmentApplication, EnrollmentApplicationStatus, Language } from '../../../types';
 import { EmptyFeatureState } from '../../homepages/shared/EmptyFeatureState';
 import { AlertCircle, CheckCircle2, FileText, Lock } from 'lucide-react';
-
-const REVIEW_DECISIONS: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'>[] = [
-  'UNDER_REVIEW',
-  'NEED_DOCUMENTS',
-  'ACCEPTED',
-  'WAITLIST',
-  'REJECTED',
-  'ENROLLED',
-];
 
 interface EnrollmentApplicationsQueueSectionProps {
   language: Language;
@@ -38,7 +31,7 @@ interface EnrollmentApplicationsQueueSectionProps {
 
 export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplicationsQueueSectionProps> = ({
   language,
-  canReview,
+  canReview: canReviewHint,
   enrollmentApplications,
   enrollmentsStatus,
   enrollmentsError,
@@ -54,7 +47,21 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
   onReviewSave,
   onRefresh,
   t,
-}) => (
+}) => {
+  const [queue,setQueue] = useState<EnrollmentQueue>('pending');
+  const [serverReviewAccess,setServerReviewAccess] = useState(false);
+  useEffect(() => {
+    let active=true;
+    void getEnrollmentReviewAccess().then(result => { if(active) setServerReviewAccess(result.ok && result.data===true); });
+    return () => {active=false;};
+  },[]);
+  const canReview=canReviewHint || serverReviewAccess;
+  useEffect(() => {
+    const target=enrollmentApplications.find(app => app.id===notificationIntent?.refId);
+    if(target) setQueue(getEnrollmentQueue(target));
+  },[notificationIntent?.requestId,enrollmentApplications]);
+  const visibleApplications=canReview ? enrollmentApplications.filter(app=>getEnrollmentQueue(app)===queue) : enrollmentApplications;
+  return (
   <div
     data-testid="enrollment-applications-section"
     className="bg-white dark:bg-[#111111] p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4"
@@ -84,6 +91,11 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
       </span>
     </div>
 
+    {canReview && <div role="tablist" aria-label="Admission queues" className="flex flex-wrap gap-2">
+      {(['pending','completion','history'] as const).map(value => <button key={value} type="button" role="tab" aria-selected={queue===value} onClick={()=>setQueue(value)} className={`px-3 py-2 rounded-xl text-xs font-bold ${queue===value?'bg-k-brand text-white':'bg-gray-100 dark:bg-zinc-800'}`}>
+        {pickText(value==='pending'?{ar:'بانتظار المراجعة',fr:'À examiner',en:'Pending Review',es:'Pendientes',de:'Ausstehende Prüfung',pt:'Revisão pendente'}:value==='completion'?{ar:'مقبول — إتمام القبول مطلوب',fr:'Acceptées — à finaliser',en:'Accepted — Completion Needed',es:'Aceptadas — por completar',de:'Angenommen — Abschluss erforderlich',pt:'Aceites — por concluir'}:{ar:'المكتمل / السجل',fr:'Terminées / Historique',en:'Completed / History',es:'Completadas / Historial',de:'Abgeschlossen / Verlauf',pt:'Concluídas / Histórico'},language)} ({enrollmentApplications.filter(app=>getEnrollmentQueue(app)===value).length})
+      </button>)}
+    </div>}
     {reviewFeedback && (
       <div
         role={reviewFeedback.type === 'error' ? 'alert' : 'status'}
@@ -168,18 +180,19 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
               language,
             )}
           />
-        ) : enrollmentApplications.length === 0 && enrollmentsStatus === 'READY' ? (
+        ) : visibleApplications.length === 0 && enrollmentsStatus === 'READY' ? (
           <p data-testid="enrollments-empty-state" className="text-xs text-gray-500 py-4 text-center">
             {pickText(
               { ar: 'لا توجد طلبات تسجيل مسجلة حالياً.', fr: 'Aucune demande d’inscription enregistrée.', en: 'No enrollment applications found.', es: 'No se encontraron solicitudes de matrícula.', de: 'Keine Einschreibungsanträge gefunden.', pt: 'Não foram encontrados pedidos de inscrição.' },
               language,
             )}
           </p>
-        ) : enrollmentApplications.length > 0 ? (
+        ) : visibleApplications.length > 0 ? (
           <div className="space-y-3">
-            {enrollmentApplications.map((app) => {
-              const defaultDecision: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'> =
-                app.status !== 'DRAFT' && app.status !== 'SUBMITTED' ? app.status : 'UNDER_REVIEW';
+            {visibleApplications.map((app) => {
+              const decisions=getEnrollmentReviewDecisions(app.status);
+              const selected=reviewDecisionMap[app.id];
+              const defaultDecision=selected && decisions.includes(selected) ? selected : decisions[0];
               return (
                 <div
                   key={app.id}
@@ -203,6 +216,8 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                     </span>
                   </div>
 
+                  {canReview && getEnrollmentQueue(app)==='completion' && <CompleteAdmissionForm application={app} language={language} onCompleted={onRefresh} />}
+                  {canReview && app.status==='ENROLLED' && !app.studentId && <p role="status" className="text-amber-800 text-xs">{pickText({ar:'يلزم تصحيح القبول قبل التسكين.',fr:'Rapprochement nécessaire avant affectation.',en:'Admission reconciliation required before placement.',es:'Se requiere conciliar la admisión.',de:'Zulassung muss abgeglichen werden.',pt:'É necessário reconciliar a admissão.'},language)}</p>}
                   {app.notes && <p className="text-xs text-gray-600 dark:text-gray-400">{app.notes}</p>}
                   {app.reviewNote && (
                     <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
@@ -210,10 +225,10 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                     </p>
                   )}
 
-                  {canReview && (
+                  {canReview && decisions.length > 0 && (
                     <div className="pt-2 border-t border-gray-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
                       <select
-                        value={reviewDecisionMap[app.id] ?? defaultDecision}
+                        value={defaultDecision}
                         onChange={(e) =>
                           setReviewDecisionMap((prev) => ({
                             ...prev,
@@ -222,7 +237,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                         }
                         className="p-2 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold"
                       >
-                        {REVIEW_DECISIONS.map((dec) => (
+                        {decisions.map((dec) => (
                           <option key={dec} value={dec}>{dec}</option>
                         ))}
                       </select>
@@ -237,7 +252,7 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                       />
                       <button
                         type="button"
-                        disabled={reviewingId === app.id}
+                        disabled={Boolean(reviewingId)}
                         onClick={() => onReviewSave(app.id, app.status, app.version)}
                         className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
                       >
@@ -254,3 +269,4 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
     )}
   </div>
 );
+};

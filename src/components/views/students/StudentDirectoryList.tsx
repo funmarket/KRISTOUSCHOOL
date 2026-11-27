@@ -234,7 +234,7 @@ export function StudentDirectoryList({
                       </td>
                       <td className="py-3.5 px-4">
                         {!stu.classes || stu.classes.length === 0 ? (
-                          <span className="text-gray-400 italic text-[11px]">
+                          <span className="inline-block px-2 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300 font-bold text-[11px]">
                             {pickText({ ar: 'غير مسجل في قسم', fr: 'Non assigné', en: 'Unassigned', es: 'Sin asignar', de: 'Nicht zugewiesen', pt: 'Não atribuído' }, language)}
                           </span>
                         ) : (

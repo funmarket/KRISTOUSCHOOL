@@ -828,6 +828,11 @@ receipt before ENROLLED, and may leave the student unassigned for later class pl
 No account/contact heuristic, automatic class authority, or duplicate student is allowed.
 Legacy status-only ENROLLED applications require the same explicit completion operation.
 
+ENROLL-D02 separates staff pending review, accepted completion, and read-only history.
+Placement and guardian verification/revocation explicitly update existing canonical
+records with stale-record protection. Admission review does not confer class/Family
+administration. Browser and verified Telegram share server-scoped context and operations.
+
 Academic-year age windows and document requirements must be configurable rather than permanently hard-coded.
 
 Exact Tunisian legal/document requirements must be verified at implementation time; do not present assumptions as law.

@@ -11,6 +11,19 @@ export type TelegramPrivateOperation =
   | 'notifications.markAll'
   | 'preferences.load'
   | 'preferences.save'
+  | 'school.context'
+  | 'academics.classes'
+  | 'academics.years'
+  | 'academics.placeStudent'
+  | 'people.students'
+  | 'people.studentIdentity'
+  | 'family.guardians'
+  | 'family.reviewGuardian'
+  | 'enrollment.list'
+  | 'enrollment.reviewAccess'
+  | 'enrollment.review'
+  | 'enrollment.complete'
+  | 'enrollment.submit'
   | 'pickup.board'
   | 'pickup.arrive'
   | 'pickup.receipt'
@@ -32,6 +45,10 @@ export interface TelegramPrivateOperationResult<T = unknown> {
 }
 
 const PRESERVED_REMOTE_ERROR_CODES = new Set([
+  'insufficient_authority', 'invalid_transition', 'application_not_accepted',
+  'admission_completion_required', 'admission_completion_conflict', 'guardian_student_conflict',
+  'student_not_available', 'class_not_found', 'class_capacity_reached',
+  'invalid_parent_account', 'invalid_guardian_request', 'invalid_admission_request',
   'actor_unauthenticated',
   'actor_not_approved',
   'insufficient_governance_authority',

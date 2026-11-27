@@ -1,6 +1,8 @@
 name: TG-AUTHZ-01 validation
 
 on:
+  push:
+    branches: ['feat/enroll-*']
   pull_request:
     branches: [main]
   workflow_dispatch:

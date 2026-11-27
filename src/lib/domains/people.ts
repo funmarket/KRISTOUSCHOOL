@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import type { BackendOpResult } from '../../types.ts';
 
 export interface SchoolStudentSummary {
@@ -68,7 +69,8 @@ export async function listSchoolStudents(
 ): Promise<BackendOpResult<ListSchoolStudentsResponse>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('list_school_students', {
+    const tg = await invokeTelegramPrivateOperation('people.students', {...input}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('list_school_students', {
       p_search: input.p_search?.trim() || null,
       p_academic_year_id: input.p_academic_year_id || null,
       p_class_id: input.p_class_id || null,
@@ -105,7 +107,8 @@ export async function getSchoolStudentIdentity(
   }
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('get_school_student_identity', {
+    const tg = await invokeTelegramPrivateOperation('people.studentIdentity', {studentId:p_student_id}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('get_school_student_identity', {
       p_student_id,
     });
     if (error) {

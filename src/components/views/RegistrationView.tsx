@@ -10,6 +10,7 @@ import {
   submitEnrollmentApplication,
   type SubmitEnrollmentReceipt,
 } from '../../lib/schoolOperations';
+import { getEnrollmentReviewDecisions } from '../../lib/domains/enrollment';
 import { EnrollmentApplicationsQueueSection } from './registration/EnrollmentApplicationsQueueSection';
 import { CheckCircle2, Send, AlertCircle } from 'lucide-react';
 
@@ -118,9 +119,10 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
     if (reviewingId || enrollmentsStatus === 'UNAUTHORIZED') return;
     setReviewFeedback(null);
     setReviewingId(appId);
-    const fallbackDecision: Exclude<EnrollmentApplicationStatus, 'DRAFT' | 'SUBMITTED'> =
-      currentStatus !== 'DRAFT' && currentStatus !== 'SUBMITTED' ? currentStatus : 'UNDER_REVIEW';
-    const decision = reviewDecisionMap[appId] ?? fallbackDecision;
+    const decisions=getEnrollmentReviewDecisions(currentStatus);
+    const selected=reviewDecisionMap[appId];
+    const decision=selected && decisions.includes(selected) ? selected : decisions[0];
+    if(!decision) { setReviewingId(null); return; }
     const reviewNote = reviewNoteMap[appId] ?? '';
 
     try {
@@ -326,6 +328,7 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
 
       {showApplicationsSection && (
         <EnrollmentApplicationsQueueSection
+          key={`${currentUser?.id}:${currentUser?.role}:${currentUser?.accountStatus}`}
           language={language}
           canReview={canReview}
           enrollmentApplications={enrollmentApplications}

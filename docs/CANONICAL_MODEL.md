@@ -275,6 +275,11 @@ Enrollment may provide the eligibility/reference needed for Academics to establi
 
 ## Enrollment Documents
 
+ENROLL-D02 retains Academics membership history for class changes and Family's
+parent_child_links for guardian verification/revocation. Family-owned immutable
+family_guardian_audit_logs records explicit link, actor, decision, prior verification
+and reason. No new student, family, class or session owner is introduced.
+
 ENROLL-D01 binds an application to its canonical People student through nullable
 `enrollment_applications.student_id`. `enrollment_admission_completions` owns the
 atomic completion receipt (student, explicit guardian, verification choice, actor/time,

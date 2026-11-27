@@ -1,4 +1,5 @@
 import { supabase, classifySupabaseError } from '../supabase.ts';
+import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import { CANONICAL_SCHOOL_LEVELS } from './academics.ts';
 import type { BackendOpResult } from '../../types.ts';
 
@@ -106,7 +107,8 @@ export async function submitEnrollmentApplication(
   }
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('submit_enrollment_application', {
+    const tg = await invokeTelegramPrivateOperation('enrollment.submit', {...input}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('submit_enrollment_application', {
       p_student_full_name: input.studentFullName.trim(),
       p_birth_date: input.birthDate.trim(),
       p_desired_level_code: input.desiredLevelCode.trim().toUpperCase(),
@@ -134,15 +136,12 @@ export async function listEnrollmentApplications(
 ): Promise<BackendOpResult<EnrollmentApplication[]>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client
-      .from('enrollment_applications')
-      .select(
-        'id, reference_code, student_full_name, birth_date, desired_level_code, parent_full_name, phone, email, notes, submitted_by_user_id, student_id, status, review_note, reviewed_at, version, created_at',
-      )
-      .order('created_at', { ascending: false });
+    const tg = await invokeTelegramPrivateOperation('enrollment.list', {}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('list_enrollment_applications');
     if (error) {
       return { ok: false, ...classifySupabaseError(error) };
     }
+    if (!Array.isArray(data)) throw new Error('invalid_enrollment_list');
     const mapped: EnrollmentApplication[] = Array.isArray(data)
       ? data.map((row: Record<string, unknown>) => ({
           id: String(row.id),
@@ -191,7 +190,8 @@ export async function completeEnrollmentAdmission(
 ): Promise<BackendOpResult<AdmissionCompletionReceipt>> {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('complete_enrollment_admission', {
+    const tg = await invokeTelegramPrivateOperation('enrollment.complete', {...input}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('complete_enrollment_admission', {
       p_application_id: input.applicationId,
       ...(input.existingStudentId ? { p_existing_student_id: input.existingStudentId } : {}),
       p_verify_guardian: input.verifyGuardian ?? true,
@@ -223,7 +223,8 @@ export async function reviewEnrollmentApplication(
 > {
   if (!client) return unavailableResult();
   try {
-    const { data, error } = await client.rpc('review_enrollment_application', {
+    const tg = await invokeTelegramPrivateOperation('enrollment.review', {...input}, client);
+    const { data, error } = tg.handled ? {data:tg.data,error:null} : await client.rpc('review_enrollment_application', {
       p_application_id: input.applicationId,
       p_decision: input.decision,
       p_review_note: input.reviewNote?.trim() || null,
@@ -246,4 +247,28 @@ export async function reviewEnrollmentApplication(
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
+}
+
+export type EnrollmentQueue = 'pending' | 'completion' | 'history';
+export function getEnrollmentQueue(app: {status: string; studentId?: string | null}): EnrollmentQueue {
+  if (app.status==='ACCEPTED' && !app.studentId) return 'completion';
+  return ['DRAFT','SUBMITTED','UNDER_REVIEW','WAITLIST','NEED_DOCUMENTS','WAITLISTED','NEEDS_INFO'].includes(app.status) ? 'pending' : 'history';
+}
+export function getEnrollmentReviewDecisions(status: string): ReviewEnrollmentInput['decision'][] {
+  switch(status) {
+    case 'SUBMITTED': return ['UNDER_REVIEW'];
+    case 'UNDER_REVIEW': return ['UNDER_REVIEW','NEED_DOCUMENTS','ACCEPTED','WAITLIST','REJECTED'];
+    case 'NEED_DOCUMENTS': return ['UNDER_REVIEW'];
+    case 'WAITLIST': return ['UNDER_REVIEW','ACCEPTED','REJECTED'];
+    default: return [];
+  }
+}
+export async function getEnrollmentReviewAccess(client: typeof supabase = supabase): Promise<BackendOpResult<boolean>> {
+  if (!client) return unavailableResult();
+  try {
+    const tg = await invokeTelegramPrivateOperation<boolean>('enrollment.reviewAccess', {}, client);
+    const {data,error} = tg.handled ? {data:tg.data,error:null} : await client.rpc('get_enrollment_review_access');
+    if (error) return {ok:false,...classifySupabaseError(error)};
+    return {ok:true,status:'READY',data:data===true};
+  } catch(error) {return {ok:false,...classifySupabaseError(error)};}
 }

@@ -55,6 +55,19 @@ type GatewayOperation =
   | 'notifications.markAll'
   | 'preferences.load'
   | 'preferences.save'
+  | 'school.context'
+  | 'academics.classes'
+  | 'academics.years'
+  | 'academics.placeStudent'
+  | 'people.students'
+  | 'people.studentIdentity'
+  | 'family.guardians'
+  | 'family.reviewGuardian'
+  | 'enrollment.list'
+  | 'enrollment.reviewAccess'
+  | 'enrollment.review'
+  | 'enrollment.complete'
+  | 'enrollment.submit'
   | 'pickup.board'
   | 'pickup.arrive'
   | 'pickup.receipt'
@@ -202,6 +215,11 @@ async function verifyBrowserIdentity(
   return typeof user?.id === 'string' ? user.id : null;
 }
 
+function requiredText(value: unknown, max: number): string {
+  if(typeof value !== 'string' || !value.trim() || value.trim().length > max) throw new GatewayError('invalid_request',400);
+  return value.trim();
+}
+
 function readParams(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new GatewayError('invalid_request', 400);
   return value as Record<string, unknown>;
@@ -322,6 +340,71 @@ async function executeOperation(
   params: Record<string, unknown>,
 ): Promise<unknown> {
   switch (operation) {
+    case 'school.context':
+      return requireRow(await transaction`select public.get_my_school_context() as data`).data;
+    case 'academics.classes':
+      return requireRow(await transaction`select public.list_school_classes_with_rosters() as data`).data;
+    case 'academics.years':
+      return requireRow(await transaction`select public.list_academic_years() as data`).data;
+    case 'enrollment.list':
+      return requireRow(await transaction`select public.list_enrollment_applications() as data`).data;
+    case 'enrollment.reviewAccess':
+      return requireRow(await transaction`select public.get_enrollment_review_access() as data`).data;
+    case 'enrollment.complete': {
+      const id = requireUuid(params.applicationId);
+      const studentId = params.existingStudentId == null ? null : requireUuid(params.existingStudentId);
+      const version = integer(params.expectedVersion, -1, 1);
+      const verify = params.verifyGuardian ?? true;
+      if (version < 1 || typeof verify !== 'boolean') throw new GatewayError('invalid_request',400);
+      return requireRow(await transaction`select public.complete_enrollment_admission(${id}::uuid,${studentId}::uuid,${verify},${version}) as data`).data;
+    }
+    case 'enrollment.review': {
+      const id = requireUuid(params.applicationId);
+      const version = integer(params.expectedVersion, -1, 1);
+      const decision = optionalEnum(params.decision,new Set(['UNDER_REVIEW','NEED_DOCUMENTS','ACCEPTED','WAITLIST','REJECTED']));
+      const note = optionalSearch(params.reviewNote);
+      if(version < 1 || !decision) throw new GatewayError('invalid_request',400);
+      return requireRow(await transaction`select public.review_enrollment_application(${id}::uuid,${decision},${note},${version}) as data`).data;
+    }
+    case 'enrollment.submit': {
+      const name = requiredText(params.studentFullName,120);
+      const birthDate = optionalIsoDate(params.birthDate);
+      const level = requiredText(params.desiredLevelCode,20);
+      const parent = requiredText(params.parentFullName,120);
+      const phone = requiredText(params.phone,32);
+      const email = params.email ? requiredText(params.email,254) : null;
+      const notes = params.notes ? requiredText(params.notes,1500) : null;
+      if(!birthDate) throw new GatewayError('invalid_request',400);
+      return requireRow(await transaction`select public.submit_enrollment_application(${name},${birthDate}::date,${level},${parent},${phone},${email},${notes}) as data`).data;
+    }
+    case 'people.students': {
+      const search = optionalSearch(params.p_search);
+      const year = params.p_academic_year_id ? requireUuid(params.p_academic_year_id) : null;
+      const cls = params.p_class_id ? requireUuid(params.p_class_id) : null;
+      const status = optionalEnum(params.p_status,new Set(['ACTIVE','ARCHIVED','ALL'])) ?? 'ALL';
+      const limit = integer(params.p_limit,25,1,100), offset = integer(params.p_offset,0,0,100000);
+      return requireRow(await transaction`select public.list_school_students(${search},${year}::uuid,${cls}::uuid,${status},${limit},${offset}) as data`).data;
+    }
+    case 'people.studentIdentity': {
+      const id = requireUuid(params.studentId);
+      return requireRow(await transaction`select public.get_school_student_identity(${id}::uuid) as data`).data;
+    }
+    case 'academics.placeStudent': {
+      const student = requireUuid(params.studentId), cls = requireUuid(params.classId);
+      const previous = params.expectedMembershipId == null ? null : requireUuid(params.expectedMembershipId);
+      return requireRow(await transaction`select public.assign_existing_student_to_class(${student}::uuid,${cls}::uuid,${previous}::uuid) as data`).data;
+    }
+    case 'family.guardians': {
+      const student = requireUuid(params.studentId);
+      return requireRow(await transaction`select public.list_student_guardians(${student}::uuid) as data`).data;
+    }
+    case 'family.reviewGuardian': {
+      const student = requireUuid(params.studentId), link = requireUuid(params.linkId);
+      const action = optionalEnum(params.action,new Set(['VERIFY','REVOKE']));
+      const stamp = optionalIsoTimestamp(params.expectedUpdatedAt), reason = requirePickupReason(params.reason);
+      if(!action || !stamp) throw new GatewayError('invalid_request',400);
+      return requireRow(await transaction`select public.review_student_guardian(${student}::uuid,${link}::uuid,${action},${stamp}::timestamptz,${reason}) as data`).data;
+    }
     case 'governance.actorScope':
       return requireRow(await transaction`select public.governance_get_actor_scope() as data`).data;
     case 'governance.pendingAccounts': {
@@ -603,6 +686,7 @@ export async function handleTelegramPrivateOps(
       'governance.actorScope', 'governance.pendingAccounts', 'governance.accountDirectory',
       'governance.accountDetail', 'notifications.list', 'notifications.markOne',
       'notifications.markAll', 'preferences.load', 'preferences.save',
+      'school.context', 'academics.classes', 'academics.years', 'academics.placeStudent', 'people.students', 'people.studentIdentity', 'family.guardians', 'family.reviewGuardian', 'enrollment.list', 'enrollment.reviewAccess', 'enrollment.review', 'enrollment.complete', 'enrollment.submit',
       'pickup.board', 'pickup.arrive', 'pickup.receipt', 'pickup.release',
       'pickup.provision', 'pickup.openCycles', 'pickup.revokeRelease', 'pickup.reinstateRelease',
       'pickup.earlyDepartures', 'pickup.requestEarly', 'pickup.reviewEarly', 'pickup.completeEarly',
@@ -653,6 +737,10 @@ export async function handleTelegramPrivateOps(
     }
     if (message.includes('owner_only_operation')) return json({ error: 'owner_only_operation' }, 403, origin, allowedOrigin);
     if (message.includes('target_not_found')) return json({ error: 'target_not_found' }, 404, origin, allowedOrigin);
+    if (message==='actor_unauthenticated') return json({error:message},401,origin,allowedOrigin);
+    if (message==='insufficient_authority' || message==='actor_not_approved') return json({error:message},403,origin,allowedOrigin);
+    if (['admission_completion_conflict','guardian_student_conflict','class_capacity_reached'].includes(message)) return json({error:message},409,origin,allowedOrigin);
+    if (['invalid_transition','application_not_accepted','admission_completion_required','student_not_available','class_not_found','invalid_parent_account','invalid_guardian_request','invalid_admission_request'].includes(message)) return json({error:message},422,origin,allowedOrigin);
     const pickupConflictCodes = new Set([
       'version_conflict', 'idempotency_conflict', 'arrival_required', 'already_released',
       'early_departure_already_open', 'early_departure_terminal', 'early_departure_not_approved',

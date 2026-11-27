@@ -37,6 +37,44 @@ authorized only after green CI and only for ADM-20261127-9DDB15; Amir is protect
 
 ## Authority and inspected baseline
 
+### ENROLL-D02 — directory actions, queues and transport (2026-11-27)
+
+Execution base main `082b7fd52d9ebf7529fae1b0c42db4f1becfea15` contains merged
+PR #47 and #48. This explicit Owner assignment supersedes the older Gemini-only
+application allocation below for this packet.
+
+- Enrollment owns Pending Review (`SUBMITTED`, `UNDER_REVIEW`, `WAITLIST`,
+  `NEED_DOCUMENTS`), Accepted — Completion Needed (ACCEPTED without student), and
+  read-only Completed / History. WAITLISTED/NEEDS_INFO are labels for existing
+  canonical states. WITHDRAWN is history if encountered, not a new SQL mutation.
+- Only legal review transitions appear. ENROLLED requires explicit D01 completion,
+  with new student or explicit existing student UUID and attached Parent verification.
+  Server review access includes Managers/delegated Staff, without roster escalation.
+- Existing People readers stay in `domains/people.ts`; there is no students.ts owner.
+  Unassigned is a placement badge separate from ACTIVE identity status.
+- Academics places existing pupils using student/class/expected membership IDs.
+  Owner/Office/CLASSES_MANAGE may write. Active pupil/class, capacity, per-year
+  membership, stale selection and retry are checked atomically. Transfers preserve
+  the previous membership and pupil identity. No create-and-enroll workaround.
+- Family reads/verifies/revokes existing parent_child_links. Directory audiences may
+  read; Owner/Office/CLASSES_MANAGE may write using link+student ID, expected timestamp
+  and a reason. Verification requires an approved active Parent; revocation removes
+  active family access. Private immutable Family audits retain decisions. No account
+  discovery, inferred contact match, new guardian registry or Pickup collector grant.
+- Verified Telegram uses allowlisted gateway operations for context, enrollment,
+  directory/detail, academic metadata/placement and Family actions. Fresh signed
+  identity resolves the canonical account; existing authenticated-role RPC policies
+  enforce authorization. No minted session, client actor claim or anonymous fallback.
+  Existing Pickup gateway reads remain unchanged. Unassigned children in school context
+  do not acquire eligible Pickup cycles without class, attendance and schedule policy.
+
+Checks: domain/UI/gateway regressions and pgTAP roles, cross-family, placement,
+capacity, stale/revoked authority; lint/test/build; clean isolated replay and generated
+type parity; full TG-AUTHZ before PR. The workflow also runs on feat/enroll-* pushes
+to support the pre-PR gate. No hosted migration, gateway deployment, real family/class
+mutation, next packet or PR2 merge is authorized. Release the backend migration and
+gateway before dependent UI. See progress.md for actual evidence and remaining gates.
+
 - Latest Owner decisions in this conversation take precedence.
 - Approved master revision 3: `KRISTOU_MASTER_EXECUTION_PLAN_REV3.txt`, SHA-256
   `d0213cd47d3cbf94d749a7234a9ab29cc965448c0c39850f9d234978b053e3cd`.

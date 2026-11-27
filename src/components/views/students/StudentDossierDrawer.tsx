@@ -1,4 +1,6 @@
 import React from 'react';
+import { StudentAdministrationActions } from './StudentAdministrationActions';
+import type { AvailableStudentClassItem } from './useStudentsManagement';
 import type { Language } from '../../../types';
 import { pickText } from '../../../i18n/homepages';
 import type { SchoolStudentIdentityDetail } from '../../../lib/schoolOperations';
@@ -19,6 +21,8 @@ export interface StudentDossierDrawerProps {
   listViewRef: React.RefObject<HTMLDivElement | null>;
   onBack: () => void;
   onRetryDetail: () => void;
+  availableClasses?: AvailableStudentClassItem[];
+  onChanged?: () => void;
 }
 
 export function StudentDossierDrawer({
@@ -30,6 +34,8 @@ export function StudentDossierDrawer({
   listViewRef,
   onBack,
   onRetryDetail,
+  availableClasses = [],
+  onChanged = () => {},
 }: StudentDossierDrawerProps) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-6 px-4 sm:px-6" ref={listViewRef}>
@@ -203,6 +209,7 @@ export function StudentDossierDrawer({
               </div>
             )}
 
+            <StudentAdministrationActions student={studentDetail} classes={availableClasses} onChanged={onChanged} />
             {/* Academic Performance & Progress Summary (Honest Empty State) */}
             <div className="pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">

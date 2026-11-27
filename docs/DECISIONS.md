@@ -406,6 +406,12 @@ Next proposed document: **AGENTS.md (DOC-D5)**, only upon explicit instruction. 
 
 ## ENROLL-D01 — explicit admission completion (2026-11-27)
 
+ENROLL-D02 continuation: separate review/completion/history presentation; reuse People
+directory readers, Academics memberships and Family links for explicit administration.
+Admission authority does not imply roster/placement/guardian-management authority.
+Verified Telegram routes these bounded operations through existing authenticated-role
+gateway transactions. Backend migration and gateway release precede dependent UI.
+
 The latest Owner-authorized PR 1 adds an Enrollment-owned completion receipt and audit
 to bridge accepted applications to existing People identity and verified Family links.
 It does not invent another student/guardian/class owner. An application can be ENROLLED

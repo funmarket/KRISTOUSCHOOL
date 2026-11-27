@@ -24,7 +24,8 @@ pickup_relations(relname) as (
     ('pickup_audit_export_logs_id_seq'),('pickup_person_audit_logs_id_seq'),
     ('pickup_dismissal_policy_audit_logs_id_seq'),
     -- ENROLL-D01 additions have their own admission regression suite.
-    ('enrollment_admission_completions'),('enrollment_admission_audit_logs')
+    ('enrollment_admission_completions'),('enrollment_admission_audit_logs'),
+    ('family_guardian_audit_logs') -- ENROLL-D02 tested separately
 ),
 pickup_routines(proname) as (
   values
@@ -46,7 +47,9 @@ pickup_routines(proname) as (
     ('review_early_departure'),('complete_early_departure_release'),
     ('claim_pickup_outbox_batch'),('acknowledge_pickup_outbox_delivery'),
     ('get_pickup_outbox_summary'),('retry_failed_pickup_notifications'),
-    ('enrollment_actor_can_complete'),('enrollment_reject_audit_mutation'),('complete_enrollment_admission')
+    ('enrollment_actor_can_complete'),('enrollment_reject_audit_mutation'),('complete_enrollment_admission'),
+    ('get_enrollment_review_access'),('list_enrollment_applications'),('assign_existing_student_to_class'),
+    ('list_student_guardians'),('review_student_guardian'),('family_reject_audit_mutation')
 ),
 rel as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,c.relpersistence,c.relispartition) s
