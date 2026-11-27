@@ -93,7 +93,7 @@ test('ARCH-06 Gate 3: All 14 domain modules preserve exact RPC and table contrac
       tables: ['directory_entries'],
     },
     'enrollment.ts': {
-      rpcs: ['submit_enrollment_application', 'review_enrollment_application'],
+      rpcs: ['submit_enrollment_application', 'complete_enrollment_admission', 'review_enrollment_application'],
       tables: ['enrollment_applications'],
     },
     'foodMenu.ts': {

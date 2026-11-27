@@ -403,3 +403,21 @@ Only create an ADR for a real architectural decision. Do not create placeholder 
 DOC-D4 reconciles this decision record only. Its checks establish document consistency, supersession, references and protected scope; they do not test or implement the app. The master, requirements, structure, canonical model and all code/schema/config/accounts remain unchanged by this packet. Local documentation is not a merged/deployed release.
 
 Next proposed document: **AGENTS.md (DOC-D5)**, only upon explicit instruction. Do not update another document/master/progress, change PR #15, enable Table Editor preferences or resume backend work automatically.
+
+## ENROLL-D01 — explicit admission completion (2026-11-27)
+
+The latest Owner-authorized PR 1 adds an Enrollment-owned completion receipt and audit
+to bridge accepted applications to existing People identity and verified Family links.
+It does not invent another student/guardian/class owner. An application can be ENROLLED
+only with a canonical student and active admission-completion record; class placement
+and annual enrollment/renewal remain separate. Explicit existing-student selection is
+supported; no name/email/contact account matching. Legacy status-only ENROLLED rows may
+be repaired through the same atomic RPC, never by a silent bulk backfill.
+
+Completion/review permits approved APP_ADMIN, MANAGER, ADMINISTRATIVE_PERSONNEL and
+SCHOOL_STAFF with an existing active ENROLLMENT_REVIEW delegation, as explicitly directed
+for ENROLL-D01. This does not broaden class/roster, account governance or Pickup authority.
+The attached Parent account uses existing submitted_by_user_id, while parent_child_links
+retains Family write authority. Repeats return the same student/receipt without repeated
+audit/notification; conflicting identity/verification intent fails closed. See the dossier
+plan for exact scope and progress.md for actual CI/hosted evidence and remaining UI work.

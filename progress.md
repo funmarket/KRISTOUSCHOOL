@@ -171,3 +171,39 @@ Dependencies were installed locally with `npm install --ignore-scripts --package
 **Hosted read-only postchecks:** Project `ofppapwofhovhroyjtkc` still has seven recorded migrations, 3 Auth users/3 profiles (1 APPROVED, 2 PENDING), 1 approved active Owner and 1 Telegram identity. Authenticated has no table-wide profile UPDATE or account_status UPDATE; full_name/avatar_url UPDATE remain allowed. Edge Functions are still username v6, Telegram v9, challenge v6. No accounts, linking records, migration history, schema, functions or hosted configuration were mutated.
 
 **Remaining gates, in order:** Docker-backed clean reset + RLS suite; genuine two-session last-Owner and post-wait caller-revocation tests; PR review/explicit merge approval; actual deployed Web sign-in/Owner workflow acceptance; separately scoped matching username-handler release and verification. GOV-02 remains deferred. Do not rerun installed repair SQL, bootstrap another Owner, or redeploy Telegram handlers.
+
+## ENROLL-D01 — admission completion and bounded hosted reconciliation (2026-11-27)
+
+PR #48 (`feat/enroll-d01-admission-completion`), base main `5293ca1b2b880c57ecdc1a20327bd517c53d6544`.
+Tested implementation revision `d17df82b81ee16a8396737b808e19c4301147cfc` adds the application-to-student
+FK, Enrollment-owned completion/audit records, legal review transitions, atomic/idempotent
+completion RPC, generated types and typed adapter. Uses existing `parent_child_links` and
+`submitted_by_user_id`; no duplicate guardian owner, contact matching, class assignment,
+account provisioning or temporary maintenance deployment. See STUDENT_TEACHER_DOSSIER_PLAN ENROLL-D01.
+
+Evidence: npm run lint (exit 0), npm test (284 passed, 0 failed), npm run build (exit 0).
+GitHub TG-AUTHZ-01 run 46071917880 passed locked install, typecheck, tests/build, isolated
+Supabase startup/reset, generated-type parity and 17 pgTAP files / 695 assertions,
+including 42 admission assertions. First CI run 46071502479 passed replay/generation but
+failed parity against the bootstrap signature; the committed types were replaced using
+that run's generated schema diff. Local Docker extraction failed with no space left on
+device; no local reset/pgTAP pass is claimed. Detailed local evidence is ignored under .evidence/.
+
+Owner-authorized hosted target `ofppapwofhovhroyjtkc`: exact migration source SHA-256
+`ea54b09ad4f6ca02a0563c887537339190839b9fb916d740e6f5b1ebdc4b66b7` applied after green CI.
+The tool initially recorded version 20261127214439. Its single stored statement matched
+the source byte-for-byte (MD5 e3d5ef009540827cf1f2c1c7049706ba); only that exact history
+record was aligned to source version 20261128000001. No unrelated history was repaired.
+
+One operator-executed authenticated-role RPC call under the existing approved APP_ADMIN
+completed application ADM-20261127-9DDB15, version 7 -> 8. Hosted readback: one ACTIVE,
+unassigned canonical student, verified link to the explicitly attached Parent, one active
+completion, one audit, one completion notification. The authorized student-directory RPC
+returns one matching pupil with an empty classes array; Parent school-context readback
+returns both Amir and MOMO. Amir's complete student/guardian/membership fingerprint stayed
+`2e0ced30bb1905d42ac24c870ae734fa` before/after. Existing IDs/records were not replaced.
+
+Limits: database/adapter PR only. No new browser completion/class-placement UI, no Telegram
+enrollment transport, no browser login/end-to-end acceptance, no genuine multi-session
+completion race test, no school-wide backfill or inferred family links. These remain
+separate packets. PR remains unmerged pending explicit owner approval; no next packet started.

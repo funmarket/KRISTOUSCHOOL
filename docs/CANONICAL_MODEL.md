@@ -275,6 +275,14 @@ Enrollment may provide the eligibility/reference needed for Academics to establi
 
 ## Enrollment Documents
 
+ENROLL-D01 binds an application to its canonical People student through nullable
+`enrollment_applications.student_id`. `enrollment_admission_completions` owns the
+atomic completion receipt (student, explicit guardian, verification choice, actor/time,
+active flag); `enrollment_admission_audit_logs` owns immutable completion evidence.
+These are admission records, not another student identity or class/annual-enrollment
+ledger. Completion may leave the student unassigned. Family still owns
+`parent_child_links`; submission contact data never establishes guardian authority.
+
 Enrollment owns semantic document requirement/application attachment relationships.
 
 Generic media descriptors/bytes remain Media-owned infrastructure.

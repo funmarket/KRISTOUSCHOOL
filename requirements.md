@@ -821,6 +821,13 @@ DRAFT
 
 Acceptance does not itself grant class/private access. Active enrollment/class assignment is required.
 
+ENROLL-D01: authorized staff explicitly complete an accepted admission into a new or
+explicitly selected canonical student, with optional verified linkage to the attached
+Parent account. Completion is atomic and retry-safe, requires a durable admission
+receipt before ENROLLED, and may leave the student unassigned for later class placement.
+No account/contact heuristic, automatic class authority, or duplicate student is allowed.
+Legacy status-only ENROLLED applications require the same explicit completion operation.
+
 Academic-year age windows and document requirements must be configurable rather than permanently hard-coded.
 
 Exact Tunisian legal/document requirements must be verified at implementation time; do not present assumptions as law.

@@ -3,6 +3,38 @@
 Date: 2026-11-18. This is the living source-to-requirement reconciliation of the
 approved master, not a replacement master or a declaration that its features are complete.
 
+## ENROLL-D01 — admission completion contract (2026-11-27)
+
+Owner-authorized PR 1 closes only the admission-to-canonical-student handoff. It adds
+`enrollment_applications.student_id`, an Enrollment-owned admission completion receipt
+and immutable admission audit entries. `complete_enrollment_admission` atomically creates
+an ACTIVE, unassigned People student (or links an explicitly selected existing student),
+optionally verifies the explicitly attached Parent account through Family's existing
+`parent_child_links`, marks the application ENROLLED, and queues a safe notification.
+The existing account reference is `submitted_by_user_id`; there is no invented
+`applicant_profile_id` or second `parent_student_links` owner. Contact text is never
+used to match an account. Anonymous/Office submissions without a Parent account can
+complete without creating a guardian. Default verification does not make staff submitters parents.
+
+Completion requires ACCEPTED, except explicit repair of legacy ENROLLED rows with no
+student. Existing completed receipts replay without another student, audit or notification;
+changed student/verification intent conflicts. Existing verified guardian metadata is
+preserved; linking a student already verified to a different family fails closed.
+Version mismatches and failed side effects roll back the whole operation. No class
+membership, Auth user, role approval, collector authority or annual renewal is created.
+
+The latest Owner instruction permits completion by APPROVED APP_ADMIN, MANAGER,
+ADMINISTRATIVE_PERSONNEL, and SCHOOL_STAFF holding an active ENROLLMENT_REVIEW delegation
+in the existing capability-grant store. This narrow completion/review authority does
+not expand roster/class/identity/governance permissions or create a new delegation system.
+Queue/frontend capability alignment remains a subsequent UI packet. Review transitions
+are validated; a status-only ENROLLED write requires an active admission completion.
+
+The typed adapter and generated schema contract are PR 1 scope. Completion UI, class
+placement for existing students, guardian-management UI, queue/history filters and
+Telegram enrollment transport remain subsequent packets. Hosted reconciliation is
+authorized only after green CI and only for ADM-20261127-9DDB15; Amir is protected.
+
 ## Authority and inspected baseline
 
 - Latest Owner decisions in this conversation take precedence.

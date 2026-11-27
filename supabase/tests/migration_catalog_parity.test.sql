@@ -1,7 +1,11 @@
 -- Normalized public-catalog parity gate for the installed 20-migration baseline.
 -- Expected fingerprints were captured read-only from ofppapwofhovhroyjtkc.
 -- This test runs against the clean isolated database built by `supabase db reset`.
--- It compares the G2 baseline only, not OIDs or row data. Later feature-stage
+-- It compares the G2 baseline only, not OIDs or row data. ENROLL-D01 changes only
+-- review_enrollment_application among baseline sources; its expected source digest
+-- includes that reviewed replacement. New admission objects/column/FK/index are
+-- excluded narrowly and tested in enrollment_admission_completion.test.sql.
+-- Later feature-stage
 -- objects are excluded explicitly so this regression gate remains meaningful.
 
 begin;
@@ -18,7 +22,9 @@ pickup_relations(relname) as (
     ('pickup_audit_export_logs'),('pickup_person_audit_logs'),
     ('pickup_events_id_seq'),('pickup_authority_audit_logs_id_seq'),
     ('pickup_audit_export_logs_id_seq'),('pickup_person_audit_logs_id_seq'),
-    ('pickup_dismissal_policy_audit_logs_id_seq')
+    ('pickup_dismissal_policy_audit_logs_id_seq'),
+    -- ENROLL-D01 additions have their own admission regression suite.
+    ('enrollment_admission_completions'),('enrollment_admission_audit_logs')
 ),
 pickup_routines(proname) as (
   values
@@ -39,7 +45,8 @@ pickup_routines(proname) as (
     ('get_pickup_early_departures'),('request_early_departure'),
     ('review_early_departure'),('complete_early_departure_release'),
     ('claim_pickup_outbox_batch'),('acknowledge_pickup_outbox_delivery'),
-    ('get_pickup_outbox_summary'),('retry_failed_pickup_notifications')
+    ('get_pickup_outbox_summary'),('retry_failed_pickup_notifications'),
+    ('enrollment_actor_can_complete'),('enrollment_reject_audit_mutation'),('complete_enrollment_admission')
 ),
 rel as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,c.relpersistence,c.relispartition) s
@@ -57,6 +64,7 @@ cols as (
     and not (c.relname='notification_outbox' and a.attname in (
       'delivery_status','attempt_count','next_attempt_at','claimed_at','sent_at','last_error','provider_message_id'
     ))
+    and not (c.relname='enrollment_applications' and a.attname='student_id')
 ),
 cons as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,co.conname,co.contype,co.convalidated,co.condeferrable,co.condeferred,pg_get_constraintdef(co.oid,true)) s
@@ -64,6 +72,7 @@ cons as (
   where n.nspname='public'
     and not exists (select 1 from pickup_relations x where x.relname=c.relname)
     and not (c.relname='notification_outbox' and co.conname like 'notification_outbox_g7_%')
+    and not (c.relname='enrollment_applications' and co.conname='enrollment_applications_student_id_fkey')
 ),
 idx as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,ic.relname,i.indisunique,i.indisprimary,i.indisvalid,i.indisready,pg_get_indexdef(i.indexrelid)) s
@@ -71,6 +80,7 @@ idx as (
   where n.nspname='public'
     and not exists (select 1 from pickup_relations x where x.relname=c.relname)
     and not (c.relname='notification_outbox' and ic.relname like 'notification_outbox_g7_%')
+    and not (c.relname='enrollment_applications' and ic.relname='enrollment_applications_student_id_idx')
 ),
 trig as (
   select format('%s.%s|%s|%s|%s|%s',n.nspname,c.relname,t.tgname,t.tgenabled,pg_get_triggerdef(t.oid,true),t.tgfoid::regprocedure::text) s
@@ -138,7 +148,7 @@ select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fin
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='indexes'),'93:a3105f3a779e0a734a272d36e55f5000','public indexes match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='triggers'),'40:243e9c72292fe2a2ac8dbec5220555f5','public triggers and trigger functions match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_metadata'),'99:9ddcd3aced7d4b67a59dd643b2c63a55','public function signatures/security/owners/configuration match hosted baseline');
-select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_source'),'99:dc80080e264cfebded7f81b0efa80f4c','public function source bodies match hosted baseline after whitespace normalization');
+select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='function_source'),'99:b95435ae4b1eb6d8988b9496eb9dd204','public function sources match baseline plus reviewed ENROLL-D01 replacement after whitespace normalization');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='policies'),'56:d093adf4ea11deae5d7067ae0fc9fa4a','public RLS policies match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='table_grants'),'839:2643402505bd4f6a74a930e30cd9e5b5','public table/view/sequence grants match hosted baseline');
 select extensions.is((select format('%s:%s',n,digest) from migration_catalog_fingerprints where category='routine_grants'),'295:97acc07e6163e9b2b1bdf889faec8761','public routine grants match hosted baseline');

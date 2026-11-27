@@ -27,10 +27,13 @@ export {
   type SubmitEnrollmentInput,
   type SubmitEnrollmentReceipt,
   type ReviewEnrollmentInput,
+  type CompleteEnrollmentAdmissionInput,
+  type AdmissionCompletionReceipt,
   validateEnrollmentInput,
   submitEnrollmentApplication,
   listEnrollmentApplications,
   reviewEnrollmentApplication,
+  completeEnrollmentAdmission,
 } from './domains/enrollment.ts';
 
 export {
