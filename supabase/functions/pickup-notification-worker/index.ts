@@ -32,6 +32,8 @@ export interface ClaimedOutboxItem {
 export interface WorkerDependencies {
   supabaseUrl?: string;
   serviceRoleKey?: string;
+  jwtSecret?: string;
+  createRpcClient?: typeof createClient;
   botToken?: string;
   fetcher?: typeof fetch;
   claimBatch?: (limit: number) => Promise<ClaimedOutboxItem[]>;
@@ -74,6 +76,35 @@ function parseBearerToken(request: Request): string | null {
   if (!header) return null;
   const match = /^Bearer\s+(.+)$/i.exec(header.trim());
   return match?.[1]?.trim() || null;
+}
+
+// This is only an early rejection filter. PostgREST must still authenticate the
+// incoming credential and enforce the service_role-only RPC EXECUTE grants.
+async function serviceCredentialCandidate(token: string, configuredKey: string, jwtSecret: string): Promise<boolean> {
+  if (configuredKey && timingSafeEqualString(token, configuredKey)) return true;
+  if (/^sb_secret_[A-Za-z0-9_-]+$/.test(token)) return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const decode = (part: string) => atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '='));
+    const header = JSON.parse(decode(parts[0]));
+    const claims = JSON.parse(decode(parts[1]));
+    const now = Date.now() / 1000;
+    if (claims.role !== 'service_role' || !Number.isFinite(claims.exp) || claims.exp <= now ||
+        (claims.nbf !== undefined && (!Number.isFinite(claims.nbf) || claims.nbf > now))) return false;
+    if (jwtSecret) {
+      if (header.alg !== 'HS256') return false;
+      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(jwtSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+      return await crypto.subtle.verify('HMAC', key, Uint8Array.from(decode(parts[2]), c => c.charCodeAt(0)), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
+    }
+    // Without a signing secret, decoding is NOT authentication. The RPC request
+    // below verifies the signature/project/key validity before any claim occurs.
+    return header.alg === 'HS256' || header.alg === 'ES256' || header.alg === 'RS256';
+  } catch { return false; }
+}
+
+class WorkerRpcError extends Error {
+  constructor(public status: number) { super('worker_rpc_failed'); }
 }
 
 function normalizeLanguage(lang: string | undefined): SupportedLanguage {
@@ -165,16 +196,17 @@ export async function handlePickupNotificationWorker(
   }
 
   const supabaseUrl = overrides.supabaseUrl ?? getEnv('SUPABASE_URL') ?? '';
-  const serviceRoleKey = overrides.serviceRoleKey ?? getEnv('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const botToken = overrides.botToken ?? getEnv('TELEGRAM_BOT_TOKEN') ?? '';
+  const serviceRoleKey = (overrides.serviceRoleKey ?? getEnv('SUPABASE_SERVICE_ROLE_KEY') ?? '').trim();
+  const jwtSecret = overrides.jwtSecret ?? getEnv('SUPABASE_JWT_SECRET') ?? '';
+  const botToken = (overrides.botToken ?? getEnv('TELEGRAM_BOT_TOKEN') ?? '').trim();
   const fetcher = overrides.fetcher ?? fetch;
 
-  if (!serviceRoleKey) {
+  if (!serviceRoleKey && !supabaseUrl && !jwtSecret) {
     return json({ error: 'worker_unconfigured' }, 503);
   }
 
   const bearer = parseBearerToken(request);
-  if (!bearer || !timingSafeEqualString(bearer, serviceRoleKey)) {
+  if (!bearer || !await serviceCredentialCandidate(bearer, serviceRoleKey, jwtSecret)) {
     return json({ error: 'unauthorized' }, 401);
   }
 
@@ -199,29 +231,30 @@ export async function handlePickupNotificationWorker(
   let acknowledgeDelivery = overrides.acknowledgeDelivery;
 
   if (!claimBatch || !acknowledgeDelivery) {
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabaseUrl) {
       return json({ error: 'backend_unavailable' }, 503);
     }
-    const db = createClient(supabaseUrl, serviceRoleKey, {
+    const db = (overrides.createRpcClient ?? createClient)(supabaseUrl, bearer, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: `Bearer ${bearer}` } },
     });
     if (!claimBatch) {
       claimBatch = async (batchLimit: number) => {
-        const { data, error } = await db.rpc('claim_pickup_outbox_batch', { p_limit: batchLimit });
-        if (error) throw new Error(error.message);
+        const { data, error, status } = await db.rpc('claim_pickup_outbox_batch', { p_limit: batchLimit });
+        if (error) throw new WorkerRpcError(status === 401 || status === 403 ? status : 502);
         const items = (data as { items?: unknown } | null)?.items;
         return Array.isArray(items) ? (items as ClaimedOutboxItem[]) : [];
       };
     }
     if (!acknowledgeDelivery) {
       acknowledgeDelivery = async (input) => {
-        const { data, error } = await db.rpc('acknowledge_pickup_outbox_delivery', {
+        const { data, error, status } = await db.rpc('acknowledge_pickup_outbox_delivery', {
           p_outbox_id: input.outboxId,
           p_succeeded: input.succeeded,
           p_provider_message_id: input.providerMessageId ?? null,
           p_error: input.error ?? null,
         });
-        if (error) throw new Error(error.message);
+        if (error) throw new WorkerRpcError(status === 401 || status === 403 ? status : 502);
         return data;
       };
     }
@@ -273,12 +306,14 @@ export async function handlePickupNotificationWorker(
           if (response.ok) {
             const payload = await response.json().catch(() => null) as { result?: { message_id?: unknown } } | null;
             const msgId = payload?.result?.message_id;
-            deliveredIds.push(typeof msgId === 'number' || typeof msgId === 'string' ? String(msgId) : 'tg-ok');
+            if (payload && 'ok' in payload && payload.ok === true && (typeof msgId === 'number' || typeof msgId === 'string')) deliveredIds.push(String(msgId));
+            else lastError = 'telegram_invalid_response';
           } else {
             lastError = `telegram_http_${response.status}`;
           }
-        } catch (err) {
-          lastError = err instanceof Error && err.message ? err.message.slice(0, 200) : 'telegram_fetch_error';
+        } catch {
+          // Fetch errors can contain the bot-token-bearing URL; never persist them.
+          lastError = 'telegram_fetch_error';
         }
       }
 
@@ -306,9 +341,11 @@ export async function handlePickupNotificationWorker(
       retriedOrFailed,
     }, 200);
   } catch (err) {
+    if (err instanceof WorkerRpcError && (err.status === 401 || err.status === 403)) {
+      return json({ error: 'unauthorized' }, err.status);
+    }
     return json({
       error: 'worker_execution_failed',
-      detail: err instanceof Error ? err.message : 'unexpected_error',
     }, 500);
   }
 }
