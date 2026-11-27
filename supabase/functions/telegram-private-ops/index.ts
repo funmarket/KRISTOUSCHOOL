@@ -62,7 +62,11 @@ type GatewayOperation =
   | 'pickup.provision'
   | 'pickup.openCycles'
   | 'pickup.revokeRelease'
-  | 'pickup.reinstateRelease';
+  | 'pickup.reinstateRelease'
+  | 'pickup.earlyDepartures'
+  | 'pickup.requestEarly'
+  | 'pickup.reviewEarly'
+  | 'pickup.completeEarly';
 
 type RequestBody = {
   initData?: unknown;
@@ -224,6 +228,14 @@ function optionalSearch(value: unknown): string | null {
 function optionalIsoDate(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new GatewayError('invalid_request', 400);
+  }
+  return value;
+}
+
+function optionalIsoTimestamp(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
     throw new GatewayError('invalid_request', 400);
   }
   return value;
@@ -464,6 +476,75 @@ async function executeOperation(
         select public.reinstate_pickup_release_authority(${targetUserId}::uuid, ${reason}) as data
       `).data;
     }
+    case 'pickup.earlyDepartures': {
+      const requestedClassId = params.classId === undefined || params.classId === null
+        ? null
+        : requireUuid(params.classId);
+      return requireRow(await transaction`
+        select public.get_pickup_early_departures(${requestedClassId}::uuid) as data
+      `).data;
+    }
+    case 'pickup.requestEarly': {
+      const studentId = requireUuid(params.studentId);
+      const collectorId = requireUuid(params.collectorId);
+      const requestId = requireUuid(params.requestId);
+      const reason = requirePickupReason(params.reason);
+      const requestedPickupAt = optionalIsoTimestamp(params.requestedPickupAt);
+      return requireRow(await transaction`
+        select public.request_early_departure(
+          ${studentId}::uuid, ${collectorId}::uuid, ${reason},
+          ${requestId}::uuid, ${requestedPickupAt}::timestamptz
+        ) as data
+      `).data;
+    }
+    case 'pickup.reviewEarly': {
+      const earlyDepartureId = requireUuid(params.earlyDepartureId);
+      const requestId = requireUuid(params.requestId);
+      const decision = params.decision;
+      if (decision !== 'APPROVED' && decision !== 'REJECTED') {
+        throw new GatewayError('invalid_request', 400);
+      }
+      const expectedVersion = integer(params.expectedVersion, -1, 1);
+      if (expectedVersion < 1) throw new GatewayError('invalid_request', 400);
+      const rawReason = params.reviewReason === undefined || params.reviewReason === null
+        ? null
+        : typeof params.reviewReason === 'string'
+          ? params.reviewReason.trim() || null
+          : (() => { throw new GatewayError('invalid_request', 400); })();
+      if (rawReason !== null && rawReason.length > 500) {
+        throw new GatewayError('invalid_request', 400);
+      }
+      if (decision === 'REJECTED' && (!rawReason || rawReason.length < 3)) {
+        throw new GatewayError('invalid_request', 400);
+      }
+      return requireRow(await transaction`
+        select public.review_early_departure(
+          ${earlyDepartureId}::uuid, ${decision}, ${requestId}::uuid,
+          ${expectedVersion}, ${rawReason}::text
+        ) as data
+      `).data;
+    }
+    case 'pickup.completeEarly': {
+      const earlyDepartureId = requireUuid(params.earlyDepartureId);
+      const collectorId = requireUuid(params.collectorId);
+      const requestId = requireUuid(params.requestId);
+      const expectedVersion = integer(params.expectedVersion, -1, 1);
+      if (expectedVersion < 1) throw new GatewayError('invalid_request', 400);
+      const inPersonVerified = params.inPersonVerified === undefined ? null : params.inPersonVerified;
+      if (inPersonVerified !== null && typeof inPersonVerified !== 'boolean') {
+        throw new GatewayError('invalid_request', 400);
+      }
+      const handoffNotes = params.handoffNotes === undefined ? null : params.handoffNotes;
+      if (handoffNotes !== null && (typeof handoffNotes !== 'string' || handoffNotes.trim().length > 500)) {
+        throw new GatewayError('invalid_request', 400);
+      }
+      return requireRow(await transaction`
+        select public.complete_early_departure_release(
+          ${earlyDepartureId}::uuid, ${collectorId}::uuid, ${requestId}::uuid,
+          ${expectedVersion}, ${inPersonVerified}::boolean, ${handoffNotes}::text
+        ) as data
+      `).data;
+    }
     default:
       throw new GatewayError('invalid_request', 400);
   }
@@ -511,6 +592,7 @@ export async function handleTelegramPrivateOps(
       'notifications.markAll', 'preferences.load', 'preferences.save',
       'pickup.board', 'pickup.arrive', 'pickup.receipt', 'pickup.release',
       'pickup.provision', 'pickup.openCycles', 'pickup.revokeRelease', 'pickup.reinstateRelease',
+      'pickup.earlyDepartures', 'pickup.requestEarly', 'pickup.reviewEarly', 'pickup.completeEarly',
     ]);
     if (!knownOperations.has(operation)) throw new GatewayError('invalid_request', 400);
     if (!dependencies.botToken) throw new GatewayError('backend_unavailable', 503);
@@ -557,19 +639,24 @@ export async function handleTelegramPrivateOps(
     }
     if (message.includes('owner_only_operation')) return json({ error: 'owner_only_operation' }, 403, origin, allowedOrigin);
     if (message.includes('target_not_found')) return json({ error: 'target_not_found' }, 404, origin, allowedOrigin);
-    const pickupConflictCodes = new Set(['version_conflict', 'idempotency_conflict', 'arrival_required', 'already_released']);
+    const pickupConflictCodes = new Set([
+      'version_conflict', 'idempotency_conflict', 'arrival_required', 'already_released',
+      'early_departure_already_open', 'early_departure_terminal', 'early_departure_not_approved',
+    ]);
     const pickupDeniedCodes = new Set([
       'pickup_parent_required', 'pickup_parent_child_link_required', 'collector_or_parent_not_authorized',
       'insufficient_pickup_scope', 'pickup_receipt_unavailable', 'pickup_release_authority_required',
       'pickup_release_authority_revoked', 'pickup_provision_authority_required', 'pickup_app_admin_required',
     ]);
     const pickupUnavailableCodes = new Set([
-      'schedule_unavailable', 'outside_dismissal_window', 'attendance_absent', 'attendance_excused',
-      'attendance_mark_missing', 'attendance_mark_unknown', 'attendance_entry_missing_or_conflicting',
-      'register_missing', 'register_not_submitted', 'conflicting_registers',
-      'conflicting_effective_memberships', 'responsible_teacher_unavailable', 'attestation_required',
-      'collector_invalid', 'attendance_ineligible', 'pickup_cycle_not_found', 'release_authority_target_ineligible',
+      'schedule_unavailable', 'outside_dismissal_window', 'cycle_date_mismatch',
+      'attendance_absent', 'attendance_excused', 'attendance_mark_missing', 'attendance_mark_unknown',
+      'attendance_entry_missing_or_conflicting', 'register_missing', 'register_not_submitted',
+      'conflicting_registers', 'conflicting_effective_memberships', 'responsible_teacher_unavailable',
+      'attestation_required', 'collector_invalid', 'attendance_ineligible',
+      'pickup_cycle_not_found', 'early_departure_not_found', 'release_authority_target_ineligible',
     ]);
+    if (message === 'invalid_pickup_request') return json({ error: message }, 400, origin, allowedOrigin);
     if (pickupConflictCodes.has(message)) return json({ error: message }, 409, origin, allowedOrigin);
     if (pickupDeniedCodes.has(message)) return json({ error: message }, 403, origin, allowedOrigin);
     if (pickupUnavailableCodes.has(message)) return json({ error: message }, 422, origin, allowedOrigin);

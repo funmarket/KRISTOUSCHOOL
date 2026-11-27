@@ -539,14 +539,14 @@ isOneToOne: false
                   ]
                 },"early_departure_requests": {
                   Row: {
-                    "cancellation_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"collector_id": string,"created_at": string,"cycle_id": string | null,"id": string,"membership_id": string,"reason": string,"requested_by": string,"review_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"status": string,"student_id": string,"updated_at": string,"version": number
+                    "cancellation_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"collector_id": string,"completed_at": string | null,"created_at": string,"cycle_id": string | null,"handoff_notes": string | null,"id": string,"membership_id": string,"reason": string,"released_by_user_id": string | null,"requested_by": string,"requested_pickup_at": string | null,"review_reason": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"school_date": string,"status": string,"student_id": string,"updated_at": string,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"collector_id": string,"created_at"?: string,"cycle_id"?: string | null,"id"?: string,"membership_id": string,"reason": string,"requested_by": string,"review_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_id": string,"updated_at"?: string,"version"?: number
+                    "cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"collector_id": string,"completed_at"?: string | null,"created_at"?: string,"cycle_id"?: string | null,"handoff_notes"?: string | null,"id"?: string,"membership_id": string,"reason": string,"released_by_user_id"?: string | null,"requested_by": string,"requested_pickup_at"?: string | null,"review_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"school_date"?: string,"status"?: string,"student_id": string,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"collector_id"?: string,"created_at"?: string,"cycle_id"?: string | null,"id"?: string,"membership_id"?: string,"reason"?: string,"requested_by"?: string,"review_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"status"?: string,"student_id"?: string,"updated_at"?: string,"version"?: number
+                    "cancellation_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"collector_id"?: string,"completed_at"?: string | null,"created_at"?: string,"cycle_id"?: string | null,"handoff_notes"?: string | null,"id"?: string,"membership_id"?: string,"reason"?: string,"released_by_user_id"?: string | null,"requested_by"?: string,"requested_pickup_at"?: string | null,"review_reason"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"school_date"?: string,"status"?: string,"student_id"?: string,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     {
@@ -572,6 +572,12 @@ isOneToOne: false
       columns: ["membership_id"]
 isOneToOne: false
       referencedRelation: "student_class_memberships"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "early_departure_requests_released_by_user_id_fkey"
+      columns: ["released_by_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "early_departure_requests_requested_by_fkey"
@@ -1870,6 +1876,9 @@ isOneToOne: false
 "claim_telegram_account_link":
 { Args: { "p_first_name": string,"p_language_code": string,"p_last_name": string,"p_telegram_user_id": number,"p_telegram_username": string,"p_verifier_hash": string }; Returns: undefined
                            },
+"complete_early_departure_release":
+{ Args: { "p_collector_id": string,"p_early_departure_id": string,"p_expected_version": number,"p_handoff_notes"?: string,"p_in_person_verified": boolean,"p_request_id": string }; Returns: Json
+                           },
 "create_and_enroll_student":
 { Args: { "p_birth_date": string,"p_class_id": string,"p_full_name": string,"p_linked_profile_id"?: string,"p_parent_user_id"?: string,"p_relationship_label"?: string,"p_student_code": string }; Returns: Json
                            },
@@ -1992,12 +2001,15 @@ isOneToOne: false
 "get_pickup_actor_authority":
 { Args: { "p_collector_id"?: string,"p_school_date"?: string,"p_student_id": string }; Returns: Json
                            },
+"get_pickup_early_departures":
+{ Args: { "p_class_id"?: string }; Returns: Json
+                           },
 "get_pickup_operation_receipt":
 { Args: { "p_cycle_id"?: string,"p_request_id": string }; Returns: Json
                            },
 "get_pickup_parent_board":
 { Args: Record<PropertyKey, never>; Returns: {
-              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
+              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"early_departure": Json,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
             }[]
                            },
 "get_pickup_schedule":
@@ -2005,7 +2017,7 @@ isOneToOne: false
                            },
 "get_pickup_staff_board":
 { Args: { "p_class_id"?: string }; Returns: {
-              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
+              "arrival_actor_label": string,"arrival_at": string,"can_announce_arrival": boolean,"can_confirm_release": boolean,"class_id": string,"class_label": string,"collector_label": string,"collectors": Json,"cycle_id": string,"early_departure": Json,"eligibility_reason": string,"eligible": boolean,"release_actor_label": string,"release_at": string,"schedule_available": boolean,"school_date": string,"state": string,"student_id": string,"student_label": string,"version": number,"window_end": string,"window_start": string
             }[]
                            },
 "get_pickup_student_eligibility":
@@ -2286,6 +2298,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"request_early_departure":
+{ Args: { "p_collector_id": string,"p_reason": string,"p_request_id": string,"p_requested_pickup_at"?: string,"p_student_id": string }; Returns: Json
+                           },
 "respond_public_inquiry":
 { Args: { "p_inquiry_id": string,"p_staff_response": string,"p_status": string }; Returns: Json
                            },
@@ -2303,6 +2318,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"review_early_departure":
+{ Args: { "p_decision": string,"p_early_departure_id": string,"p_expected_version": number,"p_request_id": string,"p_review_reason"?: string }; Returns: Json
+                           },
 "review_enrollment_application":
 { Args: { "p_application_id": string,"p_decision": string,"p_expected_version"?: number,"p_review_note"?: string }; Returns: Json
                            },

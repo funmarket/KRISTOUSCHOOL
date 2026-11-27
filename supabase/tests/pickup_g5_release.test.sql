@@ -2,7 +2,7 @@
 -- real PostgreSQL lock races, and durable release receipt recovery.
 create extension if not exists dblink;
 begin;
-select extensions.plan(74);
+select extensions.plan(84);
 
 select extensions.ok(has_function_privilege('authenticated','public.provision_pickup_cycles(date)','EXECUTE'),'authenticated can invoke cycle provisioning RPC');
 select extensions.ok(has_function_privilege('authenticated','public.release_pupil(uuid,uuid,uuid,integer,boolean,text)','EXECUTE'),'authenticated can invoke physical release RPC');
@@ -269,6 +269,9 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010103'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010103","role":"authenticated"}',true);
 set local role authenticated;
 select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010139'),'00000000-0000-4000-9000-000000010189','00000000-0000-4000-9000-000000010415',2,true,null)$$,'P0001','pickup_release_authority_revoked','revoked Manager is denied on a fresh server command');
+-- G5-B: revoked Manager is also denied when replaying a prior release request_id, while historical receipt readback remains available.
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010131'),'00000000-0000-4000-9000-000000010181','00000000-0000-4000-9000-000000010301',2,true,null)$$,'P0001','pickup_release_authority_revoked','G5-B: revoked Manager cannot replay an earlier release request_id');
+select extensions.is((public.get_pickup_operation_receipt('00000000-0000-4000-9000-000000010301',public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010131'))->>'state'),'RELEASED','G5-B: historical receipt lookup remains available after pickup-specific revocation');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
@@ -315,6 +318,55 @@ select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_
 reset role;
 update public.attendance_registers set status='SUBMITTED',submitted_at=now(),submitted_by='00000000-0000-4000-9000-000000010105' where id='00000000-0000-4000-9000-000000010171';
 
+-- G5-B: suspended actor cannot replay an earlier release request_id either.
+update public.profiles set account_status='SUSPENDED' where id='00000000-0000-4000-9000-000000010104';
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010104',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010104","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010132'),'00000000-0000-4000-9000-000000010182','00000000-0000-4000-9000-000000010302',2,true,null)$$,'P0001','pickup_release_authority_required','G5-B: suspended actor cannot replay an earlier release request_id');
+reset role;
+update public.profiles set account_status='APPROVED' where id='00000000-0000-4000-9000-000000010104';
+
+-- G5-A: post-window release succeeds today while closures, inactive policies, and prior-day cycles fail closed.
+update public.dismissal_policies set opens_at='00:00:00',closes_at='00:00:01' where id='00000000-0000-4000-9000-000000010170';
+select set_config('request.jwt.claim.sub','00000000-0000-4000-9000-000000010101',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}',true);
+set local role authenticated;
+select extensions.is((public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010138'),'00000000-0000-4000-9000-000000010188','00000000-0000-4000-9000-000000010425',2,true,null)->>'code'),'pupil_released','G5-A: post-window release remains allowed for today valid PARENT_ARRIVED cycle');
+reset role;
+update public.dismissal_policies set opens_at='00:00',closes_at='23:59:59' where id='00000000-0000-4000-9000-000000010170';
+
+insert into public.school_calendar_events(id,class_id,title,category,start_date,end_date,audience_mode,created_by)
+values('00000000-0000-4000-9000-000000010179',null,'G5 release closure','CLOSURE',(now() at time zone 'Africa/Tunis')::date,(now() at time zone 'Africa/Tunis')::date,'WHOLE_SCHOOL','00000000-0000-4000-9000-000000010101');
+set local role authenticated;
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010143'),'00000000-0000-4000-9000-000000010193','00000000-0000-4000-9000-000000010426',2,true,null)$$,'P0001','schedule_unavailable','G5-A: active school closure blocks release');
+reset role;
+delete from public.school_calendar_events where id='00000000-0000-4000-9000-000000010179';
+
+update public.dismissal_policies set active=false where id='00000000-0000-4000-9000-000000010170';
+set local role authenticated;
+select extensions.throws_ok($$select public.release_pupil(public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010143'),'00000000-0000-4000-9000-000000010193','00000000-0000-4000-9000-000000010427',2,true,null)$$,'P0001','schedule_unavailable','G5-A: deactivated dismissal policy blocks release');
+reset role;
+update public.dismissal_policies set active=true where id='00000000-0000-4000-9000-000000010170';
+
+insert into public.students(id,student_code,full_name,birth_date,status,created_by)
+values('00000000-0000-4000-9000-000000010145','PICKUP-G5-15','G5 Stale Day Pupil','2018-01-01','ACTIVE','00000000-0000-4000-9000-000000010101');
+insert into public.student_class_memberships(id,student_id,class_id,academic_year_id,status,started_at,assigned_by)
+select '00000000-0000-4000-9000-000000010165','00000000-0000-4000-9000-000000010145','00000000-0000-4000-9000-000000010120',y.id,'ACTIVE',(now() at time zone 'Africa/Tunis')::date-1,'00000000-0000-4000-9000-000000010101'
+  from public.academic_years y where y.code='2026-2027';
+insert into public.authorized_pickup_persons(id,student_id,display_name,relationship_label,verification_method,verification_reference,verified_by,verified_at,valid_from,valid_until)
+values('00000000-0000-4000-9000-000000010195','00000000-0000-4000-9000-000000010145','G5 Stale Collector','Family','ID checked','G5-REF-15','00000000-0000-4000-9000-000000010101',now(),(now() at time zone 'Africa/Tunis')::date-1,(now() at time zone 'Africa/Tunis')::date);
+insert into public.dismissal_policies(id,class_id,weekday,opens_at,closes_at,effective_from,revision,active,created_by)
+values('00000000-0000-4000-9000-000000010172','00000000-0000-4000-9000-000000010120',extract(dow from ((now() at time zone 'Africa/Tunis')::date-1))::smallint,'00:00','23:59:59',(now() at time zone 'Africa/Tunis')::date-1,1,true,'00000000-0000-4000-9000-000000010101');
+insert into public.pickup_cycles(cycle_id,student_id,school_date,class_id,academic_year_id,membership_id,dismissal_policy_id,policy_revision)
+select '00000000-0000-4000-9000-000000010199','00000000-0000-4000-9000-000000010145',(now() at time zone 'Africa/Tunis')::date-1,'00000000-0000-4000-9000-000000010120',y.id,'00000000-0000-4000-9000-000000010165','00000000-0000-4000-9000-000000010172',1
+  from public.academic_years y where y.code='2026-2027';
+update public.pickup_cycles set state='PARENT_ARRIVED',version=2,arrival_at=now()-interval '1 day',arrival_actor_user_id='00000000-0000-4000-9000-000000010107',collector_id='00000000-0000-4000-9000-000000010195'
+ where cycle_id='00000000-0000-4000-9000-000000010199';
+set local role authenticated;
+select extensions.throws_ok($$select public.release_pupil('00000000-0000-4000-9000-000000010199','00000000-0000-4000-9000-000000010195','00000000-0000-4000-9000-000000010428',2,true,null)$$,'P0001','cycle_date_mismatch','G5-A: stale prior-day PARENT_ARRIVED cycle is rejected');
+reset role;
+
 -- Temporary helper converts concurrent RPC exceptions into inspectable JSON for dblink.
 create function public.pickup_g5_test_capture_release(
   p_cycle_id uuid,p_collector_id uuid,p_request_id uuid,p_expected_version integer,
@@ -332,24 +384,26 @@ revoke all on function public.pickup_g5_test_capture_release(uuid,uuid,uuid,inte
 grant execute on function public.pickup_g5_test_capture_release(uuid,uuid,uuid,integer,boolean,text) to authenticated;
 create temp table pickup_g5_race_results(case_name text,session_name text,result jsonb) on commit preserve rows;
 create temp table pickup_g5_session_pids(pid integer) on commit preserve rows;
+create temp table pickup_g5_barriers(barrier_name text primary key,observed boolean) on commit preserve rows;
 commit;
 
 do $$
 declare
-  v_host text; v_port integer; v_db text; v_conn text;
-  v_cycle uuid; v_collector uuid; v_waiters integer; v_sql text; v_result jsonb; v_pid integer; i integer;
+  v_conn text; v_cycle uuid; v_collector uuid; v_waiters integer; v_result jsonb;
+  v_blocker_pid integer; v_a_pid integer; v_b_pid integer; i integer;
 begin
   v_conn:=format('host=%s port=%s dbname=%s user=postgres password=postgres',
     host(inet_server_addr()),inet_server_port(),current_database());
+  perform dblink_connect('g5_obs',v_conn);
   perform dblink_connect('g5_blocker',v_conn);
   perform dblink_connect('g5_staff_a',v_conn);
   perform dblink_connect('g5_staff_b',v_conn);
-  select pid into v_pid from dblink('g5_blocker','select pg_backend_pid()') as t(pid integer);
-  insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_staff_a','select pg_backend_pid()') as t(pid integer);
-  insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_staff_b','select pg_backend_pid()') as t(pid integer);
-  insert into pickup_g5_session_pids values(v_pid);
+  select pid into v_blocker_pid from dblink('g5_blocker','select pg_backend_pid()') as t(pid integer);
+  insert into pickup_g5_session_pids values(v_blocker_pid);
+  select pid into v_a_pid from dblink('g5_staff_a','select pg_backend_pid()') as t(pid integer);
+  insert into pickup_g5_session_pids values(v_a_pid);
+  select pid into v_b_pid from dblink('g5_staff_b','select pg_backend_pid()') as t(pid integer);
+  insert into pickup_g5_session_pids values(v_b_pid);
   perform dblink_exec('g5_staff_a','set request.jwt.claim.sub=''00000000-0000-4000-9000-000000010101''');
   perform dblink_exec('g5_staff_a','set request.jwt.claims=''{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}''');
   perform dblink_exec('g5_staff_a','set role authenticated');
@@ -366,11 +420,19 @@ begin
   end if;
   v_waiters:=0;
   for i in 1..200 loop
-    v_waiters:=dblink_is_busy('g5_staff_a')+dblink_is_busy('g5_staff_b');
+    select blocked_count into v_waiters
+      from dblink('g5_obs',format($obs$
+        select count(*)::integer
+          from pg_stat_activity a
+         where a.pid in (%s,%s)
+           and %s = any(pg_blocking_pids(a.pid))
+           and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
+      $obs$, v_a_pid, v_b_pid, v_blocker_pid)) as t(blocked_count integer);
     exit when v_waiters=2;
     perform pg_sleep(0.05);
   end loop;
-  if v_waiters<>2 then raise exception 'g5_dual_release_sessions_not_both_queued'; end if;
+  if v_waiters<>2 then raise exception 'g5_dual_release_sessions_not_both_blocked_on_lock'; end if;
+  insert into pickup_g5_barriers values('two_staff_release_lock_wait',true);
   perform dblink_exec('g5_blocker','commit');
   select result into v_result from dblink_get_result('g5_staff_a') as t(result jsonb);
   insert into pickup_g5_race_results values('two_staff_release','a',v_result);
@@ -381,10 +443,12 @@ begin
   perform dblink_disconnect('g5_staff_a');
   perform dblink_disconnect('g5_staff_b');
   perform dblink_disconnect('g5_blocker');
+  perform dblink_disconnect('g5_obs');
 end;
 $$;
 
 select extensions.ok((select count(distinct pid)=3 from pickup_g5_session_pids),'release race used three distinct PostgreSQL sessions');
+select extensions.ok((select observed from pickup_g5_barriers where barrier_name='two_staff_release_lock_wait'),'G5-C: observer verified both staff sessions queued on cycle lock');
 select extensions.is((select count(*)::integer from pickup_g5_race_results where case_name='two_staff_release' and result->>'code'='pupil_released'),1,'exactly one simultaneous authorized release wins');
 select extensions.ok((select count(*)::integer from pickup_g5_race_results where case_name='two_staff_release' and result->>'code' in ('already_released','version_conflict'))=1,'losing release receives authoritative already-released/version conflict');
 select extensions.is((select count(*)::integer from public.pickup_events where cycle_id=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010140') and action='CHILD_RELEASED'),1,'two-session release race appends exactly one event');
@@ -392,13 +456,16 @@ select extensions.is((select count(*)::integer from public.notification_outbox w
 
 -- Queue a real G3 revocation RPC ahead of release on the target profile lock.
 do $$
-declare v_conn text; v_cycle uuid; v_pid integer; v_waiters integer; v_result jsonb; i integer;
+declare
+  v_conn text; v_cycle uuid; v_blocker_pid integer; v_revoker_pid integer; v_release_pid integer;
+  v_waiters integer; v_result jsonb; i integer;
 begin
   v_conn:=format('host=%s port=%s dbname=%s user=postgres password=postgres',host(inet_server_addr()),inet_server_port(),current_database());
+  perform dblink_connect('g5_obs',v_conn);
   perform dblink_connect('g5_rev_blocker',v_conn); perform dblink_connect('g5_revoker',v_conn); perform dblink_connect('g5_rev_release',v_conn);
-  select pid into v_pid from dblink('g5_rev_blocker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_revoker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_rev_release','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
+  select pid into v_blocker_pid from dblink('g5_rev_blocker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_blocker_pid);
+  select pid into v_revoker_pid from dblink('g5_revoker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_revoker_pid);
+  select pid into v_release_pid from dblink('g5_rev_release','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_release_pid);
   perform dblink_exec('g5_revoker','set request.jwt.claim.sub=''00000000-0000-4000-9000-000000010101''');
   perform dblink_exec('g5_revoker','set request.jwt.claims=''{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}''');
   perform dblink_exec('g5_revoker','set role authenticated');
@@ -408,53 +475,108 @@ begin
   perform dblink_exec('g5_rev_blocker','begin');
   perform 1 from dblink('g5_rev_blocker','select id from public.profiles where id=''00000000-0000-4000-9000-000000010103'' for update') as t(id uuid);
   if dblink_send_query('g5_revoker',$q$select public.revoke_pickup_release_authority('00000000-0000-4000-9000-000000010103','Concurrent G5 revoke')$q$)<>1 then raise exception 'g5_revoke_query_not_accepted'; end if;
-  v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_revoker'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
-  if v_waiters<>1 then raise exception 'g5_revoke_session_not_queued'; end if;
+  v_waiters:=0;
+  for i in 1..200 loop
+    select blocked_count into v_waiters
+      from dblink('g5_obs',format($obs$
+        select count(*)::integer
+          from pg_stat_activity a
+         where a.pid=%s
+           and %s = any(pg_blocking_pids(a.pid))
+           and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
+      $obs$, v_revoker_pid, v_blocker_pid)) as t(blocked_count integer);
+    exit when v_waiters=1;
+    perform pg_sleep(0.05);
+  end loop;
+  if v_waiters<>1 then raise exception 'g5_revoke_session_not_blocked_on_lock'; end if;
   v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010141');
   if dblink_send_query('g5_rev_release',format('select public.pickup_g5_test_capture_release(%L::uuid,%L::uuid,%L::uuid,2,true,null)',v_cycle,'00000000-0000-4000-9000-000000010191','00000000-0000-4000-9000-000000010432'))<>1 then raise exception 'g5_rev_race_release_not_accepted'; end if;
-  v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_revoker')+dblink_is_busy('g5_rev_release'); exit when v_waiters=2; perform pg_sleep(0.05); end loop;
-  if v_waiters<>2 then raise exception 'g5_revocation_and_release_not_both_queued'; end if;
+  v_waiters:=0;
+  for i in 1..200 loop
+    select blocked_count into v_waiters
+      from dblink('g5_obs',format($obs$
+        select count(*)::integer
+          from pg_stat_activity a
+         where a.pid=%s
+           and (%s = any(pg_blocking_pids(a.pid)) or %s = any(pg_blocking_pids(a.pid)))
+           and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
+      $obs$, v_release_pid, v_blocker_pid, v_revoker_pid)) as t(blocked_count integer);
+    exit when v_waiters=1;
+    perform pg_sleep(0.05);
+  end loop;
+  if v_waiters<>1 then raise exception 'g5_release_session_not_blocked_behind_revocation'; end if;
+  insert into pickup_g5_barriers values('revoke_vs_release_lock_wait',true);
   perform dblink_exec('g5_rev_blocker','commit');
   perform result from dblink_get_result('g5_revoker') as t(result jsonb);
   select result into v_result from dblink_get_result('g5_rev_release') as t(result jsonb);
   insert into pickup_g5_race_results values('revoke_vs_release','release',v_result);
   perform result from dblink_get_result('g5_rev_release') as t(result jsonb);
-  perform dblink_disconnect('g5_rev_release'); perform dblink_disconnect('g5_revoker'); perform dblink_disconnect('g5_rev_blocker');
+  perform dblink_disconnect('g5_rev_release'); perform dblink_disconnect('g5_revoker'); perform dblink_disconnect('g5_rev_blocker'); perform dblink_disconnect('g5_obs');
 end;
 $$;
+select extensions.ok((select observed from pickup_g5_barriers where barrier_name='revoke_vs_release_lock_wait'),'G5-C: observer verified revocation and release queued deterministically on profile lock');
 select extensions.is((select result->>'code' from pickup_g5_race_results where case_name='revoke_vs_release'),'pickup_release_authority_revoked','release queued behind committed revocation is denied');
 select extensions.is((select state from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010141'),'PARENT_ARRIVED','revocation race does not alter custody cycle');
 select extensions.ok((select is_revoked from public.pickup_release_revocations where target_user_id='00000000-0000-4000-9000-000000010103'),'concurrent App Admin revocation committed before waiting release');
 
 -- Queue Attendance correction before release on the same attendance entry lock.
 do $$
-declare v_conn text; v_cycle uuid; v_pid integer; v_waiters integer; v_result jsonb; i integer; v_mark text;
+declare
+  v_conn text; v_cycle uuid; v_blocker_pid integer; v_correct_pid integer; v_release_pid integer;
+  v_waiters integer; v_result jsonb; i integer; v_mark text;
 begin
   v_conn:=format('host=%s port=%s dbname=%s user=postgres password=postgres',host(inet_server_addr()),inet_server_port(),current_database());
+  perform dblink_connect('g5_obs',v_conn);
   perform dblink_connect('g5_att_blocker',v_conn); perform dblink_connect('g5_att_correct',v_conn); perform dblink_connect('g5_att_release',v_conn);
-  select pid into v_pid from dblink('g5_att_blocker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_att_correct','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
-  select pid into v_pid from dblink('g5_att_release','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_pid);
+  select pid into v_blocker_pid from dblink('g5_att_blocker','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_blocker_pid);
+  select pid into v_correct_pid from dblink('g5_att_correct','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_correct_pid);
+  select pid into v_release_pid from dblink('g5_att_release','select pg_backend_pid()') as t(pid integer); insert into pickup_g5_session_pids values(v_release_pid);
   perform dblink_exec('g5_att_release','set request.jwt.claim.sub=''00000000-0000-4000-9000-000000010101''');
   perform dblink_exec('g5_att_release','set request.jwt.claims=''{"sub":"00000000-0000-4000-9000-000000010101","role":"authenticated"}''');
   perform dblink_exec('g5_att_release','set role authenticated');
   perform dblink_exec('g5_att_blocker','begin');
   perform 1 from dblink('g5_att_blocker','select student_id from public.attendance_entries where register_id=''00000000-0000-4000-9000-000000010171'' and student_id=''00000000-0000-4000-9000-000000010142'' for update') as t(student_id uuid);
   if dblink_send_query('g5_att_correct',$q$update public.attendance_entries set mark='ABSENT' where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010142' returning mark$q$)<>1 then raise exception 'g5_attendance_correction_not_accepted'; end if;
-  v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_att_correct'); exit when v_waiters=1; perform pg_sleep(0.05); end loop;
-  if v_waiters<>1 then raise exception 'g5_attendance_correction_not_queued'; end if;
+  v_waiters:=0;
+  for i in 1..200 loop
+    select blocked_count into v_waiters
+      from dblink('g5_obs',format($obs$
+        select count(*)::integer
+          from pg_stat_activity a
+         where a.pid=%s
+           and %s = any(pg_blocking_pids(a.pid))
+           and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
+      $obs$, v_correct_pid, v_blocker_pid)) as t(blocked_count integer);
+    exit when v_waiters=1;
+    perform pg_sleep(0.05);
+  end loop;
+  if v_waiters<>1 then raise exception 'g5_attendance_correction_not_blocked_on_lock'; end if;
   v_cycle:=public.pickup_g5_test_cycle_id('00000000-0000-4000-9000-000000010142');
   if dblink_send_query('g5_att_release',format('select public.pickup_g5_test_capture_release(%L::uuid,%L::uuid,%L::uuid,2,true,null)',v_cycle,'00000000-0000-4000-9000-000000010192','00000000-0000-4000-9000-000000010433'))<>1 then raise exception 'g5_attendance_race_release_not_accepted'; end if;
-  v_waiters:=0; for i in 1..200 loop v_waiters:=dblink_is_busy('g5_att_correct')+dblink_is_busy('g5_att_release'); exit when v_waiters=2; perform pg_sleep(0.05); end loop;
-  if v_waiters<>2 then raise exception 'g5_attendance_correction_and_release_not_both_queued'; end if;
+  v_waiters:=0;
+  for i in 1..200 loop
+    select blocked_count into v_waiters
+      from dblink('g5_obs',format($obs$
+        select count(*)::integer
+          from pg_stat_activity a
+         where a.pid=%s
+           and (%s = any(pg_blocking_pids(a.pid)) or %s = any(pg_blocking_pids(a.pid)))
+           and (a.wait_event_type='Lock' or exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))
+      $obs$, v_release_pid, v_blocker_pid, v_correct_pid)) as t(blocked_count integer);
+    exit when v_waiters=1;
+    perform pg_sleep(0.05);
+  end loop;
+  if v_waiters<>1 then raise exception 'g5_attendance_race_release_not_blocked_on_lock'; end if;
+  insert into pickup_g5_barriers values('attendance_vs_release_lock_wait',true);
   perform dblink_exec('g5_att_blocker','commit');
   select mark into v_mark from dblink_get_result('g5_att_correct') as t(mark text);
   select result into v_result from dblink_get_result('g5_att_release') as t(result jsonb);
   insert into pickup_g5_race_results values('attendance_vs_release','release',v_result);
   perform result from dblink_get_result('g5_att_release') as t(result jsonb);
-  perform dblink_disconnect('g5_att_release'); perform dblink_disconnect('g5_att_correct'); perform dblink_disconnect('g5_att_blocker');
+  perform dblink_disconnect('g5_att_release'); perform dblink_disconnect('g5_att_correct'); perform dblink_disconnect('g5_att_blocker'); perform dblink_disconnect('g5_obs');
 end;
 $$;
+select extensions.ok((select observed from pickup_g5_barriers where barrier_name='attendance_vs_release_lock_wait'),'G5-C: observer verified attendance correction and release queued deterministically on attendance lock');
 select extensions.is((select result->>'code' from pickup_g5_race_results where case_name='attendance_vs_release'),'attendance_ineligible','release queued behind committed ABSENT correction is denied');
 select extensions.is((select mark from public.attendance_entries where register_id='00000000-0000-4000-9000-000000010171' and student_id='00000000-0000-4000-9000-000000010142'),'ABSENT','concurrent Attendance correction commits before release revalidation');
 select extensions.is((select state from public.pickup_cycles where student_id='00000000-0000-4000-9000-000000010142'),'PARENT_ARRIVED','Attendance race preserves arrival but does not falsely confirm release');

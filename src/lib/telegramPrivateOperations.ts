@@ -18,7 +18,11 @@ export type TelegramPrivateOperation =
   | 'pickup.provision'
   | 'pickup.openCycles'
   | 'pickup.revokeRelease'
-  | 'pickup.reinstateRelease';
+  | 'pickup.reinstateRelease'
+  | 'pickup.earlyDepartures'
+  | 'pickup.requestEarly'
+  | 'pickup.reviewEarly'
+  | 'pickup.completeEarly';
 
 export interface TelegramPrivateOperationResult<T = unknown> {
   handled: boolean;
@@ -55,6 +59,11 @@ const PRESERVED_REMOTE_ERROR_CODES = new Set([
   'insufficient_pickup_scope',
   'pickup_receipt_unavailable',
   'pickup_cycle_not_found',
+  'early_departure_not_found',
+  'early_departure_already_open',
+  'early_departure_terminal',
+  'early_departure_not_approved',
+  'cycle_date_mismatch',
   'invalid_pickup_request',
   'pickup_crypto_unavailable',
   'schedule_unavailable',
