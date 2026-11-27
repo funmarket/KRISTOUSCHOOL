@@ -719,14 +719,14 @@ isOneToOne: false
                   ]
                 },"notification_outbox": {
                   Row: {
-                    "created_at": string,"dispatched_at": string | null,"event_type": string,"id": string,"payload": NonNullable<Json>,"source_id": string | null
+                    "attempt_count": number,"claimed_at": string | null,"created_at": string,"delivery_status": string,"dispatched_at": string | null,"event_type": string,"id": string,"last_error": string | null,"next_attempt_at": string,"payload": NonNullable<Json>,"provider_message_id": string | null,"sent_at": string | null,"source_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"dispatched_at"?: string | null,"event_type": string,"id"?: string,"payload"?: NonNullable<Json>,"source_id"?: string | null
+                    "attempt_count"?: number,"claimed_at"?: string | null,"created_at"?: string,"delivery_status"?: string,"dispatched_at"?: string | null,"event_type": string,"id"?: string,"last_error"?: string | null,"next_attempt_at"?: string,"payload"?: NonNullable<Json>,"provider_message_id"?: string | null,"sent_at"?: string | null,"source_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"dispatched_at"?: string | null,"event_type"?: string,"id"?: string,"payload"?: NonNullable<Json>,"source_id"?: string | null
+                    "attempt_count"?: number,"claimed_at"?: string | null,"created_at"?: string,"delivery_status"?: string,"dispatched_at"?: string | null,"event_type"?: string,"id"?: string,"last_error"?: string | null,"next_attempt_at"?: string,"payload"?: NonNullable<Json>,"provider_message_id"?: string | null,"sent_at"?: string | null,"source_id"?: string | null
                   }
                   Relationships: [
 
@@ -1799,7 +1799,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "assign_teacher_subject_allocation":
+            "acknowledge_pickup_outbox_delivery":
+{ Args: { "p_error"?: string,"p_outbox_id": string,"p_provider_message_id"?: string,"p_succeeded": boolean }; Returns: Json
+                           },
+"assign_teacher_subject_allocation":
 { Args: { "p_class_id": string,"p_notes"?: string,"p_subject_code": string,"p_teacher_user_id": string }; Returns: Json
                            },
 "assign_teacher_to_class":
@@ -1873,6 +1876,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"claim_pickup_outbox_batch":
+{ Args: { "p_limit"?: number }; Returns: Json
+                           },
 "claim_telegram_account_link":
 { Args: { "p_first_name": string,"p_language_code": string,"p_last_name": string,"p_telegram_user_id": number,"p_telegram_username": string,"p_verifier_hash": string }; Returns: undefined
                            },
@@ -2006,6 +2012,9 @@ isOneToOne: false
                            },
 "get_pickup_operation_receipt":
 { Args: { "p_cycle_id"?: string,"p_request_id": string }; Returns: Json
+                           },
+"get_pickup_outbox_summary":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_pickup_parent_board":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -2323,6 +2332,9 @@ isOneToOne: false
                            },
 "review_enrollment_application":
 { Args: { "p_application_id": string,"p_decision": string,"p_expected_version"?: number,"p_review_note"?: string }; Returns: Json
+                           },
+"retry_failed_pickup_notifications":
+{ Args: { "p_request_id": string }; Returns: Json
                            },
 "revoke_authorized_pickup_person":
 { Args: { "p_person_id": string,"p_reason": string }; Returns: Json

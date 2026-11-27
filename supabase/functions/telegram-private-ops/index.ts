@@ -66,7 +66,9 @@ type GatewayOperation =
   | 'pickup.earlyDepartures'
   | 'pickup.requestEarly'
   | 'pickup.reviewEarly'
-  | 'pickup.completeEarly';
+  | 'pickup.completeEarly'
+  | 'pickup.outboxSummary'
+  | 'pickup.retryOutbox';
 
 type RequestBody = {
   initData?: unknown;
@@ -545,6 +547,17 @@ async function executeOperation(
         ) as data
       `).data;
     }
+    case 'pickup.outboxSummary': {
+      return requireRow(await transaction`
+        select public.get_pickup_outbox_summary() as data
+      `).data;
+    }
+    case 'pickup.retryOutbox': {
+      const requestId = requireUuid(params.requestId);
+      return requireRow(await transaction`
+        select public.retry_failed_pickup_notifications(${requestId}::uuid) as data
+      `).data;
+    }
     default:
       throw new GatewayError('invalid_request', 400);
   }
@@ -593,6 +606,7 @@ export async function handleTelegramPrivateOps(
       'pickup.board', 'pickup.arrive', 'pickup.receipt', 'pickup.release',
       'pickup.provision', 'pickup.openCycles', 'pickup.revokeRelease', 'pickup.reinstateRelease',
       'pickup.earlyDepartures', 'pickup.requestEarly', 'pickup.reviewEarly', 'pickup.completeEarly',
+      'pickup.outboxSummary', 'pickup.retryOutbox',
     ]);
     if (!knownOperations.has(operation)) throw new GatewayError('invalid_request', 400);
     if (!dependencies.botToken) throw new GatewayError('backend_unavailable', 503);

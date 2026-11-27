@@ -22,7 +22,9 @@ export type TelegramPrivateOperation =
   | 'pickup.earlyDepartures'
   | 'pickup.requestEarly'
   | 'pickup.reviewEarly'
-  | 'pickup.completeEarly';
+  | 'pickup.completeEarly'
+  | 'pickup.outboxSummary'
+  | 'pickup.retryOutbox';
 
 export interface TelegramPrivateOperationResult<T = unknown> {
   handled: boolean;

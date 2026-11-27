@@ -24,3 +24,7 @@ verify_jwt = false
 
 [functions.telegram-link-challenge]
 verify_jwt = true
+
+[functions.pickup-notification-worker]
+verify_jwt = false
+

@@ -71,6 +71,8 @@ function fakeDatabase({ accountStatus = 'APPROVED', role = 'PARENT', banned = fa
         if (text.includes('request_early_departure(')) return [{ data: { ok: true, code: 'early_departure_requested', status: 'PENDING', version: 1 } }];
         if (text.includes('review_early_departure(')) return [{ data: { ok: true, code: 'early_departure_approved', status: 'APPROVED', version: 2 } }];
         if (text.includes('complete_early_departure_release(')) return [{ data: { ok: true, code: 'early_departure_completed', status: 'COMPLETED', version: 3 } }];
+        if (text.includes('get_pickup_outbox_summary(')) return [{ data: { ok: true, pendingCount: 1, retryCount: 0, processingCount: 0, sentCount: 4, failedCount: 0, totalCount: 5, recentFailures: [] } }];
+        if (text.includes('retry_failed_pickup_notifications(')) return [{ data: { ok: true, retriedCount: 2, requestId: values[0] } }];
         return [{ data: true }];
       };
       return callback(query);
@@ -228,6 +230,8 @@ test('all G4/G5/G6 pickup gateway operations enforce validation, authenticated r
     ['pickup.requestEarly', { studentId: U1, collectorId: U2, requestId: U3, reason: 'Medical checkup', requestedPickupAt: '2026-11-27T11:30:00Z' }, 'request_early_departure('],
     ['pickup.reviewEarly', { earlyDepartureId: U1, requestId: U3, decision: 'APPROVED', expectedVersion: 1 }, 'review_early_departure('],
     ['pickup.completeEarly', { earlyDepartureId: U1, collectorId: U2, requestId: U3, expectedVersion: 2, inPersonVerified: true, handoffNotes: 'Signed out' }, 'complete_early_departure_release('],
+    ['pickup.outboxSummary', {}, 'get_pickup_outbox_summary('],
+    ['pickup.retryOutbox', { requestId: U3 }, 'retry_failed_pickup_notifications('],
   ];
 
   for (const [operation, params, expectedSql] of validPickupCalls) {
@@ -247,6 +251,7 @@ test('all G4/G5/G6 pickup gateway operations enforce validation, authenticated r
     ['pickup.requestEarly', { studentId: U1, collectorId: U2, requestId: U3, reason: 'Medical', requestedPickupAt: 'invalid-date' }],
     ['pickup.reviewEarly', { earlyDepartureId: U1, requestId: U3, decision: 'REJECTED', expectedVersion: 1 }],
     ['pickup.completeEarly', { earlyDepartureId: U1, collectorId: U2, requestId: U3, expectedVersion: 2, inPersonVerified: 'yes' }],
+    ['pickup.retryOutbox', { requestId: 'not-a-uuid' }],
   ];
   for (const [operation, params] of badRequests) {
     const sql = fakeDatabase({ role: 'APP_ADMIN' });
@@ -268,6 +273,7 @@ test('all G4/G5/G6 pickup gateway operations enforce validation, authenticated r
     ['early_departure_not_found', 422],
     ['schedule_unavailable', 422],
     ['invalid_pickup_request', 400],
+    ['pickup_app_admin_required', 403],
   ];
   for (const [code, expectedStatus] of errorStatusCases) {
     const sql = fakeDatabase({ role: 'APP_ADMIN', throwError: code });

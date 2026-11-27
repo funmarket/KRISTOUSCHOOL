@@ -379,3 +379,38 @@ export interface EarlyDepartureMutationEntry {
   reasonCode?: PickupReasonCode;
   message?: string;
 }
+
+export type PickupRealtimeStatus = 'OFF' | 'CONNECTING' | 'LIVE' | 'POLLING';
+
+export interface PickupOutboxFailureItem {
+  id: string;
+  eventType: string;
+  attemptCount: number;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export interface PickupOutboxSummary {
+  ok: boolean;
+  pendingCount: number;
+  retryCount: number;
+  processingCount: number;
+  sentCount: number;
+  failedCount: number;
+  totalCount: number;
+  oldestPendingAt: string | null;
+  lastSentAt: string | null;
+  recentFailures: PickupOutboxFailureItem[];
+  errorCode?: PickupReasonCode;
+  message?: string;
+}
+
+export interface PickupOutboxRetryResult {
+  ok: boolean;
+  retriedCount: number;
+  requestId: string;
+  replayed?: boolean;
+  errorCode?: PickupReasonCode;
+  message?: string;
+}
+

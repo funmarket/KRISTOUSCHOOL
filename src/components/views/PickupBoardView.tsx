@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { usePickupRealtime } from '../../context/usePickupRealtime';
 import { ShieldCheck, Lock, AlertTriangle, AlertCircle } from 'lucide-react';
 import { HOMEPAGE_COMMON_TEXT, pickText } from '../../i18n/homepages';
 import {
@@ -27,6 +28,9 @@ export const PickupBoardView: React.FC = () => {
     isProvisioningPickup,
     isUpdatingReleaseAuthority,
     pickupAdminNotice,
+    pickupOutboxSummary,
+    isLoadingPickupOutbox,
+    isRetryingPickupOutbox,
     earlyDepartures = [],
     earlyDeparturesAvailability,
     isLoadingEarlyDepartures = false,
@@ -39,6 +43,8 @@ export const PickupBoardView: React.FC = () => {
     provisionTodayPickupCycles,
     revokePickupReleaseAuthority,
     reinstatePickupReleaseAuthority,
+    refreshPickupOutboxSummary,
+    retryFailedPickupOutbox,
     refreshEarlyDepartures,
     submitEarlyDepartureRequest,
     reviewEarlyDepartureRequest,
@@ -48,17 +54,37 @@ export const PickupBoardView: React.FC = () => {
     t,
   } = useApp();
 
-  useEffect(() => {
-    if (
-      currentUser?.id &&
+  const canSyncBoard = Boolean(
+    currentUser?.id &&
       currentUser.accountStatus === 'APPROVED' &&
       currentRole &&
       currentRole !== 'STUDENT' &&
-      currentRole !== 'SCHOOL_STAFF'
-    ) {
+      currentRole !== 'SCHOOL_STAFF',
+  );
+
+  useEffect(() => {
+    if (canSyncBoard) {
       void refreshPickupBoard();
     }
-  }, [currentUser?.id, currentUser?.accountStatus, currentRole, refreshPickupBoard]);
+  }, [canSyncBoard, refreshPickupBoard]);
+
+  useEffect(() => {
+    if (
+      canSyncBoard &&
+      currentRole === 'APP_ADMIN' &&
+      pickupAvailability === 'READY' &&
+      refreshPickupOutboxSummary
+    ) {
+      void refreshPickupOutboxSummary();
+    }
+  }, [canSyncBoard, currentRole, pickupAvailability, refreshPickupOutboxSummary]);
+
+  const handleRealtimeSync = useCallback(() => refreshPickupBoard(), [refreshPickupBoard]);
+  const { realtimeStatus } = usePickupRealtime({
+    enabled: canSyncBoard,
+    accountKey: currentUser?.id ?? null,
+    onSync: handleRealtimeSync,
+  });
 
   const userChildren =
     currentUser?.linkedChildrenIds && currentUser.linkedChildrenIds.length > 0
@@ -101,6 +127,18 @@ export const PickupBoardView: React.FC = () => {
                 : pendingBackendLabel}
             </span>
           </span>
+          {pickupAvailability === 'READY' && (realtimeStatus === 'LIVE' || realtimeStatus === 'POLLING') && (
+            <span
+              data-testid="pickup-realtime-status-badge"
+              className={`inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-2xl text-xs font-bold ${
+                realtimeStatus === 'LIVE'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300'
+              }`}
+            >
+              {realtimeStatus === 'LIVE' ? t('pickupRealtimeLiveBadge') : t('pickupRealtimePollingBadge')}
+            </span>
+          )}
           <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 rounded-2xl text-xs font-semibold text-gray-700 dark:text-gray-300">
             {t('timezone')}
           </div>
@@ -243,6 +281,9 @@ export const PickupBoardView: React.FC = () => {
             isProvisioningPickup={isProvisioningPickup}
             isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
             pickupAdminNotice={pickupAdminNotice}
+            pickupOutboxSummary={pickupOutboxSummary}
+            isLoadingPickupOutbox={isLoadingPickupOutbox}
+            isRetryingPickupOutbox={isRetryingPickupOutbox}
             onRefresh={(classId) => {
               void refreshPickupBoard(classId);
             }}
@@ -259,6 +300,8 @@ export const PickupBoardView: React.FC = () => {
             onProvisionCycles={provisionTodayPickupCycles}
             onRevokeReleaseAuthority={revokePickupReleaseAuthority}
             onReinstateReleaseAuthority={reinstatePickupReleaseAuthority}
+            onRefreshOutboxSummary={refreshPickupOutboxSummary}
+            onRetryFailedOutbox={retryFailedPickupOutbox}
           />
           <PickupStaffEarlyDepartureSection
             key={`ed-staff-${currentUser?.id ?? 'anon'}`}

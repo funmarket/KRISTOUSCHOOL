@@ -5,11 +5,14 @@ import type { TranslationKey } from '../../../i18n/translations.ts';
 import type { PickupAdminNotice } from '../../../context/usePickupAdminActions.ts';
 import type {
   PickupAvailabilityStatus,
+  PickupOutboxRetryResult,
+  PickupOutboxSummary,
   PickupProvisionResult,
   PickupReleaseAuthorityResult,
 } from '../../../lib/domains/pickup.ts';
 import { listAccountDirectory } from '../../../lib/governance/governanceQueries.ts';
 import type { GovernanceAccountRecord } from '../../../lib/governance/governanceTypes.ts';
+import { PickupOutboxHealthCard } from './PickupOutboxHealthCard.tsx';
 import { resolvePickupReasonText } from './pickupDisplayMessages.ts';
 
 export interface PickupAdminControlsPanelProps {
@@ -20,9 +23,14 @@ export interface PickupAdminControlsPanelProps {
   isProvisioningPickup?: boolean;
   isUpdatingReleaseAuthority?: boolean;
   pickupAdminNotice?: PickupAdminNotice | null;
+  pickupOutboxSummary?: PickupOutboxSummary | null;
+  isLoadingPickupOutbox?: boolean;
+  isRetryingPickupOutbox?: boolean;
   onProvisionCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
   onRevokeReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
   onReinstateReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  onRefreshOutboxSummary?: () => Promise<PickupOutboxSummary>;
+  onRetryFailedOutbox?: () => Promise<PickupOutboxRetryResult>;
 }
 
 const RELEASE_ELIGIBLE_ROLES = new Set<AccountRole>(['APP_ADMIN', 'MANAGER', 'ADMINISTRATIVE_PERSONNEL']);
@@ -30,10 +38,15 @@ const RELEASE_ELIGIBLE_ROLES = new Set<AccountRole>(['APP_ADMIN', 'MANAGER', 'AD
 export const PickupAdminControlsPanel: React.FC<PickupAdminControlsPanelProps> = ({
   currentUserId, currentRole, pickupAvailability, t,
   isProvisioningPickup = false, isUpdatingReleaseAuthority = false, pickupAdminNotice = null,
+  pickupOutboxSummary = null, isLoadingPickupOutbox = false, isRetryingPickupOutbox = false,
   onProvisionCycles, onRevokeReleaseAuthority, onReinstateReleaseAuthority,
+  onRefreshOutboxSummary, onRetryFailedOutbox,
 }) => {
   const canProvision = RELEASE_ELIGIBLE_ROLES.has(currentRole) && Boolean(onProvisionCycles);
   const canManageAuthority = currentRole === 'APP_ADMIN' && Boolean(onRevokeReleaseAuthority || onReinstateReleaseAuthority);
+  const canInspectOutbox =
+    currentRole === 'APP_ADMIN' &&
+    Boolean(onRefreshOutboxSummary || onRetryFailedOutbox || pickupOutboxSummary);
 
   const [staffAccounts, setStaffAccounts] = useState<GovernanceAccountRecord[]>([]);
   const [targetUserId, setTargetUserId] = useState('');
@@ -57,7 +70,7 @@ export const PickupAdminControlsPanel: React.FC<PickupAdminControlsPanelProps> =
     return () => { active = false; };
   }, [canManageAuthority, pickupAvailability]);
 
-  if ((!canProvision && !canManageAuthority) || pickupAvailability === 'UNAVAILABLE' || pickupAvailability === 'UNAUTHORIZED') {
+  if ((!canProvision && !canManageAuthority && !canInspectOutbox) || pickupAvailability === 'UNAVAILABLE' || pickupAvailability === 'UNAUTHORIZED') {
     return null;
   }
 
@@ -158,6 +171,17 @@ export const PickupAdminControlsPanel: React.FC<PickupAdminControlsPanelProps> =
         </div>
       )}
 
+      {canInspectOutbox && pickupAvailability === 'READY' && (
+        <PickupOutboxHealthCard
+          t={t}
+          summary={pickupOutboxSummary}
+          isLoading={isLoadingPickupOutbox}
+          isRetrying={isRetryingPickupOutbox}
+          onRefresh={onRefreshOutboxSummary}
+          onRetryFailed={onRetryFailedOutbox}
+        />
+      )}
+
       {pickupAdminNotice && (
         <div data-testid="pickup-admin-notice"
           className={`rounded-2xl border p-3 text-xs flex items-center gap-2 ${
@@ -170,7 +194,9 @@ export const PickupAdminControlsPanel: React.FC<PickupAdminControlsPanelProps> =
             {pickupAdminNotice.ok
               ? pickupAdminNotice.action === 'PROVISION'
                 ? `${t('pickupProvisionSuccess')} (${t('pickupProvisionCreatedLabel')}: ${pickupAdminNotice.provisionedCount ?? 0}, ${t('pickupProvisionSkippedLabel')}: ${pickupAdminNotice.skippedCount ?? 0})`
-                : t('pickupAuthorityUpdatedNotice')
+                : pickupAdminNotice.action === 'RETRY_OUTBOX'
+                  ? `${t('pickupOutboxRetrySuccess')} (${pickupAdminNotice.retriedCount ?? 0})`
+                  : t('pickupAuthorityUpdatedNotice')
               : resolvePickupReasonText(pickupAdminNotice.errorCode, t, pickupAdminNotice.message)}
           </span>
         </div>

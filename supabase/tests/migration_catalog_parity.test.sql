@@ -37,7 +37,9 @@ pickup_routines(proname) as (
     ('provision_pickup_cycles'),('release_pupil'),
     ('revoke_pickup_release_authority'),('reinstate_pickup_release_authority'),
     ('get_pickup_early_departures'),('request_early_departure'),
-    ('review_early_departure'),('complete_early_departure_release')
+    ('review_early_departure'),('complete_early_departure_release'),
+    ('claim_pickup_outbox_batch'),('acknowledge_pickup_outbox_delivery'),
+    ('get_pickup_outbox_summary'),('retry_failed_pickup_notifications')
 ),
 rel as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,c.relpersistence,c.relispartition) s
@@ -52,18 +54,23 @@ cols as (
   left join pg_collation coll on coll.oid=a.attcollation and a.attcollation<>0
   where n.nspname='public' and c.relkind in ('r','p','v','m','f') and a.attnum>0 and not a.attisdropped
     and not exists (select 1 from pickup_relations x where x.relname=c.relname)
+    and not (c.relname='notification_outbox' and a.attname in (
+      'delivery_status','attempt_count','next_attempt_at','claimed_at','sent_at','last_error','provider_message_id'
+    ))
 ),
 cons as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,co.conname,co.contype,co.convalidated,co.condeferrable,co.condeferred,pg_get_constraintdef(co.oid,true)) s
   from pg_constraint co join pg_class c on c.oid=co.conrelid join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='public'
     and not exists (select 1 from pickup_relations x where x.relname=c.relname)
+    and not (c.relname='notification_outbox' and co.conname like 'notification_outbox_g7_%')
 ),
 idx as (
   select format('%s.%s|%s|%s|%s|%s|%s|%s',n.nspname,c.relname,ic.relname,i.indisunique,i.indisprimary,i.indisvalid,i.indisready,pg_get_indexdef(i.indexrelid)) s
   from pg_index i join pg_class c on c.oid=i.indrelid join pg_namespace n on n.oid=c.relnamespace join pg_class ic on ic.oid=i.indexrelid
   where n.nspname='public'
     and not exists (select 1 from pickup_relations x where x.relname=c.relname)
+    and not (c.relname='notification_outbox' and ic.relname like 'notification_outbox_g7_%')
 ),
 trig as (
   select format('%s.%s|%s|%s|%s|%s',n.nspname,c.relname,t.tgname,t.tgenabled,pg_get_triggerdef(t.oid,true),t.tgfoid::regprocedure::text) s

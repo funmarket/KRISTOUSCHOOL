@@ -7,10 +7,16 @@ import {
 } from './pickupTransport.ts';
 import {
   fetchAuthorizedPickupCollectorsTransport,
+  getPickupOutboxSummaryTransport,
   provisionPickupCyclesTransport,
   reinstatePickupReleaseAuthorityTransport,
+  retryFailedPickupNotificationsTransport,
   revokePickupReleaseAuthorityTransport,
 } from './pickupAdminTransport.ts';
+import {
+  subscribePickupRealtimeTransport,
+  type PickupRealtimeSubscription,
+} from './pickupRealtimeTransport.ts';
 import {
   completeEarlyDepartureReleaseTransport,
   fetchEarlyDeparturesTransport,
@@ -31,9 +37,12 @@ import type {
   PickupCycleRecord,
   PickupMutationEntry,
   PickupNotificationDeliveryStatus,
+  PickupOutboxRetryResult,
+  PickupOutboxSummary,
   PickupPresentationState,
   PickupProvisionResult,
   PickupReadResult,
+  PickupRealtimeStatus,
   PickupReasonCode,
   PickupRecord,
   PickupReleaseAuthorityResult,
@@ -67,10 +76,14 @@ export type {
   PickupDurableState,
   PickupMutationEntry,
   PickupNotificationDeliveryStatus,
+  PickupOutboxFailureItem,
+  PickupOutboxRetryResult,
   PickupOutboxStatus,
+  PickupOutboxSummary,
   PickupPresentationState,
   PickupProvisionResult,
   PickupReadResult,
+  PickupRealtimeStatus,
   PickupReasonCode,
   PickupRecord,
   PickupReleaseAuthorityResult,
@@ -79,6 +92,7 @@ export type {
   RequestEarlyDepartureInput,
   ReviewEarlyDepartureInput,
 } from './pickupTypes.ts';
+export type { PickupRealtimeSubscription };
 
 export const PICKUP_BACKEND_UNAVAILABLE_CODE: PickupReasonCode = 'pickup_backend_unavailable';
 
@@ -401,3 +415,23 @@ export const readEarlyDepartureReceipt = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   clientOverride?: any,
 ): Promise<EarlyDepartureCommandOutcome> => readEarlyDepartureReceiptTransport(requestId, targetId, clientOverride);
+
+export const getPickupOutboxSummary = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupOutboxSummary> => getPickupOutboxSummaryTransport(clientOverride);
+
+export const retryFailedPickupNotifications = (
+  requestId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupOutboxRetryResult> => retryFailedPickupNotificationsTransport(requestId, clientOverride);
+
+export const subscribePickupRealtime = (params: {
+  onChange: () => void;
+  onStatusChange?: (status: PickupRealtimeStatus) => void;
+  channelName?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any;
+}): PickupRealtimeSubscription => subscribePickupRealtimeTransport(params);
+

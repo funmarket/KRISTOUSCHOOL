@@ -2,6 +2,9 @@ import { supabase } from '../supabase.ts';
 import { invokeTelegramPrivateOperation } from '../telegramPrivateOperations.ts';
 import type {
   PickupAuthorizedCollectorSummary,
+  PickupOutboxFailureItem,
+  PickupOutboxRetryResult,
+  PickupOutboxSummary,
   PickupProvisionResult,
   PickupReasonCode,
   PickupReleaseAuthorityResult,
@@ -175,3 +178,127 @@ export const reinstatePickupReleaseAuthorityTransport = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   clientOverride?: any,
 ) => runReleaseAuthorityChange('reinstate', targetUserId, reason, clientOverride);
+
+const emptyOutboxSummary = (errorCode?: PickupReasonCode, message?: string): PickupOutboxSummary => ({
+  ok: false,
+  pendingCount: 0,
+  retryCount: 0,
+  processingCount: 0,
+  sentCount: 0,
+  failedCount: 0,
+  totalCount: 0,
+  oldestPendingAt: null,
+  lastSentAt: null,
+  recentFailures: [],
+  errorCode,
+  message,
+});
+
+function toFailureItem(raw: unknown): PickupOutboxFailureItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.id !== 'string' || typeof r.eventType !== 'string') return null;
+  return {
+    id: r.id,
+    eventType: r.eventType,
+    attemptCount: typeof r.attemptCount === 'number' ? r.attemptCount : 0,
+    lastError: typeof r.lastError === 'string' ? r.lastError : null,
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : '',
+  };
+}
+
+export async function getPickupOutboxSummaryTransport(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupOutboxSummary> {
+  const client = clientOverride ?? supabase;
+  if (!client && !isTelegramRuntime()) {
+    return emptyOutboxSummary('pickup_backend_unavailable', 'Pickup backend client is unavailable.');
+  }
+  try {
+    const tg = await invokeTelegramPrivateOperation<unknown>('pickup.outboxSummary', {}, client);
+    let data: unknown;
+    if (tg.handled) {
+      data = tg.data;
+    } else {
+      if (!client || typeof client.rpc !== 'function') {
+        return emptyOutboxSummary('pickup_backend_unavailable', 'Pickup backend client is unavailable.');
+      }
+      const res = await client.rpc('get_pickup_outbox_summary');
+      if (res.error) {
+        const { code, message } = extractPickupErrorCode(res.error);
+        return emptyOutboxSummary(mapAdminErrorReason(code), message);
+      }
+      data = res.data;
+    }
+    if (!data || typeof data !== 'object') {
+      return emptyOutboxSummary('unknown_outcome_verify_required', 'Invalid outbox summary response.');
+    }
+    const obj = data as Record<string, unknown>;
+    const failures = Array.isArray(obj.recentFailures)
+      ? obj.recentFailures.map(toFailureItem).filter((item): item is PickupOutboxFailureItem => Boolean(item))
+      : [];
+    return {
+      ok: obj.ok === true,
+      pendingCount: typeof obj.pendingCount === 'number' ? obj.pendingCount : 0,
+      retryCount: typeof obj.retryCount === 'number' ? obj.retryCount : 0,
+      processingCount: typeof obj.processingCount === 'number' ? obj.processingCount : 0,
+      sentCount: typeof obj.sentCount === 'number' ? obj.sentCount : 0,
+      failedCount: typeof obj.failedCount === 'number' ? obj.failedCount : 0,
+      totalCount: typeof obj.totalCount === 'number' ? obj.totalCount : 0,
+      oldestPendingAt: typeof obj.oldestPendingAt === 'string' ? obj.oldestPendingAt : null,
+      lastSentAt: typeof obj.lastSentAt === 'string' ? obj.lastSentAt : null,
+      recentFailures: failures,
+    };
+  } catch (err) {
+    const { code, message } = extractPickupErrorCode(err);
+    return emptyOutboxSummary(mapAdminErrorReason(code), message);
+  }
+}
+
+export async function retryFailedPickupNotificationsTransport(
+  requestId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<PickupOutboxRetryResult> {
+  const client = clientOverride ?? supabase;
+  if (!client && !isTelegramRuntime()) {
+    return { ok: false, retriedCount: 0, requestId, errorCode: 'pickup_backend_unavailable', message: 'Pickup backend client is unavailable.' };
+  }
+  if (!UUID_RE.test(requestId)) {
+    return { ok: false, retriedCount: 0, requestId, errorCode: 'invalid_pickup_request', message: 'Valid request ID is required.' };
+  }
+  try {
+    const tg = await invokeTelegramPrivateOperation<unknown>('pickup.retryOutbox', { requestId }, client);
+    let data: unknown;
+    if (tg.handled) {
+      data = tg.data;
+    } else {
+      if (!client || typeof client.rpc !== 'function') {
+        return { ok: false, retriedCount: 0, requestId, errorCode: 'pickup_backend_unavailable', message: 'Pickup backend client is unavailable.' };
+      }
+      const res = await client.rpc('retry_failed_pickup_notifications', { p_request_id: requestId });
+      if (res.error) {
+        const { code, message } = extractPickupErrorCode(res.error);
+        const mapped = code === 'idempotency_conflict' ? 'idempotency_conflict' : mapAdminErrorReason(code);
+        return { ok: false, retriedCount: 0, requestId, errorCode: mapped, message };
+      }
+      data = res.data;
+    }
+    if (!data || typeof data !== 'object') {
+      return { ok: false, retriedCount: 0, requestId, errorCode: 'unknown_outcome_verify_required', message: 'Invalid outbox retry response.' };
+    }
+    const obj = data as Record<string, unknown>;
+    return {
+      ok: obj.ok === true,
+      retriedCount: typeof obj.retriedCount === 'number' ? obj.retriedCount : 0,
+      requestId: typeof obj.requestId === 'string' ? obj.requestId : requestId,
+      replayed: obj.replayed === true,
+    };
+  } catch (err) {
+    const { code, message } = extractPickupErrorCode(err);
+    const mapped = code === 'idempotency_conflict' ? 'idempotency_conflict' : mapAdminErrorReason(code);
+    return { ok: false, retriedCount: 0, requestId, errorCode: mapped, message };
+  }
+}
+

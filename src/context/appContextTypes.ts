@@ -44,6 +44,8 @@ import type {
   EarlyDepartureMutationEntry,
   EarlyDepartureReadResult,
   EarlyDepartureRequestRow,
+  PickupOutboxRetryResult,
+  PickupOutboxSummary,
   PickupProvisionResult,
   PickupReleaseAuthorityResult,
   RequestEarlyDepartureInput,
@@ -128,6 +130,9 @@ export interface AppContextType {
   isProvisioningPickup?: boolean;
   isUpdatingReleaseAuthority?: boolean;
   pickupAdminNotice?: PickupAdminNotice | null;
+  pickupOutboxSummary?: PickupOutboxSummary | null;
+  isLoadingPickupOutbox?: boolean;
+  isRetryingPickupOutbox?: boolean;
   earlyDepartures?: EarlyDepartureRequestRow[];
   earlyDeparturesStatus?: BackendOpStatus;
   earlyDeparturesAvailability?: PickupAvailabilityStatus;
@@ -211,6 +216,8 @@ export interface AppContextType {
   provisionTodayPickupCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
   revokePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
   reinstatePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  refreshPickupOutboxSummary?: () => Promise<PickupOutboxSummary>;
+  retryFailedPickupOutbox?: () => Promise<PickupOutboxRetryResult>;
   refreshEarlyDepartures?: (classId?: string | null) => Promise<EarlyDepartureReadResult>;
   submitEarlyDepartureRequest?: (input: RequestEarlyDepartureInput) => Promise<EarlyDepartureMutationResponse>;
   reviewEarlyDepartureRequest?: (input: ReviewEarlyDepartureInput) => Promise<EarlyDepartureMutationResponse>;

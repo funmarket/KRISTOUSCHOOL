@@ -12,6 +12,8 @@ import {
   type PickupAvailabilityStatus,
   type PickupCycleRecord,
   type PickupMutationEntry,
+  type PickupOutboxRetryResult,
+  type PickupOutboxSummary,
   type PickupProvisionResult,
   type PickupReleaseAuthorityResult,
 } from '../../../lib/domains/pickup.ts';
@@ -39,19 +41,26 @@ export interface PickupStaffQueueSectionProps {
   isProvisioningPickup?: boolean;
   isUpdatingReleaseAuthority?: boolean;
   pickupAdminNotice?: PickupAdminNotice | null;
+  pickupOutboxSummary?: PickupOutboxSummary | null;
+  isLoadingPickupOutbox?: boolean;
+  isRetryingPickupOutbox?: boolean;
   onRefresh: (classId?: string | null) => void;
   onConfirmRelease: (input: ConfirmReleaseInput) => void;
   onVerifyReceipt?: (cycleId: string) => void;
   onProvisionCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
   onRevokeReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
   onReinstateReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  onRefreshOutboxSummary?: () => Promise<PickupOutboxSummary>;
+  onRetryFailedOutbox?: () => Promise<PickupOutboxRetryResult>;
 }
 
 export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = ({
   currentUserId, language, t, currentRole, pickupCycles, classesList = [], pickupAvailability,
   pickupMutationState, isLoadingPickup, isProvisioningPickup, isUpdatingReleaseAuthority,
-  pickupAdminNotice, onRefresh, onConfirmRelease, onVerifyReceipt,
+  pickupAdminNotice, pickupOutboxSummary, isLoadingPickupOutbox, isRetryingPickupOutbox,
+  onRefresh, onConfirmRelease, onVerifyReceipt,
   onProvisionCycles, onRevokeReleaseAuthority, onReinstateReleaseAuthority,
+  onRefreshOutboxSummary, onRetryFailedOutbox,
 }) => {
   const [stateFilter, setStateFilter] = useState<'ALL' | PickupCycleRecord['state']>('ALL');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -147,9 +156,14 @@ export const PickupStaffQueueSection: React.FC<PickupStaffQueueSectionProps> = (
         isProvisioningPickup={isProvisioningPickup}
         isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
         pickupAdminNotice={pickupAdminNotice}
+        pickupOutboxSummary={pickupOutboxSummary}
+        isLoadingPickupOutbox={isLoadingPickupOutbox}
+        isRetryingPickupOutbox={isRetryingPickupOutbox}
         onProvisionCycles={onProvisionCycles}
         onRevokeReleaseAuthority={onRevokeReleaseAuthority}
         onReinstateReleaseAuthority={onReinstateReleaseAuthority}
+        onRefreshOutboxSummary={onRefreshOutboxSummary}
+        onRetryFailedOutbox={onRetryFailedOutbox}
       />
 
       {pickupAvailability !== 'READY' ? (
