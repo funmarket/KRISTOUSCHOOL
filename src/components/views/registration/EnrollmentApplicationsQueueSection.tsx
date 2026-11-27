@@ -225,6 +225,11 @@ export const EnrollmentApplicationsQueueSection: React.FC<EnrollmentApplications
                     </p>
                   )}
 
+                  {getEnrollmentQueue(app)==='history' && <p className="text-xs text-gray-500 break-all">
+                    {pickText({ar:'سجل القرار',fr:'Historique de décision',en:'Decision history',es:'Historial de decisiones',de:'Entscheidungsverlauf',pt:'Histórico de decisões'},language)}
+                    {` · v${app.version}${app.reviewedAt ? ` · ${app.reviewedAt}` : ''}${app.studentId ? ` · ${app.studentId}` : ''}`}
+                  </p>}
+
                   {canReview && decisions.length > 0 && (
                     <div className="pt-2 border-t border-gray-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
                       <select

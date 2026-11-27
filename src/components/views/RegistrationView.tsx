@@ -123,7 +123,7 @@ export const RegistrationView: React.FC<{ notificationTarget?: NotificationTarge
     const selected=reviewDecisionMap[appId];
     const decision=selected && decisions.includes(selected) ? selected : decisions[0];
     if(!decision) { setReviewingId(null); return; }
-    const reviewNote = reviewNoteMap[appId] ?? '';
+    const reviewNote = reviewNoteMap[appId] ?? enrollmentApplications.find(app => app.id === appId)?.reviewNote ?? '';
 
     try {
       const res = await reviewEnrollmentApplication({
