@@ -39,11 +39,21 @@ import type { SchoolClassWithRoster } from '../lib/schoolOperations';
 import type { PreferencesSyncStatus } from '../lib/appStateGuards';
 import type {
   AnnounceArrivalInput,
+  CompleteEarlyDepartureInput,
   ConfirmReleaseInput,
+  EarlyDepartureMutationEntry,
+  EarlyDepartureReadResult,
+  EarlyDepartureRequestRow,
   PickupProvisionResult,
   PickupReleaseAuthorityResult,
+  RequestEarlyDepartureInput,
+  ReviewEarlyDepartureInput,
 } from '../lib/domains/pickup';
-import type { PickupAdminNotice, PickupMutationResponse } from './usePickupState';
+import type {
+  EarlyDepartureMutationResponse,
+  PickupAdminNotice,
+  PickupMutationResponse,
+} from './usePickupState';
 import type { SignupInput, SignupOutcome } from './IdentityContext';
 import { MOCK_ANNOUNCEMENTS, MOCK_FOOD_MENU } from '../data/mockData';
 import { contentT } from '../i18n/content';
@@ -118,6 +128,13 @@ export interface AppContextType {
   isProvisioningPickup?: boolean;
   isUpdatingReleaseAuthority?: boolean;
   pickupAdminNotice?: PickupAdminNotice | null;
+  earlyDepartures?: EarlyDepartureRequestRow[];
+  earlyDeparturesStatus?: BackendOpStatus;
+  earlyDeparturesAvailability?: PickupAvailabilityStatus;
+  earlyDeparturesError?: string | null;
+  isLoadingEarlyDepartures?: boolean;
+  earlyDepartureMutationState?: Record<string, EarlyDepartureMutationEntry>;
+  earlyDepartureRevoked?: boolean;
   foodMenu: FoodMenuWeek;
   foodMenuStatus: BackendOpStatus;
   foodMenuError: string | null;
@@ -194,6 +211,11 @@ export interface AppContextType {
   provisionTodayPickupCycles?: (schoolDate?: string | null) => Promise<PickupProvisionResult>;
   revokePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
   reinstatePickupReleaseAuthority?: (targetUserId: string, reason: string) => Promise<PickupReleaseAuthorityResult>;
+  refreshEarlyDepartures?: (classId?: string | null) => Promise<EarlyDepartureReadResult>;
+  submitEarlyDepartureRequest?: (input: RequestEarlyDepartureInput) => Promise<EarlyDepartureMutationResponse>;
+  reviewEarlyDepartureRequest?: (input: ReviewEarlyDepartureInput) => Promise<EarlyDepartureMutationResponse>;
+  completeEarlyDepartureRelease?: (input: CompleteEarlyDepartureInput) => Promise<EarlyDepartureMutationResponse>;
+  verifyEarlyDepartureReceipt?: (targetKey: string) => Promise<EarlyDepartureMutationResponse>;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   notificationSound: NotificationSoundOption;

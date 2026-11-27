@@ -34,10 +34,15 @@ import {
   type PickupMutationResponse,
   type UsePickupAdminAdapters,
 } from './usePickupAdminActions.ts';
+import {
+  usePickupEarlyDepartureActions,
+  type EarlyDepartureMutationResponse,
+  type UsePickupEarlyDepartureAdapters,
+} from './usePickupEarlyDepartureActions.ts';
 
-export type { PickupAdminNotice, PickupMutationResponse };
+export type { EarlyDepartureMutationResponse, PickupAdminNotice, PickupMutationResponse };
 
-export interface UsePickupStateAdapters extends UsePickupAdminAdapters {
+export interface UsePickupStateAdapters extends UsePickupAdminAdapters, UsePickupEarlyDepartureAdapters {
   fetchCycles?: (options?: { role?: AccountRole | null; classId?: string | null }) => Promise<PickupReadResult>;
   announceArrival?: (input: AnnounceArrivalInput) => Promise<PickupCommandOutcome>;
   confirmRelease?: (input: ConfirmReleaseInput) => Promise<PickupCommandOutcome>;
@@ -75,6 +80,7 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
   const internalMountedRef = useRef<boolean>(true);
   const effectiveMountedRef = mountedRef ?? internalMountedRef;
   const readReqGenRef = useRef<number>(0);
+  const refreshEarlyRef = useRef<(targetUser: User | null | undefined, classId?: string | null) => Promise<unknown>>(async () => {});
 
   useEffect(() => {
     if (mountedRef) return;
@@ -98,6 +104,7 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
       }
       const reqGen = ++readReqGenRef.current;
       if (effectiveMountedRef.current) setIsLoadingPickup(true);
+      void refreshEarlyRef.current(targetUser, classId ?? null);
       try {
         const res = await fetchCycles({ role: targetUser.role, classId: classId ?? null });
         if (reqGen !== readReqGenRef.current || !isMatchingApprovedAccountContext(origin, getCurrentIdentity(), effectiveMountedRef.current)) {
@@ -139,8 +146,13 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
   const adminActions = usePickupAdminActions({
     currentUser, getCurrentIdentity, effectiveMountedRef, refreshPickupBoardForUser, adapters,
   });
+  const earlyActions = usePickupEarlyDepartureActions({
+    currentUser, getCurrentIdentity, effectiveMountedRef, refreshPickupBoardForUser, adapters,
+  });
+  refreshEarlyRef.current = earlyActions.refreshEarlyDeparturesForUser;
 
   const { clearPickupAdminState } = adminActions;
+  const { clearEarlyDepartureState } = earlyActions;
 
   const clearPickupState = useCallback(() => {
     readReqGenRef.current += 1;
@@ -148,7 +160,8 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     setPickupError(null); setPickupErrorCode(PICKUP_BACKEND_UNAVAILABLE_CODE);
     setPickupLastSyncedAt(null); setPickupMutationState({}); setIsLoadingPickup(false);
     clearPickupAdminState();
-  }, [clearPickupAdminState]);
+    clearEarlyDepartureState();
+  }, [clearEarlyDepartureState, clearPickupAdminState]);
 
   const lastIdentityGenRef = useRef<number>(identityContext.generation);
   useEffect(() => {
@@ -405,5 +418,6 @@ export function usePickupState({ currentUser, identityContext, getCurrentIdentit
     pickupLastSyncedAt, pickupMutationState, isLoadingPickup, refreshPickupBoard, refreshPickupBoardForUser,
     verifyPickupOperationReceipt, markPickupArrived, confirmPickupRelease, clearPickupState,
     ...adminActions,
+    ...earlyActions,
   };
 }

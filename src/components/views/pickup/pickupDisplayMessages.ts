@@ -1,5 +1,6 @@
 import { formatAttendanceTimestamp } from '../../../lib/attendance/dateUtils.ts';
 import type {
+  EarlyDepartureStatus,
   PickupNotificationDeliveryStatus,
   PickupPresentationState,
   PickupReasonCode,
@@ -25,6 +26,21 @@ export function getPickupBadgeMeta(
     UNAVAILABLE: { key: 'pickupStateUnavailable', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300' },
   };
   const m = map[state] ?? map.UNAVAILABLE;
+  return { label: t(m.key), toneClass: m.cls };
+}
+
+export function getEarlyDepartureBadgeMeta(
+  status: EarlyDepartureStatus,
+  t: (key: TranslationKey) => string,
+) {
+  const map: Record<EarlyDepartureStatus, { key: TranslationKey; cls: string }> = {
+    PENDING: { key: 'pickupEarlyStatusPending', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300' },
+    APPROVED: { key: 'pickupEarlyStatusApproved', cls: 'bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300' },
+    REJECTED: { key: 'pickupEarlyStatusRejected', cls: 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300' },
+    CANCELLED: { key: 'pickupEarlyStatusCancelled', cls: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300' },
+    COMPLETED: { key: 'pickupEarlyStatusCompleted', cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
+  };
+  const m = map[status] ?? map.PENDING;
   return { label: t(m.key), toneClass: m.cls };
 }
 
@@ -115,6 +131,11 @@ export function resolvePickupReasonText(
   if (code === 'pickup_release_authority_already_revoked' || code === 'pickup_release_authority_not_revoked') {
     return t('pickupReasonAuthorityStateConflict');
   }
+  if (code === 'early_departure_already_open') return t('pickupEarlyReasonAlreadyOpen');
+  if (code === 'early_departure_terminal') return t('pickupEarlyReasonTerminal');
+  if (code === 'early_departure_not_approved') return t('pickupEarlyReasonNotApproved');
+  if (code === 'early_departure_not_found') return t('pickupEarlyReasonNotFound');
+  if (code === 'cycle_date_mismatch') return t('pickupEarlyReasonDateMismatch');
   if (
     code === 'actor_not_authorized' ||
     code === 'collector_not_authorized' ||

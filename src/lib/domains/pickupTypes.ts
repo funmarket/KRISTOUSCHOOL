@@ -72,6 +72,11 @@ export type PickupReasonCode =
   | 'idempotency_conflict'
   | 'pickup_cycle_not_found'
   | 'pickup_receipt_unavailable'
+  | 'early_departure_not_found'
+  | 'early_departure_already_open'
+  | 'early_departure_terminal'
+  | 'early_departure_not_approved'
+  | 'cycle_date_mismatch'
   | 'invalid_pickup_request'
   | 'already_arrived'
   | 'already_released'
@@ -252,4 +257,125 @@ export interface PickupMutationEntry {
   message?: string;
   serverRecord?: PickupCycleRecord;
   notificationDeliveryStatus?: PickupNotificationDeliveryStatus;
+}
+
+export type EarlyDepartureStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+
+export interface EarlyDepartureRequestRow {
+  id: string;
+  studentId: string;
+  studentLabel: string;
+  classId: string;
+  classLabel: string;
+  cycleId: string | null;
+  schoolDate: string;
+  collectorId: string;
+  collectorLabel: string;
+  reason: string;
+  requestedPickupAt: string | null;
+  status: EarlyDepartureStatus;
+  version: number;
+  requestedByLabel?: string | null;
+  reviewedByLabel?: string | null;
+  reviewedAt: string | null;
+  reviewReason: string | null;
+  releasedByLabel?: string | null;
+  completedAt: string | null;
+  handoffNotes?: string | null;
+  createdAt: string;
+  canReview: boolean;
+  canComplete: boolean;
+}
+
+export interface EarlyDepartureReadResult {
+  ok: boolean;
+  status: PickupBackendStatus;
+  availability: PickupAvailabilityStatus;
+  records: EarlyDepartureRequestRow[];
+  lastSyncedAt: string | null;
+  errorCode?: PickupReasonCode;
+  errorMessage?: string;
+}
+
+export interface RequestEarlyDepartureInput {
+  studentId: string;
+  collectorId: string;
+  reason: string;
+  requestId: string;
+  requestedPickupAt?: string | null;
+}
+
+export interface ReviewEarlyDepartureInput {
+  earlyDepartureId: string;
+  decision: 'APPROVED' | 'REJECTED';
+  requestId: string;
+  expectedVersion: number;
+  reviewReason?: string | null;
+}
+
+export interface CompleteEarlyDepartureInput {
+  earlyDepartureId: string;
+  collectorId: string;
+  requestId: string;
+  expectedVersion: number;
+  inPersonVerified: true;
+  handoffNotes?: string | null;
+}
+
+export interface EarlyDepartureCommandSuccess {
+  ok: true;
+  outcome: 'SUCCESS';
+  code: 'early_departure_requested' | 'early_departure_approved' | 'early_departure_rejected' | 'early_departure_completed';
+  earlyDepartureId: string;
+  studentId: string | null;
+  cycleId: string | null;
+  status: EarlyDepartureStatus;
+  version: number;
+  requestId: string;
+  cycleState?: PickupDurableState | null;
+  cycleVersion?: number | null;
+  replayed?: boolean;
+}
+
+export interface EarlyDepartureCommandConflict {
+  ok: false;
+  outcome: 'CONFLICT';
+  reasonCode:
+    | 'version_conflict'
+    | 'idempotency_conflict'
+    | 'already_released'
+    | 'early_departure_already_open'
+    | 'early_departure_terminal'
+    | 'early_departure_not_approved';
+  earlyDepartureId?: string;
+  serverStatus?: EarlyDepartureStatus;
+  serverVersion?: number;
+  cycleId?: string | null;
+  message: string;
+}
+
+export interface EarlyDepartureCommandUnknownOutcome {
+  ok: false;
+  outcome: 'UNKNOWN_OUTCOME';
+  requestId: string;
+  targetId: string;
+  reasonCode: 'unknown_outcome_verify_required';
+  message: string;
+  requiresAuthoritativeReadback: true;
+}
+
+export type EarlyDepartureCommandOutcome =
+  | EarlyDepartureCommandSuccess
+  | PickupCommandUnavailable
+  | PickupCommandDenied
+  | EarlyDepartureCommandConflict
+  | EarlyDepartureCommandUnknownOutcome;
+
+export interface EarlyDepartureMutationEntry {
+  status: 'IDLE' | 'SUBMITTING' | 'UNKNOWN_OUTCOME' | 'CONFLICT' | 'DENIED' | 'UNAVAILABLE';
+  requestId?: string;
+  operation?: 'REQUEST' | 'REVIEW' | 'COMPLETE';
+  payload?: RequestEarlyDepartureInput | ReviewEarlyDepartureInput | CompleteEarlyDepartureInput;
+  reasonCode?: PickupReasonCode;
+  message?: string;
 }

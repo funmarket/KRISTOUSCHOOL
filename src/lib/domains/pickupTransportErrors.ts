@@ -1,5 +1,10 @@
 import { getTelegramWebAppInitData } from '../telegram.ts';
-import type { PickupCommandOutcome, PickupDurableState, PickupReasonCode } from './pickupTypes.ts';
+import type {
+  EarlyDepartureCommandOutcome,
+  PickupCommandOutcome,
+  PickupDurableState,
+  PickupReasonCode,
+} from './pickupTypes.ts';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -12,7 +17,9 @@ export function isTelegramRuntime(): boolean {
 const KNOWN_PICKUP_ERROR_CODES = new Set([
   'actor_unauthenticated', 'actor_not_approved', 'pickup_parent_required', 'pickup_parent_child_link_required',
   'collector_or_parent_not_authorized', 'insufficient_pickup_scope', 'pickup_receipt_unavailable',
-  'pickup_cycle_not_found', 'invalid_pickup_request', 'invalid_request', 'pickup_crypto_unavailable',
+  'pickup_cycle_not_found', 'early_departure_not_found', 'early_departure_already_open',
+  'early_departure_terminal', 'early_departure_not_approved', 'cycle_date_mismatch',
+  'invalid_pickup_request', 'invalid_request', 'pickup_crypto_unavailable',
   'idempotency_conflict', 'version_conflict', 'arrival_required', 'already_released', 'attestation_required',
   'collector_invalid', 'attendance_ineligible', 'pickup_release_authority_required',
   'pickup_release_authority_revoked', 'pickup_provision_authority_required', 'pickup_app_admin_required',
@@ -82,6 +89,7 @@ export function mapPickupCommandError(err: unknown, requestId: string, cycleId: 
     code === 'pickup_release_authority_required' || code === 'pickup_release_authority_revoked' ||
     code === 'pickup_app_admin_required' || code === 'pickup_provision_authority_required' ||
     code === 'pickup_receipt_unavailable' || code === 'pickup_cycle_not_found' ||
+    code === 'early_departure_not_found' || code === 'cycle_date_mismatch' ||
     code === 'invalid_pickup_request' || code === 'invalid_request'
   ) {
     return { ok: false, outcome: 'DENIED', reasonCode: code === 'invalid_request' ? 'invalid_pickup_request' : (code as PickupReasonCode), message };
@@ -102,4 +110,53 @@ export function mapPickupCommandError(err: unknown, requestId: string, cycleId: 
     return { ok: false, outcome: 'UNAVAILABLE', reasonCode: 'attendance_unavailable', message, retryable: true };
   }
   return { ok: false, outcome: 'UNKNOWN_OUTCOME', requestId, cycleId, reasonCode: 'unknown_outcome_verify_required', message, requiresAuthoritativeReadback: true };
+}
+
+export function mapEarlyDepartureCommandError(
+  err: unknown,
+  requestId: string,
+  targetId: string,
+): EarlyDepartureCommandOutcome {
+  const { code, message } = extractPickupErrorCode(err);
+  if (code === 'pickup_backend_unavailable' || code === 'backend_unavailable' || code === 'pickup_crypto_unavailable') {
+    return { ok: false, outcome: 'UNAVAILABLE', reasonCode: 'pickup_backend_unavailable', message, retryable: true };
+  }
+  if (
+    code === 'idempotency_conflict' || code === 'already_released' || code === 'version_conflict' ||
+    code === 'early_departure_already_open' || code === 'early_departure_terminal' ||
+    code === 'early_departure_not_approved'
+  ) {
+    return { ok: false, outcome: 'CONFLICT', reasonCode: code, message };
+  }
+  if (
+    code === 'actor_unauthenticated' || code === 'actor_not_approved' || code === 'pickup_parent_required' ||
+    code === 'pickup_parent_child_link_required' || code === 'insufficient_pickup_scope'
+  ) {
+    return { ok: false, outcome: 'DENIED', reasonCode: 'actor_not_authorized', message };
+  }
+  if (code === 'collector_or_parent_not_authorized') return { ok: false, outcome: 'DENIED', reasonCode: 'collector_not_authorized', message };
+  if (
+    code === 'attestation_required' || code === 'collector_invalid' ||
+    code === 'pickup_release_authority_required' || code === 'pickup_release_authority_revoked' ||
+    code === 'early_departure_not_found' || code === 'cycle_date_mismatch' ||
+    code === 'pickup_receipt_unavailable' || code === 'invalid_pickup_request' || code === 'invalid_request'
+  ) {
+    return { ok: false, outcome: 'DENIED', reasonCode: code === 'invalid_request' ? 'invalid_pickup_request' : (code as PickupReasonCode), message };
+  }
+  if (code === 'schedule_unavailable' || code === 'outside_dismissal_window') {
+    return { ok: false, outcome: 'UNAVAILABLE', reasonCode: code, message, retryable: true };
+  }
+  if (
+    code === 'attendance_ineligible' || code === 'attendance_absent' || code === 'attendance_excused' ||
+    code === 'attendance_mark_missing' || code === 'attendance_mark_unknown' ||
+    code === 'attendance_entry_missing_or_conflicting' || code === 'register_missing' ||
+    code === 'register_not_submitted' || code === 'conflicting_registers' ||
+    code === 'conflicting_effective_memberships' || code === 'responsible_teacher_unavailable'
+  ) {
+    return { ok: false, outcome: 'UNAVAILABLE', reasonCode: code, message, retryable: true };
+  }
+  if (code === 'attendance_unavailable' || code === 'eligibility_unavailable') {
+    return { ok: false, outcome: 'UNAVAILABLE', reasonCode: 'attendance_unavailable', message, retryable: true };
+  }
+  return { ok: false, outcome: 'UNKNOWN_OUTCOME', requestId, targetId, reasonCode: 'unknown_outcome_verify_required', message, requiresAuthoritativeReadback: true };
 }

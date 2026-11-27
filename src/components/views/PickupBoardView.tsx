@@ -6,6 +6,8 @@ import {
   PickupParentSection,
   PickupStaffQueueSection,
 } from './pickup/PickupBoardSections';
+import { PickupParentEarlyDepartureSection } from './pickup/PickupParentEarlyDepartureSection';
+import { PickupStaffEarlyDepartureSection } from './pickup/PickupStaffEarlyDepartureSection';
 
 const PICKUP_FAIL_CLOSED_REASON = 'pickup_backend_unavailable';
 
@@ -25,6 +27,11 @@ export const PickupBoardView: React.FC = () => {
     isProvisioningPickup,
     isUpdatingReleaseAuthority,
     pickupAdminNotice,
+    earlyDepartures = [],
+    earlyDeparturesAvailability,
+    isLoadingEarlyDepartures = false,
+    earlyDepartureMutationState = {},
+    earlyDepartureRevoked = false,
     refreshPickupBoard,
     verifyPickupOperationReceipt,
     markPickupArrived,
@@ -32,6 +39,11 @@ export const PickupBoardView: React.FC = () => {
     provisionTodayPickupCycles,
     revokePickupReleaseAuthority,
     reinstatePickupReleaseAuthority,
+    refreshEarlyDepartures,
+    submitEarlyDepartureRequest,
+    reviewEarlyDepartureRequest,
+    completeEarlyDepartureRelease,
+    verifyEarlyDepartureReceipt,
     language,
     t,
   } = useApp();
@@ -156,30 +168,58 @@ export const PickupBoardView: React.FC = () => {
 
       {/* Parent Perspective */}
       {currentRole === 'PARENT' && (
-        <PickupParentSection
-          key={currentUser?.id ?? 'anon'}
-          currentUserId={currentUser?.id ?? null}
-          language={language}
-          t={t}
-          userChildren={userChildren}
-          pickupCycles={pickupCycles}
-          pickupAvailability={pickupAvailability}
-          pickupMutationState={pickupMutationState}
-          isLoadingPickup={isLoadingPickup}
-          onRefresh={() => {
-            void refreshPickupBoard();
-          }}
-          onAnnounceArrival={(input) => {
-            void markPickupArrived(input);
-          }}
-          onVerifyReceipt={
-            verifyPickupOperationReceipt
-              ? (cycleId) => {
-                  void verifyPickupOperationReceipt(cycleId);
-                }
-              : undefined
-          }
-        />
+        <>
+          <PickupParentSection
+            key={currentUser?.id ?? 'anon'}
+            currentUserId={currentUser?.id ?? null}
+            language={language}
+            t={t}
+            userChildren={userChildren}
+            pickupCycles={pickupCycles}
+            pickupAvailability={pickupAvailability}
+            pickupMutationState={pickupMutationState}
+            isLoadingPickup={isLoadingPickup}
+            onRefresh={() => {
+              void refreshPickupBoard();
+            }}
+            onAnnounceArrival={(input) => {
+              void markPickupArrived(input);
+            }}
+            onVerifyReceipt={
+              verifyPickupOperationReceipt
+                ? (cycleId) => {
+                    void verifyPickupOperationReceipt(cycleId);
+                  }
+                : undefined
+            }
+          />
+          <PickupParentEarlyDepartureSection
+            key={`ed-parent-${currentUser?.id ?? 'anon'}`}
+            currentUserId={currentUser?.id ?? null}
+            language={language}
+            t={t}
+            userChildren={userChildren}
+            pickupCycles={pickupCycles}
+            earlyDepartures={earlyDepartures}
+            earlyDeparturesAvailability={earlyDeparturesAvailability ?? pickupAvailability}
+            earlyDepartureMutationState={earlyDepartureMutationState}
+            isLoadingEarlyDepartures={isLoadingEarlyDepartures}
+            onRefresh={() => {
+              if (refreshEarlyDepartures) void refreshEarlyDepartures();
+              else void refreshPickupBoard();
+            }}
+            onRequestEarlyDeparture={(input) => {
+              if (submitEarlyDepartureRequest) void submitEarlyDepartureRequest(input);
+            }}
+            onVerifyReceipt={
+              verifyEarlyDepartureReceipt
+                ? (targetKey) => {
+                    void verifyEarlyDepartureReceipt(targetKey);
+                  }
+                : undefined
+            }
+          />
+        </>
       )}
 
       {/* Teacher / Manager / Admin / Staff Perspective: Pickup Queue */}
@@ -188,37 +228,69 @@ export const PickupBoardView: React.FC = () => {
         currentRole === 'APP_ADMIN' ||
         currentRole === 'SCHOOL_STAFF' ||
         currentRole === 'ADMINISTRATIVE_PERSONNEL') && (
-        <PickupStaffQueueSection
-          key={currentUser?.id ?? 'anon'}
-          currentUserId={currentUser?.id ?? null}
-          language={language}
-          t={t}
-          currentRole={currentRole}
-          pickupCycles={pickupCycles}
-          classesList={classesList}
-          pickupAvailability={pickupAvailability}
-          pickupMutationState={pickupMutationState}
-          isLoadingPickup={isLoadingPickup}
-          isProvisioningPickup={isProvisioningPickup}
-          isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
-          pickupAdminNotice={pickupAdminNotice}
-          onRefresh={(classId) => {
-            void refreshPickupBoard(classId);
-          }}
-          onConfirmRelease={(input) => {
-            void confirmPickupRelease(input);
-          }}
-          onVerifyReceipt={
-            verifyPickupOperationReceipt
-              ? (cycleId) => {
-                  void verifyPickupOperationReceipt(cycleId);
-                }
-              : undefined
-          }
-          onProvisionCycles={provisionTodayPickupCycles}
-          onRevokeReleaseAuthority={revokePickupReleaseAuthority}
-          onReinstateReleaseAuthority={reinstatePickupReleaseAuthority}
-        />
+        <>
+          <PickupStaffQueueSection
+            key={currentUser?.id ?? 'anon'}
+            currentUserId={currentUser?.id ?? null}
+            language={language}
+            t={t}
+            currentRole={currentRole}
+            pickupCycles={pickupCycles}
+            classesList={classesList}
+            pickupAvailability={pickupAvailability}
+            pickupMutationState={pickupMutationState}
+            isLoadingPickup={isLoadingPickup}
+            isProvisioningPickup={isProvisioningPickup}
+            isUpdatingReleaseAuthority={isUpdatingReleaseAuthority}
+            pickupAdminNotice={pickupAdminNotice}
+            onRefresh={(classId) => {
+              void refreshPickupBoard(classId);
+            }}
+            onConfirmRelease={(input) => {
+              void confirmPickupRelease(input);
+            }}
+            onVerifyReceipt={
+              verifyPickupOperationReceipt
+                ? (cycleId) => {
+                    void verifyPickupOperationReceipt(cycleId);
+                  }
+                : undefined
+            }
+            onProvisionCycles={provisionTodayPickupCycles}
+            onRevokeReleaseAuthority={revokePickupReleaseAuthority}
+            onReinstateReleaseAuthority={reinstatePickupReleaseAuthority}
+          />
+          <PickupStaffEarlyDepartureSection
+            key={`ed-staff-${currentUser?.id ?? 'anon'}`}
+            currentUserId={currentUser?.id ?? null}
+            currentRole={currentRole}
+            language={language}
+            t={t}
+            classesList={classesList}
+            earlyDepartures={earlyDepartures}
+            earlyDeparturesAvailability={earlyDeparturesAvailability ?? pickupAvailability}
+            earlyDepartureMutationState={earlyDepartureMutationState}
+            isLoadingEarlyDepartures={isLoadingEarlyDepartures}
+            earlyDepartureRevoked={earlyDepartureRevoked}
+            onRefresh={(classId) => {
+              if (refreshEarlyDepartures) void refreshEarlyDepartures(classId);
+              else void refreshPickupBoard(classId);
+            }}
+            onReviewEarlyDeparture={(input) => {
+              if (reviewEarlyDepartureRequest) void reviewEarlyDepartureRequest(input);
+            }}
+            onCompleteEarlyDeparture={(input) => {
+              if (completeEarlyDepartureRelease) void completeEarlyDepartureRelease(input);
+            }}
+            onVerifyReceipt={
+              verifyEarlyDepartureReceipt
+                ? (targetKey) => {
+                    void verifyEarlyDepartureReceipt(targetKey);
+                  }
+                : undefined
+            }
+          />
+        </>
       )}
     </div>
   );

@@ -11,9 +11,20 @@ import {
   reinstatePickupReleaseAuthorityTransport,
   revokePickupReleaseAuthorityTransport,
 } from './pickupAdminTransport.ts';
+import {
+  completeEarlyDepartureReleaseTransport,
+  fetchEarlyDeparturesTransport,
+  readEarlyDepartureReceiptTransport,
+  requestEarlyDepartureTransport,
+  reviewEarlyDepartureTransport,
+} from './pickupEarlyDepartureTransport.ts';
 import type {
   AnnounceArrivalInput,
+  CompleteEarlyDepartureInput,
   ConfirmReleaseInput,
+  EarlyDepartureCommandOutcome,
+  EarlyDepartureReadResult,
+  EarlyDepartureRequestRow,
   PickupAuthorizedCollectorSummary,
   PickupAvailabilityStatus,
   PickupCommandOutcome,
@@ -26,11 +37,22 @@ import type {
   PickupReasonCode,
   PickupRecord,
   PickupReleaseAuthorityResult,
+  RequestEarlyDepartureInput,
+  ReviewEarlyDepartureInput,
 } from './pickupTypes.ts';
 
 export type {
   AnnounceArrivalInput,
+  CompleteEarlyDepartureInput,
   ConfirmReleaseInput,
+  EarlyDepartureCommandConflict,
+  EarlyDepartureCommandOutcome,
+  EarlyDepartureCommandSuccess,
+  EarlyDepartureCommandUnknownOutcome,
+  EarlyDepartureMutationEntry,
+  EarlyDepartureReadResult,
+  EarlyDepartureRequestRow,
+  EarlyDepartureStatus,
   PickupAttendanceEligibility,
   PickupAuthorizedCollectorSummary,
   PickupAvailabilityStatus,
@@ -54,6 +76,8 @@ export type {
   PickupReleaseAuthorityResult,
   PickupRevocationStatus,
   PickupWindowStatus,
+  RequestEarlyDepartureInput,
+  ReviewEarlyDepartureInput,
 } from './pickupTypes.ts';
 
 export const PICKUP_BACKEND_UNAVAILABLE_CODE: PickupReasonCode = 'pickup_backend_unavailable';
@@ -326,3 +350,54 @@ export async function reinstatePickupReleaseAuthority(
 ): Promise<PickupReleaseAuthorityResult> {
   return reinstatePickupReleaseAuthorityTransport(targetUserId, reason, clientOverride);
 }
+
+export function getTunisTodayIsoDate(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Tunis', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+}
+
+export function buildTunisTimestampForTime(hhmm: string, schoolDate?: string | null): string | null {
+  const clean = typeof hhmm === 'string' ? hhmm.trim() : '';
+  if (!/^\d{2}:\d{2}$/.test(clean)) return null;
+  const datePart = schoolDate && /^\d{4}-\d{2}-\d{2}$/.test(schoolDate) ? schoolDate : getTunisTodayIsoDate();
+  return `${datePart}T${clean}:00+01:00`;
+}
+
+export function hasOpenOrCompletedEarlyDepartureForStudent(
+  studentId: string,
+  requests: EarlyDepartureRequestRow[],
+): boolean {
+  return requests.some((r) => r.studentId === studentId && (r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'COMPLETED'));
+}
+
+export const fetchEarlyDepartures = (
+  options?: { role?: AccountRole | null; classId?: string | null },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<EarlyDepartureReadResult> => fetchEarlyDeparturesTransport(options, clientOverride);
+
+export const requestEarlyDeparture = (
+  input: RequestEarlyDepartureInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<EarlyDepartureCommandOutcome> => requestEarlyDepartureTransport(input, clientOverride);
+
+export const reviewEarlyDeparture = (
+  input: ReviewEarlyDepartureInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<EarlyDepartureCommandOutcome> => reviewEarlyDepartureTransport(input, clientOverride);
+
+export const completeEarlyDepartureRelease = (
+  input: CompleteEarlyDepartureInput,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<EarlyDepartureCommandOutcome> => completeEarlyDepartureReleaseTransport(input, clientOverride);
+
+export const readEarlyDepartureReceipt = (
+  requestId: string,
+  targetId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clientOverride?: any,
+): Promise<EarlyDepartureCommandOutcome> => readEarlyDepartureReceiptTransport(requestId, targetId, clientOverride);
