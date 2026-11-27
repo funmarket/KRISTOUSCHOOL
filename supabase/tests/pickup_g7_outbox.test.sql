@@ -6,9 +6,9 @@ create extension if not exists dblink;
 -- Run real multi-session FOR UPDATE SKIP LOCKED race before main transaction,
 -- capturing results in a session temp table and deleting the two synthetic outbox rows cleanly.
 create temp table g7_skip_locked_results(worker text, claimed_id text);
-insert into public.notification_outbox(id,event_type,payload,created_at) values
- ('00000000-0000-4000-9000-000000030901','pickup.arrival_announced','{}',now()-interval '2 seconds'),
- ('00000000-0000-4000-9000-000000030902','pickup.arrival_announced','{}',now()-interval '1 second');
+insert into public.notification_outbox(id,event_type,payload,created_at,next_attempt_at) values
+ ('00000000-0000-4000-9000-000000030901','pickup.arrival_announced','{}','-infinity','-infinity'),
+ ('00000000-0000-4000-9000-000000030902','pickup.arrival_announced','{}','-infinity','-infinity');
 
 do $$
 declare
@@ -49,6 +49,7 @@ delete from public.notification_outbox
  where id in ('00000000-0000-4000-9000-000000030901','00000000-0000-4000-9000-000000030902');
 
 begin;
+delete from public.notification_outbox where event_type like 'pickup.%';
 select extensions.plan(49);
 
 -- 1–16. Privilege boundaries & Realtime configuration.
