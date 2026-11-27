@@ -119,6 +119,7 @@ declare
   v_class_id uuid;
   v_cycle_id uuid;
   v_ed_id uuid;
+  v_source record;
   v_student_label text;
   v_class_label text;
   v_recipients jsonb;
@@ -168,21 +169,27 @@ begin
 
     if v_cycle_id is null and v_row.source_id is not null then
       select c.cycle_id, c.student_id, c.class_id
-        into v_cycle_id, v_student_id, v_class_id
+        into v_source
         from public.pickup_cycles c
        where c.cycle_id = v_row.source_id;
-    elsif v_student_id is null and v_ed_id is not null then
+      if found then
+        v_cycle_id := v_source.cycle_id;
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+      end if;
+    end if;
+    if v_ed_id is not null
+       and (v_student_id is null or v_class_id is null or v_cycle_id is null) then
       select ed.student_id, m.class_id, ed.cycle_id
-        into v_student_id, v_class_id, v_cycle_id
+        into v_source
         from public.early_departure_requests ed
         join public.student_class_memberships m on m.id = ed.membership_id
        where ed.id = v_ed_id;
-    elsif v_class_id is null and v_ed_id is not null then
-      select m.class_id
-        into v_class_id
-        from public.early_departure_requests ed
-        join public.student_class_memberships m on m.id = ed.membership_id
-       where ed.id = v_ed_id;
+      if found then
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+        v_cycle_id := coalesce(v_cycle_id, v_source.cycle_id);
+      end if;
     end if;
 
     v_student_label := null;
@@ -305,6 +312,7 @@ declare
   v_request_id uuid;
   v_actor_user_id uuid := auth.uid();
   v_actor_role public.app_role;
+  v_source record;
 begin
   if p_outbox_id is null or p_succeeded is null then
     raise exception 'invalid_pickup_request' using errcode = 'P0001';
@@ -391,17 +399,28 @@ begin
       v_cycle_id := null;
     end if;
     if v_cycle_id is null and v_row.source_id is not null then
-      select c.cycle_id, coalesce(v_student_id, c.student_id), coalesce(v_class_id, c.class_id)
-        into v_cycle_id, v_student_id, v_class_id
+      select c.cycle_id, c.student_id, c.class_id
+        into v_source
         from public.pickup_cycles c
        where c.cycle_id = v_row.source_id;
+      if found then
+        v_cycle_id := v_source.cycle_id;
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+      end if;
     end if;
-    if v_student_id is null and v_row.source_id is not null then
-      select ed.student_id, coalesce(v_class_id, m.class_id), coalesce(v_cycle_id, ed.cycle_id)
-        into v_student_id, v_class_id, v_cycle_id
+    if v_row.source_id is not null
+       and (v_student_id is null or v_class_id is null or v_cycle_id is null) then
+      select ed.student_id, m.class_id, ed.cycle_id
+        into v_source
         from public.early_departure_requests ed
         join public.student_class_memberships m on m.id = ed.membership_id
        where ed.id = v_row.source_id;
+      if found then
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+        v_cycle_id := coalesce(v_cycle_id, v_source.cycle_id);
+      end if;
     end if;
 
     if v_actor_user_id is null then
@@ -561,6 +580,7 @@ declare
   v_cycle_id uuid;
   v_class_id uuid;
   v_result jsonb;
+  v_source record;
 begin
   if v_actor is null then
     raise exception 'actor_unauthenticated' using errcode = 'P0001';
@@ -645,17 +665,28 @@ begin
       v_cycle_id := null;
     end if;
     if v_cycle_id is null and v_retried.source_id is not null then
-      select c.cycle_id, coalesce(v_student_id, c.student_id), coalesce(v_class_id, c.class_id)
-        into v_cycle_id, v_student_id, v_class_id
+      select c.cycle_id, c.student_id, c.class_id
+        into v_source
         from public.pickup_cycles c
        where c.cycle_id = v_retried.source_id;
+      if found then
+        v_cycle_id := v_source.cycle_id;
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+      end if;
     end if;
-    if v_student_id is null and v_retried.source_id is not null then
-      select ed.student_id, coalesce(v_class_id, m.class_id), coalesce(v_cycle_id, ed.cycle_id)
-        into v_student_id, v_class_id, v_cycle_id
+    if v_retried.source_id is not null
+       and (v_student_id is null or v_class_id is null or v_cycle_id is null) then
+      select ed.student_id, m.class_id, ed.cycle_id
+        into v_source
         from public.early_departure_requests ed
         join public.student_class_memberships m on m.id = ed.membership_id
        where ed.id = v_retried.source_id;
+      if found then
+        v_student_id := coalesce(v_student_id, v_source.student_id);
+        v_class_id := coalesce(v_class_id, v_source.class_id);
+        v_cycle_id := coalesce(v_cycle_id, v_source.cycle_id);
+      end if;
     end if;
 
     if v_student_id is not null and exists (select 1 from public.students s where s.id = v_student_id) then
