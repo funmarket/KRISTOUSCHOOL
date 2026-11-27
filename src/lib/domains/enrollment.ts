@@ -23,6 +23,7 @@ export interface EnrollmentApplication {
   email?: string | null;
   notes?: string | null;
   submittedByUserId?: string | null;
+  studentId?: string | null;
   status: EnrollmentApplicationStatus;
   reviewNote?: string | null;
   reviewedAt?: string | null;
@@ -136,7 +137,7 @@ export async function listEnrollmentApplications(
     const { data, error } = await client
       .from('enrollment_applications')
       .select(
-        'id, reference_code, student_full_name, birth_date, desired_level_code, parent_full_name, phone, email, notes, submitted_by_user_id, status, review_note, reviewed_at, version, created_at',
+        'id, reference_code, student_full_name, birth_date, desired_level_code, parent_full_name, phone, email, notes, submitted_by_user_id, student_id, status, review_note, reviewed_at, version, created_at',
       )
       .order('created_at', { ascending: false });
     if (error) {
@@ -154,6 +155,7 @@ export async function listEnrollmentApplications(
           email: row.email ? String(row.email) : null,
           notes: row.notes ? String(row.notes) : null,
           submittedByUserId: row.submitted_by_user_id ? String(row.submitted_by_user_id) : null,
+          studentId: row.student_id ? String(row.student_id) : null,
           status: String(row.status) as EnrollmentApplicationStatus,
           reviewNote: row.review_note ? String(row.review_note) : null,
           reviewedAt: row.reviewed_at ? String(row.reviewed_at) : null,
@@ -165,6 +167,45 @@ export async function listEnrollmentApplications(
   } catch (err) {
     return { ok: false, ...classifySupabaseError(err) };
   }
+}
+
+export interface CompleteEnrollmentAdmissionInput {
+  applicationId: string;
+  existingStudentId?: string;
+  verifyGuardian?: boolean;
+  expectedVersion: number;
+}
+
+export interface AdmissionCompletionReceipt {
+  applicationId: string;
+  studentId: string;
+  status: 'ENROLLED';
+  version: number;
+  guardianVerified: boolean;
+  replayed: boolean;
+}
+
+export async function completeEnrollmentAdmission(
+  input: CompleteEnrollmentAdmissionInput,
+  client: typeof supabase = supabase,
+): Promise<BackendOpResult<AdmissionCompletionReceipt>> {
+  if (!client) return unavailableResult();
+  try {
+    const { data, error } = await client.rpc('complete_enrollment_admission', {
+      p_application_id: input.applicationId,
+      ...(input.existingStudentId ? { p_existing_student_id: input.existingStudentId } : {}),
+      p_verify_guardian: input.verifyGuardian ?? true,
+      p_expected_version: input.expectedVersion,
+    });
+    if (error) return { ok: false, ...classifySupabaseError(error) };
+    const row = data as unknown as AdmissionCompletionReceipt | null;
+    if (!row || typeof row.studentId !== 'string' || row.applicationId !== input.applicationId ||
+        row.status !== 'ENROLLED' || !Number.isInteger(row.version) ||
+        typeof row.guardianVerified !== 'boolean' || typeof row.replayed !== 'boolean') {
+      return { ok: false, status: 'ERROR', errorCode: 'invalid_admission_receipt', errorMessage: 'Admission result could not be verified. Reload before retrying.' };
+    }
+    return { ok: true, status: 'READY', data: row };
+  } catch (err) { return { ok: false, ...classifySupabaseError(err) }; }
 }
 
 export async function reviewEnrollmentApplication(

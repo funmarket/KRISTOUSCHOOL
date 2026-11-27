@@ -1885,6 +1885,9 @@ isOneToOne: false
 "complete_early_departure_release":
 { Args: { "p_collector_id": string,"p_early_departure_id": string,"p_expected_version": number,"p_handoff_notes"?: string,"p_in_person_verified": boolean,"p_request_id": string }; Returns: Json
                            },
+"complete_enrollment_admission":
+{ Args: { "p_application_id": string,"p_existing_student_id"?: string,"p_expected_version"?: number,"p_verify_guardian"?: boolean }; Returns: Json
+                           },
 "create_and_enroll_student":
 { Args: { "p_birth_date": string,"p_class_id": string,"p_full_name": string,"p_linked_profile_id"?: string,"p_parent_user_id"?: string,"p_relationship_label"?: string,"p_student_code": string }; Returns: Json
                            },

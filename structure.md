@@ -1106,6 +1106,8 @@ Owns:
 Owns:
 
 - enrollment_applications
+- enrollment_admission_completions (admission receipt; no class-membership ownership)
+- enrollment_admission_audit_logs (immutable completion evidence)
 - public_school_inquiries
 
 ## Broadcasts / Calendar
